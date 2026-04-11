@@ -1,0 +1,269 @@
+<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <UserControl.DataContext>
+        <Binding Path="InFlightVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
+    </UserControl.DataContext>
+
+    <StackPanel>
+        <!-- Header: Fase + tiempo + botones sim -->
+        <Grid Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="En Vuelo · Telemetría" Style="{StaticResource PageTitle}"
+                           Margin="0,0,0,4"/>
+                <StackPanel Orientation="Horizontal">
+                    <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <Ellipse.Fill>
+                            <SolidColorBrush Color="#3FB950"/>
+                        </Ellipse.Fill>
+                    </Ellipse>
+                    <TextBlock Text="{Binding PhaseLabel}" Foreground="#3FB950"
+                               FontSize="15" FontWeight="Bold" FontFamily="Segoe UI"
+                               VerticalAlignment="Center"/>
+                    <TextBlock Text="  ·  " Foreground="#30363D" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding ElapsedTime}" Foreground="#8B949E"
+                               FontFamily="Consolas" FontSize="14" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Botones de conexión al sim -->
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Content="Conectar MSFS" Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,8,0" Click="BtnConnectMsfs_Click"/>
+                <Button Content="Conectar X-Plane" Style="{StaticResource SecondaryButton}"
+                        Margin="0,0,8,0" Click="BtnConnectXPlane_Click"/>
+                <Button Content="Finalizar Vuelo" Style="{StaticResource PrimaryButton}"
+                        Command="{Binding FinishFlightCommand}"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Alertas -->
+        <Border Background="#CC2200" CornerRadius="8" Padding="12,8" Margin="0,0,0,12"
+                Visibility="{Binding AlertNoStrobe, Converter={StaticResource BoolToVisibilityConverter}}">
+            <TextBlock Text="⚠ LUCES STROBE APAGADAS EN VUELO" Foreground="White"
+                       FontWeight="Bold" FontSize="13"/>
+        </Border>
+
+        <!-- Telemetría principal: 3 columnas -->
+        <UniformGrid Columns="3" Margin="0,0,0,16">
+            <!-- Velocidad -->
+            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="VELOCIDAD INDICADA" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="{Binding IAS, StringFormat={}{0:F0}}"
+                                   Style="{StaticResource TelemetryValue}"/>
+                        <TextBlock Text="kts" Style="{StaticResource TelemetryUnit}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="GS: " Foreground="#8B949E" FontSize="12"/>
+                        <TextBlock Text="{Binding GS, StringFormat={}{0:F0}}" Foreground="#8B949E"
+                                   FontFamily="Consolas" FontSize="12"/>
+                        <TextBlock Text=" kts" Foreground="#8B949E" FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Altitud -->
+            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="ALTITUD" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="{Binding Altitude, StringFormat={}{0:F0}}"
+                                   Style="{StaticResource TelemetryValue}"/>
+                        <TextBlock Text="ft" Style="{StaticResource TelemetryUnit}"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="VS: " Foreground="#8B949E" FontSize="12"/>
+                        <TextBlock Text="{Binding VS, StringFormat={}{0:+#;-#;0}}"
+                                   FontFamily="Consolas" FontSize="12"
+                                   Foreground="{Binding VS, Converter={StaticResource VSToColorConverter}}"/>
+                        <TextBlock Text=" fpm" Foreground="#8B949E" FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- Rumbo -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="RUMBO" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="{Binding Heading, StringFormat={}{0:000}°}"
+                                   Style="{StaticResource TelemetryValue}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Lat, StringFormat=Lat: {0:F4}°}"
+                               Foreground="#8B949E" FontFamily="Consolas" FontSize="11"
+                               Margin="0,4,0,0"/>
+                    <TextBlock Text="{Binding Lon, StringFormat=Lon: {0:F4}°}"
+                               Foreground="#8B949E" FontFamily="Consolas" FontSize="11"/>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <!-- Fila 2: Motores + Combustible + Ambiente -->
+        <UniformGrid Columns="3" Margin="0,0,0,16">
+            <!-- Motores -->
+            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="MOTORES (N1%)" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Margin="0,8,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <TextBlock Text="ENG 1: " Foreground="#8B949E" FontSize="13"/>
+                            <TextBlock Text="{Binding N1Eng1, StringFormat={}{0:F1}%}"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontFamily="Consolas" FontSize="16" FontWeight="Bold"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="ENG 2: " Foreground="#8B949E" FontSize="13"/>
+                            <TextBlock Text="{Binding N1Eng2, StringFormat={}{0:F1}%}"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontFamily="Consolas" FontSize="16" FontWeight="Bold"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <!-- AP indicator -->
+                    <Border Background="#1F2937" CornerRadius="4" Padding="6,3" Margin="0,10,0,0"
+                            HorizontalAlignment="Left">
+                        <TextBlock FontSize="11" FontWeight="Bold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="AP OFF"/>
+                                    <Setter Property="Foreground" Value="#FF4444"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
+                                            <Setter Property="Text" Value="AP ON"/>
+                                            <Setter Property="Foreground" Value="#3FB950"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- Combustible -->
+            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+                <StackPanel>
+                    <TextBlock Text="COMBUSTIBLE" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <TextBlock Text="{Binding FuelKg, StringFormat={}{0:F0}}"
+                                   Style="{StaticResource TelemetryValue}"/>
+                        <TextBlock Text="kg" Style="{StaticResource TelemetryUnit}"/>
+                    </StackPanel>
+                    <TextBlock Foreground="#8B949E" FontFamily="Consolas" FontSize="11" Margin="0,4">
+                        <Run Text="{Binding FuelLbs, StringFormat={}{0:F0}}"/>
+                        <Run Text=" lbs"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <!-- Ambiente -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="AMBIENTE" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Margin="0,8,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                            <TextBlock Text="OAT: " Foreground="#8B949E" FontSize="12"/>
+                            <TextBlock Text="{Binding OAT, StringFormat={}{0:F1}°C}"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontFamily="Consolas" FontSize="14"/>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Viento: " Foreground="#8B949E" FontSize="12"/>
+                            <TextBlock FontFamily="Consolas" FontSize="13"
+                                       Foreground="{StaticResource AccentLightBlueBrush}">
+                                <Run Text="{Binding WindDir, StringFormat={}{0:000}}"/>
+                                <Run Text="° / "/>
+                                <Run Text="{Binding WindSpeed, StringFormat={}{0:F0}}"/>
+                                <Run Text="kts"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </UniformGrid>
+
+        <!-- Luces e indicadores -->
+        <Border Style="{StaticResource Card}">
+            <StackPanel>
+                <TextBlock Text="INDICADORES DE SISTEMAS" Style="{StaticResource FieldLabel}"
+                           Margin="0,0,0,12"/>
+                <StackPanel Orientation="Horizontal">
+                    <!-- Strobe -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#FF4444"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StrobeOn}" Value="True">
+                                            <Setter Property="Fill" Value="#3FB950"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="STROBE" Foreground="#8B949E" FontSize="12"/>
+                    </StackPanel>
+                    <!-- Beacon -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#FF4444"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding BeaconOn}" Value="True">
+                                            <Setter Property="Fill" Value="#3FB950"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="BEACON" Foreground="#8B949E" FontSize="12"/>
+                    </StackPanel>
+                    <!-- Landing -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#FF4444"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LandingOn}" Value="True">
+                                            <Setter Property="Fill" Value="#3FB950"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="LANDING" Foreground="#8B949E" FontSize="12"/>
+                    </StackPanel>
+                    <!-- On Ground -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
+                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#8B949E"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OnGround}" Value="True">
+                                            <Setter Property="Fill" Value="#FFD700"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="EN TIERRA" Foreground="#8B949E" FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+</UserControl>

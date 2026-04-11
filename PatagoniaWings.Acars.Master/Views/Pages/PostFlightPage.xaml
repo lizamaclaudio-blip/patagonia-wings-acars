@@ -1,0 +1,134 @@
+<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.PostFlightPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <UserControl.DataContext>
+        <Binding Path="PostFlightVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
+    </UserControl.DataContext>
+
+    <StackPanel MaxWidth="700">
+        <TextBlock Text="Reporte Post-Vuelo" Style="{StaticResource PageTitle}"/>
+
+        <Border Style="{StaticResource Card}" Margin="0,0,0,16">
+            <StackPanel>
+                <!-- Encabezado del vuelo -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock Text="{Binding Report.FlightNumber}" FontSize="24" FontWeight="Bold"
+                                   Foreground="White" FontFamily="Consolas"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <TextBlock Text="{Binding Report.DepartureIcao}" FontSize="18"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontFamily="Consolas" FontWeight="Bold"/>
+                            <TextBlock Text="  →  " Foreground="#8B949E" FontSize="18"/>
+                            <TextBlock Text="{Binding Report.ArrivalIcao}" FontSize="18"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontFamily="Consolas" FontWeight="Bold"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Nota / Grade -->
+                    <Border Grid.Column="1" Width="80" Height="80" CornerRadius="40"
+                            HorizontalAlignment="Right">
+                        <Border.Background>
+                            <SolidColorBrush Color="{Binding GradeColor}"/>
+                        </Border.Background>
+                        <TextBlock Text="{Binding Report.Grade}" FontSize="28" FontWeight="Bold"
+                                   Foreground="White" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                </Grid>
+
+                <Separator Background="{StaticResource BorderBrush}" Margin="0,0,0,16"/>
+
+                <!-- Estadísticas del vuelo -->
+                <UniformGrid Columns="3" Margin="0,0,0,16">
+                    <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="DURACIÓN" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Report.Duration, StringFormat=hh\\:mm\\:ss}"
+                                   Foreground="White" FontFamily="Consolas" FontSize="18"/>
+                    </StackPanel>
+                    <StackPanel Margin="0,0,12,0">
+                        <TextBlock Text="DISTANCIA" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Report.Distance, StringFormat={}{0:F0}}"
+                                       Foreground="White" FontFamily="Consolas" FontSize="18"/>
+                            <TextBlock Text=" NM" Foreground="#8B949E" FontSize="12"
+                                       VerticalAlignment="Bottom" Margin="2,0,0,2"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="COMBUSTIBLE USADO" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Report.FuelUsed, StringFormat={}{0:F0}}"
+                                       Foreground="White" FontFamily="Consolas" FontSize="18"/>
+                            <TextBlock Text=" lbs" Foreground="#8B949E" FontSize="12"
+                                       VerticalAlignment="Bottom" Margin="2,0,0,2"/>
+                        </StackPanel>
+                    </StackPanel>
+                </UniformGrid>
+
+                <!-- Aterrizaje -->
+                <Border Background="#FF0D1117" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="VS DE ATERRIZAJE" Style="{StaticResource FieldLabel}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Report.LandingVS, StringFormat={}{0:F0}}"
+                                           Foreground="{StaticResource AccentLightBlueBrush}"
+                                           FontFamily="Consolas" FontSize="20" FontWeight="Bold"/>
+                                <TextBlock Text=" fpm" Foreground="#8B949E" FontSize="11"
+                                           VerticalAlignment="Bottom" Margin="2,0,0,3"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="FACTOR G" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding Report.LandingG, StringFormat={}{0:F2}G}"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontFamily="Consolas" FontSize="20" FontWeight="Bold"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="CALIDAD" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding LandingQuality}"
+                                       Foreground="White" FontSize="16" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Puntos -->
+                <Border Background="#1A3A1A" CornerRadius="8" Padding="12" Margin="0,0,0,20">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⭐ " FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Foreground="#3FB950" FontSize="14" FontWeight="SemiBold">
+                            <Run Text="Puntos ganados: "/>
+                            <Run Text="{Binding Report.PointsEarned}"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Botón enviar -->
+                <Button Content="ENVIAR REPORTE" Style="{StaticResource PrimaryButton}"
+                        Command="{Binding SubmitCommand}" Height="44" FontSize="14"
+                        IsEnabled="{Binding Submitted, Converter={StaticResource BoolInverseConverter}}"/>
+
+                <!-- Mensaje resultado -->
+                <TextBlock Text="{Binding SubmitMessage}" Foreground="#3FB950"
+                           FontSize="14" FontFamily="Segoe UI" HorizontalAlignment="Center"
+                           Margin="0,16,0,0"/>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+    </UserControl.Resources>
+</UserControl>
