@@ -24,8 +24,16 @@ namespace PatagoniaWings.Acars.Core.Models
         public string PreferredSimulator { get; set; } = "MSFS";
         public string Language { get; set; } = "ESP";
         public bool CopilotVoiceFemale { get; set; } = true;
+        public string RankCode { get; set; } = string.Empty;
+        public string CareerRankCode { get; set; } = string.Empty;
         public string CurrentAirportCode { get; set; } = string.Empty;
         public string BaseHubCode { get; set; } = string.Empty;
+        public double TransferredHours { get; set; }
+        public double Pulso10 { get; set; }
+        public double Ruta10 { get; set; }
+        public int LegadoPoints { get; set; }
+        public string ActiveQualifications { get; set; } = string.Empty;
+        public string ActiveCertifications { get; set; } = string.Empty;
 
         public bool HasUsableToken
         {

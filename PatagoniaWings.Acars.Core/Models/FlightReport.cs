@@ -20,11 +20,28 @@ namespace PatagoniaWings.Acars.Core.Models
         public double LandingG { get; set; }
         public int Score { get; set; }
         public string Grade { get; set; } = string.Empty;
+        public string ProceduralSummary { get; set; } = string.Empty;
         public SimulatorType Simulator { get; set; }
         public string Remarks { get; set; } = string.Empty;
         public bool IsApproved { get; set; }
         public FlightStatus Status { get; set; }
         public int PointsEarned { get; set; }
+
+        // Estadísticas de vuelo extendidas
+        public double MaxAltitudeFeet { get; set; }
+        public double MaxSpeedKts { get; set; }
+        public double ApproachQnhHpa { get; set; }
+
+        // Desglose de penalizaciones por fase (valores negativos o cero)
+        public int LandingPenalty { get; set; }
+        public int TaxiPenalty { get; set; }
+        public int AirbornePenalty { get; set; }
+        public int ApproachPenalty { get; set; }
+        public int CabinPenalty { get; set; }
+
+        // Perfil del piloto (para mostrar en PostFlight)
+        public string PilotQualifications { get; set; } = string.Empty;
+        public string PilotCertifications { get; set; } = string.Empty;
     }
 
     public enum FlightStatus

@@ -3,267 +3,813 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
     <UserControl.DataContext>
-        <Binding Path="InFlightVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
+        <Binding Path="DataContext.InFlightVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
     </UserControl.DataContext>
 
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+
+        <!-- LEDs radiales -->
+        <RadialGradientBrush x:Key="LedGreen" RadiusX="0.6" RadiusY="0.6" GradientOrigin="0.35,0.3">
+            <GradientStop Color="#CCFFDD" Offset="0"/>
+            <GradientStop Color="#00EE55" Offset="0.4"/>
+            <GradientStop Color="#009933" Offset="0.75"/>
+            <GradientStop Color="#003311" Offset="1"/>
+        </RadialGradientBrush>
+        <RadialGradientBrush x:Key="LedRed" RadiusX="0.6" RadiusY="0.6" GradientOrigin="0.35,0.3">
+            <GradientStop Color="#FFCCCC" Offset="0"/>
+            <GradientStop Color="#FF2222" Offset="0.4"/>
+            <GradientStop Color="#BB0000" Offset="0.75"/>
+            <GradientStop Color="#330000" Offset="1"/>
+        </RadialGradientBrush>
+        <RadialGradientBrush x:Key="LedAmber" RadiusX="0.6" RadiusY="0.6" GradientOrigin="0.35,0.3">
+            <GradientStop Color="#FFEECC" Offset="0"/>
+            <GradientStop Color="#FFBB00" Offset="0.4"/>
+            <GradientStop Color="#CC7700" Offset="0.75"/>
+            <GradientStop Color="#332200" Offset="1"/>
+        </RadialGradientBrush>
+        <RadialGradientBrush x:Key="LedBlue" RadiusX="0.6" RadiusY="0.6" GradientOrigin="0.35,0.3">
+            <GradientStop Color="#CCDDFF" Offset="0"/>
+            <GradientStop Color="#2299FF" Offset="0.4"/>
+            <GradientStop Color="#0055CC" Offset="0.75"/>
+            <GradientStop Color="#001133" Offset="1"/>
+        </RadialGradientBrush>
+        <RadialGradientBrush x:Key="LedWhite" RadiusX="0.6" RadiusY="0.6" GradientOrigin="0.35,0.3">
+            <GradientStop Color="#FFFFFF" Offset="0"/>
+            <GradientStop Color="#CCDDEE" Offset="0.5"/>
+            <GradientStop Color="#6688AA" Offset="1"/>
+        </RadialGradientBrush>
+        <RadialGradientBrush x:Key="LedOff" RadiusX="0.5" RadiusY="0.5">
+            <GradientStop Color="#2A3040" Offset="0"/>
+            <GradientStop Color="#141820" Offset="0.7"/>
+            <GradientStop Color="#0A0C10" Offset="1"/>
+        </RadialGradientBrush>
+    </UserControl.Resources>
+
     <StackPanel>
-        <!-- Header: Fase + tiempo + botones sim -->
-        <Grid Margin="0,0,0,20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <StackPanel>
-                <TextBlock Text="En Vuelo · Telemetría" Style="{StaticResource PageTitle}"
-                           Margin="0,0,0,4"/>
-                <StackPanel Orientation="Horizontal">
-                    <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,8,0">
-                        <Ellipse.Fill>
-                            <SolidColorBrush Color="#3FB950"/>
-                        </Ellipse.Fill>
-                    </Ellipse>
-                    <TextBlock Text="{Binding PhaseLabel}" Foreground="#3FB950"
-                               FontSize="15" FontWeight="Bold" FontFamily="Segoe UI"
-                               VerticalAlignment="Center"/>
-                    <TextBlock Text="  ·  " Foreground="#30363D" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding ElapsedTime}" Foreground="#8B949E"
-                               FontFamily="Consolas" FontSize="14" VerticalAlignment="Center"/>
-                </StackPanel>
-            </StackPanel>
 
-            <!-- Botones de conexión al sim -->
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <Button Content="Conectar MSFS" Style="{StaticResource SecondaryButton}"
-                        Margin="0,0,8,0" Click="BtnConnectMsfs_Click"/>
-                <Button Content="Conectar X-Plane" Style="{StaticResource SecondaryButton}"
-                        Margin="0,0,8,0" Click="BtnConnectXPlane_Click"/>
-                <Button Content="Finalizar Vuelo" Style="{StaticResource PrimaryButton}"
-                        Command="{Binding FinishFlightCommand}"/>
-            </StackPanel>
-        </Grid>
-
-        <!-- Alertas -->
-        <Border Background="#CC2200" CornerRadius="8" Padding="12,8" Margin="0,0,0,12"
+        <!-- ══ ALERTA STROBES ════════════════════════════════════════════════ -->
+        <Border Background="#7A0E0E" CornerRadius="8" Padding="14,10" Margin="0,0,0,12"
                 Visibility="{Binding AlertNoStrobe, Converter={StaticResource BoolToVisibilityConverter}}">
-            <TextBlock Text="⚠ LUCES STROBE APAGADAS EN VUELO" Foreground="White"
-                       FontWeight="Bold" FontSize="13"/>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="⚠" FontSize="16" Foreground="#FFEE00" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                <TextBlock Text="STROBES APAGADOS EN VUELO — PENALIZACIÓN ACTIVA"
+                           Foreground="White" FontWeight="Bold" FontSize="13"/>
+            </StackPanel>
         </Border>
 
-        <!-- Telemetría principal: 3 columnas -->
-        <UniformGrid Columns="3" Margin="0,0,0,16">
-            <!-- Velocidad -->
-            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+        <!-- ══ HEADER ════════════════════════════════════════════════════════ -->
+        <Border Background="#0C1320" BorderBrush="#1A2840" BorderThickness="1"
+                CornerRadius="10" Padding="20,14" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
                 <StackPanel>
-                    <TextBlock Text="VELOCIDAD INDICADA" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <TextBlock Text="{Binding IAS, StringFormat={}{0:F0}}"
-                                   Style="{StaticResource TelemetryValue}"/>
-                        <TextBlock Text="kts" Style="{StaticResource TelemetryUnit}"/>
+                    <TextBlock Text="EN VUELO · TELEMETRÍA ACARS" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="12" Height="12" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="#3FB950"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Phase}" Value="Disconnected">
+                                            <Setter Property="Fill" Value="#2A3040"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding PhaseLabelDisplay}" FontSize="20" FontWeight="Bold"
+                                   Foreground="White" VerticalAlignment="Center"/>
+                        <TextBlock Text="  ·  " Foreground="#252D3A" VerticalAlignment="Center" FontSize="18"/>
+                        <TextBlock Text="{Binding ElapsedTimeDisplay}" Foreground="#2D9CDB"
+                                   FontFamily="Consolas" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <TextBlock Text="GS: " Foreground="#8B949E" FontSize="12"/>
-                        <TextBlock Text="{Binding GS, StringFormat={}{0:F0}}" Foreground="#8B949E"
-                                   FontFamily="Consolas" FontSize="12"/>
-                        <TextBlock Text=" kts" Foreground="#8B949E" FontSize="12"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="● MSFS" Style="{StaticResource SecondaryButton}" Margin="0,0,8,0"
+                            Click="BtnConnectMsfs_Click" Padding="12,8"/>
+                    <Button Content="FINALIZAR VUELO ▶" Style="{StaticResource PrimaryButton}"
+                            Command="{Binding FinishFlightCommand}" Padding="16,10"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ══ TELEMETRÍA 4 TARJETAS ════════════════════════════════════════ -->
+        <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <!-- IAS -->
+            <Border Grid.Column="0" Style="{StaticResource CardBlue}">
+                <StackPanel>
+                    <TextBlock Text="VELOCIDAD IAS" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding IASDisplay}" Style="{StaticResource TelemetryValue}" FontSize="30"/>
+                        <TextBlock Text="kts" Style="{StaticResource TelemetryUnit}" FontSize="13"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <TextBlock Text="GS " Foreground="#606C7A" FontSize="11"/>
+                        <TextBlock Text="{Binding GSDisplay}" Foreground="#2D9CDB" FontFamily="Consolas" FontSize="13"/>
+                        <TextBlock Text=" kts" Foreground="#606C7A" FontSize="11"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
-
-            <!-- Altitud -->
-            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+            <!-- ALT -->
+            <Border Grid.Column="2" Style="{StaticResource CardTeal}">
                 <StackPanel>
                     <TextBlock Text="ALTITUD" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <TextBlock Text="{Binding Altitude, StringFormat={}{0:F0}}"
-                                   Style="{StaticResource TelemetryValue}"/>
-                        <TextBlock Text="ft" Style="{StaticResource TelemetryUnit}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding AltitudeDisplay}" Style="{StaticResource TelemetryValue}" FontSize="30"/>
+                        <TextBlock Text="ft" Style="{StaticResource TelemetryUnit}" FontSize="13"/>
                     </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <TextBlock Text="VS: " Foreground="#8B949E" FontSize="12"/>
-                        <TextBlock Text="{Binding VS, StringFormat={}{0:+#;-#;0}}"
-                                   FontFamily="Consolas" FontSize="12"
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <TextBlock Text="VS " Foreground="#606C7A" FontSize="11"/>
+                        <TextBlock Text="{Binding VSDisplay}"
+                                   FontFamily="Consolas" FontSize="13" FontWeight="Bold"
                                    Foreground="{Binding VS, Converter={StaticResource VSToColorConverter}}"/>
-                        <TextBlock Text=" fpm" Foreground="#8B949E" FontSize="12"/>
+                        <TextBlock Text=" fpm" Foreground="#606C7A" FontSize="11"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
-
-            <!-- Rumbo -->
-            <Border Style="{StaticResource Card}">
+            <!-- HDG -->
+            <Border Grid.Column="4" Style="{StaticResource Card}">
                 <StackPanel>
-                    <TextBlock Text="RUMBO" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <TextBlock Text="{Binding Heading, StringFormat={}{0:000}°}"
-                                   Style="{StaticResource TelemetryValue}"/>
-                    </StackPanel>
-                    <TextBlock Text="{Binding Lat, StringFormat=Lat: {0:F4}°}"
-                               Foreground="#8B949E" FontFamily="Consolas" FontSize="11"
-                               Margin="0,4,0,0"/>
-                    <TextBlock Text="{Binding Lon, StringFormat=Lon: {0:F4}°}"
-                               Foreground="#8B949E" FontFamily="Consolas" FontSize="11"/>
+                    <TextBlock Text="RUMBO / POSICIÓN" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding Heading, StringFormat={}{0:000}°}" Style="{StaticResource TelemetryValue}" FontSize="30" Margin="0,8,0,0"/>
+                    <TextBlock Text="{Binding Lat,  StringFormat=Lat {0:F4}°}" Foreground="#606C7A" FontFamily="Consolas" FontSize="11" Margin="0,5,0,1"/>
+                    <TextBlock Text="{Binding Lon, StringFormat=Lon {0:F4}°}" Foreground="#606C7A" FontFamily="Consolas" FontSize="11"/>
                 </StackPanel>
             </Border>
-        </UniformGrid>
-
-        <!-- Fila 2: Motores + Combustible + Ambiente -->
-        <UniformGrid Columns="3" Margin="0,0,0,16">
-            <!-- Motores -->
-            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+            <!-- FUEL -->
+            <Border Grid.Column="6" Style="{StaticResource CardGold}">
                 <StackPanel>
-                    <TextBlock Text="MOTORES (N1%)" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Margin="0,8,0,0">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                            <TextBlock Text="ENG 1: " Foreground="#8B949E" FontSize="13"/>
-                            <TextBlock Text="{Binding N1Eng1, StringFormat={}{0:F1}%}"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontFamily="Consolas" FontSize="16" FontWeight="Bold"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="ENG 2: " Foreground="#8B949E" FontSize="13"/>
-                            <TextBlock Text="{Binding N1Eng2, StringFormat={}{0:F1}%}"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontFamily="Consolas" FontSize="16" FontWeight="Bold"/>
-                        </StackPanel>
+                    <TextBlock Text="COMBUSTIBLE" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding FuelKgDisplay}" Style="{StaticResource TelemetryValue}" FontSize="30"/>
+                        <TextBlock Text="kg" Style="{StaticResource TelemetryUnit}" FontSize="13"/>
                     </StackPanel>
-                    <!-- AP indicator -->
-                    <Border Background="#1F2937" CornerRadius="4" Padding="6,3" Margin="0,10,0,0"
-                            HorizontalAlignment="Left">
-                        <TextBlock FontSize="11" FontWeight="Bold">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="Text" Value="AP OFF"/>
-                                    <Setter Property="Foreground" Value="#FF4444"/>
+                    <TextBlock Foreground="#606C7A" FontFamily="Consolas" FontSize="11" Margin="0,5,0,0">
+                        <Run Text="{Binding FuelLbsDisplay}"/>
+                        <Run Text=" lbs"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ══ FILA 2: MOTORES + AMBIENTE + PRESURIZACIÓN ═══════════════════ -->
+        <Grid Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="10"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- MOTORES -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="MOTORES N1 %" Style="{StaticResource FieldLabel}"/>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition/><RowDefinition Height="8"/><RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            <TextBlock Text="ENG 1" Foreground="#606C7A" FontSize="11" Width="50" VerticalAlignment="Center"/>
+                            <Border Background="#0A0E14" CornerRadius="4" Padding="10,4">
+                                <TextBlock Text="{Binding N1Eng1Display}"
+                                           Foreground="{StaticResource AccentLightBlueBrush}"
+                                           FontFamily="Consolas" FontSize="17" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal">
+                            <TextBlock Text="ENG 2" Foreground="#606C7A" FontSize="11" Width="50" VerticalAlignment="Center"/>
+                            <Border Background="#0A0E14" CornerRadius="4" Padding="10,4">
+                                <TextBlock Text="{Binding N1Eng2Display}"
+                                           Foreground="{StaticResource AccentLightBlueBrush}"
+                                           FontFamily="Consolas" FontSize="17" FontWeight="Bold"/>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <!-- AP -->
+                        <Border CornerRadius="4" Padding="7,3" Margin="0,0,6,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#1A0808"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
-                                            <Setter Property="Text" Value="AP ON"/>
+                                            <Setter Property="Background" Value="#081A0E"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="11" FontWeight="Bold" FontFamily="Consolas">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text"       Value="AP OFF"/>
+                                        <Setter Property="Foreground" Value="#FF4444"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
+                                                <Setter Property="Text"       Value="AP ON"/>
+                                                <Setter Property="Foreground" Value="#3FB950"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <!-- REV -->
+                        <Border CornerRadius="4" Padding="7,3" Margin="0,0,6,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#0A0A0A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ReverserActive}" Value="True">
+                                            <Setter Property="Background" Value="#1A1000"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="11" FontWeight="Bold" FontFamily="Consolas">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text"       Value="REV"/>
+                                        <Setter Property="Foreground" Value="#2A3040"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ReverserActive}" Value="True">
+                                                <Setter Property="Text"       Value="REV ON"/>
+                                                <Setter Property="Foreground" Value="#FFAA00"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- AMBIENTE -->
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="AMBIENTE / POSICIÓN" Style="{StaticResource FieldLabel}"/>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition/><RowDefinition Height="8"/><RowDefinition/>
+                            <RowDefinition Height="8"/><RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            <TextBlock Text="OAT  " Foreground="#606C7A" FontSize="11" Width="52" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding OAT, StringFormat={}{0:F1} °C}"
+                                       Foreground="#2D9CDB" FontFamily="Consolas" FontSize="15" FontWeight="Bold"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal">
+                            <TextBlock Text="WIND " Foreground="#606C7A" FontSize="11" Width="52" VerticalAlignment="Center"/>
+                            <TextBlock FontFamily="Consolas" FontSize="13" Foreground="#2D9CDB">
+                                <Run Text="{Binding WindDir, StringFormat={}{0:000}}"/>
+                                <Run Text="° / "/><Run Text="{Binding WindSpeed, StringFormat={}{0:F0}}"/>
+                                <Run Text=" kts"/>
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Grid.Row="4" Orientation="Horizontal">
+                            <TextBlock Text="FLAP " Foreground="#606C7A" FontSize="11" Width="52" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding FlapsDisplay}"
+                                       Foreground="#FFCC44" FontFamily="Consolas" FontSize="13" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- PRESURIZACIÓN + TRANSPONDER -->
+            <Border Grid.Column="4" Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="PRESURIZACIÓN / AVIÓNICA" Style="{StaticResource FieldLabel}"/>
+                    <Grid Margin="0,10,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition/><RowDefinition Height="8"/><RowDefinition/>
+                            <RowDefinition Height="8"/><RowDefinition/>
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0" Orientation="Horizontal">
+                            <TextBlock Text="CABIN" Foreground="#606C7A" FontSize="11" Width="52" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding CabinAlt, StringFormat={}{0:F0} ft}"
+                                       Foreground="#0CA789" FontFamily="Consolas" FontSize="14" FontWeight="Bold"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="2" Orientation="Horizontal">
+                            <TextBlock Text="ΔPSI " Foreground="#606C7A" FontSize="11" Width="52" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding PressDiff, StringFormat={}{0:F2} psi}"
+                                       Foreground="#0CA789" FontFamily="Consolas" FontSize="13"/>
+                        </StackPanel>
+                        <StackPanel Grid.Row="4" Orientation="Horizontal">
+                            <TextBlock Text="XPDR " Foreground="#606C7A" FontSize="11" Width="52" VerticalAlignment="Center"/>
+                            <Border CornerRadius="4" Padding="6,2">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#0A0A0A"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding CharlieMode}" Value="True">
+                                                <Setter Property="Background" Value="#0A1A0A"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="Consolas" FontSize="12" FontWeight="Bold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text"       Value="STBY"/>
+                                                <Setter Property="Foreground" Value="#606C7A"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CharlieMode}" Value="True">
+                                                        <Setter Property="Text"       Value="MODE C"/>
+                                                        <Setter Property="Foreground" Value="#3FB950"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text=" · " Foreground="#2A3040" FontFamily="Consolas" FontSize="12"/>
+                                    <TextBlock Text="{Binding SquawkDisplay}"
+                                               Foreground="#FFCC44" FontFamily="Consolas" FontSize="12"/>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- ══ PANEL DE LUCES LED + SISTEMAS ════════════════════════════════ -->
+        <Border Background="#090D14" BorderBrush="#141C28" BorderThickness="1"
+                CornerRadius="10" Padding="20,16" Margin="0,0,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="1"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="1"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="1"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- COL 1: LUCES EXTERIORES -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="LUCES EXTERIORES" Style="{StaticResource FieldLabel}" Margin="0,0,0,12"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StrobeOn}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedWhite}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="STROBE" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="70"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF · -15 pts"/>
+                                    <Setter Property="Foreground" Value="#FF4444"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding StrobeOn}" Value="True">
+                                            <Setter Property="Text"       Value="ON"/>
                                             <Setter Property="Foreground" Value="#3FB950"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                    </Border>
-                </StackPanel>
-            </Border>
-
-            <!-- Combustible -->
-            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
-                <StackPanel>
-                    <TextBlock Text="COMBUSTIBLE" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                        <TextBlock Text="{Binding FuelKg, StringFormat={}{0:F0}}"
-                                   Style="{StaticResource TelemetryValue}"/>
-                        <TextBlock Text="kg" Style="{StaticResource TelemetryUnit}"/>
                     </StackPanel>
-                    <TextBlock Foreground="#8B949E" FontFamily="Consolas" FontSize="11" Margin="0,4">
-                        <Run Text="{Binding FuelLbs, StringFormat={}{0:F0}}"/>
-                        <Run Text=" lbs"/>
-                    </TextBlock>
-                </StackPanel>
-            </Border>
-
-            <!-- Ambiente -->
-            <Border Style="{StaticResource Card}">
-                <StackPanel>
-                    <TextBlock Text="AMBIENTE" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Margin="0,8,0,0">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                            <TextBlock Text="OAT: " Foreground="#8B949E" FontSize="12"/>
-                            <TextBlock Text="{Binding OAT, StringFormat={}{0:F1}°C}"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontFamily="Consolas" FontSize="14"/>
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="Viento: " Foreground="#8B949E" FontSize="12"/>
-                            <TextBlock FontFamily="Consolas" FontSize="13"
-                                       Foreground="{StaticResource AccentLightBlueBrush}">
-                                <Run Text="{Binding WindDir, StringFormat={}{0:000}}"/>
-                                <Run Text="° / "/>
-                                <Run Text="{Binding WindSpeed, StringFormat={}{0:F0}}"/>
-                                <Run Text="kts"/>
-                            </TextBlock>
-                        </StackPanel>
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-        </UniformGrid>
-
-        <!-- Luces e indicadores -->
-        <Border Style="{StaticResource Card}">
-            <StackPanel>
-                <TextBlock Text="INDICADORES DE SISTEMAS" Style="{StaticResource FieldLabel}"
-                           Margin="0,0,0,12"/>
-                <StackPanel Orientation="Horizontal">
-                    <!-- Strobe -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="#FF4444"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding StrobeOn}" Value="True">
-                                            <Setter Property="Fill" Value="#3FB950"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Ellipse.Style>
-                        </Ellipse>
-                        <TextBlock Text="STROBE" Foreground="#8B949E" FontSize="12"/>
-                    </StackPanel>
-                    <!-- Beacon -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
-                            <Ellipse.Style>
-                                <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="#FF4444"/>
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding BeaconOn}" Value="True">
-                                            <Setter Property="Fill" Value="#3FB950"/>
+                                            <Setter Property="Fill" Value="{StaticResource LedRed}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
-                        <TextBlock Text="BEACON" Foreground="#8B949E" FontSize="12"/>
+                        <TextBlock Text="BEACON" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="70"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding BeaconOn}" Value="True">
+                                            <Setter Property="Text"       Value="ON"/>
+                                            <Setter Property="Foreground" Value="#FF4444"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
-                    <!-- Landing -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="#FF4444"/>
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding LandingOn}" Value="True">
-                                            <Setter Property="Fill" Value="#3FB950"/>
+                                            <Setter Property="Fill" Value="{StaticResource LedWhite}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
-                        <TextBlock Text="LANDING" Foreground="#8B949E" FontSize="12"/>
+                        <TextBlock Text="LANDING" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="70"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LandingOn}" Value="True">
+                                            <Setter Property="Text"       Value="ON"/>
+                                            <Setter Property="Foreground" Value="#CCDDFF"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
-                    <!-- On Ground -->
-                    <StackPanel Orientation="Horizontal" Margin="0,0,20,0">
-                        <Ellipse Width="10" Height="10" VerticalAlignment="Center" Margin="0,0,6,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse">
-                                    <Setter Property="Fill" Value="#8B949E"/>
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding OnGround}" Value="True">
-                                            <Setter Property="Fill" Value="#FFD700"/>
+                                        <DataTrigger Binding="{Binding TaxiOn}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedAmber}"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
-                        <TextBlock Text="EN TIERRA" Foreground="#8B949E" FontSize="12"/>
+                        <TextBlock Text="TAXI" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="70"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding TaxiOn}" Value="True">
+                                            <Setter Property="Text"       Value="ON"/>
+                                            <Setter Property="Foreground" Value="#FFCC44"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavOn}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedGreen}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="NAV" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="70"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NavOn}" Value="True">
+                                            <Setter Property="Text"       Value="ON"/>
+                                            <Setter Property="Foreground" Value="#3FB950"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                     </StackPanel>
                 </StackPanel>
-            </StackPanel>
-        </Border>
-    </StackPanel>
 
-    <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-    </UserControl.Resources>
+                <Rectangle Grid.Column="1" Fill="#141C28"/>
+
+                <!-- COL 2: CABINA + TREN -->
+                <StackPanel Grid.Column="2" Margin="16,0">
+                    <TextBlock Text="CABINA / TREN" Style="{StaticResource FieldLabel}" Margin="0,0,0,12"/>
+                    <!-- SEAT BELT -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SeatBeltSign}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedAmber}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="SEAT BELT" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="80"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SeatBeltSign}" Value="True">
+                                            <Setter Property="Text"       Value="ON"/>
+                                            <Setter Property="Foreground" Value="#FFCC44"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <!-- NO SMOKING -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NoSmokingSign}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedAmber}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="NO SMOKING" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="80"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NoSmokingSign}" Value="True">
+                                            <Setter Property="Text"       Value="ON"/>
+                                            <Setter Property="Foreground" Value="#FFCC44"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <!-- GEAR -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding GearDown}"         Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedGreen}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding GearTransitioning}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedAmber}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="GEAR" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="80"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="UP"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding GearDown}" Value="True">
+                                            <Setter Property="Text"       Value="DOWN"/>
+                                            <Setter Property="Foreground" Value="#3FB950"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding GearTransitioning}" Value="True">
+                                            <Setter Property="Text"       Value="TRANSIT"/>
+                                            <Setter Property="Foreground" Value="#FFCC44"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <!-- SPOILERS -->
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SpoilersArmed}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedBlue}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="SPD BRK" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="80"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="—"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding SpoilersArmed}" Value="True">
+                                            <Setter Property="Text"       Value="ARMED"/>
+                                            <Setter Property="Foreground" Value="#2D9CDB"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+
+                <Rectangle Grid.Column="3" Fill="#141C28"/>
+
+                <!-- COL 3: APU + BLEED + ON GROUND -->
+                <StackPanel Grid.Column="4" Margin="16,0">
+                    <TextBlock Text="APU / BLEED AIR" Style="{StaticResource FieldLabel}" Margin="0,0,0,12"/>
+                    <!-- APU AVAIL -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ApuAvailable}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedAmber}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="APU AVAIL" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="80"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="—"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ApuAvailable}" Value="True">
+                                            <Setter Property="Text"       Value="AVAIL"/>
+                                            <Setter Property="Foreground" Value="#FFCC44"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <!-- APU RUN -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ApuRunning}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedGreen}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="APU RUN" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="80"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding ApuRunning}" Value="True">
+                                            <Setter Property="Text"       Value="RUN"/>
+                                            <Setter Property="Foreground" Value="#3FB950"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <!-- BLEED -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,9">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedBlue}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="BLEED" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="80"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="OFF"/>
+                                    <Setter Property="Foreground" Value="#606C7A"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
+                                            <Setter Property="Text"       Value="ON"/>
+                                            <Setter Property="Foreground" Value="#2D9CDB"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                    <!-- ON GROUND -->
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="18" Height="18" VerticalAlignment="Center" Margin="0,0,10,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource LedOff}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OnGround}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource LedAmber}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="ON GND" Foreground="#8B949E" FontSize="12" VerticalAlignment="Center" Width="80"/>
+                        <TextBlock FontSize="10" FontWeight="SemiBold" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text"       Value="AIRBORNE"/>
+                                    <Setter Property="Foreground" Value="#3FB950"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OnGround}" Value="True">
+                                            <Setter Property="Text"       Value="GND"/>
+                                            <Setter Property="Foreground" Value="#FFCC44"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </StackPanel>
+
+                <Rectangle Grid.Column="5" Fill="#141C28"/>
+
+                <!-- COL 4: REGLAS PUNTAJE -->
+                <StackPanel Grid.Column="6" Margin="16,0">
+                    <TextBlock Text="REGLAS DE PUNTAJE" Style="{StaticResource FieldLabel}" Margin="0,0,0,12"/>
+                    <TextBlock FontSize="11" Foreground="#606C7A" Margin="0,0,0,5">
+                        <Run Foreground="#3FB950" Text="&lt;100 fpm  "/>
+                        <Run Text="sin penalización"/>
+                    </TextBlock>
+                    <TextBlock FontSize="11" Foreground="#606C7A" Margin="0,0,0,5">
+                        <Run Foreground="#FFCC00" Text="100-200  "/>
+                        <Run Text="-10 pts"/>
+                    </TextBlock>
+                    <TextBlock FontSize="11" Foreground="#606C7A" Margin="0,0,0,5">
+                        <Run Foreground="#FF8844" Text="200-400  "/>
+                        <Run Text="-20 pts"/>
+                    </TextBlock>
+                    <TextBlock FontSize="11" Foreground="#606C7A" Margin="0,0,0,12">
+                        <Run Foreground="#FF4444" Text="&gt;700  "/>
+                        <Run Text="-30 pts"/>
+                    </TextBlock>
+                    <TextBlock FontSize="11" Foreground="#606C7A" Margin="0,0,0,5">
+                        <Run Foreground="#FF4444" Text="Strobe OFF  "/>
+                        <Run Text="penaliza"/>
+                    </TextBlock>
+                    <TextBlock FontSize="11" Foreground="#606C7A" Margin="0,0,0,5">
+                        <Run Foreground="#FF8844" Text="G &gt;1.5  "/>
+                        <Run Text="-10 pts"/>
+                    </TextBlock>
+                    <TextBlock FontSize="11" Foreground="#606C7A">
+                        <Run Foreground="#FF4444" Text="G &gt;2.0  "/>
+                        <Run Text="-20 pts"/>
+                    </TextBlock>
+                </StackPanel>
+
+            </Grid>
+        </Border>
+
+    </StackPanel>
 </UserControl>

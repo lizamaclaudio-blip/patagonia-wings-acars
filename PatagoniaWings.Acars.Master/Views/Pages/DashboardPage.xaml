@@ -3,118 +3,191 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
     <UserControl.DataContext>
-        <Binding Path="DashboardVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
+        <Binding Path="DataContext.DashboardVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
     </UserControl.DataContext>
 
     <StackPanel>
-        <TextBlock Text="Dashboard" Style="{StaticResource PageTitle}"/>
 
-        <!-- Tarjetas de estadísticas -->
-        <UniformGrid Columns="4" Margin="0,0,0,24">
-            <!-- Horas Totales -->
-            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+        <!-- ═══ HERO BANNER ════════════════════════════════════════════════ -->
+        <Border CornerRadius="12" Margin="0,0,0,24" Height="130" ClipToBounds="True">
+            <Border.Background>
+                <ImageBrush ImageSource="pack://application:,,,/Assets/hero-banner.png"
+                            Stretch="UniformToFill" AlignmentY="Center"/>
+            </Border.Background>
+            <Border>
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#E00A0E14" Offset="0"/>
+                        <GradientStop Color="#AA0A0E14" Offset="0.5"/>
+                        <GradientStop Color="#330A0E14" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Grid Margin="28,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                            <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
+                                   Height="26" Width="26" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="PATAGONIA WINGS" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="#2D9CDB" VerticalAlignment="Center"
+                                       FontFamily="Segoe UI"/>
+                        </StackPanel>
+                        <TextBlock FontSize="24" FontWeight="Bold" Foreground="White" FontFamily="Segoe UI">
+                            <Run Text="Bienvenido, "/>
+                            <Run Text="{Binding DataContext.Pilot.RankName, RelativeSource={RelativeSource AncestorType=Window}, TargetNullValue=''}"
+                                 Foreground="#FFD700"/>
+                            <Run Text=" "/>
+                            <Run Text="{Binding DataContext.Pilot.FullName, RelativeSource={RelativeSource AncestorType=Window}, TargetNullValue=Piloto}"
+                                 Foreground="#2D9CDB"/>
+                        </TextBlock>
+                        <TextBlock FontSize="13" Foreground="#8B949E" FontFamily="Consolas" Margin="0,4,0,0">
+                            <Run Text="{Binding DataContext.Pilot.CallSign, RelativeSource={RelativeSource AncestorType=Window}, TargetNullValue=''}"/>
+                            <Run Text=" · "/>
+                            <Run Text="{Binding RankName}"/>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,8,0">
+                        <Border Style="{StaticResource PillBlue}">
+                            <TextBlock Text="ACARS v1.0  CONECTADO" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="#2D9CDB"/>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Border>
+
+        <!-- ═══ TARJETAS ESTADÍSTICAS ════════════════════════════════════ -->
+        <UniformGrid Columns="4" Margin="0,0,0,28">
+
+            <!-- Horas -->
+            <Border Style="{StaticResource CardBlue}" Margin="0,0,12,0">
                 <StackPanel>
-                    <TextBlock Text="HORAS TOTALES" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <TextBlock Text="{Binding TotalHours}" Style="{StaticResource TelemetryValue}"
-                                   FontSize="30"/>
-                        <TextBlock Text="h" Style="{StaticResource TelemetryUnit}" FontSize="14"/>
+                    <TextBlock Text="✈  HORAS TOTALES" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <TextBlock Text="{Binding TotalHours}" Style="{StaticResource StatBig}"/>
+                        <TextBlock Text="h" Style="{StaticResource TelemetryUnit}" FontSize="15"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
+
             <!-- Vuelos -->
-            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+            <Border Style="{StaticResource CardTeal}" Margin="0,0,12,0">
                 <StackPanel>
-                    <TextBlock Text="VUELOS REALIZADOS" Style="{StaticResource FieldLabel}"/>
-                    <TextBlock Text="{Binding TotalFlights}" Style="{StaticResource TelemetryValue}"
-                               FontSize="30" Margin="0,8,0,0"/>
+                    <TextBlock Text="⊞  VUELOS REALIZADOS" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding TotalFlights}" Style="{StaticResource StatBig}" Margin="0,10,0,0"/>
                 </StackPanel>
             </Border>
+
             <!-- Distancia -->
-            <Border Style="{StaticResource Card}" Margin="0,0,12,0">
+            <Border Style="{StaticResource CardGreen}" Margin="0,0,12,0">
                 <StackPanel>
-                    <TextBlock Text="DISTANCIA TOTAL" Style="{StaticResource FieldLabel}"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                        <TextBlock Text="{Binding TotalDistance}" Style="{StaticResource TelemetryValue}"
-                                   FontSize="30"/>
-                        <TextBlock Text="NM" Style="{StaticResource TelemetryUnit}" FontSize="14"/>
+                    <TextBlock Text="⊕  DISTANCIA TOTAL" Style="{StaticResource FieldLabel}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <TextBlock Text="{Binding TotalDistance}" Style="{StaticResource StatBig}"/>
+                        <TextBlock Text="NM" Style="{StaticResource TelemetryUnit}" FontSize="15"/>
                     </StackPanel>
                 </StackPanel>
             </Border>
+
             <!-- Rango -->
-            <Border Style="{StaticResource Card}">
+            <Border Style="{StaticResource CardGold}">
                 <StackPanel>
-                    <TextBlock Text="RANGO ACTUAL" Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="★  RANGO ACTUAL" Style="{StaticResource FieldLabel}"/>
                     <TextBlock Text="{Binding RankName}" Foreground="#FFD700"
-                               FontSize="16" FontWeight="Bold" FontFamily="Segoe UI"
-                               Margin="0,8,0,0" TextWrapping="Wrap"/>
+                               FontSize="15" FontWeight="Bold" FontFamily="Segoe UI"
+                               Margin="0,10,0,0" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
 
-        <!-- Vuelos recientes -->
-        <TextBlock Text="Vuelos Recientes" FontSize="16" FontWeight="SemiBold"
-                   Foreground="White" FontFamily="Segoe UI" Margin="0,0,0,12"/>
+        <!-- ═══ VUELOS RECIENTES ══════════════════════════════════════════ -->
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+            <TextBlock Text="Vuelos Recientes" FontSize="16" FontWeight="SemiBold"
+                       Foreground="White" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+            <Border Style="{StaticResource PillBlue}" Margin="12,0,0,0">
+                <TextBlock Text="últimos 20" Foreground="#2D9CDB" FontSize="10"/>
+            </Border>
+        </StackPanel>
 
         <Border Style="{StaticResource Card}">
-            <!-- Encabezado -->
             <StackPanel>
-                <Grid Margin="0,0,0,8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="60"/>
-                        <ColumnDefinition Width="60"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBlock Text="VUELO" Style="{StaticResource FieldLabel}" Grid.Column="0"/>
-                    <TextBlock Text="ORIGEN" Style="{StaticResource FieldLabel}" Grid.Column="1"/>
-                    <TextBlock Text="DESTINO" Style="{StaticResource FieldLabel}" Grid.Column="2"/>
-                    <TextBlock Text="AERONAVE" Style="{StaticResource FieldLabel}" Grid.Column="3"/>
-                    <TextBlock Text="DURACIÓN" Style="{StaticResource FieldLabel}" Grid.Column="4"/>
-                    <TextBlock Text="VS" Style="{StaticResource FieldLabel}" Grid.Column="5"/>
-                    <TextBlock Text="NOTA" Style="{StaticResource FieldLabel}" Grid.Column="6"/>
-                    <TextBlock Text="ESTADO" Style="{StaticResource FieldLabel}" Grid.Column="7"/>
-                </Grid>
-                <Separator Background="{StaticResource BorderBrush}" Margin="0,0,0,8"/>
+                <!-- Encabezado tabla -->
+                <Border Background="#0A0E14" CornerRadius="6" Padding="12,8" Margin="0,0,0,2">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="80"/>
+                            <ColumnDefinition Width="70"/>
+                            <ColumnDefinition Width="55"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="VUELO"     Style="{StaticResource FieldLabel}" Grid.Column="0"/>
+                        <TextBlock Text="ORIGEN"    Style="{StaticResource FieldLabel}" Grid.Column="1"/>
+                        <TextBlock Text="DESTINO"   Style="{StaticResource FieldLabel}" Grid.Column="2"/>
+                        <TextBlock Text="AERONAVE"  Style="{StaticResource FieldLabel}" Grid.Column="3"/>
+                        <TextBlock Text="DURACIÓN"  Style="{StaticResource FieldLabel}" Grid.Column="4"/>
+                        <TextBlock Text="VS"        Style="{StaticResource FieldLabel}" Grid.Column="5"/>
+                        <TextBlock Text="NOTA"      Style="{StaticResource FieldLabel}" Grid.Column="6"/>
+                        <TextBlock Text="ESTADO"    Style="{StaticResource FieldLabel}" Grid.Column="7"/>
+                    </Grid>
+                </Border>
 
-                <!-- Lista de vuelos -->
+                <!-- Filas de vuelos -->
                 <ItemsControl ItemsSource="{Binding RecentFlights}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="0,6" BorderBrush="#30363D" BorderThickness="0,0,0,1">
+                            <Border Padding="12,9" BorderBrush="#181F28" BorderThickness="0,0,0,1">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#0F1620"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="110"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="90"/>
                                         <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="100"/>
-                                        <ColumnDefinition Width="80"/>
-                                        <ColumnDefinition Width="60"/>
-                                        <ColumnDefinition Width="60"/>
+                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="55"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding FlightNumber}" Foreground="White"
-                                               FontFamily="Consolas" FontSize="13" Grid.Column="0"/>
+                                               FontFamily="Consolas" FontSize="13" FontWeight="SemiBold" Grid.Column="0"/>
                                     <TextBlock Text="{Binding DepartureIcao}" Foreground="#2D9CDB"
                                                FontFamily="Consolas" FontSize="13" Grid.Column="1"/>
                                     <TextBlock Text="{Binding ArrivalIcao}" Foreground="#2D9CDB"
                                                FontFamily="Consolas" FontSize="13" Grid.Column="2"/>
                                     <TextBlock Text="{Binding AircraftIcao}" Foreground="#8B949E"
                                                FontSize="12" Grid.Column="3"/>
-                                    <TextBlock Foreground="#8B949E" FontSize="12" Grid.Column="4"
+                                    <TextBlock Foreground="#8B949E" FontSize="12" FontFamily="Consolas" Grid.Column="4"
                                                Text="{Binding Duration, StringFormat=hh\\:mm}"/>
                                     <TextBlock Foreground="#8B949E" FontFamily="Consolas"
                                                FontSize="12" Grid.Column="5"
                                                Text="{Binding LandingVS, StringFormat={}{0:F0}}"/>
-                                    <TextBlock FontSize="13" FontWeight="Bold" Grid.Column="6"
-                                               Text="{Binding Grade}"
-                                               Foreground="{Binding Grade, Converter={StaticResource GradeToColorConverter}}"/>
+                                    <!-- NOTA con color -->
+                                    <Border Grid.Column="6" CornerRadius="4" Padding="6,2" HorizontalAlignment="Left">
+                                        <Border.Background>
+                                            <SolidColorBrush Color="{Binding Grade, Converter={StaticResource GradeToColorConverter}}"/>
+                                        </Border.Background>
+                                        <TextBlock Text="{Binding Grade}" FontSize="12" FontWeight="Bold"
+                                                   Foreground="White"/>
+                                    </Border>
                                     <TextBlock Text="{Binding Status}" FontSize="11"
-                                               Foreground="#8B949E" Grid.Column="7"/>
+                                               Foreground="#606C7A" Grid.Column="7"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -122,12 +195,13 @@
                 </ItemsControl>
 
                 <!-- Sin vuelos -->
-                <TextBlock Text="Sin vuelos registrados aún. ¡Realiza tu primer vuelo!"
-                           Foreground="#8B949E" FontSize="13" FontFamily="Segoe UI"
-                           HorizontalAlignment="Center" Margin="0,20"
+                <TextBlock Text="Sin vuelos registrados aún. ¡Realiza tu primer vuelo en Pre-Vuelo!"
+                           Foreground="#606C7A" FontSize="13" FontFamily="Segoe UI"
+                           HorizontalAlignment="Center" Margin="0,24"
                            Visibility="{Binding RecentFlights.Count,
                                Converter={StaticResource ZeroToVisibilityConverter}}"/>
             </StackPanel>
         </Border>
+
     </StackPanel>
 </UserControl>

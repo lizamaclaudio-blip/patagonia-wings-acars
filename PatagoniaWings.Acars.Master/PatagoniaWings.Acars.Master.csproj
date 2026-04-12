@@ -14,6 +14,7 @@
     <ProjectTypeGuids>{60dc8134-eba5-43b8-bcc9-bb4bc16c2548};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <Deterministic>true</Deterministic>
+    <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Assets\patagonia-logo.ico</ApplicationIcon>
     <StartupObject>PatagoniaWings.Acars.Master.App</StartupObject>
@@ -35,6 +36,26 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <Prefer32Bit>true</Prefer32Bit>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -46,6 +67,9 @@
     <Reference Include="System.Xaml" />
     <Reference Include="WindowsBase" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="fsuipcClient">
+      <HintPath>..\Libs\fsuipcClient.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PatagoniaWings.Acars.Core\PatagoniaWings.Acars.Core.csproj">
@@ -56,16 +80,23 @@
       <Project>{C3D4E5F6-A7B8-9012-CDEF-123456789012}</Project>
       <Name>PatagoniaWings.Acars.SimConnect</Name>
     </ProjectReference>
-    <ProjectReference Include="..\PatagoniaWings.Acars.XPlane\PatagoniaWings.Acars.XPlane.csproj">
-      <Project>{D4E5F6A7-B8C9-0123-DEF0-234567890123}</Project>
-      <Name>PatagoniaWings.Acars.XPlane</Name>
-    </ProjectReference>
-  </ItemGroup>
+</ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <None Include="Assets\Presets\SUR Checkride A0.WPR" />
+    <None Include="Assets\Presets\SUR Checkride A3.WPR" />
+    <None Include="Assets\Presets\SUR Checkride C1.WPR" />
+    <None Include="Assets\Presets\SUR Checkride C3.WPR" />
+    <None Include="Assets\Presets\SUR Checkride CX.WPR" />
+    <None Include="Presets\PW Checkride A0.WPR" />
+    <None Include="Presets\PW Checkride C1.WPR" />
+    <Page Include="Resources\Styles\AppStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\LoginWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -74,11 +105,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\Pages\DashboardPage.xaml">
+    <Page Include="Views\Pages\CommunityPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\Pages\PreFlightPage.xaml">
+    <Page Include="Views\Pages\DashboardPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -90,15 +121,11 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Views\Pages\PreFlightPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\Pages\ProfilePage.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\Pages\CommunityPage.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Resources\Styles\AppStyles.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -106,31 +133,35 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Helpers\RelayCommand.cs" />
     <Compile Include="Helpers\AcarsContext.cs" />
+    <Compile Include="Helpers\FsuipcService.cs" />
+    <Compile Include="Helpers\SimulatorCoordinator.cs" />
     <Compile Include="Helpers\Converters.cs" />
-    <Compile Include="Helpers\SoundPlayer.cs" />
     <Compile Include="Helpers\PhaseToStringConverter.cs" />
-    <Compile Include="ViewModels\ViewModelBase.cs" />
+    <Compile Include="Helpers\RelayCommand.cs" />
+    <Compile Include="Helpers\SoundPlayer.cs" />
+    <Compile Include="Helpers\UpdateService.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ViewModels\CommunityViewModel.cs" />
+    <Compile Include="ViewModels\DashboardViewModel.cs" />
+    <Compile Include="ViewModels\InFlightViewModel.cs" />
     <Compile Include="ViewModels\LoginViewModel.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
-    <Compile Include="ViewModels\DashboardViewModel.cs" />
-    <Compile Include="ViewModels\PreFlightViewModel.cs" />
-    <Compile Include="ViewModels\InFlightViewModel.cs" />
     <Compile Include="ViewModels\PostFlightViewModel.cs" />
+    <Compile Include="ViewModels\PreFlightViewModel.cs" />
     <Compile Include="ViewModels\ProfileViewModel.cs" />
-    <Compile Include="ViewModels\CommunityViewModel.cs" />
+    <Compile Include="ViewModels\ViewModelBase.cs" />
     <Compile Include="Views\LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Pages\CommunityPage.xaml.cs">
+      <DependentUpon>CommunityPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Pages\DashboardPage.xaml.cs">
       <DependentUpon>DashboardPage.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Views\Pages\PreFlightPage.xaml.cs">
-      <DependentUpon>PreFlightPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Pages\InFlightPage.xaml.cs">
       <DependentUpon>InFlightPage.xaml</DependentUpon>
@@ -138,17 +169,49 @@
     <Compile Include="Views\Pages\PostFlightPage.xaml.cs">
       <DependentUpon>PostFlightPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Pages\PreFlightPage.xaml.cs">
+      <DependentUpon>PreFlightPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Pages\ProfilePage.xaml.cs">
       <DependentUpon>ProfilePage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="Views\Pages\CommunityPage.xaml.cs">
-      <DependentUpon>CommunityPage.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Resource Include="Assets\patagonia-logo.ico" />
+    <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Assets\patagonia-logo.ico" />
+    <Resource Include="Assets\SurKit\airbone.png" />
+    <Resource Include="Assets\SurKit\Airport.png" />
+    <Resource Include="Assets\SurKit\approach.png" />
+    <Resource Include="Assets\SurKit\Arrivals.png" />
+    <Resource Include="Assets\SurKit\Bola gris.png" />
+    <Resource Include="Assets\SurKit\Bola roja.png" />
+    <Resource Include="Assets\SurKit\Bola verde.png" />
+    <Resource Include="Assets\SurKit\clima_gris_1.png" />
+    <Resource Include="Assets\SurKit\Departure.png" />
+    <Resource Include="Assets\SurKit\onGround.png" />
+    <Resource Include="Assets\SurKit\route.png" />
+    <Resource Include="Assets\SurKit\Telemetry.png" />
+    <Resource Include="Assets\SurKit\tracker.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\hero-banner.png" />
+    <Resource Include="Assets\icon-dispatch.png" />
+    <Resource Include="Assets\patagonia-logo.png" />
     <Resource Include="Assets\patagonia-bg.jpg" />
+    <Content Include="Assets\Sounds\Beep.wav" />
+    <Content Include="Assets\Sounds\DingACARS.wav" />
+    <Content Include="Assets\Sounds\Radio.wav" />
+    <Content Include="..\libs\SimConnect.dll">
+      <Link>SimConnect.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\libs\fsuipcClient.dll">
+      <Link>fsuipcClient.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="obj\Release\Resources\Styles\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using PatagoniaWings.Acars.Master.Helpers;
@@ -35,45 +36,116 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                     IsLoading = true;
                     ErrorMessage = string.Empty;
+                    WriteAuthLog("LoginViewModel.ExecuteLoginAsync started. UserInput=" + Username.Trim());
 
                     try
                     {
                         var result = await AcarsContext.Api.LoginAsync(Username, Password);
-                        if (result.Success && result.Data != null)
+                        WriteAuthLog("LoginAsync finished. Success=" + result.Success);
+
+                        if (result.Success && result.Data != null && result.Data.Pilot != null)
                         {
                             var pilot = result.Data.Pilot;
-                            pilot.Token = result.Data.Token;
+                            var token = (result.Data.Token ?? string.Empty).Trim();
+
+                            if (string.IsNullOrWhiteSpace(token))
+                            {
+                                token = (pilot.Token ?? string.Empty).Trim();
+                                WriteAuthLog("LoginResponse.Token vacío. Fallback a Pilot.Token => " +
+                                             (string.IsNullOrWhiteSpace(token) ? "VACIO" : "OK"));
+                            }
+
+                            if (string.IsNullOrWhiteSpace(token))
+                            {
+                                ErrorMessage = "Supabase autenticó, pero la respuesta del login no trajo token usable. Revisa auth.log";
+                                WriteAuthLog("Login failed after success: both LoginResponse.Token and Pilot.Token were empty.");
+                                return;
+                            }
+
+                            pilot.Token = token;
                             AcarsContext.Api.SetAuthToken(pilot.Token);
+                            AcarsContext.Auth.SetCurrentPilot(pilot);
+
                             if (RememberMe)
+                            {
                                 AcarsContext.Auth.SaveSession(pilot);
+                                WriteAuthLog("Session saved.");
+                            }
+                            else
+                            {
+                                AcarsContext.Auth.ClearSavedSession();
+                                WriteAuthLog("Session kept in memory only.");
+                            }
 
                             AcarsContext.Sound.PlayDing();
+                            WriteAuthLog("Login success. Opening main window.");
                             Application.Current.Dispatcher.Invoke(() => OnLoginSuccess?.Invoke());
                         }
                         else
                         {
-                            var error = result.Error ?? string.Empty;
+                            var error = (result.Error ?? string.Empty).Trim();
+
                             if (error.IndexOf("invalid login credentials", StringComparison.OrdinalIgnoreCase) >= 0)
                             {
                                 ErrorMessage = "Correo/callsign o contraseña incorrectos.";
+                            }
+                            else if (string.IsNullOrWhiteSpace(error))
+                            {
+                                ErrorMessage = "Error de conexión. Revisa el log de autenticación en " + GetResolvedLogPath();
                             }
                             else
                             {
                                 ErrorMessage = error.StartsWith("No pude resolver", StringComparison.OrdinalIgnoreCase)
                                     ? error + " Si quieres entrar altiro, usa tu correo de acceso en vez del callsign."
-                                    : $"Error de conexión: {error}";
+                                    : "Error de conexión: " + error;
                             }
+
+                            WriteAuthLog("LoginAsync returned failure. Error=" + error);
                         }
                     }
                     catch (Exception ex)
                     {
-                        ErrorMessage = $"Error inesperado: {ex.Message}";
+                        ErrorMessage = "Error inesperado: " + ex.Message;
+                        WriteAuthLog("Unexpected exception: " + ex);
                     }
                     finally
                     {
                         IsLoading = false;
                     }
                 });
+        }
+
+        private static void WriteAuthLog(string message)
+        {
+            try
+            {
+                var path = GetResolvedLogPath();
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                File.AppendAllText(
+                    path,
+                    "[" + DateTime.UtcNow.ToString("o") + "] " + message + Environment.NewLine);
+            }
+            catch
+            {
+            }
+        }
+
+        private static string GetResolvedLogPath()
+        {
+            try
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                return Path.Combine(appData, "PatagoniaWings", "Acars", "logs", "auth.log");
+            }
+            catch
+            {
+                return "auth.log";
+            }
         }
     }
 }

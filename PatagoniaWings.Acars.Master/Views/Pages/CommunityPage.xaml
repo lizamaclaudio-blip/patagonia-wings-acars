@@ -3,150 +3,357 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
     <UserControl.DataContext>
-        <Binding Path="CommunityVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
+        <Binding Path="DataContext.CommunityVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
     </UserControl.DataContext>
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+        <local:TabToVisibilityConverter x:Key="TabToVisibilityConverter"
+                                        xmlns:local="clr-namespace:PatagoniaWings.Acars.Master.Helpers"/>
+        <local:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"
+                                         xmlns:local="clr-namespace:PatagoniaWings.Acars.Master.Helpers"/>
+    </UserControl.Resources>
 
-    <StackPanel>
+    <StackPanel MaxWidth="900">
+
+        <!-- ── CABECERA ──────────────────────────────────────────────────────── -->
+        <TextBlock Text="RED · PILOTOS" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
         <Grid Margin="0,0,0,20">
             <TextBlock Text="Comunidad" Style="{StaticResource PageTitle}" Margin="0"/>
-            <Button Content="🔄 Actualizar" Style="{StaticResource SecondaryButton}"
-                    Command="{Binding RefreshCommand}" HorizontalAlignment="Right"
-                    VerticalAlignment="Top"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <!-- Loading indicator -->
+                <TextBlock Text="Actualizando..." Foreground="#2D9CDB" FontSize="12"
+                           VerticalAlignment="Center" Margin="0,0,12,0"
+                           Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                <Button Content="↻  ACTUALIZAR" Style="{StaticResource SecondaryButton}"
+                        Command="{Binding RefreshCommand}" Padding="12,8"/>
+            </StackPanel>
         </Grid>
 
-        <!-- Tabs -->
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,16">
-            <Button Content="Pilotos En Línea" Click="TabOnline_Click"
-                    Tag="0" x:Name="TabOnlineBtn">
-                <Button.Style>
-                    <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedTab}" Value="0">
-                                <Setter Property="Background" Value="#1A3A5C"/>
-                                <Setter Property="BorderBrush" Value="{StaticResource AccentLightBlueBrush}"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
-            <Button Content="Tabla de Líderes" Click="TabLeader_Click"
-                    Tag="1" Margin="8,0,0,0">
-                <Button.Style>
-                    <Style TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding SelectedTab}" Value="1">
-                                <Setter Property="Background" Value="#1A3A5C"/>
-                                <Setter Property="BorderBrush" Value="{StaticResource AccentLightBlueBrush}"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Button.Style>
-            </Button>
-        </StackPanel>
+        <!-- ── TABS ──────────────────────────────────────────────────────────── -->
+        <Border Background="#0D1117" CornerRadius="10" Padding="4" Margin="0,0,0,16">
+            <StackPanel Orientation="Horizontal">
+                <!-- Tab Online -->
+                <Button Click="TabOnline_Click" Padding="16,10" Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="#8B949E"/>
+                            <Setter Property="FontFamily" Value="Segoe UI"/>
+                            <Setter Property="FontSize" Value="13"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <Ellipse Width="8" Height="8" Fill="#3FB950"
+                                                         VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTab}" Value="0">
+                                    <Setter Property="Background" Value="#1A2130"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="#CDD9E5"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <Button.Content>Pilotos En Línea</Button.Content>
+                </Button>
 
-        <!-- Pilotos en línea -->
+                <!-- Tab Leaderboard -->
+                <Button Click="TabLeader_Click" Margin="4,0,0,0" Padding="16,10" Cursor="Hand">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="#8B949E"/>
+                            <Setter Property="FontFamily" Value="Segoe UI"/>
+                            <Setter Property="FontSize" Value="13"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                CornerRadius="7" Padding="{TemplateBinding Padding}">
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="🏆" FontSize="12"
+                                                           VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                                <ContentPresenter VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedTab}" Value="1">
+                                    <Setter Property="Background" Value="#1A2130"/>
+                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                </DataTrigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Foreground" Value="#CDD9E5"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <Button.Content>Tabla de Líderes</Button.Content>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- ── PILOTOS EN LÍNEA ───────────────────────────────────────────────── -->
         <Border Style="{StaticResource Card}"
                 Visibility="{Binding SelectedTab, Converter={StaticResource TabToVisibilityConverter}, ConverterParameter=0}">
             <StackPanel>
+                <!-- Header tabla -->
+                <Grid Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="110"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="130"/>
+                        <ColumnDefinition Width="70"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="CALLSIGN" Style="{StaticResource FieldLabel}" Grid.Column="0"/>
+                    <TextBlock Text="PILOTO" Style="{StaticResource FieldLabel}" Grid.Column="1"/>
+                    <TextBlock Text="RANGO" Style="{StaticResource FieldLabel}" Grid.Column="2"/>
+                    <TextBlock Text="HORAS" Style="{StaticResource FieldLabel}" Grid.Column="3"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+                <Rectangle Height="1" Margin="0,0,0,8">
+                    <Rectangle.Fill>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#1A3A5C" Offset="0"/>
+                            <GradientStop Color="#0CA789" Offset="0.5"/>
+                            <GradientStop Color="#1A3A5C" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
+
                 <ItemsControl ItemsSource="{Binding OnlinePilots}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="0,8" BorderBrush="#30363D" BorderThickness="0,0,0,1">
+                            <Border Padding="4,10" BorderBrush="#1A2130" BorderThickness="0,0,0,1">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#0D1520"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="110"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="120"/>
-                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="130"/>
+                                        <ColumnDefinition Width="70"/>
                                     </Grid.ColumnDefinitions>
-                                    <StackPanel Orientation="Horizontal" Grid.Column="0">
-                                        <Ellipse Width="8" Height="8" Fill="#3FB950"
-                                                 VerticalAlignment="Center" Margin="0,0,6,0"/>
+
+                                    <!-- Callsign + LED online -->
+                                    <StackPanel Orientation="Horizontal" Grid.Column="0"
+                                                VerticalAlignment="Center">
+                                        <Grid Width="10" Height="10" Margin="0,0,8,0"
+                                              VerticalAlignment="Center">
+                                            <!-- Glow exterior -->
+                                            <Ellipse Width="10" Height="10">
+                                                <Ellipse.Fill>
+                                                    <RadialGradientBrush>
+                                                        <GradientStop Color="#803FB950" Offset="0.4"/>
+                                                        <GradientStop Color="#003FB950" Offset="1"/>
+                                                    </RadialGradientBrush>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                            <!-- LED core -->
+                                            <Ellipse Width="6" Height="6">
+                                                <Ellipse.Fill>
+                                                    <RadialGradientBrush>
+                                                        <GradientStop Color="#CCFFDD" Offset="0"/>
+                                                        <GradientStop Color="#3FB950" Offset="0.5"/>
+                                                        <GradientStop Color="#1A6630" Offset="1"/>
+                                                    </RadialGradientBrush>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                        </Grid>
                                         <TextBlock Text="{Binding CallSign}" Foreground="White"
-                                                   FontFamily="Consolas" FontSize="13" FontWeight="Bold"/>
+                                                   FontFamily="Consolas" FontSize="13"
+                                                   FontWeight="Bold" VerticalAlignment="Center"/>
                                     </StackPanel>
+
                                     <TextBlock Text="{Binding FullName}" Grid.Column="1"
-                                               Foreground="#8B949E" FontSize="13"/>
-                                    <TextBlock Text="{Binding RankName}" Grid.Column="2"
-                                               Foreground="#FFD700" FontSize="12"/>
+                                               Foreground="#8B949E" FontSize="13"
+                                               VerticalAlignment="Center"/>
+
+                                    <!-- Rango con badge dorado -->
+                                    <Border Grid.Column="2" CornerRadius="4" BorderThickness="1"
+                                            Padding="8,3" HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                        <Border.BorderBrush>
+                                            <SolidColorBrush Color="#3D3010"/>
+                                        </Border.BorderBrush>
+                                        <Border.Background>
+                                            <SolidColorBrush Color="#1A160A"/>
+                                        </Border.Background>
+                                        <TextBlock Text="{Binding RankName}" Foreground="#FFD700"
+                                                   FontSize="11" FontWeight="SemiBold"/>
+                                    </Border>
+
                                     <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F0}h}"
                                                Grid.Column="3" Foreground="#8B949E"
                                                FontFamily="Consolas" FontSize="12"
-                                               HorizontalAlignment="Right"/>
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBlock Text="Sin pilotos en línea en este momento."
-                           Foreground="#8B949E" FontSize="13" HorizontalAlignment="Center"
-                           Margin="0,20"
-                           Visibility="{Binding OnlinePilots.Count,
-                               Converter={StaticResource ZeroToVisibilityConverter}}"/>
+
+                <!-- Estado vacío -->
+                <Border Padding="0,20"
+                        Visibility="{Binding OnlinePilots.Count,
+                            Converter={StaticResource ZeroToVisibilityConverter}}">
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="✈" FontSize="28" Foreground="#252D3A"
+                                   HorizontalAlignment="Center" Margin="0,0,0,8"/>
+                        <TextBlock Text="Sin pilotos en línea en este momento."
+                                   Foreground="#8B949E" FontSize="13"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="Sé el primero en conectarte al simulador."
+                                   Foreground="#606C7A" FontSize="11"
+                                   HorizontalAlignment="Center" Margin="0,4,0,0"/>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </Border>
 
-        <!-- Leaderboard -->
+        <!-- ── LEADERBOARD ────────────────────────────────────────────────────── -->
         <Border Style="{StaticResource Card}"
                 Visibility="{Binding SelectedTab, Converter={StaticResource TabToVisibilityConverter}, ConverterParameter=1}">
             <StackPanel>
-                <!-- Header -->
-                <Grid Margin="0,0,0,8">
+                <!-- Header tabla -->
+                <Grid Margin="0,0,0,10">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="40"/>
-                        <ColumnDefinition Width="100"/>
+                        <ColumnDefinition Width="110"/>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="100"/>
-                        <ColumnDefinition Width="80"/>
+                        <ColumnDefinition Width="120"/>
+                        <ColumnDefinition Width="70"/>
                         <ColumnDefinition Width="80"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="#" Style="{StaticResource FieldLabel}" Grid.Column="0"/>
                     <TextBlock Text="CALLSIGN" Style="{StaticResource FieldLabel}" Grid.Column="1"/>
                     <TextBlock Text="PILOTO" Style="{StaticResource FieldLabel}" Grid.Column="2"/>
                     <TextBlock Text="RANGO" Style="{StaticResource FieldLabel}" Grid.Column="3"/>
-                    <TextBlock Text="HORAS" Style="{StaticResource FieldLabel}" Grid.Column="4"/>
-                    <TextBlock Text="PUNTOS" Style="{StaticResource FieldLabel}" Grid.Column="5"/>
+                    <TextBlock Text="HORAS" Style="{StaticResource FieldLabel}" Grid.Column="4"
+                               HorizontalAlignment="Right"/>
+                    <TextBlock Text="PUNTOS" Style="{StaticResource FieldLabel}" Grid.Column="5"
+                               HorizontalAlignment="Right"/>
                 </Grid>
-                <Separator Background="{StaticResource BorderBrush}" Margin="0,0,0,8"/>
+                <Rectangle Height="1" Margin="0,0,0,8">
+                    <Rectangle.Fill>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                            <GradientStop Color="#1A3A5C" Offset="0"/>
+                            <GradientStop Color="#FFD700" Offset="0.5"/>
+                            <GradientStop Color="#1A3A5C" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Rectangle.Fill>
+                </Rectangle>
 
                 <ItemsControl ItemsSource="{Binding Leaderboard}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="0,8" BorderBrush="#30363D" BorderThickness="0,0,0,1">
+                            <Border Padding="4,9" BorderBrush="#1A2130" BorderThickness="0,0,0,1">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#0D1520"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="40"/>
-                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="110"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="100"/>
-                                        <ColumnDefinition Width="80"/>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="70"/>
                                         <ColumnDefinition Width="80"/>
                                     </Grid.ColumnDefinitions>
+
+                                    <!-- Posición (sin binding de índice; mostramos emoji estático si top3) -->
                                     <TextBlock Foreground="#FFD700" FontFamily="Consolas"
-                                               FontSize="13" Grid.Column="0" VerticalAlignment="Center"/>
+                                               FontSize="13" FontWeight="Bold"
+                                               Grid.Column="0" VerticalAlignment="Center"
+                                               Text="·"/>
+
                                     <TextBlock Text="{Binding CallSign}" Foreground="White"
-                                               FontFamily="Consolas" FontSize="13" FontWeight="Bold"
-                                               Grid.Column="1"/>
+                                               FontFamily="Consolas" FontSize="13"
+                                               FontWeight="Bold" Grid.Column="1"
+                                               VerticalAlignment="Center"/>
+
                                     <TextBlock Text="{Binding FullName}" Grid.Column="2"
-                                               Foreground="#8B949E" FontSize="13"/>
-                                    <TextBlock Text="{Binding RankName}" Grid.Column="3"
-                                               Foreground="#FFD700" FontSize="11"/>
+                                               Foreground="#8B949E" FontSize="13"
+                                               VerticalAlignment="Center"/>
+
+                                    <Border Grid.Column="3" CornerRadius="4" BorderThickness="1"
+                                            Padding="8,3" HorizontalAlignment="Left"
+                                            VerticalAlignment="Center">
+                                        <Border.BorderBrush>
+                                            <SolidColorBrush Color="#3D3010"/>
+                                        </Border.BorderBrush>
+                                        <Border.Background>
+                                            <SolidColorBrush Color="#1A160A"/>
+                                        </Border.Background>
+                                        <TextBlock Text="{Binding RankName}" Foreground="#FFD700"
+                                                   FontSize="10" FontWeight="SemiBold"/>
+                                    </Border>
+
                                     <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F0}}"
-                                               Grid.Column="4" Foreground="{StaticResource AccentLightBlueBrush}"
-                                               FontFamily="Consolas" FontSize="13"/>
-                                    <TextBlock Text="{Binding Points}" Grid.Column="5"
-                                               Foreground="#FFD700" FontFamily="Consolas"
-                                               FontSize="13" FontWeight="Bold"/>
+                                               Grid.Column="4" Foreground="#2D9CDB"
+                                               FontFamily="Consolas" FontSize="13"
+                                               HorizontalAlignment="Right"
+                                               VerticalAlignment="Center"/>
+
+                                    <!-- Puntos con badge dorado -->
+                                    <Border Grid.Column="5" CornerRadius="4" BorderThickness="1"
+                                            Padding="6,3" HorizontalAlignment="Right"
+                                            VerticalAlignment="Center">
+                                        <Border.BorderBrush>
+                                            <SolidColorBrush Color="#3D3010"/>
+                                        </Border.BorderBrush>
+                                        <Border.Background>
+                                            <SolidColorBrush Color="#1A160A"/>
+                                        </Border.Background>
+                                        <TextBlock Text="{Binding Points}" Foreground="#FFD700"
+                                                   FontFamily="Consolas" FontSize="12"
+                                                   FontWeight="Bold"/>
+                                    </Border>
                                 </Grid>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <!-- Estado vacío -->
+                <TextBlock Text="Sin datos de pilotos disponibles."
+                           Foreground="#8B949E" FontSize="13"
+                           HorizontalAlignment="Center" Margin="0,20"
+                           Visibility="{Binding Leaderboard.Count,
+                               Converter={StaticResource ZeroToVisibilityConverter}}"/>
             </StackPanel>
         </Border>
-    </StackPanel>
 
-    <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-    </UserControl.Resources>
+    </StackPanel>
 </UserControl>

@@ -1,10 +1,13 @@
+using System;
 using PatagoniaWings.Acars.Core.Enums;
 
 namespace PatagoniaWings.Acars.Core.Models
 {
     public class SimData
     {
-        // Posición
+        public DateTime CapturedAtUtc { get; set; }
+
+        // Posicion
         public double Latitude { get; set; }
         public double Longitude { get; set; }
         public double AltitudeFeet { get; set; }
@@ -35,9 +38,30 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool StrobeLightsOn { get; set; }
         public bool BeaconLightsOn { get; set; }
         public bool LandingLightsOn { get; set; }
+        public bool TaxiLightsOn { get; set; }
+        public bool NavLightsOn { get; set; }
         public bool ParkingBrake { get; set; }
         public bool AutopilotActive { get; set; }
         public bool Pause { get; set; }
+
+        // Sistemas de cabina
+        public bool SeatBeltSign { get; set; }
+        public bool NoSmokingSign { get; set; }
+        public bool GearDown { get; set; }
+        public bool GearTransitioning { get; set; }
+        public bool FlapsDeployed { get; set; }
+        public double FlapsPercent { get; set; }
+        public bool SpoilersArmed { get; set; }
+        public bool ReverserActive { get; set; }
+
+        // Aviónica / Pressurización
+        public bool TransponderCharlieMode { get; set; }
+        public int TransponderCode { get; set; }
+        public bool ApuRunning { get; set; }
+        public bool ApuAvailable { get; set; }
+        public bool BleedAirOn { get; set; }
+        public double CabinAltitudeFeet { get; set; }
+        public double PressureDiffPsi { get; set; }
 
         // Ambiente
         public double OutsideTemperature { get; set; }

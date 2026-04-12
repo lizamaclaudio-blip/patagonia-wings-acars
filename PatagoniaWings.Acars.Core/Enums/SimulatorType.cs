@@ -4,8 +4,6 @@ namespace PatagoniaWings.Acars.Core.Enums
     {
         None = 0,
         MSFS2020 = 1,
-        MSFS2024 = 2,
-        XPlane12 = 3,
-        XPlane11 = 4
+        MSFS2024 = 2
     }
 }

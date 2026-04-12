@@ -1,4 +1,6 @@
+using System.Windows;
 using System.Windows.Controls;
+using PatagoniaWings.Acars.Master.ViewModels;
 
 namespace PatagoniaWings.Acars.Master.Views.Pages
 {
@@ -7,6 +9,15 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
         public DashboardPage()
         {
             InitializeComponent();
+            Loaded += OnLoaded;
+        }
+
+        private void OnLoaded(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is DashboardViewModel vm)
+            {
+                vm.LoadAsync();
+            }
         }
     }
 }

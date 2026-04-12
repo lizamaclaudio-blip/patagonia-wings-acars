@@ -1,0 +1,200 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
+using System.Xml.Linq;
+using PatagoniaWings.Acars.Core.Models;
+
+namespace PatagoniaWings.Acars.Core.Services
+{
+    public sealed class PirepXmlBuilder
+    {
+        public sealed class BuildResult
+        {
+            public string FileName { get; set; } = string.Empty;
+            public string XmlContent { get; set; } = string.Empty;
+            public string ChecksumSha256 { get; set; } = string.Empty;
+            public DateTime GeneratedAtUtc { get; set; }
+        }
+
+        public BuildResult Build(
+            PreparedDispatch dispatch,
+            Pilot pilot,
+            FlightReport report,
+            Flight? activeFlight,
+            IReadOnlyList<SimData>? telemetryLog)
+        {
+            if (dispatch == null) throw new ArgumentNullException(nameof(dispatch));
+            if (pilot == null) throw new ArgumentNullException(nameof(pilot));
+            if (report == null) throw new ArgumentNullException(nameof(report));
+
+            var generatedAtUtc = DateTime.UtcNow;
+            var telemetry = telemetryLog ?? Array.Empty<SimData>();
+            var lastSample = telemetry.Count > 0 ? telemetry[telemetry.Count - 1] : null;
+
+            var document = new XDocument(
+                new XDeclaration("1.0", "utf-8", "yes"),
+                new XElement("PatagoniaWingsPirep",
+                    new XAttribute("schemaVersion", "2.0"),
+                    new XAttribute("visibility", "hidden"),
+                    new XAttribute("generatedAfterCompletion", "true"),
+                    new XElement("Header",
+                        Element("GeneratedAtUtc", FormatUtc(generatedAtUtc)),
+                        Element("ReservationId", dispatch.ReservationId),
+                        Element("DispatchId", dispatch.DispatchId),
+                        Element("DispatchToken", dispatch.DispatchToken),
+                        Element("PilotCallsign", pilot.CallSign),
+                        Element("PilotName", pilot.FullName),
+                        Element("PilotRank", pilot.RankName)
+                    ),
+                    new XElement("Lifecycle",
+                        Element("ReservationStatusTarget", "completed"),
+                        Element("PirepVisibility", "hidden"),
+                        Element("ValidationStatus", "pending"),
+                        Element("ScoringStatus", "pending"),
+                        Element("XmlStatus", "generated"),
+                        Element("ScoringAuthority", "web_supabase")
+                    ),
+                    new XElement("DispatchWeb",
+                        Element("FlightNumber", dispatch.FlightDesignator),
+                        Element("RouteCode", dispatch.RouteCode),
+                        Element("FlightModeCode", dispatch.FlightMode),
+                        Element("OriginIcao", dispatch.DepartureIcao),
+                        Element("DestinationIcao", dispatch.ArrivalIcao),
+                        Element("AlternateIcao", dispatch.AlternateIcao),
+                        Element("AircraftId", dispatch.AircraftId),
+                        Element("AirframeIcao", dispatch.AircraftIcao),
+                        Element("AircraftDisplayName", dispatch.AircraftDisplayName),
+                        Element("AircraftRegistration", dispatch.AircraftRegistration),
+                        Element("RouteText", dispatch.RouteText),
+                        Element("CruiseLevel", dispatch.CruiseLevel),
+                        Element("PassengerCount", dispatch.PassengerCount),
+                        Element("CargoKg", FormatDouble(dispatch.CargoKg)),
+                        Element("FuelPlannedKg", FormatDouble(dispatch.FuelPlannedKg)),
+                        Element("PayloadKg", FormatDouble(dispatch.PayloadKg)),
+                        Element("ZeroFuelWeightKg", FormatDouble(dispatch.ZeroFuelWeightKg))
+                    ),
+                    new XElement("FlightSummary",
+                        Element("DepartureIcao", report.DepartureIcao),
+                        Element("ArrivalIcao", report.ArrivalIcao),
+                        Element("AirframeIcao", report.AircraftIcao),
+                        Element("DepartureTimeUtc", FormatUtc(report.DepartureTime)),
+                        Element("ArrivalTimeUtc", FormatUtc(report.ArrivalTime)),
+                        Element("BlockMinutes", ((int)Math.Max(1, Math.Round(report.Duration.TotalMinutes))).ToString(CultureInfo.InvariantCulture)),
+                        Element("DistanceNm", FormatDouble(report.Distance)),
+                        Element("FuelUsedKg", FormatDouble(report.FuelUsed * 0.45359237d)),
+                        Element("LandingVS", FormatDouble(report.LandingVS)),
+                        Element("LandingG", FormatDouble(report.LandingG)),
+                        Element("Simulator", report.Simulator.ToString()),
+                        Element("Remarks", report.Remarks)
+                    ),
+                    new XElement("AircraftState",
+                        Element("PlannedAltitude", activeFlight == null ? string.Empty : activeFlight.PlannedAltitude.ToString(CultureInfo.InvariantCulture)),
+                        Element("PlannedSpeed", activeFlight == null ? string.Empty : activeFlight.PlannedSpeed.ToString(CultureInfo.InvariantCulture)),
+                        Element("BlockFuelKg", activeFlight == null ? string.Empty : FormatDouble(activeFlight.BlockFuel)),
+                        Element("ZeroFuelWeightKg", activeFlight == null ? string.Empty : FormatDouble(activeFlight.ZeroFuelWeight)),
+                        Element("LastLatitude", lastSample == null ? string.Empty : FormatDouble(lastSample.Latitude)),
+                        Element("LastLongitude", lastSample == null ? string.Empty : FormatDouble(lastSample.Longitude)),
+                        Element("LastAltitudeFeet", lastSample == null ? string.Empty : FormatDouble(lastSample.AltitudeFeet)),
+                        Element("LastGroundSpeedKnots", lastSample == null ? string.Empty : FormatDouble(lastSample.GroundSpeed)),
+                        Element("LastHeadingDegrees", lastSample == null ? string.Empty : FormatDouble(lastSample.Heading))
+                    ),
+                    new XElement("TelemetryLog",
+                        telemetry.Select((sample, index) =>
+                            new XElement("Sample",
+                                new XAttribute("sequence", index + 1),
+                                Element("CapturedAtUtc", FormatUtc(sample.CapturedAtUtc)),
+                                Element("Latitude", FormatDouble(sample.Latitude)),
+                                Element("Longitude", FormatDouble(sample.Longitude)),
+                                Element("AltitudeFeet", FormatDouble(sample.AltitudeFeet)),
+                                Element("IasKnots", FormatDouble(sample.IndicatedAirspeed)),
+                                Element("GroundSpeedKnots", FormatDouble(sample.GroundSpeed)),
+                                Element("VerticalSpeedFpm", FormatDouble(sample.VerticalSpeed)),
+                                Element("HeadingDegrees", FormatDouble(sample.Heading)),
+                                Element("FuelLbs", FormatDouble(sample.FuelTotalLbs)),
+                                Element("OnGround", sample.OnGround ? "true" : "false")
+                            ))
+                    )
+                )
+            );
+
+            var xmlContent = document.ToString();
+            return new BuildResult
+            {
+                GeneratedAtUtc = generatedAtUtc,
+                XmlContent = xmlContent,
+                ChecksumSha256 = ComputeSha256(xmlContent),
+                FileName = BuildFileName(dispatch, generatedAtUtc)
+            };
+        }
+
+        private static XElement Element(string name, object? value)
+        {
+            return new XElement(name, value ?? string.Empty);
+        }
+
+        private static string FormatUtc(DateTime value)
+        {
+            var utc = value.Kind == DateTimeKind.Utc ? value : value.ToUniversalTime();
+            return utc.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+        }
+
+        private static string FormatUtc(DateTime? value)
+        {
+            return value.HasValue ? FormatUtc(value.Value) : string.Empty;
+        }
+
+        private static string FormatDouble(double value)
+        {
+            return Math.Round(value, 2).ToString("0.##", CultureInfo.InvariantCulture);
+        }
+
+        private static string BuildFileName(PreparedDispatch dispatch, DateTime generatedAtUtc)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "PWG_PIREP_{0}_{1}_{2}_{3:yyyyMMdd_HHmmss}.xml",
+                Sanitize(dispatch.FlightDesignator),
+                Sanitize(dispatch.DepartureIcao),
+                Sanitize(dispatch.ArrivalIcao),
+                generatedAtUtc);
+        }
+
+        private static string Sanitize(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return "NA";
+            }
+
+            var builder = new StringBuilder();
+            foreach (var character in value.Trim())
+            {
+                if (char.IsLetterOrDigit(character) || character == '-' || character == '_')
+                {
+                    builder.Append(character);
+                }
+            }
+
+            return builder.Length == 0 ? "NA" : builder.ToString();
+        }
+
+        private static string ComputeSha256(string payload)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                var bytes = Encoding.UTF8.GetBytes(payload ?? string.Empty);
+                var hash = sha256.ComputeHash(bytes);
+                var builder = new StringBuilder(hash.Length * 2);
+                foreach (var current in hash)
+                {
+                    builder.Append(current.ToString("x2", CultureInfo.InvariantCulture));
+                }
+
+                return builder.ToString();
+            }
+        }
+    }
+}

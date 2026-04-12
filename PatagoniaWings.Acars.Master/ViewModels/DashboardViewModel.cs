@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using PatagoniaWings.Acars.Core.Models;
 using PatagoniaWings.Acars.Master.Helpers;
@@ -24,23 +25,43 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public async void LoadAsync()
         {
             IsLoading = true;
-            var pilot = AcarsContext.Auth.CurrentPilot;
-            if (pilot != null)
-            {
-                TotalHours = pilot.TotalHours.ToString("F1");
-                TotalFlights = pilot.TotalFlights.ToString();
-                TotalDistance = pilot.TotalDistance.ToString("F0");
-                RankName = pilot.RankName;
-            }
 
-            var result = await AcarsContext.Api.GetMyFlightsAsync(1);
-            if (result.Success && result.Data != null)
+            try
             {
-                RecentFlights.Clear();
-                foreach (var f in result.Data)
-                    RecentFlights.Add(f);
+                var pilot = AcarsContext.Auth.CurrentPilot;
+                if (pilot != null)
+                {
+                    TotalHours = pilot.TotalHours.ToString("F1");
+                    TotalFlights = pilot.TotalFlights.ToString();
+                    TotalDistance = pilot.TotalDistance.ToString("F0");
+                    RankName = pilot.RankName;
+                }
+                else
+                {
+                    TotalHours = "0.0";
+                    TotalFlights = "0";
+                    TotalDistance = "0";
+                    RankName = "Sin sesión";
+                }
+
+                var result = await AcarsContext.Api.GetMyFlightsAsync(1);
+                if (result.Success && result.Data != null)
+                {
+                    RecentFlights.Clear();
+                    foreach (var f in result.Data)
+                    {
+                        RecentFlights.Add(f);
+                    }
+                }
             }
-            IsLoading = false;
+            catch
+            {
+                // Evitar que un problema de carga del dashboard tumbe la apertura principal.
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
     }
 }

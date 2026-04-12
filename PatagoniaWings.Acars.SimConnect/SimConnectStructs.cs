@@ -1,41 +1,28 @@
+#nullable enable
 using System.Runtime.InteropServices;
-using Microsoft.FlightSimulator.SimConnect;
 
 namespace PatagoniaWings.Acars.SimConnect
 {
-    // IDs de definición de datos
-    public enum DataDefineId
+    internal enum DataDefineId
     {
-        AircraftData,
-        EnvironmentData
+        AircraftData = 1,
+        EnvironmentData = 2
     }
 
-    // IDs de request
-    public enum RequestId
+    internal enum RequestId
     {
-        AircraftData,
-        EnvironmentData
+        AircraftData = 1,
+        EnvironmentData = 2
     }
 
-    // IDs de evento
-    public enum EventId
+    internal enum EventId
     {
-        Pause,
-        Crashed,
-        SimStart,
-        SimStop
+        Pause = 1,
+        Crashed = 2
     }
 
-    // IDs de notificaciones de sistema
-    public enum NotificationGroupId
-    {
-        Cockpit,
-        System
-    }
-
-    /// <summary>Datos del avión recibidos desde SimConnect.</summary>
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
-    public struct AircraftDataStruct
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    internal struct AircraftDataStruct
     {
         public double Latitude;
         public double Longitude;
@@ -47,28 +34,45 @@ namespace PatagoniaWings.Acars.SimConnect
         public double Heading;
         public double Pitch;
         public double Bank;
+
         public double FuelTotalLbs;
-        public double FuelFlowLbsHour;
+        public double Engine1FuelFlowPph;
+        public double Engine2FuelFlowPph;
         public double Engine1N1;
         public double Engine2N1;
-        public double LandingVS;
-        public double GForce;
-        [MarshalAs(UnmanagedType.I4)] public int OnGround;
-        [MarshalAs(UnmanagedType.I4)] public int StrobeLights;
-        [MarshalAs(UnmanagedType.I4)] public int BeaconLights;
-        [MarshalAs(UnmanagedType.I4)] public int LandingLights;
-        [MarshalAs(UnmanagedType.I4)] public int ParkingBrake;
-        [MarshalAs(UnmanagedType.I4)] public int AutopilotActive;
+
+        public int OnGround;
+        public int ParkingBrake;
+        public int AutopilotActive;
+
+        public int StrobeLights;
+        public int BeaconLights;
+        public int LandingLights;
+        public int TaxiLights;
+        public int NavLights;
+
+        public int GearHandleDown;
+        public double FlapsPercent;
+        public double SpoilersHandlePercent;
+
+        public int TransponderState;
+        public int TransponderCode;
+
+        public double ApuPct;
+        public double CabinAltitudeFeet;
+        public double PressureDiffPsi;
+
+        public int SeatBeltSign;
+        public int NoSmokingSign;
     }
 
-    /// <summary>Datos del entorno/ambiente.</summary>
-    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
-    public struct EnvironmentDataStruct
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    internal struct EnvironmentDataStruct
     {
         public double OutsideTemperature;
         public double WindSpeed;
         public double WindDirection;
         public double SeaLevelPressure;
-        [MarshalAs(UnmanagedType.I4)] public int Precipitation;
+        public int PrecipState;
     }
 }

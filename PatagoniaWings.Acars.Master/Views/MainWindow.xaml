@@ -4,7 +4,7 @@
         xmlns:pages="clr-namespace:PatagoniaWings.Acars.Master.Views.Pages"
         xmlns:vm="clr-namespace:PatagoniaWings.Acars.Master.ViewModels"
         Title="Patagonia Wings ACARS"
-        Width="1280" Height="800"
+        Width="1320" Height="820"
         MinWidth="1100" MinHeight="680"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
@@ -14,15 +14,12 @@
     <Border CornerRadius="10" ClipToBounds="True">
         <Grid Background="{StaticResource BackgroundDarkBrush}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="48"/>
-                <!-- TitleBar -->
+                <RowDefinition Height="46"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="220"/>
-                <!-- Sidebar -->
                 <ColumnDefinition Width="*"/>
-                <!-- Content -->
             </Grid.ColumnDefinitions>
 
             <!-- ═══ TITLEBAR ════════════════════════════════════════════════ -->
@@ -37,38 +34,45 @@
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
+
                     <!-- Logo -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal"
-                                VerticalAlignment="Center" Margin="16,0">
-                        <TextBlock Text="✈" FontSize="18" Foreground="{StaticResource AccentLightBlueBrush}"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Text="PATAGONIA WINGS" FontSize="13" FontWeight="Bold"
-                                   Foreground="White" VerticalAlignment="Center" FontFamily="Segoe UI"/>
+                                VerticalAlignment="Center" Margin="14,0">
+                        <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
+                               Height="22" Width="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="PATAGONIA WINGS" FontSize="12" FontWeight="Bold"
+                                   Foreground="White" VerticalAlignment="Center"
+                                   FontFamily="Segoe UI"/>
                     </StackPanel>
 
-                    <!-- Info central: fase + sim + UTC -->
+                    <!-- Info central -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal"
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                        <!-- Sim status (click para reconectar) -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,20,0"
+                                    MouseLeftButtonDown="SimStatus_Click" Cursor="Hand"
+                                    ToolTip="Click para reconectar con MSFS">
                             <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center">
                                 <Ellipse.Fill>
                                     <SolidColorBrush Color="{Binding SimStatusColor}"/>
                                 </Ellipse.Fill>
                             </Ellipse>
                             <TextBlock Text="{Binding SimStatusText}" Foreground="#8B949E"
-                                       FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                                       FontSize="11" FontFamily="Segoe UI" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="|" Foreground="#30363D" VerticalAlignment="Center" Margin="0,0,24,0"/>
-                        <TextBlock Text="{Binding UtcTime}" Foreground="#8B949E"
-                                   FontSize="12" FontFamily="Consolas" VerticalAlignment="Center" Margin="0,0,24,0"/>
-                        <TextBlock Text="|" Foreground="#30363D" VerticalAlignment="Center" Margin="0,0,24,0"/>
+                        <TextBlock Text="|" Foreground="#252D3A" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <!-- UTC -->
+                        <TextBlock Text="{Binding UtcTime}" Foreground="#606C7A"
+                                   FontSize="12" FontFamily="Consolas" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <TextBlock Text="|" Foreground="#252D3A" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <!-- Piloto -->
                         <TextBlock Text="{Binding PilotDisplay}" Foreground="White"
                                    FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center"/>
                     </StackPanel>
 
-                    <!-- Controles de ventana -->
+                    <!-- Controles ventana -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal"
-                                VerticalAlignment="Center" Margin="0,0,8,0">
+                                VerticalAlignment="Center" Margin="0,0,6,0">
                         <Button Content="—" Width="36" Height="32" Background="Transparent"
                                 BorderThickness="0" Foreground="#8B949E" Cursor="Hand"
                                 FontSize="14" Click="BtnMinimize_Click"/>
@@ -76,14 +80,13 @@
                                 BorderThickness="0" Foreground="#8B949E" Cursor="Hand"
                                 FontSize="11" Click="BtnMaximize_Click"/>
                         <Button Content="✕" Width="36" Height="32" Background="Transparent"
-                                BorderThickness="0" Foreground="#8B949E" Cursor="Hand"
-                                FontSize="13" Click="BtnClose_Click">
+                                BorderThickness="0" Cursor="Hand" FontSize="13" Click="BtnClose_Click">
                             <Button.Style>
                                 <Style TargetType="Button">
-                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Background"  Value="Transparent"/>
                                     <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="Foreground" Value="#8B949E"/>
-                                    <Setter Property="Cursor" Value="Hand"/>
+                                    <Setter Property="Foreground"  Value="#8B949E"/>
+                                    <Setter Property="Cursor"      Value="Hand"/>
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
                                             <Setter Property="Background" Value="#CC2222"/>
@@ -103,55 +106,189 @@
                     BorderBrush="{StaticResource BorderBrush}"
                     BorderThickness="0,0,1,0">
                 <DockPanel>
+
                     <!-- Menú de navegación -->
-                    <StackPanel DockPanel.Dock="Top" Margin="8,12">
-                        <Button Style="{StaticResource SidebarButton}"
-                                Command="{Binding NavDashboardCommand}">
+                    <StackPanel DockPanel.Dock="Top" Margin="8,14">
+
+                        <!-- DASHBOARD -->
+                        <Button Command="{Binding NavDashboardCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="Dashboard">
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                        <GradientStop Color="#161F2E" Offset="0"/>
+                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⊞  " FontSize="14"/>
-                                <TextBlock Text="Dashboard"/>
+                                <TextBlock Text="⊞" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource SidebarButton}"
-                                Command="{Binding NavPreFlightCommand}">
+
+                        <!-- PRE-VUELO -->
+                        <Button Command="{Binding NavPreFlightCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="PreFlight">
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                        <GradientStop Color="#161F2E" Offset="0"/>
+                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📋  " FontSize="13"/>
-                                <TextBlock Text="Pre-Vuelo"/>
+                                <TextBlock Text="📋" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Pre-Vuelo" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource SidebarButton}"
-                                Command="{Binding NavInFlightCommand}">
+
+                        <!-- EN VUELO -->
+                        <Button Command="{Binding NavInFlightCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="InFlight">
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                        <GradientStop Color="#161F2E" Offset="0"/>
+                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="✈  " FontSize="13"/>
-                                <TextBlock Text="En Vuelo"/>
+                                <TextBlock Text="✈" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="En Vuelo" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource SidebarButton}"
-                                Command="{Binding NavCommunityCommand}">
+
+                        <!-- COMUNIDAD -->
+                        <Button Command="{Binding NavCommunityCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="Community">
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                        <GradientStop Color="#161F2E" Offset="0"/>
+                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="👥  " FontSize="13"/>
-                                <TextBlock Text="Comunidad"/>
+                                <TextBlock Text="👥" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Comunidad" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Style="{StaticResource SidebarButton}"
-                                Command="{Binding NavProfileCommand}">
+
+                        <!-- MI PERFIL -->
+                        <Button Command="{Binding NavProfileCommand}">
+                            <Button.Style>
+                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="Profile">
+                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                                        <GradientStop Color="#161F2E" Offset="0"/>
+                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                    </LinearGradientBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="👤  " FontSize="13"/>
-                                <TextBlock Text="Mi Perfil"/>
+                                <TextBlock Text="👤" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Mi Perfil" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
+
                     </StackPanel>
 
-                    <!-- Logout al fondo -->
-                    <StackPanel DockPanel.Dock="Bottom" Margin="8,0,8,16">
+                    <!-- Info piloto + logout al fondo -->
+                    <StackPanel DockPanel.Dock="Bottom" Margin="12,0,12,14">
+                        <!-- Fase actual mini -->
+                        <Border Background="#0C1218" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
+                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,7,0">
+                                    <Ellipse.Style>
+                                        <Style TargetType="Ellipse">
+                                            <Setter Property="Fill" Value="#333"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Cruise">
+                                                    <Setter Property="Fill" Value="#3FB950"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Climb">
+                                                    <Setter Property="Fill" Value="#2D9CDB"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Descent">
+                                                    <Setter Property="Fill" Value="#FFCC00"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Approach">
+                                                    <Setter Property="Fill" Value="#FF8844"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Arrived">
+                                                    <Setter Property="Fill" Value="#3FB950"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Ellipse.Style>
+                                </Ellipse>
+                                <TextBlock Text="{Binding FlightPhase, Converter={StaticResource PhaseToStringConverter}}"
+                                           Foreground="#8B949E" FontSize="11" FontFamily="Segoe UI"/>
+                            </StackPanel>
+                        </Border>
+
                         <Separator Background="{StaticResource BorderBrush}" Margin="0,0,0,8"/>
                         <Button Style="{StaticResource SidebarButton}"
                                 Command="{Binding LogoutCommand}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⏏  " FontSize="13" Foreground="#FF4444"/>
-                                <TextBlock Text="Cerrar Sesión" Foreground="#FF4444"/>
+                                <TextBlock Text="⏏" FontSize="13" Foreground="#FF4444" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Cerrar Sesión" Foreground="#FF4444" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
+                        <!-- Versión -->
+                        <TextBlock Text="ACARS v2.0.5" Foreground="#2A3440"
+                                   FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"
+                                   FontFamily="Consolas"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
@@ -167,44 +304,32 @@
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding CurrentPageName}" Value="Dashboard">
                                     <Setter Property="Content">
-                                        <Setter.Value>
-                                            <pages:DashboardPage/>
-                                        </Setter.Value>
+                                        <Setter.Value><pages:DashboardPage/></Setter.Value>
                                     </Setter>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding CurrentPageName}" Value="PreFlight">
                                     <Setter Property="Content">
-                                        <Setter.Value>
-                                            <pages:PreFlightPage/>
-                                        </Setter.Value>
+                                        <Setter.Value><pages:PreFlightPage/></Setter.Value>
                                     </Setter>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding CurrentPageName}" Value="InFlight">
                                     <Setter Property="Content">
-                                        <Setter.Value>
-                                            <pages:InFlightPage/>
-                                        </Setter.Value>
+                                        <Setter.Value><pages:InFlightPage/></Setter.Value>
                                     </Setter>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding CurrentPageName}" Value="PostFlight">
                                     <Setter Property="Content">
-                                        <Setter.Value>
-                                            <pages:PostFlightPage/>
-                                        </Setter.Value>
+                                        <Setter.Value><pages:PostFlightPage/></Setter.Value>
                                     </Setter>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding CurrentPageName}" Value="Profile">
                                     <Setter Property="Content">
-                                        <Setter.Value>
-                                            <pages:ProfilePage/>
-                                        </Setter.Value>
+                                        <Setter.Value><pages:ProfilePage/></Setter.Value>
                                     </Setter>
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding CurrentPageName}" Value="Community">
                                     <Setter Property="Content">
-                                        <Setter.Value>
-                                            <pages:CommunityPage/>
-                                        </Setter.Value>
+                                        <Setter.Value><pages:CommunityPage/></Setter.Value>
                                     </Setter>
                                 </DataTrigger>
                             </Style.Triggers>
