@@ -101,7 +101,7 @@
                                     <SolidColorBrush Color="#0A1828"/>
                                 </Border.Background>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="v2.0.5" Foreground="#2D9CDB"
+                                    <TextBlock Text="v2.0.6" Foreground="#2D9CDB"
                                                FontFamily="Consolas" FontSize="11"
                                                FontWeight="Bold" Margin="0,0,8,0"/>
                                     <TextBlock Text="Supabase Direct" Foreground="#606C7A"
@@ -260,7 +260,7 @@
                         </StackPanel>
 
                         <!-- Footer -->
-                        <TextBlock Text="Patagonia Wings Virtual Airline · ACARS 2.0.5"
+                        <TextBlock Text="Patagonia Wings Virtual Airline · ACARS 2.0.6"
                                    Foreground="#252D3A" FontSize="10" FontFamily="Segoe UI"
                                    HorizontalAlignment="Center" Margin="0,28,0,0"/>
                     </StackPanel>
