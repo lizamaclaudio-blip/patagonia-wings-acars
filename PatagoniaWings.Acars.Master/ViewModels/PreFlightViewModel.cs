@@ -22,7 +22,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private int _plannedSpeed = 450;
         private string _remarks = string.Empty;
         private SimulatorType _selectedSim = SimulatorType.MSFS2020;
-        private string _selectedSimulatorOption = "MSFS 2020";
         private Airport? _depAirport;
         private Airport? _arrAirport;
         private WeatherInfo? _depWeather;
@@ -34,6 +33,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _statusMessage = string.Empty;
         private bool _flightStarted;
         private bool _isFlightDataLocked;
+
+        public ObservableCollection<SimulatorType> SimulatorOptions { get; } = new ObservableCollection<SimulatorType>
+        {
+            SimulatorType.MSFS2020,
+            SimulatorType.MSFS2024
+        };
 
         public AcarsReadyFlight? ReadyFlight
         {
@@ -59,9 +64,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(ReadyFlightModeSummary));
                     OnPropertyChanged(nameof(OperationalQualificationsSummary));
                     OnPropertyChanged(nameof(CanStartFlight));
-                    OnPropertyChanged(nameof(DepartureIcaoDisplay));
-                    OnPropertyChanged(nameof(ArrivalIcaoDisplay));
-                    OnPropertyChanged(nameof(ShowDispatchLoadingHint));
                 }
             }
         }
@@ -74,36 +76,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public int PlannedAlt { get => _plannedAlt; set => SetField(ref _plannedAlt, value); }
         public int PlannedSpeed { get => _plannedSpeed; set => SetField(ref _plannedSpeed, value); }
         public string Remarks { get => _remarks; set => SetField(ref _remarks, value); }
-        public SimulatorType SelectedSim
-        {
-            get => _selectedSim;
-            set
-            {
-                if (SetField(ref _selectedSim, value))
-                {
-                    var label = ToSimulatorOption(value);
-                    if (_selectedSimulatorOption != label)
-                    {
-                        _selectedSimulatorOption = label;
-                        OnPropertyChanged(nameof(SelectedSimulatorOption));
-                    }
-                }
-            }
-        }
-
-        public string SelectedSimulatorOption
-        {
-            get => _selectedSimulatorOption;
-            set
-            {
-                if (SetField(ref _selectedSimulatorOption, value))
-                {
-                    SelectedSim = ParseSimulatorOption(value);
-                }
-            }
-        }
+        public SimulatorType SelectedSim { get => _selectedSim; set => SetField(ref _selectedSim, value); }
         public bool IsFlightDataLocked { get => _isFlightDataLocked; set => SetField(ref _isFlightDataLocked, value); }
-        public bool CanStartFlight => PreparedDispatch?.IsDispatchReady == true && !IsLoadingDispatch && !FlightStarted;
+        public bool CanStartFlight => PreparedDispatch != null && PreparedDispatch.IsDispatchReady && !IsLoadingDispatch && !FlightStarted;
+
         public string ReadyFlightVariantSummary
         {
             get
@@ -113,8 +89,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return string.Empty;
                 }
 
-                var variant = PreparedDispatch.AircraftVariantCode?.Trim() ?? string.Empty;
-                var addon = PreparedDispatch.AddonProvider?.Trim() ?? string.Empty;
+                var variant = PreparedDispatch.AircraftVariantCode == null ? string.Empty : PreparedDispatch.AircraftVariantCode.Trim();
+                var addon = PreparedDispatch.AddonProvider == null ? string.Empty : PreparedDispatch.AddonProvider.Trim();
 
                 if (string.IsNullOrWhiteSpace(variant) && string.IsNullOrWhiteSpace(addon))
                 {
@@ -131,19 +107,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return variant;
                 }
 
-                return $"{variant} · {addon}";
+                return variant + " · " + addon;
             }
         }
 
         public string ReadyFlightModeSummary =>
             PreparedDispatch == null || string.IsNullOrWhiteSpace(PreparedDispatch.FlightMode)
                 ? "Modo operativo no informado."
-                : $"Modo {PreparedDispatch.FlightMode}";
-
-        public ObservableCollection<string> SimulatorOptions { get; } = new()
-        {
-            "MSFS 2020", "MSFS 2024"
-        };
+                : "Modo " + PreparedDispatch.FlightMode;
 
         public Airport? DepAirport { get => _depAirport; set => SetField(ref _depAirport, value); }
         public Airport? ArrAirport { get => _arrAirport; set => SetField(ref _arrAirport, value); }
@@ -175,53 +146,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
-        public string DepMetar
-        {
-            get => _depMetar;
-            set
-            {
-                if (SetField(ref _depMetar, value))
-                {
-                    OnPropertyChanged(nameof(DepartureMetarDisplay));
-                    OnPropertyChanged(nameof(ShowMetarLoadingHint));
-                }
-            }
-        }
-
-        public string ArrMetar
-        {
-            get => _arrMetar;
-            set
-            {
-                if (SetField(ref _arrMetar, value))
-                {
-                    OnPropertyChanged(nameof(ArrivalMetarDisplay));
-                    OnPropertyChanged(nameof(ShowMetarLoadingHint));
-                }
-            }
-        }
-
-        public string DepartureIcaoDisplay => string.IsNullOrWhiteSpace(PreparedDispatch?.DepartureIcao) ? "----" : (PreparedDispatch?.DepartureIcao ?? "----");
-        public string ArrivalIcaoDisplay => string.IsNullOrWhiteSpace(PreparedDispatch?.ArrivalIcao) ? "----" : (PreparedDispatch?.ArrivalIcao ?? "----");
-        public string DepartureMetarDisplay => string.IsNullOrWhiteSpace(DepMetar) ? "Sin METAR cargado." : DepMetar;
-        public string ArrivalMetarDisplay => string.IsNullOrWhiteSpace(ArrMetar) ? "Sin METAR cargado." : ArrMetar;
+        public string DepMetar { get => _depMetar; set => SetField(ref _depMetar, value); }
+        public string ArrMetar { get => _arrMetar; set => SetField(ref _arrMetar, value); }
         public string DepartureWeatherSummary => BuildWeatherSummary(DepWeather);
         public string ArrivalWeatherSummary => BuildWeatherSummary(ArrWeather);
         public string OperationalMinimaSummary => BuildOperationalMinimaSummary();
         public string OperationalQualificationsSummary => BuildOperationalQualificationsSummary();
-        public bool IsLoadingMetar
-        {
-            get => _isLoadingMetar;
-            set
-            {
-                if (SetField(ref _isLoadingMetar, value))
-                {
-                    OnPropertyChanged(nameof(ShowMetarLoadingHint));
-                }
-            }
-        }
-        public bool ShowDispatchLoadingHint => IsLoadingDispatch && PreparedDispatch == null;
-        public bool ShowMetarLoadingHint => IsLoadingMetar && string.IsNullOrWhiteSpace(DepMetar) && string.IsNullOrWhiteSpace(ArrMetar);
+        public bool IsLoadingMetar { get => _isLoadingMetar; set => SetField(ref _isLoadingMetar, value); }
         public bool IsLoadingDispatch
         {
             get => _isLoadingDispatch;
@@ -230,7 +161,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (SetField(ref _isLoadingDispatch, value))
                 {
                     OnPropertyChanged(nameof(CanStartFlight));
-                    OnPropertyChanged(nameof(ShowDispatchLoadingHint));
                 }
             }
         }
@@ -255,128 +185,125 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public PreFlightViewModel()
         {
             LoadDispatchCommand = new RelayCommand(async _ => await LoadPreparedDispatchAsync());
-
             FetchMetarCommand = new RelayCommand(async _ => await LoadMetarAsync());
+            StartFlightCommand = new RelayCommand(async _ => await StartFlightAsync());
 
-            StartFlightCommand = new RelayCommand(async _ =>
+            AcarsContext.Runtime.Changed += OnRuntimeChanged;
+            ApplyPilotPreferences();
+            SyncFromRuntime();
+        }
+
+        private async Task StartFlightAsync()
+        {
+            if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady || ReadyFlight == null)
             {
-                if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady || ReadyFlight == null)
-                {
-                    StatusMessage = "No hay vuelo reservado/despachado listo para ACARS. Preparalo primero desde la web.";
-                    return;
-                }
+                StatusMessage = "No hay vuelo reservado/despachado listo para ACARS. Preparalo primero desde la web.";
+                return;
+            }
 
-                if (string.IsNullOrWhiteSpace(FlightNumber) ||
-                    string.IsNullOrWhiteSpace(DepartureIcao) ||
-                    string.IsNullOrWhiteSpace(ArrivalIcao) ||
-                    string.IsNullOrWhiteSpace(AircraftIcao))
-                {
-                    StatusMessage = "La reserva activa llegÃ³ incompleta. Recarga el despacho desde la web.";
-                    return;
-                }
+            if (string.IsNullOrWhiteSpace(FlightNumber) ||
+                string.IsNullOrWhiteSpace(DepartureIcao) ||
+                string.IsNullOrWhiteSpace(ArrivalIcao) ||
+                string.IsNullOrWhiteSpace(AircraftIcao))
+            {
+                StatusMessage = "La reserva activa llegó incompleta. Recarga el despacho desde la web.";
+                return;
+            }
 
-                var flight = new Flight
-                {
-                    ReservationId = PreparedDispatch.ReservationId,
-                    DispatchPackageId = PreparedDispatch.DispatchId,
-                    AircraftId = PreparedDispatch.AircraftId,
-                    FlightNumber = FlightNumber.ToUpperInvariant(),
-                    DepartureIcao = DepartureIcao.ToUpperInvariant(),
-                    ArrivalIcao = ArrivalIcao.ToUpperInvariant(),
-                    AircraftIcao = AircraftIcao.ToUpperInvariant(),
-                    AircraftTypeCode = PreparedDispatch.AircraftIcao,
-                    AircraftName = string.IsNullOrWhiteSpace(PreparedDispatch.AircraftDisplayName)
-                        ? AircraftIcao.ToUpperInvariant()
-                        : PreparedDispatch.AircraftDisplayName,
-                    AircraftDisplayName = PreparedDispatch.AircraftDisplayName,
-                    AircraftVariantCode = PreparedDispatch.AircraftVariantCode,
-                    AddonProvider = PreparedDispatch.AddonProvider,
-                    Route = Route,
-                    FlightModeCode = PreparedDispatch.FlightMode,
-                    RouteCode = PreparedDispatch.RouteCode,
-                    PlannedAltitude = PlannedAlt,
-                    PlannedSpeed = PlannedSpeed,
-                    Remarks = Remarks,
-                    Simulator = SelectedSim,
-                    StartTime = DateTime.UtcNow
-                };
+            var flight = new Flight
+            {
+                ReservationId = PreparedDispatch.ReservationId,
+                DispatchPackageId = PreparedDispatch.DispatchId,
+                AircraftId = PreparedDispatch.AircraftId,
+                FlightNumber = FlightNumber.ToUpperInvariant(),
+                DepartureIcao = DepartureIcao.ToUpperInvariant(),
+                ArrivalIcao = ArrivalIcao.ToUpperInvariant(),
+                AircraftIcao = AircraftIcao.ToUpperInvariant(),
+                AircraftTypeCode = PreparedDispatch.AircraftIcao,
+                AircraftName = string.IsNullOrWhiteSpace(PreparedDispatch.AircraftDisplayName)
+                    ? AircraftIcao.ToUpperInvariant()
+                    : PreparedDispatch.AircraftDisplayName,
+                AircraftDisplayName = PreparedDispatch.AircraftDisplayName,
+                AircraftVariantCode = PreparedDispatch.AircraftVariantCode,
+                AddonProvider = PreparedDispatch.AddonProvider,
+                Route = Route,
+                FlightModeCode = PreparedDispatch.FlightMode,
+                RouteCode = PreparedDispatch.RouteCode,
+                PlannedAltitude = PlannedAlt,
+                PlannedSpeed = PlannedSpeed,
+                Remarks = Remarks,
+                Simulator = SelectedSim,
+                StartTime = DateTime.UtcNow
+            };
 
-                var result = await AcarsContext.Api.StartFlightAsync(flight, PreparedDispatch);
-                if (result.Success)
-                {
-                    var initialFuelLbs = PreparedDispatch.FuelPlannedKg > 0
-                        ? PreparedDispatch.FuelPlannedKg / 0.45359237d
-                        : 0d;
+            var result = await AcarsContext.Api.StartFlightAsync(flight, PreparedDispatch);
+            if (result.Success)
+            {
+                var initialFuelLbs = PreparedDispatch.FuelPlannedKg > 0
+                    ? PreparedDispatch.FuelPlannedKg / 0.45359237d
+                    : 0d;
 
-                    AcarsContext.FlightService.StartFlight(flight, initialFuelLbs);
-                    AcarsContext.Sound.PlayDing();
-                    _ = AcarsContext.Sound.PlayGroundBienvenidoAsync();
-                    FlightStarted = true;
-                    StatusMessage = $"Vuelo {FlightNumber} iniciado desde la reserva activa. El ACARS queda bloqueado en vista operacional.";
-                }
-                else
-                {
-                    StatusMessage = $"Error al registrar vuelo: {result.Error}";
-                }
-            });
+                AcarsContext.FlightService.StartFlight(flight, initialFuelLbs);
+                AcarsContext.Sound.PlayDing();
+                _ = AcarsContext.Sound.PlayGroundBienvenidoAsync();
+                FlightStarted = true;
+                StatusMessage = "Vuelo " + FlightNumber + " iniciado desde la reserva activa. El ACARS queda bloqueado en vista operacional.";
+            }
+            else
+            {
+                StatusMessage = "Error al registrar vuelo: " + result.Error;
+            }
         }
 
         public async Task LoadPreparedDispatchAsync()
         {
-            var pilot = AcarsContext.Auth.CurrentPilot;
+            var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
             if (pilot == null || string.IsNullOrWhiteSpace(pilot.CallSign))
             {
-                var pilotResult = await AcarsContext.Api.GetCurrentPilotAsync();
-                if (pilotResult.Success && pilotResult.Data != null && !string.IsNullOrWhiteSpace(pilotResult.Data.CallSign))
-                {
-                    pilot = pilotResult.Data;
-                    AcarsContext.Auth.SaveSession(pilot);
-                }
-            }
-
-            if (pilot == null || string.IsNullOrWhiteSpace(pilot.CallSign))
-            {
-                StatusMessage = "Inicia sesion para cargar la reserva activa desde la web.";
+                StatusMessage = "Inicia sesión para cargar la reserva activa desde la web.";
                 return;
             }
 
             IsLoadingDispatch = true;
-            StatusMessage = "Buscando despacho activo del piloto...";
 
             try
             {
                 var result = await AcarsContext.Api.GetReadyForAcarsFlightAsync(pilot.CallSign);
                 if (!result.Success || result.Data == null)
                 {
-                    ClearLoadedFlight();
+                    if (AcarsContext.Runtime.CurrentReadyFlight != null)
+                    {
+                        ApplyReadyFlight(AcarsContext.Runtime.CurrentReadyFlight);
+                        StatusMessage = "Usando la última reserva activa almacenada en memoria.";
+                        return;
+                    }
+
+                    ClearLoadedFlight(false);
                     StatusMessage = string.IsNullOrWhiteSpace(result.Error)
                         ? "No hay un vuelo reservado/despachado listo para ACARS."
                         : result.Error;
                     return;
                 }
 
-                ReadyFlight = result.Data;
-                PreparedDispatch = result.Data.ToPreparedDispatch();
+                ApplyReadyFlight(result.Data);
+                AcarsContext.Runtime.SetReadyFlight(result.Data);
                 FlightStarted = false;
-                OnPropertyChanged(nameof(DepartureIcaoDisplay));
-                OnPropertyChanged(nameof(ArrivalIcaoDisplay));
 
-                FlightNumber = result.Data.FlightNumber;
-                DepartureIcao = result.Data.OriginIdent;
-                ArrivalIcao = result.Data.DestinationIdent;
-                AircraftIcao = result.Data.AircraftTypeCode;
-                Route = result.Data.RouteText;
-                PlannedAlt = result.Data.PlannedAltitude ?? PlannedAlt;
-                PlannedSpeed = result.Data.PlannedSpeed ?? PlannedSpeed;
-                Remarks = result.Data.Remarks;
-
-                StatusMessage = $"Reserva activa cargada: {result.Data.FlightNumber} {result.Data.OriginIdent}-{result.Data.DestinationIdent}.";
+                StatusMessage = "Reserva activa cargada: " + result.Data.FlightNumber + " " + result.Data.OriginIdent + "-" + result.Data.DestinationIdent + ".";
                 await LoadMetarAsync();
             }
             catch (Exception ex)
             {
-                ClearLoadedFlight();
-                StatusMessage = $"No se pudo cargar el vuelo listo para ACARS: {ex.Message}";
+                if (AcarsContext.Runtime.CurrentReadyFlight != null)
+                {
+                    ApplyReadyFlight(AcarsContext.Runtime.CurrentReadyFlight);
+                    StatusMessage = "Se mantuvo la reserva activa en memoria. Error remoto: " + ex.Message;
+                }
+                else
+                {
+                    ClearLoadedFlight(false);
+                    StatusMessage = "No se pudo cargar el vuelo listo para ACARS: " + ex.Message;
+                }
             }
             finally
             {
@@ -384,14 +311,65 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
-        private void ClearLoadedFlight()
+        private void ApplyReadyFlight(AcarsReadyFlight readyFlight)
+        {
+            ReadyFlight = readyFlight;
+            PreparedDispatch = readyFlight.ToPreparedDispatch();
+            FlightNumber = readyFlight.FlightNumber;
+            DepartureIcao = readyFlight.OriginIdent;
+            ArrivalIcao = readyFlight.DestinationIdent;
+            AircraftIcao = readyFlight.AircraftTypeCode;
+            Route = readyFlight.RouteText;
+            PlannedAlt = readyFlight.PlannedAltitude ?? PlannedAlt;
+            PlannedSpeed = readyFlight.PlannedSpeed ?? PlannedSpeed;
+            Remarks = readyFlight.Remarks;
+            ApplyPilotPreferences();
+        }
+
+        private void ClearLoadedFlight(bool clearRuntime)
         {
             ReadyFlight = null;
             PreparedDispatch = null;
             FlightStarted = false;
-            OnPropertyChanged(nameof(DepartureIcaoDisplay));
-            OnPropertyChanged(nameof(ArrivalIcaoDisplay));
+            FlightNumber = string.Empty;
+            DepartureIcao = string.Empty;
+            ArrivalIcao = string.Empty;
+            AircraftIcao = string.Empty;
+            Route = string.Empty;
+            Remarks = string.Empty;
             ResetWeatherContext();
+            if (clearRuntime)
+            {
+                AcarsContext.Runtime.ClearDispatch();
+            }
+        }
+
+        private void OnRuntimeChanged()
+        {
+            SyncFromRuntime();
+        }
+
+        private void SyncFromRuntime()
+        {
+            var runtimeFlight = AcarsContext.Runtime.CurrentReadyFlight;
+            if (runtimeFlight != null && (ReadyFlight == null || runtimeFlight.ReservationId != ReadyFlight.ReservationId))
+            {
+                ApplyReadyFlight(runtimeFlight);
+            }
+            ApplyPilotPreferences();
+        }
+
+        private void ApplyPilotPreferences()
+        {
+            var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+            if (pilot == null)
+            {
+                SelectedSim = SimulatorType.MSFS2020;
+                return;
+            }
+
+            var preferred = (pilot.PreferredSimulator ?? string.Empty).Trim().ToUpperInvariant();
+            SelectedSim = preferred.Contains("2024") ? SimulatorType.MSFS2024 : SimulatorType.MSFS2020;
         }
 
         private async Task LoadMetarAsync()
@@ -403,7 +381,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             IsLoadingMetar = true;
             ResetWeatherContext();
-            OnPropertyChanged(nameof(ShowMetarLoadingHint));
 
             try
             {
@@ -418,9 +395,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                         {
                             Icao = DepartureIcao,
                             Metar = response.Data.RawMetar,
-                            QNH = response.Data.QNH > 0
-                                ? Math.Round(response.Data.QNH, 0).ToString("F0")
-                                : string.Empty
+                            QNH = response.Data.QNH > 0 ? Math.Round(response.Data.QNH, 0).ToString("F0") : string.Empty
                         };
                     }
                 }
@@ -436,9 +411,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                         {
                             Icao = ArrivalIcao,
                             Metar = response.Data.RawMetar,
-                            QNH = response.Data.QNH > 0
-                                ? Math.Round(response.Data.QNH, 0).ToString("F0")
-                                : string.Empty
+                            QNH = response.Data.QNH > 0 ? Math.Round(response.Data.QNH, 0).ToString("F0") : string.Empty
                         };
                     }
                 }
@@ -446,7 +419,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             finally
             {
                 IsLoadingMetar = false;
-                OnPropertyChanged(nameof(ShowMetarLoadingHint));
             }
         }
 
@@ -468,43 +440,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
 
             var fragments = new List<string>();
+            if (!string.IsNullOrWhiteSpace(weather.FlightCategory)) fragments.Add(weather.FlightCategory.Trim().ToUpperInvariant());
+            if (!string.IsNullOrWhiteSpace(weather.Visibility)) fragments.Add("Vis " + weather.Visibility.Trim());
+            if (weather.QNH > 0) fragments.Add("QNH " + Math.Round(weather.QNH, 0).ToString("F0") + " hPa");
+            if (!string.IsNullOrWhiteSpace(weather.Wind)) fragments.Add(weather.Wind.Trim());
+            if (weather.HasThunderstorm) fragments.Add("Tormenta");
+            else if (weather.IsSnowing) fragments.Add("Nieve");
+            else if (weather.IsRaining) fragments.Add("Lluvia");
 
-            if (!string.IsNullOrWhiteSpace(weather.FlightCategory))
-            {
-                fragments.Add(weather.FlightCategory.Trim().ToUpperInvariant());
-            }
-
-            if (!string.IsNullOrWhiteSpace(weather.Visibility))
-            {
-                fragments.Add($"Vis {weather.Visibility.Trim()}");
-            }
-
-            if (weather.QNH > 0)
-            {
-                fragments.Add($"QNH {Math.Round(weather.QNH, 0):F0} hPa");
-            }
-
-            if (!string.IsNullOrWhiteSpace(weather.Wind))
-            {
-                fragments.Add(weather.Wind.Trim());
-            }
-
-            if (weather.HasThunderstorm)
-            {
-                fragments.Add("Tormenta");
-            }
-            else if (weather.IsSnowing)
-            {
-                fragments.Add("Nieve");
-            }
-            else if (weather.IsRaining)
-            {
-                fragments.Add("Lluvia");
-            }
-
-            return fragments.Count == 0
-                ? "METAR recibido, pero sin resumen operativo util."
-                : string.Join(" · ", fragments);
+            return fragments.Count == 0 ? "METAR recibido, pero sin resumen operativo útil." : string.Join(" · ", fragments);
         }
 
         private string BuildOperationalMinimaSummary()
@@ -512,90 +456,66 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             var worstWeather = GetWorstWeather();
             if (worstWeather == null)
             {
-                return "Carga METAR para evaluar QNH, categoria y minimos operativos.";
+                return "Carga METAR para evaluar QNH, categoría y mínimos operativos.";
             }
 
             var advisories = new List<string>();
-            if (DepWeather?.HasThunderstorm == true || ArrWeather?.HasThunderstorm == true)
-            {
-                advisories.Add("actividad convectiva");
-            }
+            if ((DepWeather != null && DepWeather.HasThunderstorm) || (ArrWeather != null && ArrWeather.HasThunderstorm)) advisories.Add("actividad convectiva");
+            if ((DepWeather != null && DepWeather.IsSnowing) || (ArrWeather != null && ArrWeather.IsSnowing)) advisories.Add("nieve");
+            else if ((DepWeather != null && DepWeather.IsRaining) || (ArrWeather != null && ArrWeather.IsRaining)) advisories.Add("precipitación");
 
-            if (DepWeather?.IsSnowing == true || ArrWeather?.IsSnowing == true)
+            if ((DepWeather != null && DepWeather.QNH > 0 && (DepWeather.QNH < 995 || DepWeather.QNH > 1035)) ||
+                (ArrWeather != null && ArrWeather.QNH > 0 && (ArrWeather.QNH < 995 || ArrWeather.QNH > 1035)))
             {
-                advisories.Add("nieve");
-            }
-            else if (DepWeather?.IsRaining == true || ArrWeather?.IsRaining == true)
-            {
-                advisories.Add("precipitacion");
-            }
-
-            if (DepWeather?.QNH > 0 && (DepWeather.QNH < 995 || DepWeather.QNH > 1035) ||
-                ArrWeather?.QNH > 0 && (ArrWeather.QNH < 995 || ArrWeather.QNH > 1035))
-            {
-                advisories.Add("QNH fuera de rango comodo");
+                advisories.Add("QNH fuera de rango cómodo");
             }
 
             var baseSummary = GetFlightCategorySeverity(worstWeather.FlightCategory) switch
             {
-                3 => "Condiciones LIFR/IFR fuertes. Minimos restringidos y despacho solo con criterio instrumental.",
-                2 => "Condiciones IFR. Requiere brief fino de aproximacion, alterno y minimos de llegada.",
+                3 => "Condiciones LIFR/IFR fuertes. Mínimos restringidos y despacho solo con criterio instrumental.",
+                2 => "Condiciones IFR. Requiere brief fino de aproximación, alterno y mínimos de llegada.",
                 1 => "Condiciones MVFR. Ajusta combustible, briefing y margen operacional.",
-                _ => "Condiciones VFR estables para la operacion prevista."
+                _ => "Condiciones VFR estables para la operación prevista."
             };
 
-            return advisories.Count == 0
-                ? baseSummary
-                : $"{baseSummary} Riesgos: {string.Join(", ", advisories)}.";
+            return advisories.Count == 0 ? baseSummary : baseSummary + " Riesgos: " + string.Join(", ", advisories) + ".";
         }
 
         private string BuildOperationalQualificationsSummary()
         {
-            var pilot = AcarsContext.Auth.CurrentPilot;
+            var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
             if (pilot == null)
             {
-                return "Sin sesion de piloto para evaluar habilitaciones operativas.";
+                return "Sin sesión de piloto para evaluar habilitaciones operativas.";
             }
 
             var qualificationText = FormatOperationalList(pilot.ActiveQualifications);
             var certificationText = FormatOperationalList(pilot.ActiveCertifications);
-            var severeWeather =
-                GetWorstWeather() != null &&
-                (GetFlightCategorySeverity(GetWorstWeather()!.FlightCategory) >= 2 ||
-                 GetWorstWeather()!.HasThunderstorm ||
-                 GetWorstWeather()!.IsSnowing);
-            var hasInstrumentQualification = HasOperationalToken(
-                pilot.ActiveQualifications,
-                "IFR",
-                "INSTRUMENT",
-                "RNAV",
-                "ILS");
+            var worstWeather = GetWorstWeather();
+            var severeWeather = worstWeather != null &&
+                (GetFlightCategorySeverity(worstWeather.FlightCategory) >= 2 || worstWeather.HasThunderstorm || worstWeather.IsSnowing);
+            var hasInstrumentQualification = HasOperationalToken(pilot.ActiveQualifications, "IFR", "INSTRUMENT", "RNAV", "ILS");
 
             var advisory = severeWeather
-                ? hasInstrumentQualification
+                ? (hasInstrumentQualification
                     ? "Perfil instrumental detectado para condiciones degradadas."
-                    : "Verifica habilitacion IFR/instrumental antes de liberar este tramo."
-                : "Operacion estandar con habilitaciones vivas cargadas en la sesion.";
+                    : "Verifica habilitación IFR/instrumental antes de liberar este tramo.")
+                : "Operación estándar con habilitaciones vivas cargadas en la sesión.";
 
-            return $"{advisory} Qual: {qualificationText}. Cert: {certificationText}.";
+            return advisory + " Qual: " + qualificationText + ". Cert: " + certificationText + ".";
         }
 
         private WeatherInfo? GetWorstWeather()
         {
-            var departureSeverity = GetFlightCategorySeverity(DepWeather?.FlightCategory);
-            var arrivalSeverity = GetFlightCategorySeverity(ArrWeather?.FlightCategory);
-
-            if (ArrWeather != null && arrivalSeverity >= departureSeverity)
-            {
-                return ArrWeather;
-            }
-
+            var departureSeverity = GetFlightCategorySeverity(DepWeather == null ? null : DepWeather.FlightCategory);
+            var arrivalSeverity = GetFlightCategorySeverity(ArrWeather == null ? null : ArrWeather.FlightCategory);
+            if (ArrWeather != null && arrivalSeverity >= departureSeverity) return ArrWeather;
             return DepWeather ?? ArrWeather;
         }
 
         private static int GetFlightCategorySeverity(string? category)
         {
-            var normalized = category?.Trim().ToUpperInvariant() ?? string.Empty;
+            var normalized = category == null ? string.Empty : category.Trim().ToUpperInvariant();
             return normalized switch
             {
                 "LIFR" => 3,
@@ -607,30 +527,20 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private static bool HasOperationalToken(string source, params string[] candidates)
         {
-            if (string.IsNullOrWhiteSpace(source))
-            {
-                return false;
-            }
+            if (string.IsNullOrWhiteSpace(source)) return false;
 
             var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var raw in source.Split(new[] { ',', ';', '|', '/' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var token = raw.Trim();
-                if (token.Length == 0)
-                {
-                    continue;
-                }
-
+                if (token.Length == 0) continue;
                 values.Add(token);
                 values.Add(token.Replace("-", "_").Replace(" ", "_"));
             }
 
             foreach (var candidate in candidates)
             {
-                if (values.Contains(candidate))
-                {
-                    return true;
-                }
+                if (values.Contains(candidate)) return true;
             }
 
             return false;
@@ -638,34 +548,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private static string FormatOperationalList(string source)
         {
-            if (string.IsNullOrWhiteSpace(source))
-            {
-                return "sin registro";
-            }
-
-            return source.Trim();
-        }
-
-        private static SimulatorType ParseSimulatorOption(string value)
-        {
-            switch ((value ?? string.Empty).Trim())
-            {
-                case "MSFS 2024":
-                    return SimulatorType.MSFS2024;
-                default:
-                    return SimulatorType.MSFS2020;
-            }
-        }
-
-        private static string ToSimulatorOption(SimulatorType value)
-        {
-            switch (value)
-            {
-                case SimulatorType.MSFS2024:
-                    return "MSFS 2024";
-                default:
-                    return "MSFS 2020";
-            }
+            return string.IsNullOrWhiteSpace(source) ? "sin registro" : source.Trim();
         }
     }
 }

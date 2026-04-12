@@ -347,7 +347,7 @@
                         <TextBlock Text="Cargando perfil..." Foreground="#2D9CDB"
                                    FontSize="12" HorizontalAlignment="Center"
                                    Margin="0,10,0,0"
-                                   Visibility="{Binding ShowLoadingHint, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                   Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
                 </Border>
             </Grid>

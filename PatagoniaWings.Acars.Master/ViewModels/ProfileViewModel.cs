@@ -13,35 +13,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _preferredLanguage = "ESP";
         private bool _voiceFemale = true;
 
-        public Pilot? Pilot
-        {
-            get => _pilot ?? AcarsContext.Auth.CurrentPilot;
-            set => SetField(ref _pilot, value);
-        }
+        public Pilot? Pilot { get => _pilot; set => SetField(ref _pilot, value); }
         public bool IsLoading { get => _isLoading; set => SetField(ref _isLoading, value); }
-        public bool ShowLoadingHint => IsLoading && Pilot == null;
-        public string PreferredLanguage
-        {
-            get => _preferredLanguage;
-            set
-            {
-                SetField(ref _preferredLanguage, value);
-                AcarsContext.Sound.Language = value;
-            }
-        }
-
-        public bool VoiceFemale
-        {
-            get => _voiceFemale;
-            set
-            {
-                SetField(ref _voiceFemale, value);
-                AcarsContext.Sound.VoiceFemale = value;
-            }
-        }
+        public string PreferredLanguage { get => _preferredLanguage; set { SetField(ref _preferredLanguage, value); AcarsContext.Sound.Language = value; } }
+        public bool VoiceFemale { get => _voiceFemale; set { SetField(ref _voiceFemale, value); AcarsContext.Sound.VoiceFemale = value; } }
 
         public string RankImageResource => Pilot != null
-            ? $"pack://application:,,,/Resources/Ranks/Rango{(int)Pilot.Rank}.png"
+            ? string.Format("pack://application:,,,/Resources/Ranks/Rango{0}.png", (int)Pilot.Rank)
             : string.Empty;
 
         public string ProgressToNextRank
@@ -50,7 +28,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 if (Pilot == null) return "0%";
                 var next = Pilot.Rank == PilotRank.ComandanteTLA ? 100 : 50;
-                return $"{(Pilot.Points % next) * 100 / next}%";
+                return string.Format("{0}%", (Pilot.Points % next) * 100 / next);
             }
         }
 
@@ -65,35 +43,36 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     Pilot.Language = PreferredLanguage;
                     Pilot.CopilotVoiceFemale = VoiceFemale;
                     AcarsContext.Auth.SaveSession(Pilot);
+                    AcarsContext.Runtime.SetCurrentPilot(AcarsContext.Auth.CurrentPilot);
                     AcarsContext.Sound.PlayDing();
                 }
             });
+
+            AcarsContext.Runtime.Changed += () =>
+            {
+                var runtimePilot = AcarsContext.Runtime.CurrentPilot;
+                if (runtimePilot != null)
+                {
+                    ApplyPilot(runtimePilot);
+                }
+            };
         }
 
         public void LoadAsync()
         {
-            var cachedPilot = AcarsContext.Auth.CurrentPilot;
+            var cachedPilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
             if (cachedPilot != null)
             {
-                ApplyPilotSnapshot(cachedPilot);
+                ApplyPilot(cachedPilot);
+                IsLoading = false;
             }
             else
             {
                 Pilot = null;
                 IsLoading = true;
-                OnPropertyChanged(nameof(Pilot));
-                OnPropertyChanged(nameof(ShowLoadingHint));
             }
 
             _ = RefreshPilotAsync();
-        }
-
-        public void ApplyPilotSnapshot(Pilot pilot)
-        {
-            ApplyPilot(pilot);
-            IsLoading = false;
-            OnPropertyChanged(nameof(Pilot));
-            OnPropertyChanged(nameof(ShowLoadingHint));
         }
 
         private async Task RefreshPilotAsync()
@@ -103,15 +82,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var result = await AcarsContext.Api.GetCurrentPilotAsync();
                 if (result.Success && result.Data != null)
                 {
-                    ApplyPilotSnapshot(result.Data);
-                    AcarsContext.Auth.SaveSession(result.Data);
+                    AcarsContext.Auth.SetCurrentPilot(result.Data);
+                    AcarsContext.Runtime.SetCurrentPilot(AcarsContext.Auth.CurrentPilot);
+                    ApplyPilot(AcarsContext.Auth.CurrentPilot);
                 }
                 else if (Pilot == null)
                 {
-                    var fallbackPilot = AcarsContext.Auth.CurrentPilot;
+                    var fallbackPilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
                     if (fallbackPilot != null)
                     {
-                        ApplyPilotSnapshot(fallbackPilot);
+                        ApplyPilot(fallbackPilot);
                     }
                 }
             }
@@ -119,23 +99,26 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 if (Pilot == null)
                 {
-                    var fallbackPilot = AcarsContext.Auth.CurrentPilot;
+                    var fallbackPilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
                     if (fallbackPilot != null)
                     {
-                        ApplyPilotSnapshot(fallbackPilot);
+                        ApplyPilot(fallbackPilot);
                     }
                 }
             }
             finally
             {
                 IsLoading = false;
-                OnPropertyChanged(nameof(Pilot));
-                OnPropertyChanged(nameof(ShowLoadingHint));
             }
         }
 
-        private void ApplyPilot(Pilot pilot)
+        private void ApplyPilot(Pilot? pilot)
         {
+            if (pilot == null)
+            {
+                return;
+            }
+
             Pilot = pilot;
             PreferredLanguage = pilot.Language;
             VoiceFemale = pilot.CopilotVoiceFemale;

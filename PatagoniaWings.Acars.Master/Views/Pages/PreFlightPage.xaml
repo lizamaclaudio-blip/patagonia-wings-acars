@@ -72,11 +72,11 @@
                                            MaxWidth="300"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding DepartureIcaoDisplay}" FontFamily="Consolas"
+                                <TextBlock Text="{Binding PreparedDispatch.DepartureIcao}" FontFamily="Consolas"
                                            FontSize="22" FontWeight="Bold" Foreground="#2D9CDB"
                                            HorizontalAlignment="Center"/>
                                 <TextBlock Text="▼" Foreground="#252D3A" HorizontalAlignment="Center" Margin="0,2"/>
-                                <TextBlock Text="{Binding ArrivalIcaoDisplay}" FontFamily="Consolas"
+                                <TextBlock Text="{Binding PreparedDispatch.ArrivalIcao}" FontFamily="Consolas"
                                            FontSize="22" FontWeight="Bold" Foreground="#0CA789"
                                            HorizontalAlignment="Center"/>
                             </StackPanel>
@@ -87,9 +87,9 @@
                                 Command="{Binding LoadDispatchCommand}"
                                 HorizontalAlignment="Left" Padding="14,9"/>
 
-                        <TextBlock Text="Buscando despacho operativo..." Foreground="#2D9CDB"
+                        <TextBlock Text="Cargando despacho desde Supabase..." Foreground="#2D9CDB"
                                    FontSize="12" Margin="0,10,0,0"
-                                   Visibility="{Binding ShowDispatchLoadingHint, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                   Visibility="{Binding IsLoadingDispatch, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
                 </Border>
 
@@ -173,7 +173,7 @@
                         <TextBlock Text="SIMULADOR" Style="{StaticResource FieldLabel}"/>
                         <ComboBox Style="{StaticResource DarkComboBox}" Height="40"
                                   ItemsSource="{Binding SimulatorOptions}"
-                                  SelectedItem="{Binding SelectedSimulatorOption, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                  SelectedItem="{Binding SelectedSim, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                   Margin="0,0,0,20"/>
 
                         <Button Content="✈  INICIAR VUELO" Style="{StaticResource PrimaryButton}"
@@ -202,7 +202,7 @@
                         <TextBlock Text="ORIGEN" Style="{StaticResource FieldLabel}"/>
                         <Border Background="#0A0E14" CornerRadius="6" Padding="10,8" Margin="0,4,0,12">
                             <StackPanel>
-                                <TextBlock Text="{Binding DepartureMetarDisplay}" Foreground="#8B949E"
+                                <TextBlock Text="{Binding DepMetar, TargetNullValue=—}" Foreground="#8B949E"
                                            FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" MaxHeight="70"/>
                                 <TextBlock Text="{Binding DepartureWeatherSummary}" Foreground="#6E7A8B"
                                            FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
@@ -212,16 +212,16 @@
                         <TextBlock Text="DESTINO" Style="{StaticResource FieldLabel}"/>
                         <Border Background="#0A0E14" CornerRadius="6" Padding="10,8" Margin="0,4,0,0">
                             <StackPanel>
-                                <TextBlock Text="{Binding ArrivalMetarDisplay}" Foreground="#8B949E"
+                                <TextBlock Text="{Binding ArrMetar, TargetNullValue=—}" Foreground="#8B949E"
                                            FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" MaxHeight="70"/>
                                 <TextBlock Text="{Binding ArrivalWeatherSummary}" Foreground="#6E7A8B"
                                            FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             </StackPanel>
                         </Border>
 
-                        <TextBlock Text="Consultando METAR operativo..." Foreground="#2D9CDB" FontSize="12"
+                        <TextBlock Text="Cargando METAR..." Foreground="#2D9CDB" FontSize="12"
                                    HorizontalAlignment="Center" Margin="0,10,0,0"
-                                   Visibility="{Binding ShowMetarLoadingHint, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                   Visibility="{Binding IsLoadingMetar, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
                 </Border>
 

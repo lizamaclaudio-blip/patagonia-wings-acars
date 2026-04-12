@@ -11,15 +11,31 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             InitializeComponent();
         }
 
-        private MainWindow? GetMainWindow()
+        private MainWindow GetMainWindow()
         {
             return Window.GetWindow(this) as MainWindow;
         }
 
         private void BtnConnectMsfs_Click(object sender, RoutedEventArgs e)
         {
-            GetMainWindow()?.ConnectSim(silent: false);
+            MainWindow mainWindow = GetMainWindow();
+            if (mainWindow == null)
+            {
+                return;
+            }
+
+            mainWindow.ConnectSim(false);
         }
 
+        private void BtnRefreshFlight_Click(object sender, RoutedEventArgs e)
+        {
+            MainWindow mainWindow = GetMainWindow();
+            if (mainWindow == null)
+            {
+                return;
+            }
+
+            mainWindow.ConnectSim(true);
+        }
     }
 }
