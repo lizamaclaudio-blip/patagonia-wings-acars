@@ -162,7 +162,6 @@
                             </StackPanel>
                         </Button>
 
-                        <!-- EN VUELO -->
                         <Button Command="{Binding NavInFlightCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
@@ -286,7 +285,7 @@
                             </StackPanel>
                         </Button>
                         <!-- Versión -->
-                        <TextBlock Text="ACARS v2.0.5" Foreground="#2A3440"
+                        <TextBlock Text="ACARS v2.0.10" Foreground="#2A3440"
                                    FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"
                                    FontFamily="Consolas"/>
                     </StackPanel>

@@ -27,7 +27,7 @@ $msbuildPaths = @(
 )
 $msbuild = $msbuildPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
-$appVersion = "2.0.1"
+$appVersion = "2.0.10"
 if (Test-Path -LiteralPath $appConfigPath) {
     try {
         [xml]$appConfig = Get-Content -LiteralPath $appConfigPath
@@ -59,21 +59,21 @@ if (-not $iscc) {
 
 Write-Host ""
 Write-Host "Limpiando build anterior..." -ForegroundColor Cyan
-& $msbuild $slnFile /t:Clean /p:Configuration=Release /p:Platform="Any CPU" /v:minimal /nologo
+& $msbuild $slnFile /t:Clean /p:Configuration=Release /p:Platform="x64" /v:minimal /nologo
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Clean fallo." -ForegroundColor Red
     exit 1
 }
 
 Write-Host ""
-Write-Host "Compilando solucion en Release..." -ForegroundColor Cyan
-& $msbuild $slnFile /t:Build /p:Configuration=Release /p:Platform="Any CPU" /v:minimal /nologo /m
+Write-Host "Compilando solucion en Release x64..." -ForegroundColor Cyan
+& $msbuild $slnFile /t:Build /p:Configuration=Release /p:Platform="x64" /v:minimal /nologo /m
 if ($LASTEXITCODE -ne 0) {
     Write-Host "La compilacion fallo." -ForegroundColor Red
     exit 1
 }
 
-$exePath = Join-Path $root "PatagoniaWings.Acars.Master\bin\Release\PatagoniaWings.Acars.Master.exe"
+$exePath = Join-Path $root "PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.Master.exe"
 if (-not (Test-Path $exePath)) {
     Write-Host "Ejecutable no encontrado: $exePath" -ForegroundColor Red
     exit 1

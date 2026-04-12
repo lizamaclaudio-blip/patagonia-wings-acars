@@ -9,11 +9,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
-        private object? _currentPage;
         private string _currentPageName = "Dashboard";
         private bool _flightLocked;
+        private Pilot? _pilot;
+        private bool _simConnected;
+        private SimulatorType _simType = SimulatorType.None;
+        private string _simStatusText = "Sin simulador";
+        private string _utcTime = string.Empty;
+        private FlightPhase _flightPhase = FlightPhase.Disconnected;
 
-        public object? CurrentPage { get => _currentPage; set => SetField(ref _currentPage, value); }
         public string CurrentPageName { get => _currentPageName; set => SetField(ref _currentPageName, value); }
         public bool FlightLocked
         {
@@ -27,52 +31,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
             }
         }
-
         public bool CanAccessPostFlight => !FlightLocked || PostFlightVM.Report != null;
 
-        private Pilot? _pilot;
-        public Pilot? Pilot
-        {
-            get => _pilot;
-            set
-            {
-                if (SetField(ref _pilot, value))
-                {
-                    OnPropertyChanged(nameof(PilotDisplay));
-                    if (value != null)
-                    {
-                        ProfileVM.ApplyPilotSnapshot(value);
-                    }
-                }
-            }
-        }
+        public Pilot? Pilot { get => _pilot; set { if (SetField(ref _pilot, value)) OnPropertyChanged(nameof(PilotDisplay)); } }
+        public string PilotDisplay => Pilot != null ? string.Format("{0} · {1}", Pilot.CallSign, Pilot.RankName) : string.Empty;
 
-        public string PilotDisplay => Pilot != null ? $"{Pilot.CallSign} · {Pilot.RankName}" : string.Empty;
-
-        private bool _simConnected;
-        private SimulatorType _simType = SimulatorType.None;
-        private string _simStatusText = "Sin simulador";
-
-        public bool SimConnected
-        {
-            get => _simConnected;
-            set
-            {
-                if (SetField(ref _simConnected, value))
-                {
-                    OnPropertyChanged(nameof(SimStatusColor));
-                }
-            }
-        }
-
-        public SimulatorType SimType { get => _simType; set => SetField(ref _simType, value); }
+        public bool SimConnected { get => _simConnected; set { if (SetField(ref _simConnected, value)) { OnPropertyChanged(nameof(SimStatusColor)); OnPropertyChanged(nameof(SimStatusText)); } } }
+        public SimulatorType SimType { get => _simType; set { if (SetField(ref _simType, value)) OnPropertyChanged(nameof(SimStatusText)); } }
         public string SimStatusText { get => _simStatusText; set => SetField(ref _simStatusText, value); }
         public string SimStatusColor => _simConnected ? "#44CC44" : "#FF4444";
 
-        private FlightPhase _flightPhase = FlightPhase.Disconnected;
         public FlightPhase FlightPhase { get => _flightPhase; set => SetField(ref _flightPhase, value); }
-
-        private string _utcTime = string.Empty;
         public string UtcTime { get => _utcTime; set => SetField(ref _utcTime, value); }
 
         public ICommand NavDashboardCommand { get; }
@@ -81,7 +50,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand NavProfileCommand { get; }
         public ICommand NavCommunityCommand { get; }
         public ICommand LogoutCommand { get; }
-
         public Action? OnLogout { get; set; }
 
         private readonly System.Windows.Threading.DispatcherTimer _clockTimer;
@@ -103,7 +71,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             NavProfileCommand = new RelayCommand(() => NavigateTo("Profile"), () => CanNavigate("Profile"));
             NavCommunityCommand = new RelayCommand(() => NavigateTo("Community"), () => CanNavigate("Community"));
             LogoutCommand = new RelayCommand(DoLogout);
-
             _clockTimer = new System.Windows.Threading.DispatcherTimer
             {
                 Interval = TimeSpan.FromSeconds(1)
@@ -115,7 +82,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 Application.Current.Dispatcher.Invoke(() => FlightPhase = p);
             };
-
             AcarsContext.FlightService.FlightLockChanged += locked =>
             {
                 Application.Current.Dispatcher.Invoke(() =>
@@ -127,46 +93,62 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     }
                 });
             };
+            AcarsContext.Runtime.Changed += OnRuntimeChanged;
+            ApplyRuntimeState();
         }
 
         public async void LoadPilot()
         {
-            // Mostrar datos locales mientras se conecta
-            Pilot = AcarsContext.Auth.CurrentPilot;
-            if (Pilot != null)
+            var cachedPilot = AcarsContext.Auth.CurrentPilot;
+            if (cachedPilot != null)
             {
-                ProfileVM.ApplyPilotSnapshot(Pilot);
-            }
-
-            // Si el token expiró, refrescar antes de cualquier llamada a Supabase
-            if (AcarsContext.Auth.HasExpiredToken)
-            {
-                await AcarsContext.TryRefreshSessionAsync();
-                // Actualizar referencia local tras refresh
-                Pilot = AcarsContext.Auth.CurrentPilot;
-                if (Pilot != null) ProfileVM.ApplyPilotSnapshot(Pilot);
+                AcarsContext.Runtime.SetCurrentPilot(cachedPilot);
             }
 
             DashboardVM.LoadAsync();
-            _ = PreFlightVM.LoadPreparedDispatchAsync();
             ProfileVM.LoadAsync();
+            await PreFlightVM.LoadPreparedDispatchAsync();
 
             try
             {
                 var result = await AcarsContext.Api.GetCurrentPilotAsync();
                 if (result.Success && result.Data != null)
                 {
-                    AcarsContext.Auth.SaveSession(result.Data);
-                    Pilot = result.Data;
-                    ProfileVM.ApplyPilotSnapshot(result.Data);
+                    AcarsContext.Auth.SetCurrentPilot(result.Data);
+                    AcarsContext.Runtime.SetCurrentPilot(AcarsContext.Auth.CurrentPilot);
                     DashboardVM.LoadAsync();
-                    _ = PreFlightVM.LoadPreparedDispatchAsync();
                     ProfileVM.LoadAsync();
+                    await PreFlightVM.LoadPreparedDispatchAsync();
                 }
             }
             catch
             {
-                // Keep the restored local session if Supabase is temporarily unavailable.
+            }
+        }
+
+        private void OnRuntimeChanged()
+        {
+            Application.Current.Dispatcher.Invoke(ApplyRuntimeState);
+        }
+
+        private void ApplyRuntimeState()
+        {
+            Pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+            SimConnected = AcarsContext.Runtime.IsSimulatorConnected;
+            SimType = AcarsContext.Runtime.SimulatorType;
+
+            if (SimConnected)
+            {
+                var backend = AcarsContext.Runtime.SimulatorBackend;
+                SimStatusText = string.IsNullOrWhiteSpace(backend)
+                    ? string.Format("Conectado · {0}", SimType)
+                    : string.Format("Conectado · {0} · {1}", SimType, backend);
+            }
+            else
+            {
+                SimStatusText = string.IsNullOrWhiteSpace(AcarsContext.Runtime.SimulatorBackend)
+                    ? "Sin simulador"
+                    : string.Format("Esperando telemetría · {0}", AcarsContext.Runtime.SimulatorBackend);
             }
         }
 
@@ -187,20 +169,19 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return;
             }
 
+            CurrentPageName = page;
             if (page == "Profile")
             {
-                if (Pilot != null)
-                {
-                    ProfileVM.ApplyPilotSnapshot(Pilot);
-                }
-                else
-                {
-                    ProfileVM.LoadAsync();
-                }
+                ProfileVM.LoadAsync();
             }
-
-            CurrentPageName = page;
-            OnPropertyChanged(nameof(CurrentPageName));
+            else if (page == "PreFlight")
+            {
+                _ = PreFlightVM.LoadPreparedDispatchAsync();
+            }
+            else if (page == "Dashboard")
+            {
+                DashboardVM.LoadAsync();
+            }
         }
 
         public void ShowPostFlightReport(FlightReport report)
@@ -209,9 +190,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             NavigateTo("PostFlight");
         }
 
+        public void NavigateToSimulatorConnect()
+        {
+            NavigateTo("InFlight");
+        }
+
         private void DoLogout()
         {
             AcarsContext.Auth.Logout();
+            AcarsContext.Runtime.ResetAll();
             _clockTimer.Stop();
             OnLogout?.Invoke();
         }

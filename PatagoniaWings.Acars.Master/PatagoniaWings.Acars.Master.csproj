@@ -3,7 +3,7 @@
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
     <ProjectGuid>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -44,7 +44,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>bin\x64\Release\</OutputPath>
@@ -54,7 +54,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="PresentationCore" />
@@ -68,7 +68,8 @@
     <Reference Include="WindowsBase" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="fsuipcClient">
-      <HintPath>..\Libs\fsuipcClient.dll</HintPath>
+      <HintPath>..\libs\fsuipcClient.dll</HintPath>
+      <Private>True</Private>
     </Reference>
   </ItemGroup>
   <ItemGroup>
@@ -80,7 +81,7 @@
       <Project>{C3D4E5F6-A7B8-9012-CDEF-123456789012}</Project>
       <Name>PatagoniaWings.Acars.SimConnect</Name>
     </ProjectReference>
-</ItemGroup>
+  </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
@@ -134,11 +135,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Helpers\AcarsContext.cs" />
-    <Compile Include="Helpers\FsuipcService.cs" />
-    <Compile Include="Helpers\SimulatorCoordinator.cs" />
+    <Compile Include="Helpers\RuntimeState.cs" />
     <Compile Include="Helpers\Converters.cs" />
+    <Compile Include="Helpers\FsuipcService.cs" />
     <Compile Include="Helpers\PhaseToStringConverter.cs" />
     <Compile Include="Helpers\RelayCommand.cs" />
+    <Compile Include="Helpers\SimulatorCoordinator.cs" />
     <Compile Include="Helpers\SoundPlayer.cs" />
     <Compile Include="Helpers\UpdateService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -201,14 +203,6 @@
     <Content Include="Assets\Sounds\Beep.wav" />
     <Content Include="Assets\Sounds\DingACARS.wav" />
     <Content Include="Assets\Sounds\Radio.wav" />
-    <Content Include="..\libs\SimConnect.dll">
-      <Link>SimConnect.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="..\libs\fsuipcClient.dll">
-      <Link>fsuipcClient.dll</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="obj\Release\Resources\Styles\" />

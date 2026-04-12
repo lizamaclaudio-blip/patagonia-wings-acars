@@ -12,11 +12,11 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             Loaded += OnLoaded;
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             if (DataContext is PreFlightViewModel vm)
             {
-                _ = vm.LoadPreparedDispatchAsync();
+                await vm.LoadPreparedDispatchAsync();
             }
         }
     }

@@ -18,8 +18,24 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
 
         private void BtnConnectMsfs_Click(object sender, RoutedEventArgs e)
         {
-            GetMainWindow()?.ConnectSim(silent: false);
+            MainWindow? mainWindow = GetMainWindow();
+            if (mainWindow == null)
+            {
+                return;
+            }
+
+            mainWindow.ConnectSim(false);
         }
 
+        private void BtnRefreshFlight_Click(object sender, RoutedEventArgs e)
+        {
+            MainWindow? mainWindow = GetMainWindow();
+            if (mainWindow == null)
+            {
+                return;
+            }
+
+            mainWindow.ConnectSim(true);
+        }
     }
 }
