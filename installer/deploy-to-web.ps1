@@ -7,10 +7,10 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $installerSrc = Join-Path $PSScriptRoot "..\\release\\PatagoniaWingsACARSSetup.exe"
-$webPublic = "C:\\Users\\lizam\\Desktop\\PATAGONIA WINGS WEB 2.0\\patagonia-wings-site\\public\\downloads"
+$webPublic = "C:\\Users\\lizam\\Desktop\\PatagoniaWingsACARS\\PATAGONIA WINGS WEB 2.0\\patagonia-wings-site\\public\\downloads"
 $dest = Join-Path $webPublic "PatagoniaWingsACARSSetup.exe"
 $manifestDest = Join-Path $webPublic "acars-update.json"
-$appConfigPath = "C:\\Users\\lizam\\Desktop\\ACARS NUEVO\\PatagoniaWings.Acars.Master\\App.config"
+$appConfigPath = Join-Path $PSScriptRoot "..\\PatagoniaWings.Acars.Master\\App.config"
 $appVersion = "2.0.1"
 
 Write-Host ""
