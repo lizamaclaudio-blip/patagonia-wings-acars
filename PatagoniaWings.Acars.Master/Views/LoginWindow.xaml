@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:PatagoniaWings.Acars.Master.ViewModels"
         xmlns:local="clr-namespace:PatagoniaWings.Acars.Master.Helpers"
         Title="Patagonia Wings ACARS"
-        Width="920" Height="560"
+        Width="980" Height="580"
         WindowStartupLocation="CenterScreen"
         ResizeMode="NoResize"
         WindowStyle="None"
@@ -20,253 +20,290 @@
         <local:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
     </Window.Resources>
 
-    <Border CornerRadius="14" ClipToBounds="True">
+    <!-- Contenedor principal con bordes redondeados -->
+    <Border CornerRadius="16" ClipToBounds="True">
         <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="420"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
 
-            <!-- ── PANEL IZQUIERDO: imagen atmosférica ────────────────────────── -->
-            <Border Grid.Column="0" CornerRadius="14,0,0,14">
-                <Border.Background>
-                    <ImageBrush ImageSource="pack://application:,,,/Assets/patagonia-bg.jpg"
-                                Stretch="UniformToFill"/>
-                </Border.Background>
-                <Grid>
-                    <!-- Overlay degradado pronunciado -->
-                    <Rectangle>
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                <GradientStop Color="#550A0E14" Offset="0"/>
-                                <GradientStop Color="#DD0A0E14" Offset="0.85"/>
-                                <GradientStop Color="#FF0A0E14" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
+            <!-- ══ FONDO: foto del avión centrada en toda la ventana ══ -->
+            <Image Source="pack://application:,,,/Assets/patagonia-bg.jpg"
+                   Stretch="UniformToFill"
+                   HorizontalAlignment="Center"
+                   VerticalAlignment="Center"/>
 
-                    <!-- Overlay degradado vertical superior -->
-                    <Rectangle VerticalAlignment="Top" Height="140">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#88000000" Offset="0"/>
-                                <GradientStop Color="#00000000" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
+            <!-- Overlay oscuro sobre toda la imagen -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <SolidColorBrush Color="#99000000"/>
+                </Rectangle.Fill>
+            </Rectangle>
 
-                    <!-- Contenido del panel izquierdo -->
-                    <Grid>
-                        <!-- Logo superior -->
-                        <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left"
-                                    Margin="28,28,0,0" Orientation="Horizontal">
-                            <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
-                                   Height="32" Width="32" VerticalAlignment="Center"
-                                   Margin="0,0,10,0" Stretch="Uniform"/>
-                            <TextBlock Text="PATAGONIA WINGS" FontSize="13"
-                                       FontWeight="Bold" Foreground="White"
-                                       FontFamily="Segoe UI" VerticalAlignment="Center"/>
+            <!-- Degradado: izquierda semi-transparente, derecha completamente oscura -->
+            <Rectangle>
+                <Rectangle.Fill>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#00000000" Offset="0"/>
+                        <GradientStop Color="#220A0E14" Offset="0.38"/>
+                        <GradientStop Color="#DD0A0E14" Offset="0.52"/>
+                        <GradientStop Color="#FF0A0E14" Offset="1"/>
+                    </LinearGradientBrush>
+                </Rectangle.Fill>
+            </Rectangle>
+
+            <!-- ══ LAYOUT: dos columnas ══ -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="400"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- ── COLUMNA IZQUIERDA: branding sobre la foto ── -->
+                <Grid Grid.Column="0" Margin="48,0,0,0">
+
+                    <!-- Logo top-left -->
+                    <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left"
+                                Margin="0,30,0,0" Orientation="Horizontal">
+                        <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
+                               Height="30" Width="30" VerticalAlignment="Center"
+                               Margin="0,0,10,0" Stretch="Uniform"/>
+                        <TextBlock Text="PATAGONIA WINGS"
+                                   FontSize="13" FontWeight="Bold"
+                                   Foreground="White" FontFamily="Segoe UI"
+                                   VerticalAlignment="Center"
+                                   Opacity="0.9"/>
+                    </StackPanel>
+
+                    <!-- Branding central -->
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left">
+
+                        <!-- Línea de acento -->
+                        <Rectangle Height="4" Width="48" HorizontalAlignment="Left"
+                                   Margin="0,0,0,18" RadiusX="2" RadiusY="2">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#2D9CDB" Offset="0"/>
+                                    <GradientStop Color="#0CA789" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+
+                        <TextBlock Text="ACARS" FontSize="56" FontWeight="Black"
+                                   Foreground="White" FontFamily="Segoe UI"
+                                   LineHeight="56">
+                            <TextBlock.Effect>
+                                <DropShadowEffect Color="#000000" BlurRadius="20"
+                                                  ShadowDepth="0" Opacity="0.7"/>
+                            </TextBlock.Effect>
+                        </TextBlock>
+
+                        <TextBlock Text="Aircraft Communications"
+                                   FontSize="15" Foreground="#BDD8E8"
+                                   FontFamily="Segoe UI" Margin="2,6,0,2"/>
+                        <TextBlock Text="Addressing and Reporting System"
+                                   FontSize="13" Foreground="#7A9AAD"
+                                   FontFamily="Segoe UI" Margin="2,0,0,0"/>
+
+                        <!-- Badge versión -->
+                        <Border CornerRadius="6" Padding="10,5" Margin="0,20,0,0"
+                                HorizontalAlignment="Left" BorderThickness="1">
+                            <Border.BorderBrush>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#2D9CDB" Offset="0"/>
+                                    <GradientStop Color="#0CA789" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.BorderBrush>
+                            <Border.Background>
+                                <SolidColorBrush Color="#1A2D3E" Opacity="0.85"/>
+                            </Border.Background>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Source={x:Static local:UpdateService.CurrentVersion}, StringFormat='v{0}'}"
+                                           Foreground="#2D9CDB" FontFamily="Consolas"
+                                           FontSize="12" FontWeight="Bold" Margin="0,0,8,0"/>
+                                <Rectangle Width="1" Fill="#2D4A5E" Margin="0,1,8,1"/>
+                                <TextBlock Text="FSUIPC7 + SimConnect"
+                                           Foreground="#7AAABB" FontSize="11"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Feature pills -->
+                        <StackPanel Margin="0,16,0,0" Orientation="Vertical">
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <Ellipse Width="6" Height="6" Fill="#0CA789"
+                                         VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="Integración MSFS 2020 / 2024"
+                                           Foreground="#8AAABB" FontSize="12"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <Ellipse Width="6" Height="6" Fill="#0CA789"
+                                         VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="Telemetría en tiempo real"
+                                           Foreground="#8AAABB" FontSize="12"/>
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                                <Ellipse Width="6" Height="6" Fill="#2D9CDB"
+                                         VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="PIREPs automáticos vía Supabase"
+                                           Foreground="#8AAABB" FontSize="12"/>
+                            </StackPanel>
                         </StackPanel>
+                    </StackPanel>
+                </Grid>
 
-                        <!-- Texto principal inferior -->
-                        <StackPanel VerticalAlignment="Bottom" Margin="28,0,24,36">
-                            <!-- Línea decorativa -->
-                            <Rectangle Height="3" Width="40" HorizontalAlignment="Left"
-                                       Margin="0,0,0,14" RadiusX="2" RadiusY="2">
+                <!-- ── COLUMNA DERECHA: panel de login ── -->
+                <Border Grid.Column="1" CornerRadius="0,16,16,0">
+                    <Border.Background>
+                        <SolidColorBrush Color="#F20A0E14"/>
+                    </Border.Background>
+
+                    <!-- Línea de acento izquierda del panel -->
+                    <Grid>
+                        <Rectangle Width="1" HorizontalAlignment="Left">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#002D9CDB" Offset="0"/>
+                                    <GradientStop Color="#AA2D9CDB" Offset="0.3"/>
+                                    <GradientStop Color="#AA0CA789" Offset="0.7"/>
+                                    <GradientStop Color="#000CA789" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+
+                        <!-- Botón cerrar -->
+                        <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                Margin="0,14,16,0" Width="28" Height="28"
+                                Cursor="Hand" Click="BtnClose_Click">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Background" Value="Transparent"/>
+                                    <Setter Property="Foreground" Value="#556070"/>
+                                    <Setter Property="FontSize" Value="12"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Setter Property="BorderBrush" Value="#1E2A38"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                        CornerRadius="7">
+                                                    <ContentPresenter HorizontalAlignment="Center"
+                                                                      VerticalAlignment="Center"/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter Property="Background" Value="#1A2130"/>
+                                                        <Setter Property="Foreground" Value="White"/>
+                                                        <Setter Property="BorderBrush" Value="#2D9CDB"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <!-- Formulario -->
+                        <StackPanel VerticalAlignment="Center" Margin="42,0,38,0">
+
+                            <!-- Icono + Título -->
+                            <StackPanel Margin="0,0,0,6">
+                                <TextBlock Text="Iniciar Sesión"
+                                           FontSize="28" FontWeight="Bold"
+                                           Foreground="White" FontFamily="Segoe UI"/>
+                                <TextBlock Text="Ingresa con tu correo o callsign de Patagonia Wings"
+                                           Foreground="#4A5A6A" FontSize="12"
+                                           FontFamily="Segoe UI" Margin="0,5,0,0"
+                                           TextWrapping="Wrap"/>
+                            </StackPanel>
+
+                            <!-- Separador -->
+                            <Rectangle Height="1" Margin="0,18,0,22">
                                 <Rectangle.Fill>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop Color="#2D9CDB" Offset="0"/>
-                                        <GradientStop Color="#0CA789" Offset="1"/>
+                                        <GradientStop Color="#001E2A38" Offset="0"/>
+                                        <GradientStop Color="#FF1E2A38" Offset="0.5"/>
+                                        <GradientStop Color="#001E2A38" Offset="1"/>
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
                             </Rectangle>
 
-                            <TextBlock Text="ACARS" FontSize="42" FontWeight="Black"
-                                       Foreground="White" FontFamily="Segoe UI"
-                                       LineHeight="44"/>
-                            <TextBlock Text="Aircraft Communications" FontSize="15"
-                                       Foreground="#AACCDD" FontFamily="Segoe UI"
-                                       Margin="0,2,0,0"/>
-                            <TextBlock Text="Addressing and Reporting System"
-                                       FontSize="13" Foreground="#7A9AAD"
-                                       FontFamily="Segoe UI"/>
+                            <!-- Campo usuario -->
+                            <TextBlock Text="EMAIL O CALLSIGN"
+                                       Style="{StaticResource FieldLabel}"
+                                       Margin="0,0,0,6"/>
+                            <TextBox Style="{StaticResource DarkTextBox}"
+                                     Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                                     Height="44"/>
 
-                            <!-- Versión badge -->
-                            <Border CornerRadius="4" Padding="8,4" Margin="0,16,0,0"
-                                    HorizontalAlignment="Left" BorderThickness="1">
+                            <!-- Campo contraseña -->
+                            <TextBlock Text="CONTRASEÑA"
+                                       Style="{StaticResource FieldLabel}"
+                                       Margin="0,14,0,6"/>
+                            <PasswordBox x:Name="PwdBox"
+                                         Style="{StaticResource DarkPasswordBox}"
+                                         Height="44"
+                                         PasswordChanged="PwdBox_PasswordChanged"/>
+
+                            <!-- Recordar sesión -->
+                            <CheckBox Content="Recordar sesión"
+                                      Style="{StaticResource DarkCheckBox}"
+                                      IsChecked="{Binding RememberMe}"
+                                      Margin="0,12,0,0"/>
+
+                            <!-- Error -->
+                            <Border CornerRadius="6" Padding="12,8" Margin="0,10,0,0"
+                                    BorderThickness="1"
+                                    Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}">
                                 <Border.BorderBrush>
-                                    <SolidColorBrush Color="#1A3A5C"/>
+                                    <SolidColorBrush Color="#5C1A1A"/>
                                 </Border.BorderBrush>
                                 <Border.Background>
-                                    <SolidColorBrush Color="#0A1828"/>
+                                    <SolidColorBrush Color="#1A0A0A"/>
                                 </Border.Background>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="{Binding Source={x:Static local:UpdateService.CurrentVersion}, StringFormat='v{0}'}" Foreground="#2D9CDB"
-                                               FontFamily="Consolas" FontSize="11"
-                                               FontWeight="Bold" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Supabase Direct" Foreground="#606C7A"
-                                               FontSize="11"/>
+                                    <TextBlock Text="⚠ " Foreground="#FF4444"
+                                               FontSize="12" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding ErrorMessage}"
+                                               Foreground="#FF6666" FontSize="12"
+                                               FontFamily="Segoe UI" TextWrapping="Wrap"
+                                               VerticalAlignment="Center"/>
                                 </StackPanel>
                             </Border>
 
-                            <!-- Features list -->
-                            <StackPanel Margin="0,12,0,0">
-                                <StackPanel Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse Width="5" Height="5" Fill="#0CA789"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Integración MSFS 2020/2024"
-                                               Foreground="#7A9AAD" FontSize="11"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse Width="5" Height="5" Fill="#0CA789"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="Telemetría en tiempo real"
-                                               Foreground="#7A9AAD" FontSize="11"/>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Margin="0,3">
-                                    <Ellipse Width="5" Height="5" Fill="#2D9CDB"
-                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBlock Text="PIREPs automáticos vía Supabase"
-                                               Foreground="#7A9AAD" FontSize="11"/>
-                                </StackPanel>
+                            <!-- Botón principal -->
+                            <Button Content="✈  INGRESAR AL SISTEMA"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Command="{Binding LoginCommand}"
+                                    Margin="0,16,0,0" Height="46" FontSize="14"/>
+
+                            <!-- Loading -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                        Margin="0,12,0,0"
+                                        Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
+                                    <Ellipse.Fill>
+                                        <RadialGradientBrush>
+                                            <GradientStop Color="#2D9CDB" Offset="0"/>
+                                            <GradientStop Color="#1A4060" Offset="1"/>
+                                        </RadialGradientBrush>
+                                    </Ellipse.Fill>
+                                </Ellipse>
+                                <TextBlock Text="Conectando con Supabase..."
+                                           Foreground="#2D9CDB" FontSize="12"
+                                           FontFamily="Segoe UI" VerticalAlignment="Center"/>
                             </StackPanel>
+
+                            <!-- Footer versión -->
+                            <TextBlock Text="{Binding Source={x:Static local:UpdateService.CurrentVersion}, StringFormat='Patagonia Wings Virtual Airline · ACARS {0}'}"
+                                       Foreground="#1E2A38" FontSize="10"
+                                       FontFamily="Segoe UI"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,24,0,0"/>
                         </StackPanel>
                     </Grid>
-                </Grid>
-            </Border>
+                </Border>
 
-            <!-- ── PANEL DERECHO: formulario ─────────────────────────────────── -->
-            <Border Grid.Column="1" CornerRadius="0,14,14,0">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Color="#FF0D1117" Offset="0"/>
-                        <GradientStop Color="#FF0A0E14" Offset="1"/>
-                    </LinearGradientBrush>
-                </Border.Background>
-                <Grid>
-                    <!-- Línea decorativa lateral izquierda -->
-                    <Rectangle Width="2" HorizontalAlignment="Left">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                                <GradientStop Color="#001A6FB5" Offset="0"/>
-                                <GradientStop Color="#FF1A6FB5" Offset="0.3"/>
-                                <GradientStop Color="#FF0CA789" Offset="0.7"/>
-                                <GradientStop Color="#000CA789" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                    </Rectangle>
-
-                    <!-- Botón cerrar -->
-                    <Button Content="✕" HorizontalAlignment="Right" VerticalAlignment="Top"
-                            Margin="0,14,16,0" Width="30" Height="30"
-                            Cursor="Hand" Click="BtnClose_Click">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Background" Value="#0A0E14"/>
-                                <Setter Property="Foreground" Value="#8B949E"/>
-                                <Setter Property="FontSize" Value="13"/>
-                                <Setter Property="BorderThickness" Value="1"/>
-                                <Setter Property="BorderBrush" Value="#252D3A"/>
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border Background="{TemplateBinding Background}"
-                                                    BorderBrush="{TemplateBinding BorderBrush}"
-                                                    BorderThickness="{TemplateBinding BorderThickness}"
-                                                    CornerRadius="6">
-                                                <ContentPresenter HorizontalAlignment="Center"
-                                                                  VerticalAlignment="Center"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter Property="Background" Value="#1A2130"/>
-                                                    <Setter Property="Foreground" Value="White"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
-
-                    <!-- Formulario centrado -->
-                    <StackPanel VerticalAlignment="Center" Margin="48,0,44,0">
-
-                        <!-- Título -->
-                        <TextBlock Text="Iniciar Sesión" FontSize="26" FontWeight="Bold"
-                                   Foreground="White" FontFamily="Segoe UI" Margin="0,0,0,4"/>
-                        <TextBlock Text="Ingresa con tu correo o callsign de Patagonia Wings"
-                                   Foreground="#606C7A" FontSize="12" FontFamily="Segoe UI"
-                                   Margin="0,0,0,28" TextWrapping="Wrap"/>
-
-                        <!-- Campo usuario -->
-                        <TextBlock Text="EMAIL O CALLSIGN" Style="{StaticResource FieldLabel}"
-                                   Margin="0,0,0,6"/>
-                        <TextBox Style="{StaticResource DarkTextBox}"
-                                 Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
-                                 Height="61"/>
-
-                        <!-- Campo contraseña -->
-                        <TextBlock Text="CONTRASEÑA" Style="{StaticResource FieldLabel}"
-                                   Margin="0,14,0,6"/>
-                        <PasswordBox x:Name="PwdBox" Style="{StaticResource DarkPasswordBox}"
-                                     Height="69" PasswordChanged="PwdBox_PasswordChanged"/>
-
-                        <!-- Recordar sesión -->
-                        <CheckBox Content="Recordar sesión" Style="{StaticResource DarkCheckBox}"
-                                  IsChecked="{Binding RememberMe}" Margin="0,12,0,0"/>
-
-                        <!-- Mensaje de error -->
-                        <Border CornerRadius="6" Padding="12,8" Margin="0,12,0,0"
-                                BorderThickness="1"
-                                Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}">
-                            <Border.BorderBrush>
-                                <SolidColorBrush Color="#5C1A1A"/>
-                            </Border.BorderBrush>
-                            <Border.Background>
-                                <SolidColorBrush Color="#1A0A0A"/>
-                            </Border.Background>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⚠ " Foreground="#FF4444" FontSize="12"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding ErrorMessage}" Foreground="#FF6666"
-                                           FontSize="12" FontFamily="Segoe UI"
-                                           TextWrapping="Wrap" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Botón ingresar -->
-                        <Button Content="✈  INGRESAR AL SISTEMA"
-                                Style="{StaticResource PrimaryButton}"
-                                Command="{Binding LoginCommand}"
-                                Margin="0,18,0,0" Height="46" FontSize="14"/>
-
-                        <!-- Loading -->
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
-                                    Margin="0,14,0,0"
-                                    Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <Ellipse Width="6" Height="6" Margin="0,0,6,0" VerticalAlignment="Center">
-                                <Ellipse.Fill>
-                                    <RadialGradientBrush>
-                                        <GradientStop Color="#2D9CDB" Offset="0"/>
-                                        <GradientStop Color="#1A4060" Offset="1"/>
-                                    </RadialGradientBrush>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                            <TextBlock Text="Conectando con Supabase..." Foreground="#2D9CDB"
-                                       FontSize="12" FontFamily="Segoe UI"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-
-                        <!-- Footer -->
-                        <TextBlock Text="{Binding Source={x:Static local:UpdateService.CurrentVersion}, StringFormat='Patagonia Wings Virtual Airline · ACARS {0}'}"
-                                   Foreground="#252D3A" FontSize="10" FontFamily="Segoe UI"
-                                   HorizontalAlignment="Center" Margin="0,28,0,0"/>
-                    </StackPanel>
-                </Grid>
-            </Border>
-
+            </Grid>
         </Grid>
     </Border>
 </Window>
