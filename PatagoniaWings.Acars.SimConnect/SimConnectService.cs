@@ -182,6 +182,7 @@ namespace PatagoniaWings.Acars.SimConnect
 
             _simConnect.OnRecvOpen += OnRecvOpen;
             _simConnect.OnRecvSimobjectData += OnRecvSimobjectData;
+            _simConnect.OnRecvClientData += OnRecvClientData;
             _simConnect.OnRecvQuit += OnRecvQuit;
             _simConnect.OnRecvException += OnRecvException;
             _simConnect.OnRecvEvent += OnRecvEvent;
@@ -244,7 +245,7 @@ namespace PatagoniaWings.Acars.SimConnect
                     if (_mobiFlight?.IsAvailable == true && raw.Title?.Contains("A319") == true)
                     {
                         _mobiFlight.RequestA319Lvars();
-                        simData = _mobiFlight.EnrichWithLvars(simData, "A319 Headwind");
+                        simData = _mobiFlight.EnrichWithLvars(simData);
                         Debug.WriteLine("[SimConnect] Datos A319 enriquecidos con LVARs de MobiFlight");
                     }
 
@@ -267,10 +268,9 @@ namespace PatagoniaWings.Acars.SimConnect
                 {
                     _lastEnv = (EnvironmentDataStruct)data.dwData[0];
                 }
-                else if (_mobiFlight?.IsAvailable == true)
+                else
                 {
-                    // Procesar datos de MobiFlight (LVARs)
-                    _mobiFlight.ProcessSimObjectData(data);
+                    _mobiFlight?.ProcessSimObjectData(data);
                 }
             }
             catch (Exception ex)
@@ -279,6 +279,18 @@ namespace PatagoniaWings.Acars.SimConnect
             }
         }
 
+
+        private void OnRecvClientData(Microsoft.FlightSimulator.SimConnect.SimConnect sender, SIMCONNECT_RECV_CLIENT_DATA data)
+        {
+            try
+            {
+                _mobiFlight?.ProcessClientData(data);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"OnRecvClientData error: {ex.Message}");
+            }
+        }
 
         private void OnRecvOpen(Microsoft.FlightSimulator.SimConnect.SimConnect sender, SIMCONNECT_RECV_OPEN data)
         {
@@ -467,171 +479,119 @@ namespace PatagoniaWings.Acars.SimConnect
         }
 
         /// <summary>
-        /// Integración con MobiFlight WASM Module.
-        /// Se instala silenciosamente con el ACARS y permite leer LVARs.
+        /// Integración con LVARs del A319 Headwind usando SimConnect DataDefinition
+        /// con la sintaxis especial "(L:NombreVar, unit)" disponible en MSFS 2020/2024.
         /// </summary>
         private class MobiFlightIntegration : IDisposable
         {
             private Microsoft.FlightSimulator.SimConnect.SimConnect? _simConnect;
             private bool _isAvailable;
             private bool _disposed;
-            
-            // Eventos SimConnect para MobiFlight
-            private const uint EVENT_LVAR_READ = 1000;
-            private const uint DATA_ID_LVARS = 2000;
-            
-            // Cache de valores LVAR leídos
-            private readonly Dictionary<string, double> _lvarCache = new();
-            
+            private bool _initialized;
+
+            private enum LvarDefId : uint { Block = 800 }
+            private enum LvarReqId : uint { Block = 900 }
+
+            private readonly Dictionary<string, double> _lvarCache = new Dictionary<string, double>();
+
             public bool IsAvailable => _isAvailable;
-            
+
             public void Initialize(Microsoft.FlightSimulator.SimConnect.SimConnect simConnect)
             {
                 _simConnect = simConnect;
-                
+                _isAvailable = true;
+                Debug.WriteLine("[MobiFlight] Integración LVAR lista (se activa al detectar A319)");
+            }
+
+            public void RequestA319Lvars()
+            {
+                if (!_isAvailable || _simConnect == null || _initialized) return;
+
                 try
                 {
-                    RegisterLvarDataDefinition();
-                    _isAvailable = true;
-                    Debug.WriteLine("[MobiFlightIntegration] Módulo WASM detectado y listo");
+                    uint sc = Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_UNUSED;
+
+                    // SimConnect en MSFS 2020/2024 soporta leer LVARs con la sintaxis (L:NombreVar, unit)
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:A32NX_BEACON_LIGHT, bool)",         null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:STROBE_LIGHTS_ON, bool)",           null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:LANDING_LIGHTS_ON, bool)",          null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:NAV_LIGHTS_ON, bool)",              null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:TAXI_LIGHT_ON, bool)",              null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:A32NX_ENGINE_N1:1, percent)",       null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:A32NX_ENGINE_N1:2, percent)",       null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.RegisterDataDefineStruct<A319LvarBlock>(LvarDefId.Block);
+
+                    _simConnect.RequestDataOnSimObject(
+                        LvarReqId.Block,
+                        LvarDefId.Block,
+                        Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_OBJECT_ID_USER,
+                        SIMCONNECT_PERIOD.SECOND,
+                        SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
+                        0, 0, 0);
+
+                    _initialized = true;
+                    Debug.WriteLine("[MobiFlight] Solicitud de LVARs A319 enviada");
                 }
                 catch (Exception ex)
                 {
                     _isAvailable = false;
-                    Debug.WriteLine($"[MobiFlightIntegration] Módulo no disponible: {ex.Message}");
+                    Debug.WriteLine($"[MobiFlight] Error solicitando LVARs: {ex.Message}");
                 }
             }
-            
-            private void RegisterLvarDataDefinition()
+
+            [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
+            private struct A319LvarBlock
             {
-                if (_simConnect == null) return;
-                
-                uint sc = Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_UNUSED;
-                
-                // Variables del A319
-                _simConnect.AddToDataDefinition(
-                    (DataDefineId)DATA_ID_LVARS,
-                    "MOBIFLIGHT_A319_LIGHT_BEACON",
-                    "Number",
-                    SIMCONNECT_DATATYPE.FLOAT64,
-                    0, sc);
-                    
-                _simConnect.AddToDataDefinition(
-                    (DataDefineId)DATA_ID_LVARS + 1,
-                    "MOBIFLIGHT_A319_LIGHT_STROBE",
-                    "Number",
-                    SIMCONNECT_DATATYPE.FLOAT64,
-                    0, sc);
-                    
-                _simConnect.AddToDataDefinition(
-                    (DataDefineId)DATA_ID_LVARS + 2,
-                    "MOBIFLIGHT_A319_LIGHT_LANDING",
-                    "Number",
-                    SIMCONNECT_DATATYPE.FLOAT64,
-                    0, sc);
-                    
-                _simConnect.AddToDataDefinition(
-                    (DataDefineId)DATA_ID_LVARS + 3,
-                    "MOBIFLIGHT_A319_ENG_N1_1",
-                    "Percent",
-                    SIMCONNECT_DATATYPE.FLOAT64,
-                    0, sc);
-                    
-                _simConnect.AddToDataDefinition(
-                    (DataDefineId)DATA_ID_LVARS + 4,
-                    "MOBIFLIGHT_A319_ENG_N1_2",
-                    "Percent",
-                    SIMCONNECT_DATATYPE.FLOAT64,
-                    0, sc);
+                public double Beacon;
+                public double Strobe;
+                public double Landing;
+                public double Nav;
+                public double Taxi;
+                public double N1Eng1;
+                public double N1Eng2;
             }
-            
-            public double? ReadA319Lvar(string variableName)
+
+            public void ProcessSimObjectData(SIMCONNECT_RECV_SIMOBJECT_DATA data)
             {
-                if (!_isAvailable || _simConnect == null)
-                    return null;
-                    
+                if (data.dwRequestID != (uint)LvarReqId.Block) return;
                 try
                 {
-                    if (_lvarCache.TryGetValue(variableName, out var cachedValue))
-                    {
-                        return cachedValue;
-                    }
-                    
-                    Debug.WriteLine($"[MobiFlightIntegration] Solicitando LVAR: {variableName}");
-                    return null;
+                    var block = (A319LvarBlock)data.dwData[0];
+                    _lvarCache["Beacon"]  = block.Beacon;
+                    _lvarCache["Strobe"]  = block.Strobe;
+                    _lvarCache["Landing"] = block.Landing;
+                    _lvarCache["Nav"]     = block.Nav;
+                    _lvarCache["Taxi"]    = block.Taxi;
+                    _lvarCache["N1_1"]    = block.N1Eng1;
+                    _lvarCache["N1_2"]    = block.N1Eng2;
+                    Debug.WriteLine($"[MobiFlight] LVARs A319: Beacon={block.Beacon} Strobe={block.Strobe} N1_1={block.N1Eng1:F1} N1_2={block.N1Eng2:F1}");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[MobiFlightIntegration] Error leyendo {variableName}: {ex.Message}");
-                    return null;
+                    Debug.WriteLine($"[MobiFlight] Error procesando LVARs: {ex.Message}");
                 }
             }
-            
-            public void ProcessSimObjectData(SIMCONNECT_RECV_SIMOBJECT_DATA data)
+
+            public void ProcessClientData(SIMCONNECT_RECV_CLIENT_DATA data) { }
+
+            public SimData EnrichWithLvars(SimData baseData)
             {
-                if (data.dwRequestID >= DATA_ID_LVARS && data.dwRequestID <= DATA_ID_LVARS + 10)
-                {
-                    var value = (double)data.dwData[0];
-                    var lvarIndex = data.dwRequestID - DATA_ID_LVARS;
-                    
-                    Debug.WriteLine($"[MobiFlightIntegration] LVAR[{lvarIndex}] = {value}");
-                    
-                    switch (lvarIndex)
-                    {
-                        case 0: _lvarCache["Beacon"] = value; break;
-                        case 1: _lvarCache["Strobe"] = value; break;
-                        case 2: _lvarCache["Landing"] = value; break;
-                        case 3: _lvarCache["Engine1N1"] = value; break;
-                        case 4: _lvarCache["Engine2N1"] = value; break;
-                    }
-                }
-            }
-            
-            public void RequestA319Lvars()
-            {
-                if (!_isAvailable || _simConnect == null) return;
-                
-                uint userObjectId = Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_OBJECT_ID_USER;
-                
-                for (uint i = 0; i < 5; i++)
-                {
-                    _simConnect.RequestDataOnSimObject(
-                        (RequestId)(DATA_ID_LVARS + i),
-                        (DataDefineId)(DATA_ID_LVARS + i),
-                        userObjectId,
-                        SIMCONNECT_PERIOD.SECOND,
-                        SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                        0, 0, 0);
-                }
-            }
-            
-            public SimData EnrichWithLvars(SimData baseData, string aircraftType)
-            {
-                if (!_isAvailable || aircraftType != "A319 Headwind")
-                    return baseData;
-                    
-                if (_lvarCache.TryGetValue("Beacon", out var beacon))
-                    baseData.BeaconLightsOn = beacon > 0.5;
-                    
-                if (_lvarCache.TryGetValue("Strobe", out var strobe))
-                    baseData.StrobeLightsOn = strobe > 0.5;
-                    
-                if (_lvarCache.TryGetValue("Landing", out var landing))
-                    baseData.LandingLightsOn = landing > 0.5;
-                    
-                if (_lvarCache.TryGetValue("Engine1N1", out var n1_1))
-                    baseData.Engine1N1 = n1_1;
-                    
-                if (_lvarCache.TryGetValue("Engine2N1", out var n1_2))
-                    baseData.Engine2N1 = n1_2;
-                    
+                if (!_isAvailable || _lvarCache.Count == 0) return baseData;
+
+                if (_lvarCache.TryGetValue("Beacon",  out var beacon))  baseData.BeaconLightsOn  = beacon  > 0.5;
+                if (_lvarCache.TryGetValue("Strobe",  out var strobe))  baseData.StrobeLightsOn  = strobe  > 0.5;
+                if (_lvarCache.TryGetValue("Landing", out var landing)) baseData.LandingLightsOn = landing > 0.5;
+                if (_lvarCache.TryGetValue("Nav",     out var nav))     baseData.NavLightsOn     = nav     > 0.5;
+                if (_lvarCache.TryGetValue("Taxi",    out var taxi))    baseData.TaxiLightsOn    = taxi    > 0.5;
+                if (_lvarCache.TryGetValue("N1_1",    out var n1_1))    baseData.Engine1N1       = n1_1;
+                if (_lvarCache.TryGetValue("N1_2",    out var n1_2))    baseData.Engine2N1       = n1_2;
+
                 return baseData;
             }
-            
+
             public void Dispose()
             {
                 if (_disposed) return;
-                
                 _simConnect = null;
                 _disposed = true;
             }
