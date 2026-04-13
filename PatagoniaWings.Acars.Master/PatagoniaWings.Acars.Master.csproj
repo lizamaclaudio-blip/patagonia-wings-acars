@@ -86,6 +86,10 @@
       <HintPath>..\libs\fsuipcClient.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="AutoUpdater.NET">
+      <HintPath>..\libs\AutoUpdater.NET.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\PatagoniaWings.Acars.Core\PatagoniaWings.Acars.Core.csproj">
