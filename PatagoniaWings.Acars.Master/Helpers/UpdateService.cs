@@ -51,7 +51,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static bool _checkedThisSession;
         private static UpdateCheckResult? _cachedResult;
 
-        public static string CurrentVersion => ReadSetting("AppVersion", GetAssemblyVersion());
+        public static string CurrentVersion => GetAssemblyVersion();
 
         public static async Task NotifyIfUpdateAvailableAsync(Window owner)
         {

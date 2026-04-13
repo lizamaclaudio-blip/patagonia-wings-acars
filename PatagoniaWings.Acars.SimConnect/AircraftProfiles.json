@@ -92,6 +92,32 @@
       "notes": "Uses A32NX LVAR namespace"
     },
     {
+      "name": "FlyByWire A32NX",
+      "matches": ["A32NX", "Flybywire", "FlyByWire", "FBW", "FBW A320", "FlyByWire A32NX"],
+      "description": "FlyByWire A32NX Airbus family",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL TOTAL CAPACITY"],
+        "unit": "pounds",
+        "status": "WORKING"
+      },
+      "engines": {
+        "n1_variable": "(L:A32NX_ENGINE_N1:1, percent)",
+        "status": "LVAR_REQUIRED",
+        "lvars": ["(L:A32NX_ENGINE_N1:1, percent)", "(L:A32NX_ENGINE_N1:2, percent)"]
+      },
+      "lights": {
+        "status": "LVAR_REQUIRED",
+        "notes": "Usa LVARs A32NX para todas las luces principales"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "lvar_support": "REQUIRED_FOR_FULL_FUNCTIONALITY",
+      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Flaps", "Gear"],
+      "requires_lvars": ["Lights", "Engine N1"],
+      "notes": "FlyByWire A32NX usa sus propios LVARs compatibles con la integración"
+    },
+    {
       "name": "PMDG 737",
       "matches": ["B737", "PMDG 737", "Boeing 737", "737-800", "737-700", "737-900", "737 MAX"],
       "description": "Boeing 737 series by PMDG",

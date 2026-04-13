@@ -580,7 +580,8 @@ namespace PatagoniaWings.Acars.SimConnect
         {
             return profileName == "A319 Headwind"
                 || profileName == "Fenix A320"
-                || profileName == "Headwind A320";
+                || profileName == "Headwind A320"
+                || profileName == "FlyByWire A32NX";
         }
 
         // ──────────────────────────────────────────────────────────────────────
