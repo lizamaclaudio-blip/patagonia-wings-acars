@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.0.4.0</version>
-  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.4.exe</url>
-  <changelog>Fix critico: crash al iniciar sesion causado por AutoUpdater WinForms dialog. Dialogo de actualizacion reemplazado por WPF nativo. Fix: comparacion de versiones usa App.config.</changelog>
+  <version>3.0.5.0</version>
+  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.5.exe</url>
+  <changelog>Fix critico: ACARS no cargaba la reserva desde Supabase. Query corregido a columnas reales origin_ident/destination_ident. Eliminada RPC inexistente.</changelog>
   <mandatory>false</mandatory>
-  <hash>sha256:E974B27742419FF3EC40A89BC1F07E348E2854A49D4DEA2FC3F0EE0E11353F31</hash>
+  <hash>sha256:7F4C025ABA7CD50600B16AB00762B197A5084EEC38DF521A7A0B4FB1FE6C62A8</hash>
 </item>

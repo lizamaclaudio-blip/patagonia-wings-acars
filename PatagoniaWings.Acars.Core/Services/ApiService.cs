@@ -562,55 +562,29 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 Dictionary<string, object>? selectedRow = null;
 
-                // Intento 1: RPC centralizada
-                using (var request = CreateSupabaseRequest(HttpMethod.Post, "/rest/v1/rpc/pw_get_active_reservation_for_pilot", true))
+                // Query directo a flight_reservations usando columnas reales de Supabase:
+                // origin_ident / destination_ident  (NO origin_icao / destination_icao)
+                // PostgREST: múltiples neq se encadenan como parámetros separados
+                var cs = Uri.EscapeDataString(pilotCallsign.Trim().ToUpperInvariant());
+                var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{cs}&status=neq.completed&status=neq.cancelled&status=neq.expired&order=updated_at.desc&limit=5";
+                using (var req = CreateSupabaseRequest(HttpMethod.Get, directEp, true))
                 {
-                    var payload = _json.Serialize(new { p_callsign = pilotCallsign.Trim().ToUpperInvariant() });
-                    request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
-
-                    var response = await _http.SendAsync(request);
-                    var raw = await response.Content.ReadAsStringAsync();
-                    if (response.IsSuccessStatusCode)
+                    var resp = await _http.SendAsync(req);
+                    var raw = await resp.Content.ReadAsStringAsync();
+                    if (resp.IsSuccessStatusCode)
                     {
-                        var list = _json.DeserializeObject(raw) as object[];
-                        if (list != null && list.Length > 0)
+                        var rows = _json.DeserializeObject(raw) as object[];
+                        if (rows != null)
                         {
-                            foreach (var item in list)
+                            foreach (var item in rows)
                             {
                                 var row = item as Dictionary<string, object>;
                                 if (row == null) continue;
-                                var status = FirstNonEmpty(row, "status").Trim().ToLowerInvariant();
-                                if (status == "dispatch_ready" || status == "dispatched" || status == "in_progress" || status == "in_flight")
+                                var st = FirstNonEmpty(row, "status").Trim().ToLowerInvariant();
+                                // Prioridad: dispatched / in_flight primero, luego cualquier activa
+                                if (st == "dispatched" || st == "dispatch_ready" || st == "in_progress" || st == "in_flight")
                                 { selectedRow = row; break; }
                                 if (selectedRow == null) selectedRow = row;
-                            }
-                        }
-                    }
-                }
-
-                // Intento 2: fallback query directo a flight_reservations (sin RPC)
-                if (selectedRow == null)
-                {
-                    var excludedStatuses = Uri.EscapeDataString("completed") + "&status=neq." + Uri.EscapeDataString("cancelled");
-                    var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{Uri.EscapeDataString(pilotCallsign.Trim().ToUpperInvariant())}&status=neq.{excludedStatuses}&order=updated_at.desc.nullslast&limit=5";
-                    using (var req2 = CreateSupabaseRequest(HttpMethod.Get, directEp, true))
-                    {
-                        var resp2 = await _http.SendAsync(req2);
-                        var raw2 = await resp2.Content.ReadAsStringAsync();
-                        if (resp2.IsSuccessStatusCode)
-                        {
-                            var rows2 = _json.DeserializeObject(raw2) as object[];
-                            if (rows2 != null)
-                            {
-                                foreach (var item in rows2)
-                                {
-                                    var row = item as Dictionary<string, object>;
-                                    if (row == null) continue;
-                                    var status = FirstNonEmpty(row, "status").Trim().ToLowerInvariant();
-                                    if (status == "dispatch_ready" || status == "dispatched" || status == "in_progress" || status == "in_flight")
-                                    { selectedRow = row; break; }
-                                    if (selectedRow == null) selectedRow = row;
-                                }
                             }
                         }
                     }
