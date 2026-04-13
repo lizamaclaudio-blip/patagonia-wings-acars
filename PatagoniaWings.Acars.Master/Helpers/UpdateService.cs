@@ -337,19 +337,39 @@ namespace PatagoniaWings.Acars.Master.Helpers
         {
             try
             {
-                var version = Assembly.GetExecutingAssembly().GetName().Version;
+                // Intentar obtener la versión del entry assembly (la aplicación principal)
+                var entryAssembly = Assembly.GetEntryAssembly();
+                var executingAssembly = Assembly.GetExecutingAssembly();
+                
+                WriteUpdateLog($"EntryAssembly: {entryAssembly?.GetName().Name} ver={entryAssembly?.GetName().Version}");
+                WriteUpdateLog($"ExecutingAssembly: {executingAssembly?.GetName().Name} ver={executingAssembly?.GetName().Version}");
+                
+                // Usar EntryAssembly si está disponible (es la app principal), sino ExecutingAssembly
+                var targetAssembly = entryAssembly ?? executingAssembly;
+                if (targetAssembly == null)
+                {
+                    WriteUpdateLog("No se pudo obtener ningún assembly");
+                    return "2.0.17"; // Fallback hardcoded
+                }
+                
+                var version = targetAssembly.GetName().Version;
                 if (version == null)
                 {
-                    return "0.0.0";
+                    WriteUpdateLog("Assembly.Version es null");
+                    return "2.0.17"; // Fallback hardcoded
                 }
 
-                return version.Build >= 0
-                    ? string.Format("{0}.{1}.{2}", version.Major, version.Minor, version.Build)
-                    : string.Format("{0}.{1}", version.Major, version.Minor);
+                var versionString = version.Build >= 0
+                    ? $"{version.Major}.{version.Minor}.{version.Build}"
+                    : $"{version.Major}.{version.Minor}";
+                    
+                WriteUpdateLog($"Version detectada: {versionString}");
+                return versionString;
             }
-            catch
+            catch (Exception ex)
             {
-                return "0.0.0";
+                WriteUpdateLog($"Error GetAssemblyVersion: {ex}");
+                return "2.0.17"; // Fallback hardcoded
             }
         }
 
