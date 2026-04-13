@@ -44,7 +44,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
     public static class UpdateService
     {
-        private const string DefaultManifestUrl = "https://www.patagoniaw.com/downloads/acars-update.json";
+        private const string DefaultManifestUrl = "https://raw.githubusercontent.com/lizamaclaudio-blip/patagonia-wings-acars/main/Web/acars-update.json";
         private const string DefaultInstallerUrl = "https://www.patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe";
 
         private static readonly JavaScriptSerializer Serializer = new JavaScriptSerializer();
