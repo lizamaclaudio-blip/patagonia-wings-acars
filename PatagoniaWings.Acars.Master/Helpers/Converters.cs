@@ -94,4 +94,18 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
+
+    /// <summary>Convierte bool a Brush (usado para resaltar valores importantes).</summary>
+    public class BoolToBrushConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var brush = value is bool b && b 
+                ? new SolidColorBrush(Color.FromRgb(242, 201, 76))  // Amarillo/Warn
+                : new SolidColorBrush(Color.FromRgb(240, 246, 252)); // Texto normal
+            return brush;
+        }
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
 }

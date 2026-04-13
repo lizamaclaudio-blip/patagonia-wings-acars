@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
@@ -76,6 +77,8 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 return;
             }
+
+            Debug.WriteLine($"[FlightService] UpdateSimData - ALT={data.AltitudeFeet:F0} FUEL={data.FuelTotalLbs:F0}");
 
             if (data.CapturedAtUtc == default(DateTime))
             {

@@ -1,0 +1,10 @@
+{
+  "version": "2.0.11",
+  "downloadUrl": "https://www.patagoniaw.com/downloads/PatagoniaWingsACARSSetup-2.0.11.exe",
+  "mandatory": false,
+  "notes": "Novedades en esta versión:\n\n• Soporte completo para Airbus A319 Headwind\n• Integración automática con MobiFlight WASM Module\n• Lectura de LVARs para luces, N1 de motores y transponder\n• Fallback inteligente FSUIPC → SimConnect\n• Mejoras en detección de aviones WASM\n• Sistema de perfiles de avión configurable\n• Correcciones en UI de login y telemetría",
+  "releaseDate": "2025-04-12",
+  "minVersion": "2.0.0",
+  "fileSize": "15MB",
+  "hash": "sha256:pending"
+}

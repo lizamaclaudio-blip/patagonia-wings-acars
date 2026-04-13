@@ -1,6 +1,8 @@
 #nullable enable
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using PatagoniaWings.Acars.Core.Models;
 using PatagoniaWings.Acars.SimConnect;
 
@@ -8,21 +10,32 @@ namespace PatagoniaWings.Acars.Master.Helpers
 {
     /// <summary>
     /// Intenta FSUIPC7 primero. Si falla, usa SimConnect como fallback.
-    /// No emite Connected hasta recibir el primer frame real.
+    /// Solo marca conectado cuando entra telemetría real.
     /// </summary>
     public sealed class SimulatorCoordinator : IDisposable
     {
-        private FsuipcService?    _fsuipc;
-        private SimConnectService? _simConnect;
-        private bool _disposed;
+        private const int InitialTelemetryTimeoutSeconds = 6;
+        private const int LiveTelemetryTimeoutSeconds = 4;
 
+        private readonly object _sync = new object();
         private readonly string _logFile;
+
+        private FsuipcService? _fsuipc;
+        private SimConnectService? _simConnect;
+        private Timer? _healthTimer;
+        private bool _disposed;
+        private bool _disconnectRaised;
+        private DateTime _connectStartedUtc;
+        private DateTime? _lastFrameUtc;
+        private IntPtr _windowHandle;
+        private int _consecutiveInvalidFrames;
+        private const int MaxInvalidFramesBeforeFallback = 3;
 
         public bool IsConnected { get; private set; }
         public string ActiveBackend { get; private set; } = "None";
 
-        public event Action?          Connected;
-        public event Action?          Disconnected;
+        public event Action? Connected;
+        public event Action? Disconnected;
         public event Action<SimData>? DataReceived;
 
         public SimulatorCoordinator(string logFile)
@@ -30,83 +43,284 @@ namespace PatagoniaWings.Acars.Master.Helpers
             _logFile = logFile;
         }
 
-        // hwnd solo necesario para SimConnect
         public void TryConnect(IntPtr hwnd)
         {
+            StopHealthTimer();
             DisposeProviders();
+
+            _windowHandle = hwnd;
             IsConnected = false;
             ActiveBackend = "None";
+            _disconnectRaised = false;
+            _connectStartedUtc = DateTime.UtcNow;
+            _lastFrameUtc = null;
+            _consecutiveInvalidFrames = 0;
 
-            // ── Intento 1: FSUIPC7 ──────────────────────────────────────────
             try
             {
                 _fsuipc = new FsuipcService();
-                _fsuipc.Connected    += OnProviderConnected;
+                _fsuipc.Connected += OnProviderConnected;
                 _fsuipc.Disconnected += OnProviderDisconnected;
                 _fsuipc.DataReceived += OnDataReceived;
                 _fsuipc.Connect();
                 ActiveBackend = "FSUIPC7";
                 WriteLog("Backend activo: FSUIPC7");
+                StartHealthTimer();
                 return;
             }
             catch (Exception ex)
             {
                 WriteLog("FSUIPC7 no disponible: " + ex.Message);
-                _fsuipc?.Dispose();
-                _fsuipc = null;
+                DisposeFsuipc();
             }
 
-            // ── Intento 2: SimConnect (fallback) ────────────────────────────
             try
             {
                 _simConnect = new SimConnectService();
-                _simConnect.Connected    += OnProviderConnected;
+                _simConnect.Connected += OnProviderConnected;
                 _simConnect.Disconnected += OnProviderDisconnected;
                 _simConnect.DataReceived += OnDataReceived;
                 _simConnect.Connect(hwnd);
                 ActiveBackend = "SimConnect";
                 WriteLog("Backend activo: SimConnect");
+                StartHealthTimer();
             }
             catch (Exception ex)
             {
                 WriteLog("SimConnect no disponible: " + ex.Message);
-                _simConnect?.Dispose();
-                _simConnect = null;
-                throw;     // ambos fallaron → el llamador maneja el error
+                DisposeSimConnect();
+                ActiveBackend = "None";
+                throw;
             }
         }
 
         private void OnProviderConnected()
         {
-            IsConnected = true;
-            Connected?.Invoke();
+            Debug.WriteLine($"[Coordinator] Proveedor conectado: {ActiveBackend}");
+            WriteLog("Handshake inicial con " + ActiveBackend);
         }
 
         private void OnProviderDisconnected()
         {
-            IsConnected = false;
-            WriteLog("Desconectado de " + ActiveBackend);
-            Disconnected?.Invoke();
+            ForceDisconnect("Proveedor desconectado: " + ActiveBackend);
         }
 
         private void OnDataReceived(SimData data)
         {
+            if (data == null)
+            {
+                return;
+            }
+            
+            Debug.WriteLine($"[Coordinator] Datos recibidos de {ActiveBackend} - ALT={data.AltitudeFeet:F0} FUEL={data.FuelTotalLbs:F0}");
+            
+            // Validar que son datos reales del simulador
+            // Un dato válido debe tener latitud entre -90 y 90, y altitud > 0 o velocidad > 0
+            bool latValid = data.Latitude >= -90 && data.Latitude <= 90;
+            bool altValid = data.AltitudeFeet > 0 && data.AltitudeFeet < 100000;
+            bool speedValid = data.IndicatedAirspeed > 0 && data.IndicatedAirspeed < 1000;
+            bool hasValidData = latValid && (altValid || speedValid);
+            
+            if (!hasValidData)
+            {
+                _consecutiveInvalidFrames++;
+                Debug.WriteLine($"[Coordinator] Datos inválidos detectados - ignorando (frame {_consecutiveInvalidFrames}/{MaxInvalidFramesBeforeFallback}) LAT={data.Latitude:F2} ALT={data.AltitudeFeet:F0}");
+                
+                // Si recibimos muchos frames inválidos consecutivos, forzar fallback a SimConnect
+                if (ActiveBackend == "FSUIPC7" && _consecutiveInvalidFrames >= MaxInvalidFramesBeforeFallback)
+                {
+                    Debug.WriteLine("[Coordinator] Demasiados frames inválidos - forzando fallback a SimConnect...");
+                    WriteLog("FSUIPC enviando datos vacíos - cambiando a SimConnect");
+                    ForceDisconnect("FSUIPC datos vacíos");
+                    TrySimConnectFallback();
+                }
+                return;
+            }
+            
+            // Resetear contador si recibimos datos válidos
+            _consecutiveInvalidFrames = 0;
+
+            var capturedAt = data.CapturedAtUtc == default(DateTime)
+                ? DateTime.UtcNow
+                : data.CapturedAtUtc;
+
+            var shouldRaiseConnected = false;
+            lock (_sync)
+            {
+                _lastFrameUtc = capturedAt;
+                if (!IsConnected)
+                {
+                    IsConnected = true;
+                    _disconnectRaised = false;
+                    shouldRaiseConnected = true;
+                }
+            }
+
+            if (shouldRaiseConnected)
+            {
+                WriteLog("Telemetría real recibida desde " + ActiveBackend);
+                Connected?.Invoke();
+            }
+
             DataReceived?.Invoke(data);
+        }
+
+        private void StartHealthTimer()
+        {
+            StopHealthTimer();
+            _healthTimer = new Timer(_ => HealthTick(), null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+        }
+
+        private void StopHealthTimer()
+        {
+            _healthTimer?.Dispose();
+            _healthTimer = null;
+        }
+
+        private void HealthTick()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            DateTime now = DateTime.UtcNow;
+            bool shouldDisconnect = false;
+            string reason = string.Empty;
+
+            lock (_sync)
+            {
+                if (_disconnectRaised || string.IsNullOrWhiteSpace(ActiveBackend) || ActiveBackend == "None")
+                {
+                    return;
+                }
+
+                if (_lastFrameUtc.HasValue)
+                {
+                    if ((now - _lastFrameUtc.Value).TotalSeconds > LiveTelemetryTimeoutSeconds)
+                    {
+                        shouldDisconnect = true;
+                        reason = "Telemetría expirada en " + ActiveBackend;
+                    }
+                }
+                else if ((now - _connectStartedUtc).TotalSeconds > InitialTelemetryTimeoutSeconds)
+                {
+                    shouldDisconnect = true;
+                    reason = "No llegó telemetría inicial desde " + ActiveBackend;
+                }
+            }
+
+            if (shouldDisconnect)
+            {
+                // Si FSUIPC no entregó datos válidos, intentar SimConnect automáticamente
+                if (ActiveBackend == "FSUIPC7" && reason.Contains("No llegó telemetría inicial"))
+                {
+                    Debug.WriteLine("[Coordinator] FSUIPC sin datos - intentando SimConnect...");
+                    WriteLog("FSUIPC sin datos válidos - cambiando a SimConnect");
+                    ForceDisconnect(reason);
+                    // Intentar SimConnect
+                    TrySimConnectFallback();
+                    return;
+                }
+                ForceDisconnect(reason);
+            }
+        }
+        
+        private void TrySimConnectFallback()
+        {
+            try
+            {
+                _simConnect = new SimConnectService();
+                _simConnect.Connected += OnProviderConnected;
+                _simConnect.Disconnected += OnProviderDisconnected;
+                _simConnect.DataReceived += OnDataReceived;
+                _simConnect.Connect(_windowHandle);
+                ActiveBackend = "SimConnect";
+                Debug.WriteLine("[Coordinator] SimConnect fallback activado");
+                WriteLog("Backend activo: SimConnect (fallback)");
+                StartHealthTimer();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Coordinator] SimConnect fallback falló: {ex.Message}");
+                WriteLog("SimConnect fallback falló: " + ex.Message);
+                DisposeSimConnect();
+                ActiveBackend = "None";
+            }
+        }
+
+        private void ForceDisconnect(string reason)
+        {
+            bool shouldRaise;
+            lock (_sync)
+            {
+                if (_disconnectRaised)
+                {
+                    return;
+                }
+
+                _disconnectRaised = true;
+                shouldRaise = IsConnected || !string.IsNullOrWhiteSpace(ActiveBackend);
+                IsConnected = false;
+                _lastFrameUtc = null;
+            }
+
+            WriteLog(reason);
+            StopHealthTimer();
+            DisposeProviders();
+
+            if (shouldRaise)
+            {
+                Disconnected?.Invoke();
+            }
         }
 
         private void DisposeProviders()
         {
-            _fsuipc?.Dispose();
+            DisposeFsuipc();
+            DisposeSimConnect();
+        }
+
+        private void DisposeFsuipc()
+        {
+            if (_fsuipc == null)
+            {
+                return;
+            }
+
+            _fsuipc.Connected -= OnProviderConnected;
+            _fsuipc.Disconnected -= OnProviderDisconnected;
+            _fsuipc.DataReceived -= OnDataReceived;
+            _fsuipc.Dispose();
             _fsuipc = null;
-            _simConnect?.Dispose();
+        }
+
+        private void DisposeSimConnect()
+        {
+            if (_simConnect == null)
+            {
+                return;
+            }
+
+            _simConnect.Connected -= OnProviderConnected;
+            _simConnect.Disconnected -= OnProviderDisconnected;
+            _simConnect.DataReceived -= OnDataReceived;
+            _simConnect.Dispose();
             _simConnect = null;
         }
 
         public void Dispose()
         {
-            if (_disposed) return;
+            if (_disposed)
+            {
+                return;
+            }
+
+            StopHealthTimer();
             DisposeProviders();
             _disposed = true;
+            IsConnected = false;
+            ActiveBackend = "None";
         }
 
         private void WriteLog(string msg)
@@ -116,7 +330,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 File.AppendAllText(_logFile,
                     "[" + DateTime.UtcNow.ToString("o") + "] " + msg + Environment.NewLine);
             }
-            catch { }
+            catch
+            {
+            }
         }
     }
 }

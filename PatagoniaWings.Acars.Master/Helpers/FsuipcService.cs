@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Threading;
 using FSUIPC;
 using PatagoniaWings.Acars.Core.Enums;
@@ -49,7 +48,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
         // ── Motores / Combustible ─────────────────────────────────────────────
         private Offset<int>?    _n1Eng1;     // % × 16384
         private Offset<int>?    _n1Eng2;
-        private Offset<double>? _fuelKg;
+        // Múltiples offsets de fuel para compatibilidad con diferentes aviones
+        private Offset<double>? _fuelKg;      // 0x0B74 - Fuel total kg (estándar)
+        private Offset<double>? _fuelLbs;     // 0x0B78 - Fuel total lbs (alternativo)
+        private Offset<double>? _fuelCapacityKg; // 0x126C - Fuel capacity kg (A320 Headwind)
 
         // ── Ambiente ──────────────────────────────────────────────────────────
         private Offset<double>? _oat;
@@ -72,22 +74,35 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public void Connect()
         {
             if (IsConnected) return;
-            FSUIPCConnection.Open();           // lanza FSUIPCException si FSUIPC7 no está disponible
+            Debug.WriteLine("[FSUIPC] Abriendo conexión FSUIPC7...");
+            FSUIPCConnection.Open();
+            Debug.WriteLine("[FSUIPC] Conexión FSUIPC7 abierta");
             InitOffsets();
             _hasReceivedData = false;
             _running = true;
+            
+            // Primera lectura para validar que hay datos del simulador
+            Debug.WriteLine("[FSUIPC] Primera lectura de offsets...");
+            FSUIPCConnection.Process();
+            Debug.WriteLine($"[FSUIPC] Primera lectura - LAT={_lat?.Value:F6} LON={_lon?.Value:F6} ALT={_altM?.Value:F2}");
+            if (_lat?.Value == 0 && _lon?.Value == 0 && _altM?.Value == 0)
+            {
+                throw new Exception("FSUIPC7 no detecta simulador.");
+            }
+            Debug.WriteLine("[FSUIPC] Simulador detectado - iniciando polling");
+            
             _pollThread = new Thread(PollLoop) { IsBackground = true, Name = "FSUIPC7-Poll" };
             _pollThread.Start();
         }
 
         private void InitOffsets()
         {
-            _lat          = new Offset<double>(0x0560);
-            _lon          = new Offset<double>(0x0568);
-            _altM         = new Offset<double>(0x0570);
-            _hdg          = new Offset<double>(0x0580);
-            _pitch        = new Offset<double>(0x0578);
-            _bank         = new Offset<double>(0x057C);
+            _lat          = new Offset<double>(0x0560);  // Latitude (radians)
+            _lon          = new Offset<double>(0x0568);  // Longitude (radians)
+            _altM         = new Offset<double>(0x0570);  // Altitude (meters MSL)
+            _hdg          = new Offset<double>(0x0578);  // Heading (radians, 0-2PI)
+            _pitch        = new Offset<double>(0x0580);  // Pitch (radians)
+            _bank         = new Offset<double>(0x0588);  // Bank (radians)
 
             _ias          = new Offset<int>(0x02BC);
             _gs           = new Offset<int>(0x02B4);
@@ -107,7 +122,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             _n1Eng1       = new Offset<int>(0x0898);
             _n1Eng2       = new Offset<int>(0x0930);
-            _fuelKg       = new Offset<double>(0x126C);
+            // Intentar múltiples offsets de fuel para compatibilidad con diferentes aviones
+            _fuelKg       = new Offset<double>(0x0B74);   // Fuel total kg (estándar)
+            _fuelLbs      = new Offset<double>(0x0B78);   // Fuel total lbs (fallback)
+            _fuelCapacityKg = new Offset<double>(0x126C); // Fuel capacity kg (A320 Headwind)
 
             _oat          = new Offset<double>(0x0E8C);
             _windSpeed    = new Offset<double>(0x0E90);
@@ -125,21 +143,37 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 try
                 {
                     FSUIPCConnection.Process();
+                    
+                    // Log valores raw para debug
+                    Debug.WriteLine($"[FSUIPC POLL] LAT={_lat?.Value:F4} LON={_lon?.Value:F4} ALT={_altM?.Value:F0} IAS={_ias?.Value}");
+                    
+                    // Solo procesar si hay datos válidos del simulador
+                    if (_lat?.Value == 0 && _lon?.Value == 0 && _altM?.Value == 0)
+                    {
+                        Debug.WriteLine("[FSUIPC POLL] Sin datos - esperando...");
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+                    
+                    Debug.WriteLine("[FSUIPC POLL] Datos detectados - procesando...");
                     var sd = BuildSimData();
+                    Debug.WriteLine($"[FSUIPC POLL] Enviando datos - ALT={sd.AltitudeFeet:F0} FUEL={sd.FuelTotalLbs:F0}");
 
                     if (!_hasReceivedData)
                     {
                         _hasReceivedData = true;
                         IsConnected = true;
+                        Debug.WriteLine("[FSUIPC POLL] Primera conexión - evento Connected");
                         Connected?.Invoke();
                     }
 
                     DataReceived?.Invoke(sd);
+                    Debug.WriteLine("[FSUIPC POLL] Evento DataReceived enviado");
                     Thread.Sleep(1000);
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine("FSUIPC7 poll error: " + ex.Message);
+                    Debug.WriteLine($"[FSUIPC POLL] Error: {ex.Message}");
                     var wasConnected = IsConnected;
                     IsConnected = false;
                     _running = false;
@@ -156,28 +190,67 @@ namespace PatagoniaWings.Acars.Master.Helpers
             double gndFt  = (_groundAltFt?.Value ?? 0) / 65536.0;
             double aglFt  = Math.Max(0, altFt - gndFt);
             double ias    = (_ias?.Value ?? 0) / 128.0;
-            double gs     = (_gs?.Value  ?? 0) / 65536.0 * 1.94384;
+            double gs     = (_gs?.Value  ?? 0) / 128.0;  // GS en knots (offset * 128)
             double vs     = (_vs?.Value  ?? 0) / 256.0;
             double n1e1   = (_n1Eng1?.Value ?? 0) / 16384.0 * 100.0;
             double n1e2   = (_n1Eng2?.Value ?? 0) / 16384.0 * 100.0;
-            double fuelLbs = (_fuelKg?.Value ?? 0) * 2.20462;
+            
+            // Intentar leer fuel de múltiples offsets (compatibilidad con A320 Headwind y otros)
+            double fuelKg = 0;
+            double fuelLbsDirect = _fuelLbs?.Value ?? 0;
+            double fuelCapacity = _fuelCapacityKg?.Value ?? 0;
+            double fuelStandard = _fuelKg?.Value ?? 0;
+            
+            // DEBUG: Mostrar valores raw de posición y fuel
+            Debug.WriteLine($"[FSUIPC POS RAW] LAT={_lat?.Value:F6} LON={_lon?.Value:F6} ALT={_altM?.Value:F2}");
+            Debug.WriteLine($"[FSUIPC FUEL RAW] 0x0B74={fuelStandard:F2} 0x0B78={fuelLbsDirect:F2} 0x126C={fuelCapacity:F2}");
+            
+            if (fuelStandard > 0.1)
+            {
+                fuelKg = fuelStandard;
+                Debug.WriteLine($"[FSUIPC FUEL] Usando offset 0x0B74: {fuelKg:F2} kg");
+            }
+            else if (fuelLbsDirect > 0.1)
+            {
+                fuelKg = fuelLbsDirect * 0.453592;
+                Debug.WriteLine($"[FSUIPC FUEL] Usando offset 0x0B78: {fuelKg:F2} kg (convertido de lbs)");
+            }
+            else if (fuelCapacity > 0.1)
+            {
+                fuelKg = fuelCapacity;
+                Debug.WriteLine($"[FSUIPC FUEL] Usando offset 0x126C: {fuelKg:F2} kg (capacity)");
+            }
+            else
+            {
+                Debug.WriteLine("[FSUIPC FUEL] Ningún offset devolvió valor válido");
+            }
+            
             double qnh    = (_qnh?.Value ?? 0) / 16.0;
             int    gear   = _gear?.Value  ?? 0;
             int    flaps  = _flaps?.Value ?? 0;
 
+            // Convertir radianes a grados
+            double latDeg = (_lat?.Value ?? 0) * 180.0 / Math.PI;
+            double lonDeg = (_lon?.Value ?? 0) * 180.0 / Math.PI;
+            double hdgDeg = (_hdg?.Value ?? 0) * 180.0 / Math.PI;
+            double pitchDeg = (_pitch?.Value ?? 0) * 180.0 / Math.PI;
+            double bankDeg = (_bank?.Value ?? 0) * 180.0 / Math.PI;
+            if (hdgDeg < 0) hdgDeg += 360;
+            if (hdgDeg >= 360) hdgDeg -= 360;
+            
             return new SimData
             {
                 CapturedAtUtc     = DateTime.UtcNow,
-                Latitude          = _lat?.Value   ?? 0,
-                Longitude         = _lon?.Value   ?? 0,
+                Latitude          = latDeg,
+                Longitude         = lonDeg,
                 AltitudeFeet      = altFt,
                 AltitudeAGL       = aglFt,
                 IndicatedAirspeed = ias,
                 GroundSpeed       = gs,
                 VerticalSpeed     = vs,
-                Heading           = _hdg?.Value   ?? 0,
-                Pitch             = _pitch?.Value ?? 0,
-                Bank              = _bank?.Value  ?? 0,
+                Heading           = hdgDeg,
+                Pitch             = pitchDeg,
+                Bank              = bankDeg,
                 OnGround          = (_onGround?.Value    ?? 0) != 0,
                 ParkingBrake      = (_parkingBrake?.Value ?? 0) != 0,
                 AutopilotActive   = (_autopilot?.Value   ?? 0) != 0,
@@ -193,7 +266,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 FlapsPercent      = flaps / 16383.0 * 100.0,
                 Engine1N1         = n1e1,
                 Engine2N1         = n1e2,
-                FuelTotalLbs      = fuelLbs,
+                FuelTotalLbs      = fuelKg,  // Offset 0x0B74 devuelve kg directamente
                 FuelFlowLbsHour   = 0,
                 OutsideTemperature = _oat?.Value       ?? 0,
                 WindSpeed          = _windSpeed?.Value  ?? 0,

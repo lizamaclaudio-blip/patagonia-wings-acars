@@ -31,6 +31,16 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public bool mandatory { get; set; }
     }
 
+    // Fila de la tabla acars_releases en Supabase
+    internal sealed class AcarsReleaseRow
+    {
+        public string version { get; set; } = string.Empty;
+        public string download_url { get; set; } = string.Empty;
+        public string notes { get; set; } = string.Empty;
+        public bool mandatory { get; set; }
+        public bool is_active { get; set; }
+    }
+
     public static class UpdateService
     {
         private const string DefaultManifestUrl = "https://www.patagoniaw.com/downloads/acars-update.json";
@@ -92,17 +102,23 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             _checkedThisSession = true;
 
-            var result = new UpdateCheckResult
-            {
-                CurrentVersion = CurrentVersion
-            };
+            var result = new UpdateCheckResult { CurrentVersion = CurrentVersion };
 
+            // 1. Intentar desde Supabase (fuente principal)
+            var supabaseResult = await TryCheckFromSupabaseAsync(result.CurrentVersion);
+            if (supabaseResult != null)
+            {
+                _cachedResult = supabaseResult;
+                return supabaseResult;
+            }
+
+            // 2. Fallback al JSON estático
             try
             {
                 using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(8) })
                 {
                     var manifestUrl = BuildManifestRequestUrl(ReadSetting("UpdateManifestUrl", DefaultManifestUrl));
-                    WriteUpdateLog("Checking updates at " + manifestUrl);
+                    WriteUpdateLog("Fallback: checking updates at " + manifestUrl);
 
                     var json = await client.GetStringAsync(manifestUrl);
                     var manifest = Serializer.Deserialize<UpdateManifest>(json);
@@ -122,29 +138,85 @@ namespace PatagoniaWings.Acars.Master.Helpers
                         : manifest.downloadUrl.Trim();
                     result.Notes = (manifest.notes ?? string.Empty).Trim();
 
-                    Version current;
-                    Version latest;
-                    var currentOk = Version.TryParse(NormalizeVersion(result.CurrentVersion), out current);
-                    var latestOk = Version.TryParse(NormalizeVersion(result.LatestVersion), out latest);
-
-                    if (currentOk && latestOk)
-                    {
-                        result.IsUpdateAvailable = latest > current;
-                    }
-                    else
-                    {
-                        result.Error = "No se pudo comparar la versión actual con la remota.";
-                    }
+                    CompareVersions(result);
                 }
             }
             catch (Exception ex)
             {
                 result.Error = ex.Message;
-                WriteUpdateLog("CheckForUpdatesAsync error: " + ex);
+                WriteUpdateLog("CheckForUpdatesAsync fallback error: " + ex);
             }
 
             _cachedResult = result;
             return result;
+        }
+
+        private static async Task<UpdateCheckResult?> TryCheckFromSupabaseAsync(string currentVersion)
+        {
+            try
+            {
+                var supabaseUrl = ReadSetting("SupabaseUrl", string.Empty);
+                var supabaseKey = ReadSetting("SupabaseAnonKey", string.Empty);
+
+                if (string.IsNullOrWhiteSpace(supabaseUrl) || string.IsNullOrWhiteSpace(supabaseKey))
+                    return null;
+
+                var endpoint = supabaseUrl + "/rest/v1/acars_releases?select=*&is_active=eq.true&order=release_date.desc&limit=1";
+
+                using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(8) })
+                {
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("apikey", supabaseKey);
+                    client.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", "Bearer " + supabaseKey);
+
+                    WriteUpdateLog("Checking updates from Supabase: " + endpoint);
+
+                    var json = await client.GetStringAsync(endpoint);
+                    var rows = Serializer.Deserialize<List<AcarsReleaseRow>>(json);
+
+                    if (rows == null || rows.Count == 0)
+                    {
+                        WriteUpdateLog("Supabase: no releases found");
+                        return null;
+                    }
+
+                    var row = rows[0];
+
+                    if (string.IsNullOrWhiteSpace(row.version))
+                        return null;
+
+                    var result = new UpdateCheckResult
+                    {
+                        CurrentVersion = currentVersion,
+                        Success = true,
+                        LatestVersion = row.version.Trim(),
+                        Mandatory = row.mandatory,
+                        DownloadUrl = string.IsNullOrWhiteSpace(row.download_url)
+                            ? ReadSetting("InstallerDownloadUrl", DefaultInstallerUrl)
+                            : row.download_url.Trim(),
+                        Notes = (row.notes ?? string.Empty).Trim()
+                    };
+
+                    CompareVersions(result);
+                    WriteUpdateLog($"Supabase: latest={result.LatestVersion} current={result.CurrentVersion} updateAvailable={result.IsUpdateAvailable}");
+                    return result;
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteUpdateLog("TryCheckFromSupabaseAsync error: " + ex.Message);
+                return null;
+            }
+        }
+
+        private static void CompareVersions(UpdateCheckResult result)
+        {
+            var currentOk = Version.TryParse(NormalizeVersion(result.CurrentVersion), out var current);
+            var latestOk = Version.TryParse(NormalizeVersion(result.LatestVersion), out var latest);
+
+            if (currentOk && latestOk)
+                result.IsUpdateAvailable = latest > current;
+            else
+                result.Error = "No se pudo comparar versiones.";
         }
 
         private static async Task DownloadAndLaunchInstallerAsync(Window owner, UpdateCheckResult result)

@@ -24,6 +24,9 @@ namespace PatagoniaWings.Acars.SimConnect
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     internal struct AircraftDataStruct
     {
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+        public string Title;
+        
         public double Latitude;
         public double Longitude;
         public double AltitudeFeet;
@@ -35,11 +38,20 @@ namespace PatagoniaWings.Acars.SimConnect
         public double Pitch;
         public double Bank;
 
+        // Fuel - múltiples variables para compatibilidad
         public double FuelTotalLbs;
+        public double FuelTotalCapacity;
+        public double FuelLeftQuantity;
+        public double FuelRightQuantity;
+        public double FuelCenterQuantity;
+        
+        // Motores - múltiples variables
         public double Engine1FuelFlowPph;
         public double Engine2FuelFlowPph;
         public double Engine1N1;
         public double Engine2N1;
+        public double TurbEngN1_1;
+        public double TurbEngN1_2;
 
         public int OnGround;
         public int ParkingBrake;

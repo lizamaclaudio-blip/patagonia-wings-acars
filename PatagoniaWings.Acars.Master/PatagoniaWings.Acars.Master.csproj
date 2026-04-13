@@ -18,6 +18,21 @@
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Assets\patagonia-logo.ico</ApplicationIcon>
     <StartupObject>PatagoniaWings.Acars.Master.App</StartupObject>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -147,7 +162,6 @@
     <Compile Include="Helpers\SimulatorCoordinator.cs" />
     <Compile Include="Helpers\SoundPlayer.cs" />
     <Compile Include="Helpers\UpdateService.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ViewModels\CommunityViewModel.cs" />
     <Compile Include="ViewModels\DashboardViewModel.cs" />
     <Compile Include="ViewModels\InFlightViewModel.cs" />
@@ -212,7 +226,16 @@
     <Content Include="Assets\Sounds\Radio.wav" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="obj\Release\Resources\Styles\" />
+    <BootstrapperPackage Include=".NETFramework,Version=v4.8.1">
+      <Visible>False</Visible>
+      <ProductName>Microsoft .NET Framework 4.8.1 %28x86 y x64%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5.SP1">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5 SP1</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

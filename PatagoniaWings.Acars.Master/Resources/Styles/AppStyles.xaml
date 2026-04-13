@@ -502,6 +502,8 @@
         xmlns:helpers="clr-namespace:PatagoniaWings.Acars.Master.Helpers"/>
     <helpers:PhaseToStringConverter x:Key="PhaseToStringConverter"
         xmlns:helpers="clr-namespace:PatagoniaWings.Acars.Master.Helpers"/>
+    <helpers:BoolToBrushConverter x:Key="BoolToBrushConverter"
+        xmlns:helpers="clr-namespace:PatagoniaWings.Acars.Master.Helpers"/>
     <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 
 </ResourceDictionary>

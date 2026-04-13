@@ -11,7 +11,17 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             InitializeComponent();
         }
 
-        private MainWindow GetMainWindow()
+        private void OnPageLoaded(object sender, RoutedEventArgs e)
+        {
+            // Establecer DataContext manualmente desde la ventana principal
+            MainWindow mainWindow = GetMainWindow();
+            if (mainWindow != null && mainWindow.DataContext is ViewModels.MainViewModel vm)
+            {
+                DataContext = vm.InFlightVM;
+            }
+        }
+
+        private MainWindow? GetMainWindow()
         {
             return Window.GetWindow(this) as MainWindow;
         }

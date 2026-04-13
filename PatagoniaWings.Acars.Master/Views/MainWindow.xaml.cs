@@ -15,7 +15,6 @@ namespace PatagoniaWings.Acars.Master.Views
         private SimulatorCoordinator? _coordinator;
         private Timer? _reconnectTimer;
         private bool _isConnecting;
-        private LiveFlightWindow? _liveFlightWindow;
 
         private static readonly string LogFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -28,12 +27,10 @@ namespace PatagoniaWings.Acars.Master.Views
             _vm = new MainViewModel();
             _vm.OnLogout = () =>
             {
-                _liveFlightWindow?.Close();
                 var login = new LoginWindow();
                 login.Show();
                 Close();
             };
-            _vm.OnOpenLiveFlight = () => OpenLiveFlightWindow();
 
             DataContext = _vm;
             _vm.LoadPilot();
@@ -61,7 +58,11 @@ namespace PatagoniaWings.Acars.Master.Views
 
         private void TryConnectQuiet()
         {
-            if (_isConnecting) return;
+            if (_isConnecting)
+            {
+                return;
+            }
+
             _isConnecting = true;
             try
             {
@@ -73,9 +74,6 @@ namespace PatagoniaWings.Acars.Master.Views
             }
         }
 
-        /// <summary>
-        /// Usa SimulatorCoordinator: intenta FSUIPC7 primero, luego SimConnect como fallback.
-        /// </summary>
         public void ConnectSimulator(bool silent = false)
         {
             try
@@ -86,7 +84,7 @@ namespace PatagoniaWings.Acars.Master.Views
                 _coordinator.Connected += () => Dispatcher.Invoke(() =>
                 {
                     var backend = _coordinator.ActiveBackend;
-                    var simType = backend.Contains("FSUIPC") ? SimulatorType.MSFS2020 : SimulatorType.MSFS2020;
+                    var simType = SimulatorType.MSFS2020;
                     AcarsContext.Runtime.SetSimulatorWaiting(backend, simType);
                 });
 
@@ -101,6 +99,7 @@ namespace PatagoniaWings.Acars.Master.Views
                     {
                         AcarsContext.Runtime.SetTelemetry(data, _coordinator?.ActiveBackend ?? "");
                     });
+
                     OnSimulatorDataReceived(data);
                 };
 
@@ -128,28 +127,19 @@ namespace PatagoniaWings.Acars.Master.Views
             ConnectSimulator(silent);
         }
 
-        private void OpenLiveFlightWindow()
-        {
-            if (_liveFlightWindow != null && _liveFlightWindow.IsLoaded)
-            {
-                _liveFlightWindow.Activate();
-                return;
-            }
-            _liveFlightWindow = new LiveFlightWindow();
-            _liveFlightWindow.Owner = this;
-            _liveFlightWindow.Show();
-        }
-
         private void OnWindowClosed(object? sender, EventArgs e)
         {
             _reconnectTimer?.Dispose();
             _coordinator?.Dispose();
-            _liveFlightWindow?.Close();
         }
 
         private void SimStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (AcarsContext.Runtime.IsSimulatorConnected) return;
+            if (AcarsContext.Runtime.IsSimulatorConnected)
+            {
+                return;
+            }
+
             ConnectSimulator(false);
         }
 
@@ -161,21 +151,33 @@ namespace PatagoniaWings.Acars.Master.Views
         private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (e.ClickCount == 2)
+            {
                 ToggleMaximize();
+            }
             else
+            {
                 DragMove();
+            }
         }
 
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
-            => WindowState = WindowState.Minimized;
+        {
+            WindowState = WindowState.Minimized;
+        }
 
         private void BtnMaximize_Click(object sender, RoutedEventArgs e)
-            => ToggleMaximize();
+        {
+            ToggleMaximize();
+        }
 
         private void BtnClose_Click(object sender, RoutedEventArgs e)
-            => Close();
+        {
+            Close();
+        }
 
         private void ToggleMaximize()
-            => WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        {
+            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        }
     }
 }

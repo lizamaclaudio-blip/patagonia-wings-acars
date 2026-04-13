@@ -13,6 +13,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _errorMessage = string.Empty;
         private bool _isLoading;
         private bool _rememberMe = true;
+        private const string SavedUsernameFile = "saved_username.txt";
 
         public string Username { get => _username; set => SetField(ref _username, value); }
         public string Password { get => _password; set => SetField(ref _password, value); }
@@ -25,12 +26,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         public LoginViewModel()
         {
+            LoadSavedUsername();
             LoginCommand = new RelayCommand(
                 async _ =>
                 {
                     if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
                     {
-                        ErrorMessage = "Ingresa tu correo de Supabase o tu callsign, junto con la contraseña.";
+                        ErrorMessage = "Ingresa tu correo de Patagonia Wings junto con la contraseña.";
                         return;
                     }
 
@@ -69,11 +71,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                             if (RememberMe)
                             {
                                 AcarsContext.Auth.SaveSession(pilot);
+                                SaveUsername(Username.Trim());
                                 WriteAuthLog("Session saved.");
                             }
                             else
                             {
                                 AcarsContext.Auth.ClearSavedSession();
+                                ClearSavedUsername();
                                 WriteAuthLog("Session kept in memory only.");
                             }
 
@@ -87,7 +91,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                             if (error.IndexOf("invalid login credentials", StringComparison.OrdinalIgnoreCase) >= 0)
                             {
-                                ErrorMessage = "Correo/callsign o contraseña incorrectos.";
+                                ErrorMessage = "Correo o contraseña incorrectos.";
                             }
                             else if (string.IsNullOrWhiteSpace(error))
                             {
@@ -96,7 +100,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                             else
                             {
                                 ErrorMessage = error.StartsWith("No pude resolver", StringComparison.OrdinalIgnoreCase)
-                                    ? error + " Si quieres entrar altiro, usa tu correo de acceso en vez del callsign."
+                                    ? error + " Verifica tu correo y contraseña."
                                     : "Error de conexión: " + error;
                             }
 
@@ -145,6 +149,73 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             catch
             {
                 return "auth.log";
+            }
+        }
+
+        private void LoadSavedUsername()
+        {
+            try
+            {
+                var path = GetSavedUsernamePath();
+                if (File.Exists(path))
+                {
+                    var saved = File.ReadAllText(path).Trim();
+                    if (!string.IsNullOrWhiteSpace(saved))
+                    {
+                        Username = saved;
+                    }
+                }
+            }
+            catch
+            {
+                // Ignore errors
+            }
+        }
+
+        private void SaveUsername(string username)
+        {
+            try
+            {
+                var path = GetSavedUsernamePath();
+                var dir = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+                File.WriteAllText(path, username);
+            }
+            catch
+            {
+                // Ignore errors
+            }
+        }
+
+        private void ClearSavedUsername()
+        {
+            try
+            {
+                var path = GetSavedUsernamePath();
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch
+            {
+                // Ignore errors
+            }
+        }
+
+        private static string GetSavedUsernamePath()
+        {
+            try
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                return Path.Combine(appData, "PatagoniaWings", "Acars", SavedUsernameFile);
+            }
+            catch
+            {
+                return SavedUsernameFile;
             }
         }
     }

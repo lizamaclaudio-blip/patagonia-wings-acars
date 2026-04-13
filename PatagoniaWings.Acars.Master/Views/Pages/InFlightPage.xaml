@@ -1,11 +1,12 @@
 <UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             Background="#0C111B">
-
-    <UserControl.DataContext>
-        <Binding Path="DataContext.InFlightVM" RelativeSource="{RelativeSource AncestorType=Window}" />
-    </UserControl.DataContext>
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             d:DesignHeight="600" d:DesignWidth="1000"
+             mc:Ignorable="d"
+             Background="#0C111B"
+             Loaded="OnPageLoaded">
 
     <UserControl.Resources>
         <SolidColorBrush x:Key="BgBrush" Color="#0C111B"/>
@@ -124,10 +125,10 @@
 
                     <StackPanel Orientation="Horizontal" Margin="0,10,0,0" HorizontalAlignment="Right">
                         <Border Style="{StaticResource PillBorderStyle}">
-                            <TextBlock Foreground="{StaticResource AccentBrush}" FontSize="10" Text="{Binding SimBackendDisplay, FallbackValue=Sin backend}"/>
+                            <TextBlock Foreground="{StaticResource AccentBrush}" FontSize="10" Text="{Binding SimBackendDisplay, Mode=OneWay, FallbackValue=Sin backend}"/>
                         </Border>
                         <Border Style="{StaticResource PillBorderStyle}">
-                            <TextBlock Foreground="{StaticResource OkBrush}" FontSize="10" Text="{Binding PhaseLabelDisplay, FallbackValue=Desconectado}"/>
+                            <TextBlock Foreground="{StaticResource OkBrush}" FontSize="10" Text="{Binding PhaseLabelDisplay, Mode=OneWay, FallbackValue=Desconectado}"/>
                         </Border>
                     </StackPanel>
                 </StackPanel>
@@ -141,35 +142,35 @@
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource LabelStyle}" Text="IAS"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding IASDisplay, FallbackValue=---}"/>
+                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding IASDisplay, Mode=OneWay, FallbackValue=---}"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource LabelStyle}" Text="GS"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding GSDisplay, FallbackValue=---}"/>
+                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding GSDisplay, Mode=OneWay, FallbackValue=---}"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource LabelStyle}" Text="ALTITUD"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding AltitudeDisplay, FallbackValue=---}"/>
+                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding AltitudeDisplay, Mode=OneWay, FallbackValue=---}"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource LabelStyle}" Text="V/S"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding VSDisplay, FallbackValue=---}"/>
+                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding VSDisplay, Mode=OneWay, FallbackValue=---}"/>
                         </StackPanel>
                     </Border>
 
                     <Border Style="{StaticResource CardStyle}">
                         <StackPanel>
                             <TextBlock Style="{StaticResource LabelStyle}" Text="TIEMPO"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding ElapsedTimeDisplay, FallbackValue=00:00:00}"/>
+                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding ElapsedTimeDisplay, Mode=OneWay, FallbackValue=00:00:00}"/>
                         </StackPanel>
                     </Border>
                 </UniformGrid>
@@ -188,28 +189,28 @@
                                     <Border Style="{StaticResource CardStyle}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource LabelStyle}" Text="FUEL KG"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding FuelKgDisplay, FallbackValue=---}"/>
+                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding FuelKgDisplay, Mode=OneWay, FallbackValue=---}"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Style="{StaticResource CardStyle}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource LabelStyle}" Text="N1 ENG 1"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding N1Eng1Display, FallbackValue=---}"/>
+                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding N1Eng1Display, Mode=OneWay, FallbackValue=---}"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Style="{StaticResource CardStyle}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource LabelStyle}" Text="N1 ENG 2"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding N1Eng2Display, FallbackValue=---}"/>
+                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding N1Eng2Display, Mode=OneWay, FallbackValue=---}"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Style="{StaticResource CardStyle}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource LabelStyle}" Text="SQUAWK"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding SquawkDisplay, FallbackValue=----}"/>
+                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding SquawkDisplay, Mode=OneWay, FallbackValue=----}"/>
                                         </StackPanel>
                                     </Border>
                                 </UniformGrid>
@@ -218,14 +219,14 @@
                                     <Border Style="{StaticResource CardStyle}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource LabelStyle}" Text="HEADING"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding HeadingDisplay, FallbackValue=---}"/>
+                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding HeadingDisplay, Mode=OneWay, FallbackValue=---}"/>
                                         </StackPanel>
                                     </Border>
 
                                     <Border Style="{StaticResource CardStyle}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource LabelStyle}" Text="FLAPS"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding FlapsDisplay, FallbackValue=---}"/>
+                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding FlapsDisplay, Mode=OneWay, FallbackValue=---}"/>
                                         </StackPanel>
                                     </Border>
 
@@ -237,7 +238,7 @@
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}">
                                                         <Setter Property="Text" Value="UP"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding GearDown}" Value="True">
+                                                            <DataTrigger Binding="{Binding GearDown, Mode=OneWay}" Value="True">
                                                                 <Setter Property="Text" Value="DOWN"/>
                                                                 <Setter Property="Foreground" Value="{StaticResource WarnBrush}"/>
                                                             </DataTrigger>
@@ -256,7 +257,7 @@
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}">
                                                         <Setter Property="Text" Value="OFF"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
+                                                            <DataTrigger Binding="{Binding AutopilotOn, Mode=OneWay}" Value="True">
                                                                 <Setter Property="Text" Value="ON"/>
                                                                 <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
                                                             </DataTrigger>
@@ -276,30 +277,30 @@
                                 <UniformGrid Columns="4">
                                     <!-- row 1 -->
                                     <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="BEACON"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding BeaconOn}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
+                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="BEACON"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding BeaconOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
                                     </Border>
                                     <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="NAV"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding NavOn}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
+                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="NAV"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding NavOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
                                     </Border>
                                     <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="STROBE"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding StrobeOn}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
+                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="STROBE"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding StrobeOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
                                     </Border>
                                     <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="LANDING"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding LandingOn}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
+                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="LANDING"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding LandingOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
                                     </Border>
 
                                     <!-- row 2 -->
                                     <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="TAXI"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding TaxiOn}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
+                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="TAXI"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding TaxiOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
                                     </Border>
                                     <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="SEATBELT"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding SeatBeltSign}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
+                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="SEATBELT"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding SeatBeltSign, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
                                     </Border>
                                     <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="NO SMOKING"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding NoSmokingSign}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
+                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="NO SMOKING"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding NoSmokingSign, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
                                     </Border>
                                     <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="CHARLIE"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding CharlieMode}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
+                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="CHARLIE"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding CharlieMode, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
                                     </Border>
                                 </UniformGrid>
                             </StackPanel>
@@ -313,22 +314,22 @@
 
                                 <TextBlock Style="{StaticResource LabelStyle}" Text="POSICIÓN"/>
                                 <TextBlock Foreground="{StaticResource TextBrush}" FontFamily="Consolas" FontWeight="SemiBold" FontSize="16">
-                                    <Run Text="{Binding Lat, StringFormat={}{0:F4}}"/>
+                                    <Run Text="{Binding Lat, Mode=OneWay, StringFormat={}{0:F4}}"/>
                                     <Run Text=", "/>
-                                    <Run Text="{Binding Lon, StringFormat={}{0:F4}}"/>
+                                    <Run Text="{Binding Lon, Mode=OneWay, StringFormat={}{0:F4}}"/>
                                 </TextBlock>
 
                                 <TextBlock Style="{StaticResource LabelStyle}" Text="OAT" Margin="0,14,0,0"/>
                                 <TextBlock Foreground="{StaticResource TextBrush}" FontFamily="Consolas" FontWeight="SemiBold" FontSize="16">
-                                    <Run Text="{Binding OAT, StringFormat={}{0:F1}}"/>
+                                    <Run Text="{Binding OAT, Mode=OneWay, StringFormat={}{0:F1}}"/>
                                     <Run Text=" °C"/>
                                 </TextBlock>
 
                                 <TextBlock Style="{StaticResource LabelStyle}" Text="VIENTO" Margin="0,14,0,0"/>
                                 <TextBlock Foreground="{StaticResource TextBrush}" FontFamily="Consolas" FontWeight="SemiBold" FontSize="16">
-                                    <Run Text="{Binding WindDir, StringFormat={}{0:F0}}"/>
+                                    <Run Text="{Binding WindDir, Mode=OneWay, StringFormat={}{0:F0}}"/>
                                     <Run Text="° / "/>
-                                    <Run Text="{Binding WindSpeed, StringFormat={}{0:F0}}"/>
+                                    <Run Text="{Binding WindSpeed, Mode=OneWay, StringFormat={}{0:F0}}"/>
                                     <Run Text=" KT"/>
                                 </TextBlock>
 
@@ -341,7 +342,7 @@
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Text" Value="NO"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding OnGround}" Value="True">
+                                                            <DataTrigger Binding="{Binding OnGround, Mode=OneWay}" Value="True">
                                                                 <Setter Property="Text" Value="YES"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -359,7 +360,7 @@
                                                     <Style TargetType="TextBlock">
                                                         <Setter Property="Text" Value="OFF"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
+                                                            <DataTrigger Binding="{Binding AutopilotOn, Mode=OneWay}" Value="True">
                                                                 <Setter Property="Text" Value="ON"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -380,16 +381,16 @@
                                     <Border Style="{StaticResource CardStyle}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource LabelStyle}" Text="ALT. CABINA"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" FontSize="20">
-                                                <Run Text="{Binding CabinAlt, StringFormat={}{0:F0}}"/>
+                                                <TextBlock Style="{StaticResource ValueStyle}" FontSize="20">
+                                                <Run Text="{Binding CabinAlt, Mode=OneWay, StringFormat={}{0:F0}}"/>
                                             </TextBlock>
                                         </StackPanel>
                                     </Border>
                                     <Border Style="{StaticResource CardStyle}">
                                         <StackPanel>
                                             <TextBlock Style="{StaticResource LabelStyle}" Text="PRESS DIFF"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" FontSize="20">
-                                                <Run Text="{Binding PressDiff, StringFormat={}{0:F2}}"/>
+                                                <TextBlock Style="{StaticResource ValueStyle}" FontSize="20">
+                                                <Run Text="{Binding PressDiff, Mode=OneWay, StringFormat={}{0:F2}}"/>
                                             </TextBlock>
                                         </StackPanel>
                                     </Border>
@@ -404,11 +405,11 @@
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}">
                                                         <Setter Property="Text" Value="OFF"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding ApuRunning}" Value="True">
+                                                             <DataTrigger Binding="{Binding ApuRunning, Mode=OneWay}" Value="True">
                                                                 <Setter Property="Text" Value="RUN"/>
                                                                 <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
                                                             </DataTrigger>
-                                                            <DataTrigger Binding="{Binding ApuAvailable}" Value="True">
+                                                             <DataTrigger Binding="{Binding ApuAvailable, Mode=OneWay}" Value="True">
                                                                 <Setter Property="Foreground" Value="{StaticResource WarnBrush}"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -425,7 +426,7 @@
                                                     <Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}">
                                                         <Setter Property="Text" Value="OFF"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
+                                                             <DataTrigger Binding="{Binding BleedAirOn, Mode=OneWay}" Value="True">
                                                                 <Setter Property="Text" Value="ON"/>
                                                                 <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
                                                             </DataTrigger>
@@ -443,10 +444,10 @@
                             <StackPanel>
                                 <TextBlock Style="{StaticResource TitleTextStyle}" Text="Resumen operativo"/>
                                 <TextBlock Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap">
-                                    <Run Text="Backend: "/><Run Text="{Binding SimBackendDisplay, FallbackValue=Sin conexión}"/>
+                                    <Run Text="{Binding SimBackendDisplay, Mode=OneWay, FallbackValue=Sin conexión}"/>
                                 </TextBlock>
                                 <TextBlock Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,0">
-                                    <Run Text="Fase: "/><Run Text="{Binding PhaseLabelDisplay, FallbackValue=Desconectado}"/>
+                                    <Run Text="{Binding PhaseLabelDisplay, Mode=OneWay, FallbackValue=Desconectado}"/>
                                 </TextBlock>
                                 <TextBlock Foreground="{StaticResource SubtleBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0"
                                            Text="Si esta pantalla no cambia en vivo con MSFS abierto, el problema ya no es de diseño sino de telemetría o runtime."/>

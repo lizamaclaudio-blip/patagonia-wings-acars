@@ -97,10 +97,12 @@
 
                         <TextBlock Text="Aircraft Communications"
                                    FontSize="15" Foreground="#BDD8E8"
-                                   FontFamily="Segoe UI" Margin="2,6,0,2"/>
+                                   FontFamily="Segoe UI" Margin="2,6,0,2"
+                                   TextWrapping="Wrap"/>
                         <TextBlock Text="Addressing and Reporting System"
                                    FontSize="13" Foreground="#7A9AAD"
-                                   FontFamily="Segoe UI" Margin="2,0,0,0"/>
+                                   FontFamily="Segoe UI" Margin="2,0,0,0"
+                                   TextWrapping="Wrap"/>
 
                         <!-- Badge versión -->
                         <Border CornerRadius="6" Padding="10,5" Margin="0,20,0,0"
@@ -126,23 +128,26 @@
 
                         <!-- Feature pills -->
                         <StackPanel Margin="0,16,0,0" Orientation="Vertical">
-                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                            <StackPanel Orientation="Horizontal" Margin="0,6">
                                 <Ellipse Width="6" Height="6" Fill="#0CA789"
                                          VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBlock Text="Integración MSFS 2020 / 2024"
-                                           Foreground="#8AAABB" FontSize="12"/>
+                                           Foreground="#8AAABB" FontSize="12"
+                                           VerticalAlignment="Center"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                            <StackPanel Orientation="Horizontal" Margin="0,6">
                                 <Ellipse Width="6" Height="6" Fill="#0CA789"
                                          VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBlock Text="Telemetría en tiempo real"
-                                           Foreground="#8AAABB" FontSize="12"/>
+                                           Foreground="#8AAABB" FontSize="12"
+                                           VerticalAlignment="Center"/>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal" Margin="0,4">
+                            <StackPanel Orientation="Horizontal" Margin="0,6">
                                 <Ellipse Width="6" Height="6" Fill="#2D9CDB"
                                          VerticalAlignment="Center" Margin="0,0,10,0"/>
                                 <TextBlock Text="PIREPs automáticos vía Supabase"
-                                           Foreground="#8AAABB" FontSize="12"/>
+                                           Foreground="#8AAABB" FontSize="12"
+                                           VerticalAlignment="Center"/>
                             </StackPanel>
                         </StackPanel>
                     </StackPanel>
@@ -210,7 +215,7 @@
                                 <TextBlock Text="Iniciar Sesión"
                                            FontSize="28" FontWeight="Bold"
                                            Foreground="White" FontFamily="Segoe UI"/>
-                                <TextBlock Text="Ingresa con tu correo o callsign de Patagonia Wings"
+                                <TextBlock Text="Ingresa con tu correo de Patagonia Wings"
                                            Foreground="#4A5A6A" FontSize="12"
                                            FontFamily="Segoe UI" Margin="0,5,0,0"
                                            TextWrapping="Wrap"/>
@@ -228,7 +233,7 @@
                             </Rectangle>
 
                             <!-- Campo usuario -->
-                            <TextBlock Text="EMAIL O CALLSIGN"
+                            <TextBlock Text="EMAIL"
                                        Style="{StaticResource FieldLabel}"
                                        Margin="0,0,0,6"/>
                             <TextBox Style="{StaticResource DarkTextBox}"

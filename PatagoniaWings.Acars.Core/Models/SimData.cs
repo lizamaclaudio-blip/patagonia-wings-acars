@@ -6,6 +6,9 @@ namespace PatagoniaWings.Acars.Core.Models
     public class SimData
     {
         public DateTime CapturedAtUtc { get; set; }
+        
+        // Identificación del avión
+        public string AircraftTitle { get; set; } = string.Empty;
 
         // Posicion
         public double Latitude { get; set; }
@@ -28,6 +31,12 @@ namespace PatagoniaWings.Acars.Core.Models
         public double FuelFlowLbsHour { get; set; }
         public double Engine1N1 { get; set; }
         public double Engine2N1 { get; set; }
+        
+        // Tanques individuales (para aviones complejos como A319 Headwind)
+        public double FuelLeftTankLbs { get; set; }
+        public double FuelRightTankLbs { get; set; }
+        public double FuelCenterTankLbs { get; set; }
+        public double FuelTotalCapacityLbs { get; set; }
 
         // Aterrizaje
         public double LandingVS { get; set; }

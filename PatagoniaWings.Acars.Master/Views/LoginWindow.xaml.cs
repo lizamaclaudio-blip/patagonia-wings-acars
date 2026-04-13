@@ -2,7 +2,6 @@ using System;
 using System.Windows;
 using PatagoniaWings.Acars.Master.Helpers;
 using PatagoniaWings.Acars.Master.ViewModels;
-using System.Threading.Tasks;
 
 namespace PatagoniaWings.Acars.Master.Views
 {
@@ -16,7 +15,10 @@ namespace PatagoniaWings.Acars.Master.Views
             InitializeComponent();
             _vm = (LoginViewModel)DataContext;
             _vm.OnLoginSuccess = OpenMain;
+
+            // Verificar actualizaciones al iniciar (antes de login)
             Loaded += OnLoaded;
+
             if (AcarsContext.Auth.CurrentPilot != null)
             {
                 _vm.Username = string.IsNullOrWhiteSpace(AcarsContext.Auth.CurrentPilot.CallSign)
@@ -36,7 +38,7 @@ namespace PatagoniaWings.Acars.Master.Views
             await CheckForUpdatesAsync();
         }
 
-        private async Task CheckForUpdatesAsync()
+        private async System.Threading.Tasks.Task CheckForUpdatesAsync()
         {
             try
             {

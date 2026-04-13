@@ -8,6 +8,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
 {
     public sealed class AcarsRuntimeState : INotifyPropertyChanged
     {
+        private const int FreshTelemetryThresholdSeconds = 3;
+
         private Pilot? _currentPilot;
         private AcarsReadyFlight? _currentReadyFlight;
         private PreparedDispatch? _currentDispatch;
@@ -24,10 +26,13 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public AcarsReadyFlight? CurrentReadyFlight => _currentReadyFlight;
         public PreparedDispatch? CurrentDispatch => _currentDispatch;
         public SimData? LastTelemetry => _lastTelemetry;
-        public bool IsSimulatorConnected => _isSimulatorConnected;
+        public bool IsSimulatorConnected => _isSimulatorConnected && IsTelemetryFresh();
+        public bool HasTelemetry => _lastTelemetry != null && _lastTelemetryUtc.HasValue;
         public SimulatorType SimulatorType => _simulatorType;
         public string SimulatorBackend => _simulatorBackend;
         public DateTime? LastTelemetryUtc => _lastTelemetryUtc;
+        public int TelemetryFreshnessThresholdSeconds => FreshTelemetryThresholdSeconds;
+        public TimeSpan? TelemetryAge => _lastTelemetryUtc.HasValue ? DateTime.UtcNow - _lastTelemetryUtc.Value : (TimeSpan?)null;
 
         public void SetCurrentPilot(Pilot? pilot)
         {
@@ -64,6 +69,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
             _simulatorBackend = backend ?? string.Empty;
             _simulatorType = simulatorType;
             _isSimulatorConnected = false;
+            _lastTelemetry = null;
+            _lastTelemetryUtc = null;
             NotifyAll();
         }
 
@@ -97,6 +104,37 @@ namespace PatagoniaWings.Acars.Master.Helpers
             NotifyAll();
         }
 
+        public bool IsTelemetryFresh(int thresholdSeconds = FreshTelemetryThresholdSeconds)
+        {
+            if (!_isSimulatorConnected || !_lastTelemetryUtc.HasValue)
+            {
+                return false;
+            }
+
+            return (DateTime.UtcNow - _lastTelemetryUtc.Value).TotalSeconds <= thresholdSeconds;
+        }
+
+        public string GetTelemetryAgeText()
+        {
+            var age = TelemetryAge;
+            if (!age.HasValue)
+            {
+                return "sin datos";
+            }
+
+            if (age.Value.TotalSeconds < 1)
+            {
+                return "ahora";
+            }
+
+            if (age.Value.TotalMinutes < 1)
+            {
+                return string.Format("hace {0:F1}s", age.Value.TotalSeconds);
+            }
+
+            return string.Format("hace {0:F1}m", age.Value.TotalMinutes);
+        }
+
         public void ResetAll()
         {
             _currentPilot = null;
@@ -117,9 +155,12 @@ namespace PatagoniaWings.Acars.Master.Helpers
             OnPropertyChanged(nameof(CurrentDispatch));
             OnPropertyChanged(nameof(LastTelemetry));
             OnPropertyChanged(nameof(IsSimulatorConnected));
+            OnPropertyChanged(nameof(HasTelemetry));
             OnPropertyChanged(nameof(SimulatorType));
             OnPropertyChanged(nameof(SimulatorBackend));
             OnPropertyChanged(nameof(LastTelemetryUtc));
+            OnPropertyChanged(nameof(TelemetryFreshnessThresholdSeconds));
+            OnPropertyChanged(nameof(TelemetryAge));
             Changed?.Invoke();
         }
 

@@ -50,10 +50,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand NavProfileCommand { get; }
         public ICommand NavCommunityCommand { get; }
         public ICommand LogoutCommand { get; }
-        public ICommand OpenLiveFlightCommand { get; }
 
         public Action? OnLogout { get; set; }
-        public Action? OnOpenLiveFlight { get; set; }
 
         private readonly System.Windows.Threading.DispatcherTimer _clockTimer;
 
@@ -74,7 +72,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             NavProfileCommand = new RelayCommand(() => NavigateTo("Profile"), () => CanNavigate("Profile"));
             NavCommunityCommand = new RelayCommand(() => NavigateTo("Community"), () => CanNavigate("Community"));
             LogoutCommand = new RelayCommand(DoLogout);
-            OpenLiveFlightCommand = new RelayCommand(() => OnOpenLiveFlight?.Invoke());
 
             _clockTimer = new System.Windows.Threading.DispatcherTimer
             {

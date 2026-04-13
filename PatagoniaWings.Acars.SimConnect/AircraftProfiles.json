@@ -1,0 +1,138 @@
+{
+  "profiles": [
+    {
+      "name": "A319 Headwind",
+      "matches": ["A319", "Headwind", "ACJ319", "Airbus A319"],
+      "exact_titles": ["Private ACJ319 CFM"],
+      "description": "Airbus A319 by Headwind Simulations",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY", "FUEL TOTAL CAPACITY"],
+        "unit": "pounds",
+        "status": "WORKING"
+      },
+      "engines": {
+        "n1_variable": "TURB ENG N1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH",
+        "status": "LVAR_REQUIRED",
+        "lvars": ["A319_Engine_N1_1", "A319_Engine_N1_2"]
+      },
+      "lights": {
+        "status": "LVAR_REQUIRED",
+        "lvars": ["A319_Light_Beacon", "A319_Light_Strobe", "A319_Light_Landing", "A319_Light_Nav", "A319_Light_Taxi"],
+        "notes": "SimConnect returns 0, real state in WASM LVARs"
+      },
+      "squawk": {
+        "format": "BCO16",
+        "status": "LVAR_REQUIRED",
+        "lvar": "A319_Transponder_Code",
+        "notes": "SimConnect value is unreliable"
+      },
+      "cabin": {
+        "status": "LVAR_REQUIRED",
+        "altitude_lvar": "A319_Cabin_Altitude",
+        "pressure_lvar": "A319_Cabin_Pressure",
+        "notes": "SimConnect returns garbage values"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "lvar_support": "REQUIRED_FOR_FULL_FUNCTIONALITY",
+      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Flaps", "Gear"],
+      "requires_lvars": ["Lights", "Engine N1", "Transponder", "Cabin Pressure"],
+      "notes": "Uses WASM extensively. Basic flight data works via SimConnect, detailed systems require LVARs"
+    },
+    {
+      "name": "Fenix A320",
+      "matches": ["A320", "Fenix", "Airbus A320"],
+      "description": "Airbus A320 by Fenix Simulations",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
+        "unit": "pounds"
+      },
+      "engines": {
+        "n1_variable": "TURB ENG N1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
+      },
+      "lights": {
+        "use_native": true
+      },
+      "squawk": {
+        "format": "BCO16"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "notes": "Complex WASM systems"
+    },
+    {
+      "name": "PMDG 737",
+      "matches": ["B737", "PMDG", "Boeing 737"],
+      "description": "Boeing 737 series by PMDG",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "unit": "pounds"
+      },
+      "engines": {
+        "n1_variable": "TURB ENG N1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "notes": "PMDG SDK required for full functionality"
+    },
+    {
+      "name": "PMDG 777",
+      "matches": ["B777", "B77W", "PMDG 777"],
+      "description": "Boeing 777 by PMDG",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "unit": "pounds"
+      },
+      "engines": {
+        "n1_variable": "TURB ENG N1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "notes": "PMDG SDK recommended"
+    },
+    {
+      "name": "BlackSquare TBM8",
+      "matches": ["TBM8", "BlackSquare"],
+      "description": "TBM 850 by BlackSquare",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "unit": "pounds"
+      },
+      "engines": {
+        "n1_variable": "ENG N1 RPM",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "notes": "High-fidelity turboprop"
+    },
+    {
+      "name": "MSFS Native",
+      "matches": ["*"],
+      "description": "Default profile for standard MSFS aircraft",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "unit": "pounds"
+      },
+      "engines": {
+        "n1_variable": "ENG N1 RPM",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
+      },
+      "supported": true,
+      "recommended_backend": "FSUIPC7",
+      "notes": "Standard aircraft work with both backends"
+    }
+  ],
+  "config": {
+    "auto_detect": true,
+    "fallback_to_simconnect": true,
+    "log_profile_selection": true,
+    "validate_data_ranges": true
+  }
+}
