@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.0.1.0</version>
-  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.1.exe</url>
-  <changelog>Fix: GetDispatchPackageStatus con fallback a prepared. ACARS carga despachos sin SimBrief previo. SimBrief opcional. AutoUpdater.NET integrado.</changelog>
+  <version>3.0.2.0</version>
+  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.2.exe</url>
+  <changelog>Rediseno UI blanco/celeste completo. Fix: despacho Supabase sin SimBrief. Fix: estado dispatched sincronizado con ACARS.</changelog>
   <mandatory>false</mandatory>
-  <hash>sha256:6A12971254861FDBFC1E7D7C99E35A1667FB3652327CA09C829EC8A2955B8D2B</hash>
+  <hash>sha256:74E9FD8503F424EB0F2A49BB5F8A1C6B4D4E27968A557C6D6D7B3CC322494456</hash>
 </item>
