@@ -7,13 +7,13 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "2.0.6"
+  #define MyAppVersion   "2.0.12"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
 #endif
 #ifndef MyAppURL
-  #define MyAppURL       "https://www.patagoniawings.com"
+  #define MyAppURL       "https://www.patagoniaw.com"
 #endif
 #ifndef MyAppExe
   #define MyAppExe       "PatagoniaWings.Acars.Master.exe"
@@ -23,7 +23,6 @@
 #endif
 
 [Setup]
-AppId={#MyAppId}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
@@ -35,7 +34,7 @@ DefaultGroupName=Patagonia Wings
 DisableProgramGroupPage=yes
 AllowNoIcons=no
 OutputDir=..\release
-OutputBaseFilename=PatagoniaWingsACARSSetup
+OutputBaseFilename=PatagoniaWingsACARSSetup-2.0.12
 SetupIconFile=..\PatagoniaWings.Acars.Master\Assets\patagonia-logo.ico
 UninstallDisplayIcon={app}\{#MyAppExe}
 Compression=lzma2/ultra64
@@ -64,13 +63,13 @@ Name: "desktopicon"; Description: "Crear acceso directo en el escritorio"; Group
 Name: "startupicon"; Description: "Iniciar con Windows"; GroupDescription: "Inicio automatico:"; Flags: unchecked
 
 [Files]
-Source: "..\PatagoniaWings.Acars.Master\bin\Release\{#MyAppExe}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\PatagoniaWings.Acars.Master\bin\Release\PatagoniaWings.Acars.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\PatagoniaWings.Acars.Master\bin\Release\PatagoniaWings.Acars.SimConnect.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\{#MyAppExe}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.Core.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.SimConnect.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\Libs\SimConnect.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\PatagoniaWings.Acars.Master\bin\Release\Microsoft.FlightSimulator.SimConnect.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\PatagoniaWings.Acars.Master\bin\Release\fsuipcClient.dll"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\PatagoniaWings.Acars.Master\bin\Release\PatagoniaWings.Acars.Master.exe.config"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\Microsoft.FlightSimulator.SimConnect.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\fsuipcClient.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.Master.exe.config"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\PatagoniaWings.Acars.Master\Assets\Sounds\*"; DestDir: "{app}\Assets\Sounds"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\\..\\PatagoniaWings.Acars.Master\\Assets\\Sounds'))
 

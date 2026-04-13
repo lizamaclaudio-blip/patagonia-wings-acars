@@ -241,12 +241,21 @@ namespace PatagoniaWings.Acars.SimConnect
                     simData.SimulatorType = DetectedSimulator == SimulatorType.None ? SimulatorType.MSFS2020 : DetectedSimulator;
                     simData.Pause = _isPaused;
                     
-                    // Si es A319 y MobiFlight está disponible, solicitar LVARs
-                    if (_mobiFlight?.IsAvailable == true && raw.Title?.Contains("A319") == true)
+                    // Detectar aviones FlyByWire A32NX (A319, A320, A321 usan las mismas LVARs A32NX_*)
+                    bool isFlyByWire = raw.Title != null && (
+                        raw.Title.Contains("A319") ||
+                        raw.Title.Contains("A320") ||
+                        raw.Title.Contains("A321") ||
+                        raw.Title.Contains("A32NX") ||
+                        raw.Title.Contains("FlyByWire") ||
+                        raw.Title.Contains("FBW") ||
+                        raw.Title.Contains("Headwind"));
+                    
+                    if (_mobiFlight?.IsAvailable == true && isFlyByWire)
                     {
                         _mobiFlight.RequestA319Lvars();
                         simData = _mobiFlight.EnrichWithLvars(simData);
-                        Debug.WriteLine("[SimConnect] Datos A319 enriquecidos con LVARs de MobiFlight");
+                        Debug.WriteLine($"[SimConnect] LVARs FBW aplicadas para: {raw.Title}");
                     }
 
                     if (!_hasReceivedAircraftData)
