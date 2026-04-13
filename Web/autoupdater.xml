@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.0.3.0</version>
-  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.3.exe</url>
-  <changelog>Nueva pagina DESPACHO: muestra reservas activas con badge de estado, plan de vuelo, pesos y METAR. Fix: carga reservas en estado reserved sin requerir dispatch completo.</changelog>
+  <version>3.0.4.0</version>
+  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.4.exe</url>
+  <changelog>Fix critico: crash al iniciar sesion causado por AutoUpdater WinForms dialog. Dialogo de actualizacion reemplazado por WPF nativo. Fix: comparacion de versiones usa App.config.</changelog>
   <mandatory>false</mandatory>
-  <hash>sha256:EC2046E2F9F5BDBC4F4ABB5BF32A27C7A3D2F324B057CB352C23694202A279F5</hash>
+  <hash>sha256:E974B27742419FF3EC40A89BC1F07E348E2854A49D4DEA2FC3F0EE0E11353F31</hash>
 </item>
