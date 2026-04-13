@@ -162,7 +162,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 if (string.IsNullOrWhiteSpace(supabaseUrl) || string.IsNullOrWhiteSpace(supabaseKey))
                     return null;
 
-                var endpoint = supabaseUrl + "/rest/v1/acars_releases?select=*&is_active=eq.true&order=release_date.desc&limit=1";
+                var endpoint = supabaseUrl + "/rest/v1/acars_releases?select=*&is_active=eq.true&order=version.desc&limit=1";
 
                 using (var client = new HttpClient { Timeout = TimeSpan.FromSeconds(8) })
                 {
