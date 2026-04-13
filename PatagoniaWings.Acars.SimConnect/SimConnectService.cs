@@ -511,12 +511,13 @@ namespace PatagoniaWings.Acars.SimConnect
                 {
                     uint sc = Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_UNUSED;
 
-                    // SimConnect en MSFS 2020/2024 soporta leer LVARs con la sintaxis (L:NombreVar, unit)
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:A32NX_BEACON_LIGHT, bool)",         null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:STROBE_LIGHTS_ON, bool)",           null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:LANDING_LIGHTS_ON, bool)",          null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:NAV_LIGHTS_ON, bool)",              null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:TAXI_LIGHT_ON, bool)",              null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    // LVARs oficiales del A32NX según documentación FlyByWire
+                    // https://docs.flybywiresim.com/aircraft/a32nx/a32nx-api/a32nx-systems-api/
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "LIGHT BEACON",                         null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "LIGHT STROBE",                         null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "CIRCUIT SWITCH ON:18",                 null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "LIGHT NAV",                            null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+                    _simConnect.AddToDataDefinition(LvarDefId.Block, "CIRCUIT SWITCH ON:17",                 null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
                     _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:A32NX_ENGINE_N1:1, percent)",       null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
                     _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:A32NX_ENGINE_N1:2, percent)",       null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
                     _simConnect.RegisterDataDefineStruct<A319LvarBlock>(LvarDefId.Block);
