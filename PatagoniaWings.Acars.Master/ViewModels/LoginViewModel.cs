@@ -27,7 +27,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public LoginViewModel()
         {
             LoadSavedUsername();
-            LoginCommand = new RelayCommand(
+            LoginCommand = new AsyncRelayCommand(
                 async _ =>
                 {
                     if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))

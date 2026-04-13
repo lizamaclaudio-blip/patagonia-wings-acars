@@ -244,11 +244,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         public PreFlightViewModel()
         {
-            LoadDispatchCommand      = new RelayCommand(async _ => await LoadPreparedDispatchAsync());
-            FetchMetarCommand        = new RelayCommand(async _ => await LoadMetarAsync());
-            StartFlightCommand       = new RelayCommand(async _ => await StartFlightAsync());
+            LoadDispatchCommand      = new AsyncRelayCommand(async _ => await LoadPreparedDispatchAsync());
+            FetchMetarCommand        = new AsyncRelayCommand(async _ => await LoadMetarAsync());
+            StartFlightCommand       = new AsyncRelayCommand(async _ => await StartFlightAsync());
             GenerateSimbriefCommand  = new RelayCommand(_ => OpenSimbriefWebsite());
-            FetchSimbriefCommand     = new RelayCommand(async _ => await FetchSimbriefOfpAsync());
+            FetchSimbriefCommand     = new AsyncRelayCommand(async _ => await FetchSimbriefOfpAsync());
 
             AcarsContext.Runtime.Changed += OnRuntimeChanged;
             ApplyPilotPreferences();

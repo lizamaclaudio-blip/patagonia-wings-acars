@@ -100,7 +100,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         public PostFlightViewModel()
         {
-            SubmitCommand = new RelayCommand(async _ =>
+            SubmitCommand = new AsyncRelayCommand(async _ =>
             {
                 if (Report == null || Submitted) return;
                 IsSubmitting = true;

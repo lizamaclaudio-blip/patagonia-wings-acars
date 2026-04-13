@@ -129,7 +129,7 @@
                   Background="#EFF6FF">
         <StackPanel Margin="0,0,0,28">
 
-            <!-- â•â•â• HEADER â•â•â• -->
+            <!-- === HEADER === -->
             <Grid Margin="0,0,0,18">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
@@ -138,7 +138,7 @@
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="DESPACHO" FontSize="26" FontWeight="Bold"
                                Foreground="#0284C7" FontFamily="Segoe UI"/>
-                    <TextBlock Text="Reserva activa Â· Datos de vuelo Â· Inicio de operaciÃ³n"
+                    <TextBlock Text="Reserva activa · Datos de vuelo · Inicio de operación"
                                FontSize="12" Foreground="#64748B" FontFamily="Segoe UI" Margin="0,3,0,0"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -147,7 +147,7 @@
                                VerticalAlignment="Center" Margin="0,0,10,0"/>
                     <Button Style="{StaticResource SecBtn}" Command="{Binding LoadDispatchCommand}">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="â†º  " FontSize="13"/>
+                            <TextBlock Text="↺  " FontSize="13"/>
                             <TextBlock Text="Recargar"/>
                         </StackPanel>
                     </Button>
