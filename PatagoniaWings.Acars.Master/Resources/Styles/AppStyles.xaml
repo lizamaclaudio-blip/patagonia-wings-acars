@@ -2,18 +2,18 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- ═══ COLORES ═══════════════════════════════════════════════════════════ -->
-    <Color x:Key="BackgroundDarkColor">#FF0A0E14</Color>
-    <Color x:Key="BackgroundMidColor">#FF121820</Color>
-    <Color x:Key="BackgroundCardColor">#FF1A2130</Color>
-    <Color x:Key="AccentBlueColor">#FF1A6FB5</Color>
-    <Color x:Key="AccentLightBlueColor">#FF2D9CDB</Color>
-    <Color x:Key="AccentTealColor">#FF0CA789</Color>
-    <Color x:Key="TextPrimaryColor">#FFF0F6FC</Color>
-    <Color x:Key="TextSecondaryColor">#FF8B949E</Color>
-    <Color x:Key="BorderColor">#FF252D3A</Color>
-    <Color x:Key="GreenColor">#FF3FB950</Color>
-    <Color x:Key="RedColor">#FFFF4444</Color>
-    <Color x:Key="YellowColor">#FFFFD700</Color>
+    <Color x:Key="BackgroundDarkColor">#FFEFF6FF</Color>
+    <Color x:Key="BackgroundMidColor">#FFF8FAFC</Color>
+    <Color x:Key="BackgroundCardColor">#FFFFFFFF</Color>
+    <Color x:Key="AccentBlueColor">#FF0369A1</Color>
+    <Color x:Key="AccentLightBlueColor">#FF0284C7</Color>
+    <Color x:Key="AccentTealColor">#FF0EA5E9</Color>
+    <Color x:Key="TextPrimaryColor">#FF0F172A</Color>
+    <Color x:Key="TextSecondaryColor">#FF64748B</Color>
+    <Color x:Key="BorderColor">#FFBFDBFE</Color>
+    <Color x:Key="GreenColor">#FF10B981</Color>
+    <Color x:Key="RedColor">#FFEF4444</Color>
+    <Color x:Key="YellowColor">#FFF59E0B</Color>
 
     <SolidColorBrush x:Key="BackgroundDarkBrush"    Color="{StaticResource BackgroundDarkColor}"/>
     <SolidColorBrush x:Key="BackgroundMidBrush"     Color="{StaticResource BackgroundMidColor}"/>
@@ -41,7 +41,7 @@
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
-        <Setter Property="Foreground"   Value="{StaticResource TextPrimaryBrush}"/>
+        <Setter Property="Foreground"   Value="White"/>
         <Setter Property="FontFamily"   Value="{StaticResource MainFont}"/>
         <Setter Property="FontSize"     Value="13"/>
         <Setter Property="FontWeight"   Value="SemiBold"/>
@@ -50,7 +50,7 @@
         <Setter Property="Cursor"       Value="Hand"/>
         <Setter Property="Effect">
             <Setter.Value>
-                <DropShadowEffect Color="#FF1A6FB5" BlurRadius="12" ShadowDepth="0" Opacity="0.4"/>
+                <DropShadowEffect Color="#FF0284C7" BlurRadius="12" ShadowDepth="0" Opacity="0.35"/>
             </Setter.Value>
         </Setter>
         <Setter Property="Template">
@@ -79,9 +79,9 @@
 
     <!-- ═══ BOTÓN SECUNDARIO ══════════════════════════════════════════════════ -->
     <Style x:Key="SecondaryButton" TargetType="Button">
-        <Setter Property="Background"       Value="Transparent"/>
+        <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground"       Value="{StaticResource AccentLightBlueBrush}"/>
-        <Setter Property="BorderBrush"      Value="#2A4A6A"/>
+        <Setter Property="BorderBrush"      Value="#BFDBFE"/>
         <Setter Property="BorderThickness"  Value="1"/>
         <Setter Property="FontFamily"       Value="{StaticResource MainFont}"/>
         <Setter Property="FontSize"         Value="12"/>
@@ -98,7 +98,7 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#0F1D2E"/>
+                            <Setter Property="Background" Value="#DBEAFE"/>
                             <Setter Property="BorderBrush" Value="{StaticResource AccentLightBlueBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
@@ -131,11 +131,11 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="#16202E"/>
+                            <Setter TargetName="Root" Property="Background" Value="#DBEAFE"/>
                             <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="Root" Property="Background" Value="#1C2A3A"/>
+                            <Setter TargetName="Root" Property="Background" Value="#BFDBFE"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -166,18 +166,18 @@
         <Setter Property="Background">
             <Setter.Value>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#161F2E" Offset="0"/>
-                    <GradientStop Color="#0D1520" Offset="1"/>
+                    <GradientStop Color="#DBEAFE" Offset="0"/>
+                    <GradientStop Color="#EFF6FF" Offset="1"/>
                 </LinearGradientBrush>
             </Setter.Value>
         </Setter>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
         <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
     </Style>
 
     <!-- ═══ TEXTBOX ══════════════════════════════════════════════════════════ -->
     <Style x:Key="DarkTextBox" TargetType="TextBox">
-        <Setter Property="Background"       Value="#0A0E14"/>
+        <Setter Property="Background"       Value="#F0F9FF"/>
         <Setter Property="Foreground"       Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="BorderBrush"      Value="{StaticResource BorderBrush}"/>
         <Setter Property="BorderThickness"  Value="1"/>
@@ -206,7 +206,7 @@
 
     <!-- ═══ COMBOBOX ═════════════════════════════════════════════════════════ -->
     <Style x:Key="DarkComboBox" TargetType="ComboBox">
-        <Setter Property="Background"       Value="#0A0E14"/>
+        <Setter Property="Background"       Value="#F0F9FF"/>
         <Setter Property="Foreground"       Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="BorderBrush"      Value="{StaticResource BorderBrush}"/>
         <Setter Property="BorderThickness"  Value="1"/>
@@ -231,10 +231,10 @@
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsHighlighted" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#16202E"/>
+                                        <Setter TargetName="ItemBorder" Property="Background" Value="#DBEAFE"/>
                                     </Trigger>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="ItemBorder" Property="Background" Value="#1A2B3F"/>
+                                        <Setter TargetName="ItemBorder" Property="Background" Value="#BFDBFE"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>
@@ -348,7 +348,7 @@
 
     <!-- ═══ LABEL CAMPO ═══════════════════════════════════════════════════════ -->
     <Style x:Key="FieldLabel" TargetType="TextBlock">
-        <Setter Property="Foreground"   Value="#606C7A"/>
+        <Setter Property="Foreground"   Value="#64748B"/>
         <Setter Property="FontFamily"   Value="{StaticResource MainFont}"/>
         <Setter Property="FontSize"     Value="10"/>
         <Setter Property="FontWeight"   Value="SemiBold"/>
@@ -366,14 +366,14 @@
 
     <!-- ═══ DATO TELEMETRÍA ═══════════════════════════════════════════════════ -->
     <Style x:Key="TelemetryValue" TargetType="TextBlock">
-        <Setter Property="Foreground"   Value="White"/>
+        <Setter Property="Foreground"   Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="FontFamily"   Value="Consolas"/>
         <Setter Property="FontSize"     Value="26"/>
         <Setter Property="FontWeight"   Value="Bold"/>
     </Style>
 
     <Style x:Key="TelemetryUnit" TargetType="TextBlock">
-        <Setter Property="Foreground"   Value="#606C7A"/>
+        <Setter Property="Foreground"   Value="#94A3B8"/>
         <Setter Property="FontFamily"   Value="{StaticResource MainFont}"/>
         <Setter Property="FontSize"     Value="12"/>
         <Setter Property="VerticalAlignment" Value="Bottom"/>
@@ -390,22 +390,22 @@
 
     <!-- ═══ PILL / BADGE ════════════════════════════════════════════════════ -->
     <Style x:Key="PillGreen" TargetType="Border">
-        <Setter Property="Background"       Value="#122A18"/>
-        <Setter Property="BorderBrush"      Value="#1E4A28"/>
+        <Setter Property="Background"       Value="#D1FAE5"/>
+        <Setter Property="BorderBrush"      Value="#6EE7B7"/>
         <Setter Property="BorderThickness"  Value="1"/>
         <Setter Property="CornerRadius"     Value="12"/>
         <Setter Property="Padding"          Value="8,3"/>
     </Style>
     <Style x:Key="PillBlue" TargetType="Border">
-        <Setter Property="Background"       Value="#0F1D2E"/>
-        <Setter Property="BorderBrush"      Value="#1A3A5C"/>
+        <Setter Property="Background"       Value="#DBEAFE"/>
+        <Setter Property="BorderBrush"      Value="#93C5FD"/>
         <Setter Property="BorderThickness"  Value="1"/>
         <Setter Property="CornerRadius"     Value="12"/>
         <Setter Property="Padding"          Value="8,3"/>
     </Style>
     <Style x:Key="PillGold" TargetType="Border">
-        <Setter Property="Background"       Value="#2A2010"/>
-        <Setter Property="BorderBrush"      Value="#554010"/>
+        <Setter Property="Background"       Value="#FEF3C7"/>
+        <Setter Property="BorderBrush"      Value="#FCD34D"/>
         <Setter Property="BorderThickness"  Value="1"/>
         <Setter Property="CornerRadius"     Value="12"/>
         <Setter Property="Padding"          Value="8,3"/>
@@ -431,10 +431,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#16202E"/>
+                            <Setter Property="Background" Value="#DBEAFE"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter Property="Background" Value="#112030"/>
+                            <Setter Property="Background" Value="#BFDBFE"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -458,7 +458,7 @@
 
     <!-- ═══ PASSWORDBOX ═══════════════════════════════════════════════════════ -->
     <Style x:Key="DarkPasswordBox" TargetType="PasswordBox">
-        <Setter Property="Background"       Value="#0A0E14"/>
+        <Setter Property="Background"       Value="#F0F9FF"/>
         <Setter Property="Foreground"       Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="BorderBrush"      Value="{StaticResource BorderBrush}"/>
         <Setter Property="BorderThickness"  Value="1"/>

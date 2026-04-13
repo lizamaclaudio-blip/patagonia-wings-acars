@@ -108,7 +108,7 @@
         <!-- ═══ VUELOS RECIENTES ══════════════════════════════════════════ -->
         <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
             <TextBlock Text="Vuelos Recientes" FontSize="16" FontWeight="SemiBold"
-                       Foreground="White" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                       Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Segoe UI" VerticalAlignment="Center"/>
             <Border Style="{StaticResource PillBlue}" Margin="12,0,0,0">
                 <TextBlock Text="últimos 20" Foreground="#2D9CDB" FontSize="10"/>
             </Border>
@@ -117,7 +117,7 @@
         <Border Style="{StaticResource Card}">
             <StackPanel>
                 <!-- Encabezado tabla -->
-                <Border Background="#0A0E14" CornerRadius="6" Padding="12,8" Margin="0,0,0,2">
+                <Border Background="#F0F9FF" CornerRadius="6" Padding="12,8" Margin="0,0,0,2">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="110"/>
@@ -144,12 +144,12 @@
                 <ItemsControl ItemsSource="{Binding RecentFlights}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="12,9" BorderBrush="#181F28" BorderThickness="0,0,0,1">
+                            <Border Padding="12,9" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#0F1620"/>
+                                                <Setter Property="Background" Value="#EFF6FF"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -165,17 +165,17 @@
                                         <ColumnDefinition Width="55"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock Text="{Binding FlightNumber}" Foreground="White"
+                                    <TextBlock Text="{Binding FlightNumber}" Foreground="{StaticResource TextPrimaryBrush}"
                                                FontFamily="Consolas" FontSize="13" FontWeight="SemiBold" Grid.Column="0"/>
-                                    <TextBlock Text="{Binding DepartureIcao}" Foreground="#2D9CDB"
+                                    <TextBlock Text="{Binding DepartureIcao}" Foreground="{StaticResource AccentLightBlueBrush}"
                                                FontFamily="Consolas" FontSize="13" Grid.Column="1"/>
-                                    <TextBlock Text="{Binding ArrivalIcao}" Foreground="#2D9CDB"
+                                    <TextBlock Text="{Binding ArrivalIcao}" Foreground="{StaticResource AccentLightBlueBrush}"
                                                FontFamily="Consolas" FontSize="13" Grid.Column="2"/>
-                                    <TextBlock Text="{Binding AircraftIcao}" Foreground="#8B949E"
+                                    <TextBlock Text="{Binding AircraftIcao}" Foreground="{StaticResource TextSecondaryBrush}"
                                                FontSize="12" Grid.Column="3"/>
-                                    <TextBlock Foreground="#8B949E" FontSize="12" FontFamily="Consolas" Grid.Column="4"
+                                    <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontSize="12" FontFamily="Consolas" Grid.Column="4"
                                                Text="{Binding Duration, StringFormat=hh\\:mm}"/>
-                                    <TextBlock Foreground="#8B949E" FontFamily="Consolas"
+                                    <TextBlock Foreground="{StaticResource TextSecondaryBrush}" FontFamily="Consolas"
                                                FontSize="12" Grid.Column="5"
                                                Text="{Binding LandingVS, StringFormat={}{0:F0}}"/>
                                     <!-- NOTA con color -->
@@ -187,7 +187,7 @@
                                                    Foreground="White"/>
                                     </Border>
                                     <TextBlock Text="{Binding Status}" FontSize="11"
-                                               Foreground="#606C7A" Grid.Column="7"/>
+                                               Foreground="{StaticResource TextSecondaryBrush}" Grid.Column="7"/>
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -196,7 +196,7 @@
 
                 <!-- Sin vuelos -->
                 <TextBlock Text="Sin vuelos registrados aún. ¡Realiza tu primer vuelo en Pre-Vuelo!"
-                           Foreground="#606C7A" FontSize="13" FontFamily="Segoe UI"
+                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" FontFamily="Segoe UI"
                            HorizontalAlignment="Center" Margin="0,24"
                            Visibility="{Binding RecentFlights.Count,
                                Converter={StaticResource ZeroToVisibilityConverter}}"/>

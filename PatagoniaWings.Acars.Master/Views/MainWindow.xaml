@@ -41,7 +41,7 @@
                         <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
                                Height="22" Width="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
                         <TextBlock Text="PATAGONIA WINGS" FontSize="12" FontWeight="Bold"
-                                   Foreground="White" VerticalAlignment="Center"
+                                   Foreground="{StaticResource AccentLightBlueBrush}" VerticalAlignment="Center"
                                    FontFamily="Segoe UI"/>
                     </StackPanel>
 
@@ -57,16 +57,16 @@
                                     <SolidColorBrush Color="{Binding SimStatusColor}"/>
                                 </Ellipse.Fill>
                             </Ellipse>
-                            <TextBlock Text="{Binding SimStatusText}" Foreground="#8B949E"
+                            <TextBlock Text="{Binding SimStatusText}" Foreground="{StaticResource TextSecondaryBrush}"
                                        FontSize="11" FontFamily="Segoe UI" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="|" Foreground="#252D3A" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <TextBlock Text="|" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,20,0"/>
                         <!-- UTC -->
-                        <TextBlock Text="{Binding UtcTime}" Foreground="#606C7A"
+                        <TextBlock Text="{Binding UtcTime}" Foreground="{StaticResource TextSecondaryBrush}"
                                    FontSize="12" FontFamily="Consolas" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                        <TextBlock Text="|" Foreground="#252D3A" VerticalAlignment="Center" Margin="0,0,20,0"/>
+                        <TextBlock Text="|" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,20,0"/>
                         <!-- Piloto -->
-                        <TextBlock Text="{Binding PilotDisplay}" Foreground="White"
+                        <TextBlock Text="{Binding PilotDisplay}" Foreground="{StaticResource TextPrimaryBrush}"
                                    FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center"/>
                     </StackPanel>
 
@@ -74,10 +74,10 @@
                     <StackPanel Grid.Column="2" Orientation="Horizontal"
                                 VerticalAlignment="Center" Margin="0,0,6,0">
                         <Button Content="—" Width="36" Height="32" Background="Transparent"
-                                BorderThickness="0" Foreground="#8B949E" Cursor="Hand"
+                                BorderThickness="0" Foreground="{StaticResource TextSecondaryBrush}" Cursor="Hand"
                                 FontSize="14" Click="BtnMinimize_Click"/>
                         <Button Content="⬜" Width="36" Height="32" Background="Transparent"
-                                BorderThickness="0" Foreground="#8B949E" Cursor="Hand"
+                                BorderThickness="0" Foreground="{StaticResource TextSecondaryBrush}" Cursor="Hand"
                                 FontSize="11" Click="BtnMaximize_Click"/>
                         <Button Content="✕" Width="36" Height="32" Background="Transparent"
                                 BorderThickness="0" Cursor="Hand" FontSize="13" Click="BtnClose_Click">
@@ -85,7 +85,7 @@
                                 <Style TargetType="Button">
                                     <Setter Property="Background"  Value="Transparent"/>
                                     <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="Foreground"  Value="#8B949E"/>
+                                    <Setter Property="Foreground"  Value="{StaticResource TextSecondaryBrush}"/>
                                     <Setter Property="Cursor"      Value="Hand"/>
                                     <Style.Triggers>
                                         <Trigger Property="IsMouseOver" Value="True">
@@ -116,13 +116,13 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding CurrentPageName}" Value="Dashboard">
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                             <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
                                             <Setter Property="Background">
                                                 <Setter.Value>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#161F2E" Offset="0"/>
-                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
+                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
                                                     </LinearGradientBrush>
                                                 </Setter.Value>
                                             </Setter>
@@ -142,13 +142,13 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding CurrentPageName}" Value="PreFlight">
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                             <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
                                             <Setter Property="Background">
                                                 <Setter.Value>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#161F2E" Offset="0"/>
-                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
+                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
                                                     </LinearGradientBrush>
                                                 </Setter.Value>
                                             </Setter>
@@ -168,13 +168,13 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding CurrentPageName}" Value="InFlight">
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                             <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
                                             <Setter Property="Background">
                                                 <Setter.Value>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#161F2E" Offset="0"/>
-                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
+                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
                                                     </LinearGradientBrush>
                                                 </Setter.Value>
                                             </Setter>
@@ -194,13 +194,13 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding CurrentPageName}" Value="Community">
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                             <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
                                             <Setter Property="Background">
                                                 <Setter.Value>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#161F2E" Offset="0"/>
-                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
+                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
                                                     </LinearGradientBrush>
                                                 </Setter.Value>
                                             </Setter>
@@ -220,13 +220,13 @@
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding CurrentPageName}" Value="Profile">
-                                            <Setter Property="Foreground" Value="White"/>
+                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                             <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
                                             <Setter Property="Background">
                                                 <Setter.Value>
                                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#161F2E" Offset="0"/>
-                                                        <GradientStop Color="#0D1520" Offset="1"/>
+                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
+                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
                                                     </LinearGradientBrush>
                                                 </Setter.Value>
                                             </Setter>
@@ -245,13 +245,13 @@
                     <!-- Info piloto + logout al fondo -->
                     <StackPanel DockPanel.Dock="Bottom" Margin="12,0,12,14">
                         <!-- Fase actual mini -->
-                        <Border Background="#0C1218" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
+                        <Border Background="#F0F9FF" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
                                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                             <StackPanel Orientation="Horizontal">
                                 <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,7,0">
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">
-                                            <Setter Property="Fill" Value="#333"/>
+                                            <Setter Property="Fill" Value="#CBD5E1"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding FlightPhase}" Value="Cruise">
                                                     <Setter Property="Fill" Value="#3FB950"/>
@@ -273,7 +273,7 @@
                                     </Ellipse.Style>
                                 </Ellipse>
                                 <TextBlock Text="{Binding FlightPhase, Converter={StaticResource PhaseToStringConverter}}"
-                                           Foreground="#8B949E" FontSize="11" FontFamily="Segoe UI"/>
+                                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" FontFamily="Segoe UI"/>
                             </StackPanel>
                         </Border>
 
@@ -286,7 +286,7 @@
                             </StackPanel>
                         </Button>
                         <!-- Versión -->
-                        <TextBlock Text="ACARS v3.0" Foreground="#2A3440"
+                        <TextBlock Text="ACARS v3.0" Foreground="#94A3B8"
                                    FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"
                                    FontFamily="Consolas"/>
                     </StackPanel>

@@ -30,14 +30,14 @@
         </Grid>
 
         <!-- ── TABS ──────────────────────────────────────────────────────────── -->
-        <Border Background="#0D1117" CornerRadius="10" Padding="4" Margin="0,0,0,16">
+        <Border Background="#F0F9FF" CornerRadius="10" Padding="4" Margin="0,0,0,16" BorderBrush="#BFDBFE" BorderThickness="1">
             <StackPanel Orientation="Horizontal">
                 <!-- Tab Online -->
                 <Button Click="TabOnline_Click" Padding="16,10" Cursor="Hand">
                     <Button.Style>
                         <Style TargetType="Button">
                             <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="#8B949E"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                             <Setter Property="FontFamily" Value="Segoe UI"/>
                             <Setter Property="FontSize" Value="13"/>
                             <Setter Property="BorderThickness" Value="0"/>
@@ -57,12 +57,12 @@
                             </Setter>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedTab}" Value="0">
-                                    <Setter Property="Background" Value="#1A2130"/>
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Background" Value="#DBEAFE"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                 </DataTrigger>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Foreground" Value="#CDD9E5"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -75,7 +75,7 @@
                     <Button.Style>
                         <Style TargetType="Button">
                             <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Foreground" Value="#8B949E"/>
+                            <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
                             <Setter Property="FontFamily" Value="Segoe UI"/>
                             <Setter Property="FontSize" Value="13"/>
                             <Setter Property="BorderThickness" Value="0"/>
@@ -95,12 +95,12 @@
                             </Setter>
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedTab}" Value="1">
-                                    <Setter Property="Background" Value="#1A2130"/>
-                                    <Setter Property="Foreground" Value="White"/>
+                                    <Setter Property="Background" Value="#DBEAFE"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                     <Setter Property="FontWeight" Value="SemiBold"/>
                                 </DataTrigger>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Foreground" Value="#CDD9E5"/>
+                                    <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
                                 </Trigger>
                             </Style.Triggers>
                         </Style>
@@ -131,9 +131,9 @@
                 <Rectangle Height="1" Margin="0,0,0,8">
                     <Rectangle.Fill>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Color="#1A3A5C" Offset="0"/>
-                            <GradientStop Color="#0CA789" Offset="0.5"/>
-                            <GradientStop Color="#1A3A5C" Offset="1"/>
+                            <GradientStop Color="#EFF6FF" Offset="0"/>
+                            <GradientStop Color="#93C5FD" Offset="0.5"/>
+                            <GradientStop Color="#EFF6FF" Offset="1"/>
                         </LinearGradientBrush>
                     </Rectangle.Fill>
                 </Rectangle>
@@ -141,12 +141,12 @@
                 <ItemsControl ItemsSource="{Binding OnlinePilots}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="4,10" BorderBrush="#1A2130" BorderThickness="0,0,0,1">
+                            <Border Padding="4,10" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#0D1520"/>
+                                                <Setter Property="Background" Value="#EFF6FF"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -184,13 +184,13 @@
                                                 </Ellipse.Fill>
                                             </Ellipse>
                                         </Grid>
-                                        <TextBlock Text="{Binding CallSign}" Foreground="White"
+                                        <TextBlock Text="{Binding CallSign}" Foreground="{StaticResource TextPrimaryBrush}"
                                                    FontFamily="Consolas" FontSize="13"
                                                    FontWeight="Bold" VerticalAlignment="Center"/>
                                     </StackPanel>
 
                                     <TextBlock Text="{Binding FullName}" Grid.Column="1"
-                                               Foreground="#8B949E" FontSize="13"
+                                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="13"
                                                VerticalAlignment="Center"/>
 
                                     <!-- Rango con badge dorado -->
@@ -198,17 +198,17 @@
                                             Padding="8,3" HorizontalAlignment="Left"
                                             VerticalAlignment="Center">
                                         <Border.BorderBrush>
-                                            <SolidColorBrush Color="#3D3010"/>
+                                            <SolidColorBrush Color="#FCD34D"/>
                                         </Border.BorderBrush>
                                         <Border.Background>
-                                            <SolidColorBrush Color="#1A160A"/>
+                                            <SolidColorBrush Color="#FEF3C7"/>
                                         </Border.Background>
-                                        <TextBlock Text="{Binding RankName}" Foreground="#FFD700"
+                                        <TextBlock Text="{Binding RankName}" Foreground="#92400E"
                                                    FontSize="11" FontWeight="SemiBold"/>
                                     </Border>
 
                                     <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F0}h}"
-                                               Grid.Column="3" Foreground="#8B949E"
+                                               Grid.Column="3" Foreground="{StaticResource TextSecondaryBrush}"
                                                FontFamily="Consolas" FontSize="12"
                                                HorizontalAlignment="Right"
                                                VerticalAlignment="Center"/>
@@ -223,13 +223,13 @@
                         Visibility="{Binding OnlinePilots.Count,
                             Converter={StaticResource ZeroToVisibilityConverter}}">
                     <StackPanel HorizontalAlignment="Center">
-                        <TextBlock Text="✈" FontSize="28" Foreground="#252D3A"
+                        <TextBlock Text="✈" FontSize="28" Foreground="#CBD5E1"
                                    HorizontalAlignment="Center" Margin="0,0,0,8"/>
                         <TextBlock Text="Sin pilotos en línea en este momento."
-                                   Foreground="#8B949E" FontSize="13"
+                                   Foreground="{StaticResource TextSecondaryBrush}" FontSize="13"
                                    HorizontalAlignment="Center"/>
                         <TextBlock Text="Sé el primero en conectarte al simulador."
-                                   Foreground="#606C7A" FontSize="11"
+                                   Foreground="#94A3B8" FontSize="11"
                                    HorizontalAlignment="Center" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>
@@ -262,9 +262,9 @@
                 <Rectangle Height="1" Margin="0,0,0,8">
                     <Rectangle.Fill>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Color="#1A3A5C" Offset="0"/>
-                            <GradientStop Color="#FFD700" Offset="0.5"/>
-                            <GradientStop Color="#1A3A5C" Offset="1"/>
+                            <GradientStop Color="#EFF6FF" Offset="0"/>
+                            <GradientStop Color="#FCD34D" Offset="0.5"/>
+                            <GradientStop Color="#EFF6FF" Offset="1"/>
                         </LinearGradientBrush>
                     </Rectangle.Fill>
                 </Rectangle>
@@ -272,12 +272,12 @@
                 <ItemsControl ItemsSource="{Binding Leaderboard}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Padding="4,9" BorderBrush="#1A2130" BorderThickness="0,0,0,1">
+                            <Border Padding="4,9" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
                                 <Border.Style>
                                     <Style TargetType="Border">
                                         <Style.Triggers>
                                             <Trigger Property="IsMouseOver" Value="True">
-                                                <Setter Property="Background" Value="#0D1520"/>
+                                                <Setter Property="Background" Value="#EFF6FF"/>
                                             </Trigger>
                                         </Style.Triggers>
                                     </Style>
@@ -298,30 +298,30 @@
                                                Grid.Column="0" VerticalAlignment="Center"
                                                Text="·"/>
 
-                                    <TextBlock Text="{Binding CallSign}" Foreground="White"
+                                    <TextBlock Text="{Binding CallSign}" Foreground="{StaticResource TextPrimaryBrush}"
                                                FontFamily="Consolas" FontSize="13"
                                                FontWeight="Bold" Grid.Column="1"
                                                VerticalAlignment="Center"/>
 
                                     <TextBlock Text="{Binding FullName}" Grid.Column="2"
-                                               Foreground="#8B949E" FontSize="13"
+                                               Foreground="{StaticResource TextSecondaryBrush}" FontSize="13"
                                                VerticalAlignment="Center"/>
 
                                     <Border Grid.Column="3" CornerRadius="4" BorderThickness="1"
                                             Padding="8,3" HorizontalAlignment="Left"
                                             VerticalAlignment="Center">
                                         <Border.BorderBrush>
-                                            <SolidColorBrush Color="#3D3010"/>
+                                            <SolidColorBrush Color="#FCD34D"/>
                                         </Border.BorderBrush>
                                         <Border.Background>
-                                            <SolidColorBrush Color="#1A160A"/>
+                                            <SolidColorBrush Color="#FEF3C7"/>
                                         </Border.Background>
-                                        <TextBlock Text="{Binding RankName}" Foreground="#FFD700"
+                                        <TextBlock Text="{Binding RankName}" Foreground="#92400E"
                                                    FontSize="10" FontWeight="SemiBold"/>
                                     </Border>
 
                                     <TextBlock Text="{Binding TotalHours, StringFormat={}{0:F0}}"
-                                               Grid.Column="4" Foreground="#2D9CDB"
+                                               Grid.Column="4" Foreground="{StaticResource AccentLightBlueBrush}"
                                                FontFamily="Consolas" FontSize="13"
                                                HorizontalAlignment="Right"
                                                VerticalAlignment="Center"/>
@@ -331,12 +331,12 @@
                                             Padding="6,3" HorizontalAlignment="Right"
                                             VerticalAlignment="Center">
                                         <Border.BorderBrush>
-                                            <SolidColorBrush Color="#3D3010"/>
+                                            <SolidColorBrush Color="#FCD34D"/>
                                         </Border.BorderBrush>
                                         <Border.Background>
-                                            <SolidColorBrush Color="#1A160A"/>
+                                            <SolidColorBrush Color="#FEF3C7"/>
                                         </Border.Background>
-                                        <TextBlock Text="{Binding Points}" Foreground="#FFD700"
+                                        <TextBlock Text="{Binding Points}" Foreground="#92400E"
                                                    FontFamily="Consolas" FontSize="12"
                                                    FontWeight="Bold"/>
                                     </Border>
@@ -348,7 +348,7 @@
 
                 <!-- Estado vacío -->
                 <TextBlock Text="Sin datos de pilotos disponibles."
-                           Foreground="#8B949E" FontSize="13"
+                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="13"
                            HorizontalAlignment="Center" Margin="0,20"
                            Visibility="{Binding Leaderboard.Count,
                                Converter={StaticResource ZeroToVisibilityConverter}}"/>

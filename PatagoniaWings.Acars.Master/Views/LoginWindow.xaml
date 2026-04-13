@@ -156,7 +156,7 @@
                 <!-- ── COLUMNA DERECHA: panel de login ── -->
                 <Border Grid.Column="1" CornerRadius="0,16,16,0">
                     <Border.Background>
-                        <SolidColorBrush Color="#F20A0E14"/>
+                        <SolidColorBrush Color="#F0F9FF"/>
                     </Border.Background>
 
                     <!-- Línea de acento izquierda del panel -->
@@ -179,10 +179,10 @@
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="Background" Value="Transparent"/>
-                                    <Setter Property="Foreground" Value="#556070"/>
+                                    <Setter Property="Foreground" Value="#64748B"/>
                                     <Setter Property="FontSize" Value="12"/>
                                     <Setter Property="BorderThickness" Value="1"/>
-                                    <Setter Property="BorderBrush" Value="#1E2A38"/>
+                                    <Setter Property="BorderBrush" Value="#BFDBFE"/>
                                     <Setter Property="Template">
                                         <Setter.Value>
                                             <ControlTemplate TargetType="Button">
@@ -195,9 +195,9 @@
                                                 </Border>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="IsMouseOver" Value="True">
-                                                        <Setter Property="Background" Value="#1A2130"/>
-                                                        <Setter Property="Foreground" Value="White"/>
-                                                        <Setter Property="BorderBrush" Value="#2D9CDB"/>
+                                                        <Setter Property="Background" Value="#DBEAFE"/>
+                                                        <Setter Property="Foreground" Value="#0284C7"/>
+                                                        <Setter Property="BorderBrush" Value="#93C5FD"/>
                                                     </Trigger>
                                                 </ControlTemplate.Triggers>
                                             </ControlTemplate>
@@ -214,9 +214,9 @@
                             <StackPanel Margin="0,0,0,6">
                                 <TextBlock Text="Iniciar Sesión"
                                            FontSize="28" FontWeight="Bold"
-                                           Foreground="White" FontFamily="Segoe UI"/>
+                                           Foreground="#0F172A" FontFamily="Segoe UI"/>
                                 <TextBlock Text="Ingresa con tu correo de Patagonia Wings"
-                                           Foreground="#4A5A6A" FontSize="12"
+                                           Foreground="#64748B" FontSize="12"
                                            FontFamily="Segoe UI" Margin="0,5,0,0"
                                            TextWrapping="Wrap"/>
                             </StackPanel>
@@ -225,9 +225,9 @@
                             <Rectangle Height="1" Margin="0,18,0,22">
                                 <Rectangle.Fill>
                                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                        <GradientStop Color="#001E2A38" Offset="0"/>
-                                        <GradientStop Color="#FF1E2A38" Offset="0.5"/>
-                                        <GradientStop Color="#001E2A38" Offset="1"/>
+                                        <GradientStop Color="#00BFDBFE" Offset="0"/>
+                                        <GradientStop Color="#FFBFDBFE" Offset="0.5"/>
+                                        <GradientStop Color="#00BFDBFE" Offset="1"/>
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
                             </Rectangle>
@@ -260,16 +260,16 @@
                                     BorderThickness="1"
                                     Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}">
                                 <Border.BorderBrush>
-                                    <SolidColorBrush Color="#5C1A1A"/>
+                                    <SolidColorBrush Color="#FECACA"/>
                                 </Border.BorderBrush>
                                 <Border.Background>
-                                    <SolidColorBrush Color="#1A0A0A"/>
+                                    <SolidColorBrush Color="#FEF2F2"/>
                                 </Border.Background>
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="⚠ " Foreground="#FF4444"
                                                FontSize="12" VerticalAlignment="Center"/>
                                     <TextBlock Text="{Binding ErrorMessage}"
-                                               Foreground="#FF6666" FontSize="12"
+                                               Foreground="#DC2626" FontSize="12"
                                                FontFamily="Segoe UI" TextWrapping="Wrap"
                                                VerticalAlignment="Center"/>
                                 </StackPanel>
@@ -300,7 +300,7 @@
 
                             <!-- Footer versión -->
                             <TextBlock Text="{Binding Source={x:Static local:UpdateService.CurrentVersion}, StringFormat='Patagonia Wings Virtual Airline · ACARS {0}'}"
-                                       Foreground="#1E2A38" FontSize="10"
+                                       Foreground="#94A3B8" FontSize="10"
                                        FontFamily="Segoe UI"
                                        HorizontalAlignment="Center"
                                        Margin="0,24,0,0"/>
