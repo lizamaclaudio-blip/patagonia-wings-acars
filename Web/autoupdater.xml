@@ -4,5 +4,5 @@
   <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.3.exe</url>
   <changelog>Nueva pagina DESPACHO: muestra reservas activas con badge de estado, plan de vuelo, pesos y METAR. Fix: carga reservas en estado reserved sin requerir dispatch completo.</changelog>
   <mandatory>false</mandatory>
-  <hash>sha256:241D71B57AB74095378CD731B0B8E205C0B686CD444907356A08F8CCAC55ECAE</hash>
+  <hash>sha256:EC2046E2F9F5BDBC4F4ABB5BF32A27C7A3D2F324B057CB352C23694202A279F5</hash>
 </item>

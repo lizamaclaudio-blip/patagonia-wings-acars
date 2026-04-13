@@ -33,12 +33,13 @@ namespace PatagoniaWings.Acars.Master.Helpers
         /// </summary>
         static UpdateService()
         {
-            // Configurar AutoUpdater
-            // AutoUpdater.InstalledVersion = CurrentVersion; // Se detecta automáticamente del assembly
             AutoUpdater.UpdateMode = Mode.Normal;
             AutoUpdater.RunUpdateAsAdmin = true;
-            
-            // Eventos para logging
+            AutoUpdater.ShowSkipButton = true;
+            AutoUpdater.ShowRemindLaterButton = true;
+
+            // IMPORTANTE: al suscribir CheckForUpdateEvent, AutoUpdater suprime el diálogo.
+            // Hay que llamar ShowUpdateForm manualmente dentro del handler.
             AutoUpdater.CheckForUpdateEvent += AutoUpdaterOnCheckForUpdateEvent;
             AutoUpdater.ApplicationExitEvent += AutoUpdaterOnApplicationExitEvent;
         }
@@ -125,11 +126,16 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             if (args.IsUpdateAvailable)
             {
-                WriteUpdateLog($"Update available: {args.CurrentVersion} -> {args.InstalledVersion}");
+                WriteUpdateLog($"Update available: installed={args.InstalledVersion} available={args.CurrentVersion}");
+                // Mostrar diálogo explícitamente (necesario cuando CheckForUpdateEvent está suscrito)
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    AutoUpdater.ShowUpdateForm(args);
+                });
             }
             else
             {
-                WriteUpdateLog("No updates available");
+                WriteUpdateLog($"App is up to date: {args.InstalledVersion}");
             }
         }
 
