@@ -32,6 +32,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
+        public double ProgressToNextRankValue
+        {
+            get
+            {
+                if (Pilot == null) return 0;
+                var next = Pilot.Rank == PilotRank.ComandanteTLA ? 100 : 50;
+                var pct = (double)(Pilot.Points % next) / next;
+                return System.Math.Max(4, pct * 340);
+            }
+        }
+
         public ICommand SavePreferencesCommand { get; }
 
         public ProfileViewModel()
@@ -124,6 +135,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             VoiceFemale = pilot.CopilotVoiceFemale;
             OnPropertyChanged(nameof(RankImageResource));
             OnPropertyChanged(nameof(ProgressToNextRank));
+            OnPropertyChanged(nameof(ProgressToNextRankValue));
         }
     }
 }
