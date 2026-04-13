@@ -48,7 +48,13 @@ namespace PatagoniaWings.Acars.Core.Models
                     ReservationStatus == "dispatch_ready"
                     || ReservationStatus == "dispatched"
                     || ReservationStatus == "in_progress"
-                    || ReservationStatus == "in_flight";
+                    || ReservationStatus == "in_flight"
+                    || ReservationStatus == "despacho"
+                    || ReservationStatus == "despacho_ready"
+                    || ReservationStatus == "active"
+                    || ReservationStatus == "confirmed"
+                    || ReservationStatus == "booked"
+                    || ReservationStatus == "ready";
                 var packageReady =
                     string.IsNullOrWhiteSpace(DispatchPackageStatus)
                     || DispatchPackageStatus == "prepared"

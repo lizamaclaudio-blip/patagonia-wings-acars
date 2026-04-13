@@ -311,6 +311,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 AcarsContext.Runtime.SetReadyFlight(result.Data);
                 FlightStarted = false;
 
+                var dispatch = result.Data.ToPreparedDispatch();
+                Debug.WriteLine($"[PreFlight] ReservationStatus='{dispatch.ReservationStatus}' DispatchStatus='{dispatch.DispatchPackageStatus}' IsReady={dispatch.IsDispatchReady}");
+
                 StatusMessage = "Reserva activa cargada: " + result.Data.FlightNumber + " " + result.Data.OriginIdent + "-" + result.Data.DestinationIdent + ".";
                 await LoadMetarAsync();
             }
