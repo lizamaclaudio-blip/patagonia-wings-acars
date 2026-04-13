@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.ProfilePage"
+<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.ProfilePage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
@@ -7,318 +7,384 @@
     </UserControl.DataContext>
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolVis"/>
-        <Style x:Key="PLabel" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#475569"/>
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
-        </Style>
-        <Style x:Key="PValue" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#E2E8F0"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-        </Style>
-        <Style x:Key="StatCard" TargetType="Border">
-            <Setter Property="Background" Value="#0F1827"/>
-            <Setter Property="BorderBrush" Value="#1E293B"/>
+
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#BFDBFE"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="18,14"/>
+            <Setter Property="Padding" Value="20,16"/>
         </Style>
-        <Style x:Key="GCard" TargetType="Border">
-            <Setter Property="Background" Value="#111827"/>
-            <Setter Property="BorderBrush" Value="#1E293B"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="22"/>
+
+        <Style x:Key="SHead" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#0284C7"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
         </Style>
-        <Style x:Key="SaveBtn" TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
+
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Margin" Value="0,0,0,2"/>
+        </Style>
+
+        <Style x:Key="FieldValue" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Foreground" Value="#0F172A"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
+        </Style>
+
+        <Style x:Key="StatValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="26"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="Height" Value="44"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <Style x:Key="StatLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+        </Style>
+
+        <Style x:Key="SaveBtn" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#0284C7" Offset="0"/>
+                        <GradientStop Color="#0EA5E9" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Padding" Value="18,9"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
-                        <Border CornerRadius="8" Padding="20,0">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#0A7EA4" Offset="0"/>
-                                    <GradientStop Color="#0CA789" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
+                        <Border Background="{TemplateBinding Background}" CornerRadius="7"
+                                Padding="{TemplateBinding Padding}">
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.88"/></Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
-        <Style x:Key="ScorePill" TargetType="Border">
-            <Setter Property="Background" Value="#0D1520"/>
-            <Setter Property="BorderBrush" Value="#1E293B"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="Margin" Value="0,0,8,8"/>
-        </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-    <StackPanel MaxWidth="980" Margin="0,4,0,28">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  Background="#EFF6FF">
+        <StackPanel Margin="0,0,0,24">
 
-        <!-- Header -->
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-            <TextBlock Text="PILOTO" Foreground="#2D9CDB" FontSize="11" FontWeight="Bold" VerticalAlignment="Center"/>
-            <TextBlock Text=" · MI PERFIL" Foreground="#475569" FontSize="11" VerticalAlignment="Center"/>
-        </StackPanel>
-        <TextBlock Text="Mi Perfil" Foreground="White" FontSize="26" FontWeight="Bold" Margin="0,0,0,22"/>
+            <!-- Loading overlay message -->
+            <TextBlock Text="Cargando perfil..."
+                       Visibility="{Binding IsLoading, Converter={StaticResource BoolVis}}"
+                       FontSize="13" Foreground="#0EA5E9" FontFamily="Segoe UI"
+                       HorizontalAlignment="Center" Margin="0,0,0,12"/>
 
-        <!-- Hero card -->
-        <Border Margin="0,0,0,14" CornerRadius="14" BorderThickness="1" Padding="28,22">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                    <GradientStop Color="#0B1525" Offset="0"/>
-                    <GradientStop Color="#060E1A" Offset="1"/>
-                </LinearGradientBrush>
-            </Border.Background>
-            <Border.BorderBrush>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                    <GradientStop Color="#1A4A8A" Offset="0"/>
-                    <GradientStop Color="#0CA789" Offset="1"/>
-                </LinearGradientBrush>
-            </Border.BorderBrush>
+            <!-- ═══ HERO CARD ═══ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Avatar circle -->
+                    <Border Grid.Column="0" Width="80" Height="80" CornerRadius="40"
+                            BorderBrush="#BFDBFE" BorderThickness="2" Margin="0,0,20,0"
+                            VerticalAlignment="Center">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#0EA5E9" Offset="0"/>
+                                <GradientStop Color="#0284C7" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <TextBlock Text="{Binding Pilot.CallSign, FallbackValue='?'}"
+                                   FontSize="20" FontWeight="Bold" FontFamily="Segoe UI"
+                                   Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- Info -->
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Pilot.FullName, FallbackValue='—'}"
+                                   FontSize="20" FontWeight="Bold" Foreground="#0F172A" FontFamily="Segoe UI"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,6">
+                            <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1"
+                                    CornerRadius="10" Padding="10,3" Margin="0,0,8,0">
+                                <TextBlock Text="{Binding Pilot.CallSign, FallbackValue='—'}"
+                                           FontSize="12" FontWeight="Bold" FontFamily="Consolas"
+                                           Foreground="#0284C7"/>
+                            </Border>
+                            <Border Background="#F0FDF4" BorderBrush="#86EFAC" BorderThickness="1"
+                                    CornerRadius="10" Padding="10,3">
+                                <TextBlock Text="{Binding Pilot.RankName, FallbackValue='—'}"
+                                           FontSize="11" FontWeight="SemiBold" FontFamily="Segoe UI"
+                                           Foreground="#15803D"/>
+                            </Border>
+                        </StackPanel>
+                        <TextBlock Text="{Binding Pilot.Email, FallbackValue='—'}"
+                                   FontSize="11" Foreground="#64748B" FontFamily="Segoe UI"/>
+
+                        <!-- Rank progress bar -->
+                        <StackPanel Margin="0,10,0,0">
+                            <TextBlock FontSize="10" Foreground="#94A3B8" FontFamily="Segoe UI"
+                                       Margin="0,0,0,4">
+                                <Run Text="Progreso al siguiente rango: "/>
+                                <Run Text="{Binding ProgressToNextRank, FallbackValue='—'}"
+                                     FontWeight="SemiBold" Foreground="#0284C7"/>
+                            </TextBlock>
+                            <Border Height="6" CornerRadius="3" Background="#E2E8F0" MaxWidth="340" HorizontalAlignment="Left">
+                                <Border CornerRadius="3" HorizontalAlignment="Left"
+                                        Height="6"
+                                        Width="{Binding ProgressToNextRankValue}">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#0EA5E9" Offset="0"/>
+                                            <GradientStop Color="#38BDF8" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Rank image -->
+                    <Image Grid.Column="2" Width="64" Height="64"
+                           VerticalAlignment="Center" Margin="12,0,0,0">
+                        <Image.Source>
+                            <Binding Path="RankImageResource"/>
+                        </Image.Source>
+                        <Image.Style>
+                            <Style TargetType="Image">
+                                <Setter Property="Opacity" Value="0.85"/>
+                            </Style>
+                        </Image.Style>
+                    </Image>
+                </Grid>
+            </Border>
+
+            <!-- ═══ STATS ROW ═══ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding Pilot.TotalHours, StringFormat='{}{0:N0}', FallbackValue='—'}"
+                                   Style="{StaticResource StatValue}" Foreground="#0284C7"/>
+                        <TextBlock Text="Horas totales" Style="{StaticResource StatLabel}"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="1" Fill="#E2E8F0" Width="1"/>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="{Binding Pilot.TotalFlights, FallbackValue='—'}"
+                                   Style="{StaticResource StatValue}" Foreground="#10B981"/>
+                        <TextBlock Text="Vuelos" Style="{StaticResource StatLabel}"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="3" Fill="#E2E8F0" Width="1"/>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="{Binding Pilot.Points, FallbackValue='—'}"
+                                   Style="{StaticResource StatValue}" Foreground="#F59E0B"/>
+                        <TextBlock Text="Puntos" Style="{StaticResource StatLabel}"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="5" Fill="#E2E8F0" Width="1"/>
+                    <StackPanel Grid.Column="6">
+                        <TextBlock Text="{Binding Pilot.LegadoPoints, FallbackValue='—'}"
+                                   Style="{StaticResource StatValue}" Foreground="#8B5CF6"/>
+                        <TextBlock Text="Legado" Style="{StaticResource StatLabel}"/>
+                    </StackPanel>
+                    <Rectangle Grid.Column="7" Fill="#E2E8F0" Width="1"/>
+                    <StackPanel Grid.Column="8">
+                        <TextBlock Text="{Binding Pilot.TotalDistance, StringFormat='{}{0:N0}', FallbackValue='—'}"
+                                   Style="{StaticResource StatValue}" Foreground="#64748B" FontSize="20"/>
+                        <TextBlock Text="nm totales" Style="{StaticResource StatLabel}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ═══ DATA + SCORES + PREFERENCES ═══ -->
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="24"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="280"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Avatar -->
-                <Grid Grid.Column="0" Width="88" Height="88">
-                    <Ellipse Width="88" Height="88">
-                        <Ellipse.Fill>
-                            <RadialGradientBrush>
-                                <GradientStop Color="#1A3A6A" Offset="0"/>
-                                <GradientStop Color="#060E1A" Offset="1"/>
-                            </RadialGradientBrush>
-                        </Ellipse.Fill>
-                    </Ellipse>
-                    <Ellipse Width="88" Height="88" StrokeThickness="2">
-                        <Ellipse.Stroke>
-                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                                <GradientStop Color="#2D9CDB" Offset="0"/>
-                                <GradientStop Color="#0CA789" Offset="1"/>
-                            </LinearGradientBrush>
-                        </Ellipse.Stroke>
-                    </Ellipse>
-                    <TextBlock Text="{Binding Pilot.CallSign, TargetNullValue=?}"
-                               Foreground="White" FontSize="20" FontWeight="Bold"
-                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Grid>
+                <!-- DATOS DEL PILOTO -->
+                <Border Grid.Column="0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="DATOS DEL PILOTO" Style="{StaticResource SHead}"/>
 
-                <!-- Info piloto -->
-                <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding Pilot.FullName, TargetNullValue=Cargando...}"
-                               Foreground="White" FontSize="20" FontWeight="Bold" Margin="0,0,0,4"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
-                        <TextBlock Text="{Binding Pilot.CallSign}" Foreground="#38BDF8"
-                                   FontFamily="Consolas" FontSize="14" FontWeight="Bold" Margin="0,0,12,0"/>
-                        <Border Background="#0A1F14" CornerRadius="4" Padding="8,3">
-                            <TextBlock Text="{Binding Pilot.RankName, TargetNullValue=—}"
-                                       Foreground="#34D399" FontSize="11" FontWeight="Bold"/>
+                        <TextBlock Text="CALLSIGN" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Pilot.CallSign, FallbackValue='—'}"
+                                   Style="{StaticResource FieldValue}" FontFamily="Consolas" Foreground="#0284C7" FontSize="15"/>
+
+                        <TextBlock Text="NOMBRE COMPLETO" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Pilot.FullName, FallbackValue='—'}" Style="{StaticResource FieldValue}"/>
+
+                        <TextBlock Text="EMAIL" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Pilot.Email, FallbackValue='—'}"
+                                   Style="{StaticResource FieldValue}" FontSize="12"/>
+
+                        <TextBlock Text="BASE HUB" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Pilot.BaseHubCode, FallbackValue='—'}"
+                                   Style="{StaticResource FieldValue}" FontFamily="Consolas"/>
+
+                        <TextBlock Text="AEROPUERTO ACTUAL" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Pilot.CurrentAirportCode, FallbackValue='—'}"
+                                   Style="{StaticResource FieldValue}" FontFamily="Consolas"/>
+
+                        <TextBlock Text="SIMULADOR PREFERIDO" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Pilot.PreferredSimulator, FallbackValue='—'}" Style="{StaticResource FieldValue}"/>
+
+                        <TextBlock Text="HABILITACIONES" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Pilot.ActiveQualifications, FallbackValue='Sin registro'}"
+                                   FontSize="11" Foreground="#334155" FontFamily="Segoe UI" TextWrapping="Wrap" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="CERTIFICACIONES" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Pilot.ActiveCertifications, FallbackValue='Sin registro'}"
+                                   FontSize="11" Foreground="#334155" FontFamily="Segoe UI" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- MÉTRICAS -->
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="MÉTRICAS DE DESEMPEÑO" Style="{StaticResource SHead}"/>
+
+                        <!-- Pulso 10 -->
+                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1"
+                                CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="PULSO 10" Style="{StaticResource FieldLabel}" Margin="0,0,0,0"/>
+                                    <TextBlock Text="Regularidad últimos 10 vuelos"
+                                               FontSize="10" Foreground="#94A3B8" FontFamily="Segoe UI"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Pilot.Pulso10, StringFormat='{}{0:F1}', FallbackValue='—'}"
+                                           FontSize="22" FontWeight="Bold" FontFamily="Consolas"
+                                           Foreground="#0284C7" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Ruta 10 -->
+                        <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1"
+                                CornerRadius="8" Padding="14,10" Margin="0,0,0,8">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="RUTA 10" Style="{StaticResource FieldLabel}" Margin="0,0,0,0"/>
+                                    <TextBlock Text="Score de ruta últimos 10 vuelos"
+                                               FontSize="10" Foreground="#94A3B8" FontFamily="Segoe UI"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Pilot.Ruta10, StringFormat='{}{0:F1}', FallbackValue='—'}"
+                                           FontSize="22" FontWeight="Bold" FontFamily="Consolas"
+                                           Foreground="#0284C7" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+
+                        <!-- Horas transferidas -->
+                        <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1"
+                                CornerRadius="8" Padding="14,10">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="HORAS TRANSFERIDAS" Style="{StaticResource FieldLabel}" Margin="0,0,0,0"/>
+                                    <TextBlock Text="Historial acumulado"
+                                               FontSize="10" Foreground="#94A3B8" FontFamily="Segoe UI"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Pilot.TransferredHours, StringFormat='{}{0:N0}', FallbackValue='—'}"
+                                           FontSize="18" FontWeight="Bold" FontFamily="Consolas"
+                                           Foreground="#64748B" VerticalAlignment="Center"/>
+                            </Grid>
                         </Border>
                     </StackPanel>
-                    <!-- Barra progreso rango -->
-                    <TextBlock Text="PROGRESO AL SIGUIENTE RANGO" Foreground="#334155" FontSize="9" FontWeight="Bold" Margin="0,0,0,5"/>
-                    <Grid>
-                        <Border Background="#0D1520" CornerRadius="4" Height="6"/>
-                        <Border CornerRadius="4" Height="6" HorizontalAlignment="Left"
-                                Width="{Binding ProgressToNextRankValue}">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#2D9CDB" Offset="0"/>
-                                    <GradientStop Color="#0CA789" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                        </Border>
-                    </Grid>
-                </StackPanel>
+                </Border>
 
-                <!-- Email -->
-                <StackPanel Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Right">
-                    <TextBlock Text="EMAIL" Foreground="#334155" FontSize="9" FontWeight="Bold" Margin="0,0,0,4"/>
-                    <TextBlock Text="{Binding Pilot.Email, TargetNullValue=—}"
-                               Foreground="#475569" FontSize="12"/>
-                </StackPanel>
+                <!-- PREFERENCIAS -->
+                <Border Grid.Column="4" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="PREFERENCIAS" Style="{StaticResource SHead}"/>
+
+                        <TextBlock Text="IDIOMA COPILOTO" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox SelectedValue="{Binding PreferredLanguage}" Margin="0,0,0,12"
+                                  FontSize="12" FontFamily="Segoe UI"
+                                  BorderBrush="#BFDBFE" BorderThickness="1"
+                                  Background="#FFFFFF" Foreground="#0F172A"
+                                  Padding="8,6">
+                            <ComboBoxItem Content="Español" Tag="ESP"/>
+                            <ComboBoxItem Content="English" Tag="ENG"/>
+                        </ComboBox>
+
+                        <TextBlock Text="VOZ COPILOTO" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,2,0,16">
+                            <RadioButton Content="Femenina" GroupName="VoiceGroup"
+                                         IsChecked="{Binding VoiceFemale, Mode=TwoWay}"
+                                         FontSize="12" FontFamily="Segoe UI"
+                                         Foreground="#334155" Margin="0,0,14,0"/>
+                            <RadioButton Content="Masculina" GroupName="VoiceGroup"
+                                         FontSize="12" FontFamily="Segoe UI" Foreground="#334155"/>
+                        </StackPanel>
+
+                        <Button Style="{StaticResource SaveBtn}"
+                                Command="{Binding SavePreferencesCommand}"
+                                HorizontalAlignment="Stretch">
+                            <TextBlock Text="Guardar preferencias"/>
+                        </Button>
+
+                        <StackPanel Visibility="{Binding IsLoading, Converter={StaticResource BoolVis}}"
+                                    Margin="0,10,0,0">
+                            <TextBlock Text="Guardando..." FontSize="11" Foreground="#0EA5E9"
+                                       FontFamily="Segoe UI" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </Grid>
-        </Border>
 
-        <!-- Stats 3 columnas -->
-        <Grid Margin="0,0,0,14">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="12"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="12"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <Border Grid.Column="0" Style="{StaticResource StatCard}">
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="HORAS DE VUELO" Style="{StaticResource PLabel}" HorizontalAlignment="Center"/>
-                    <TextBlock Foreground="#38BDF8" FontSize="28" FontWeight="Bold" FontFamily="Consolas"
-                               HorizontalAlignment="Center"
-                               Text="{Binding Pilot.TotalHours, StringFormat={}{0:F1}, TargetNullValue=0.0}"/>
-                    <TextBlock Text="h totales" Foreground="#334155" FontSize="11" HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Border>
-            <Border Grid.Column="2" Style="{StaticResource StatCard}">
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="VUELOS COMPLETADOS" Style="{StaticResource PLabel}" HorizontalAlignment="Center"/>
-                    <TextBlock Foreground="#34D399" FontSize="28" FontWeight="Bold" FontFamily="Consolas"
-                               HorizontalAlignment="Center"
-                               Text="{Binding Pilot.TotalFlights, TargetNullValue=0}"/>
-                    <TextBlock Text="pirons aprobados" Foreground="#334155" FontSize="11" HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Border>
-            <Border Grid.Column="4" Style="{StaticResource StatCard}">
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="PUNTOS ACUMULADOS" Style="{StaticResource PLabel}" HorizontalAlignment="Center"/>
-                    <TextBlock Foreground="#F59E0B" FontSize="28" FontWeight="Bold" FontFamily="Consolas"
-                               HorizontalAlignment="Center"
-                               Text="{Binding Pilot.Points, TargetNullValue=0}"/>
-                    <TextBlock Text="pts acumulados" Foreground="#334155" FontSize="11" HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-        <!-- Info + Preferencias -->
-        <Grid>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="12"/>
-                <ColumnDefinition Width="340"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Info piloto -->
-            <Border Grid.Column="0" Style="{StaticResource GCard}">
-                <StackPanel>
-                    <TextBlock Text="INFORMACIÓN DEL PILOTO" Foreground="#64748B" FontSize="10" FontWeight="Bold" Margin="0,0,0,18"/>
-                    <Grid Margin="0,0,0,16">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="12"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Style="{StaticResource PLabel}" Text="CALLSIGN"/>
-                            <TextBlock Style="{StaticResource PValue}" FontFamily="Consolas" FontSize="18"
-                                       Text="{Binding Pilot.CallSign, TargetNullValue=—}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Style="{StaticResource PLabel}" Text="RANGO ACTUAL"/>
-                            <TextBlock Style="{StaticResource PValue}"
-                                       Text="{Binding Pilot.RankName, TargetNullValue=—}"/>
-                        </StackPanel>
-                    </Grid>
-                    <Grid Margin="0,0,0,20">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="12"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Style="{StaticResource PLabel}" Text="NOMBRE COMPLETO"/>
-                            <TextBlock Style="{StaticResource PValue}"
-                                       Text="{Binding Pilot.FullName, TargetNullValue=—}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Style="{StaticResource PLabel}" Text="CORREO ELECTRÓNICO"/>
-                            <TextBlock Style="{StaticResource PValue}" FontSize="12"
-                                       Text="{Binding Pilot.Email, TargetNullValue=—}"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <TextBlock Text="SISTEMA DE PUNTUACIÓN" Foreground="#334155" FontSize="9" FontWeight="Bold" Margin="0,0,0,12"/>
-                    <WrapPanel>
-                        <Border Style="{StaticResource ScorePill}">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="#34D399" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="Aterrizaje suave (&lt;150 fpm)" Foreground="#64748B" FontSize="11"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource ScorePill}">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="#34D399" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="Luces strobe encendidas" Foreground="#64748B" FontSize="11"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource ScorePill}">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="#34D399" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="Transponder modo C" Foreground="#64748B" FontSize="11"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource ScorePill}">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="#34D399" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="No pausar el simulador" Foreground="#64748B" FontSize="11"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource ScorePill}">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="#34D399" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="Ruta completada" Foreground="#64748B" FontSize="11"/>
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource ScorePill}">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="6" Height="6" Fill="#34D399" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <TextBlock Text="G-force normal (&lt;2.0g)" Foreground="#64748B" FontSize="11"/>
-                            </StackPanel>
-                        </Border>
-                    </WrapPanel>
-                </StackPanel>
-            </Border>
-
-            <!-- Preferencias -->
-            <Border Grid.Column="2" Style="{StaticResource GCard}">
-                <StackPanel>
-                    <TextBlock Text="PREFERENCIAS" Foreground="#64748B" FontSize="10" FontWeight="Bold" Margin="0,0,0,18"/>
-
-                    <TextBlock Style="{StaticResource PLabel}" Text="IDIOMA DEL COPILOTO" Margin="0,0,0,6"/>
-                    <ComboBox Style="{StaticResource DarkComboBox}" Height="38" Margin="0,0,0,16"
-                              SelectedValue="{Binding PreferredLanguage, Mode=TwoWay}">
-                        <ComboBoxItem Content="Español" Tag="ESP"/>
-                        <ComboBoxItem Content="English" Tag="ENG"/>
-                    </ComboBox>
-
-                    <TextBlock Style="{StaticResource PLabel}" Text="VOZ DEL COPILOTO" Margin="0,0,0,10"/>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
-                        <RadioButton Content="Femenina" IsChecked="{Binding VoiceFemale, Mode=TwoWay}"
-                                     Foreground="#94A3B8" FontSize="12" Margin="0,0,16,0"
-                                     GroupName="VoiceGroup"/>
-                        <RadioButton Content="Masculina" IsChecked="{Binding VoiceFemale, Converter={StaticResource BoolInverseConverter}, Mode=TwoWay}"
-                                     Foreground="#94A3B8" FontSize="12"
-                                     GroupName="VoiceGroup"/>
-                    </StackPanel>
-
-                    <Button Style="{StaticResource SaveBtn}" Command="{Binding SavePreferencesCommand}">
-                        <TextBlock Text="✓  Guardar Preferencias"/>
-                    </Button>
-
-                    <TextBlock Text="Cargando perfil..." Foreground="#2D9CDB" FontSize="11"
-                               Margin="0,12,0,0" HorizontalAlignment="Center"
-                               Visibility="{Binding IsLoading, Converter={StaticResource BoolVis}}"/>
-                </StackPanel>
-            </Border>
-        </Grid>
-
-    </StackPanel>
+        </StackPanel>
     </ScrollViewer>
 </UserControl>

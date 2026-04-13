@@ -1,462 +1,698 @@
 <UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             d:DesignHeight="600" d:DesignWidth="1000"
-             mc:Ignorable="d"
-             Background="#0C111B"
+             Background="#EFF6FF"
              Loaded="OnPageLoaded">
-
     <UserControl.Resources>
-        <SolidColorBrush x:Key="BgBrush" Color="#0C111B"/>
-        <SolidColorBrush x:Key="PanelBrush" Color="#121926"/>
-        <SolidColorBrush x:Key="CardBrush" Color="#162234"/>
-        <SolidColorBrush x:Key="BorderBrush" Color="#223247"/>
-        <SolidColorBrush x:Key="TextBrush" Color="#F0F6FC"/>
-        <SolidColorBrush x:Key="SubtleBrush" Color="#8B949E"/>
-        <SolidColorBrush x:Key="AccentBrush" Color="#2D9CDB"/>
-        <SolidColorBrush x:Key="OkBrush" Color="#3FB950"/>
-        <SolidColorBrush x:Key="WarnBrush" Color="#F2C94C"/>
-        <SolidColorBrush x:Key="DangerBrush" Color="#FF5D5D"/>
+        <BooleanToVisibilityConverter x:Key="BoolVis"/>
 
-        <Style x:Key="PanelStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource PanelBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="12"/>
-            <Setter Property="Padding" Value="16"/>
-        </Style>
-
-        <Style x:Key="CardStyle" TargetType="Border">
-            <Setter Property="Background" Value="{StaticResource CardBrush}"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
+        <!-- Card -->
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="#FFFFFF"/>
+            <Setter Property="BorderBrush" Value="#BFDBFE"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="10"/>
-            <Setter Property="Padding" Value="14"/>
-            <Setter Property="Margin" Value="0,0,12,12"/>
+            <Setter Property="Padding" Value="16,14"/>
         </Style>
 
-        <Style x:Key="TitleTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+        <!-- Section head -->
+        <Style x:Key="SHead" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="18"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Foreground" Value="#0284C7"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Margin" Value="0,0,0,10"/>
         </Style>
 
-        <Style x:Key="LabelStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource SubtleBrush}"/>
+        <!-- Big metric label -->
+        <Style x:Key="MetricLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Big metric value -->
+        <Style x:Key="MetricValue" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="28"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#0F172A"/>
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+        </Style>
+
+        <!-- System row label -->
+        <Style x:Key="SysLabel" TargetType="TextBlock">
             <Setter Property="FontSize" Value="11"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Foreground" Value="#64748B"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
 
-        <Style x:Key="ValueStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-            <Setter Property="FontFamily" Value="Consolas"/>
+        <!-- ON indicator -->
+        <Style x:Key="LightOn" TargetType="Ellipse">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Fill" Value="#10B981"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+        </Style>
+
+        <!-- OFF indicator -->
+        <Style x:Key="LightOff" TargetType="Ellipse">
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+            <Setter Property="Fill" Value="#CBD5E1"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+        </Style>
+
+        <!-- Status pill: ON/OFF -->
+        <Style x:Key="PillOn" TargetType="Border">
+            <Setter Property="Background" Value="#D1FAE5"/>
+            <Setter Property="BorderBrush" Value="#6EE7B7"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+        </Style>
+
+        <Style x:Key="PillOff" TargetType="Border">
+            <Setter Property="Background" Value="#F1F5F9"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="Padding" Value="10,3"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+        </Style>
+
+        <!-- Finish button -->
+        <Style x:Key="FinishBtn" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#0284C7" Offset="0"/>
+                        <GradientStop Color="#0EA5E9" Offset="1"/>
+                    </LinearGradientBrush>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="24"/>
-            <Setter Property="Margin" Value="0,8,0,0"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Padding" Value="32,12"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="9"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Opacity" Value="0.88"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.35"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
 
-        <Style x:Key="PillBorderStyle" TargetType="Border">
-            <Setter Property="CornerRadius" Value="999"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Background" Value="#0F1724"/>
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
-        </Style>
-
-        <Style x:Key="ActionButtonStyle" TargetType="Button">
-            <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
-            <Setter Property="Background" Value="#18304B"/>
-            <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="Margin" Value="0,0,8,0"/>
+        <!-- Connect button -->
+        <Style x:Key="ConnectBtn" TargetType="Button">
+            <Setter Property="Background" Value="#EFF6FF"/>
+            <Setter Property="Foreground" Value="#0284C7"/>
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-        </Style>
-
-        <Style x:Key="SecondaryButtonStyle" TargetType="Button" BasedOn="{StaticResource ActionButtonStyle}">
-            <Setter Property="Background" Value="#1A2230"/>
-            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush}"/>
-        </Style>
-
-        <Style x:Key="LightStateTextStyle" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource DangerBrush}"/>
-            <Setter Property="FontFamily" Value="Consolas"/>
-            <Setter Property="FontWeight" Value="Bold"/>
-            <Setter Property="FontSize" Value="18"/>
-            <Setter Property="Margin" Value="0,8,0,0"/>
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="BorderBrush" Value="#BFDBFE"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#DBEAFE"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="{StaticResource BgBrush}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  Background="#EFF6FF">
+        <StackPanel Margin="0,0,0,24">
 
-        <Border Grid.Row="0" Margin="0,0,0,18" Style="{StaticResource PanelStyle}">
-            <Grid>
+            <!-- ═══ HEADER ═══ -->
+            <Grid Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel>
-                    <TextBlock Foreground="{StaticResource AccentBrush}" FontSize="11" FontWeight="SemiBold" Text="EN VUELO"/>
-                    <TextBlock Foreground="{StaticResource TextBrush}" FontSize="26" FontWeight="Bold" Margin="0,4,0,0" Text="Telemetría real en vivo"/>
-                    <TextBlock Foreground="{StaticResource SubtleBrush}" FontSize="12" Margin="0,4,0,0"
-                               Text="Esta vista debe responder a telemetría real del simulador y mostrar el estado vivo del vuelo."/>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="VUELO EN VIVO" FontSize="22" FontWeight="Bold"
+                               Foreground="#0284C7" FontFamily="Segoe UI"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <!-- Backend pill -->
+                        <Border CornerRadius="10" Padding="10,3" Margin="0,0,8,0">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background" Value="#FEF3C7"/>
+                                    <Setter Property="BorderBrush" Value="#FCD34D"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsSimConnected}" Value="True">
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding SimBackendDisplay}"
+                                       FontSize="11" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#92400E"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsSimConnected}" Value="True">
+                                                <Setter Property="Foreground" Value="#065F46"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+
+                        <!-- Phase pill -->
+                        <Border CornerRadius="10" Padding="10,3" Margin="0,0,8,0"
+                                Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1">
+                            <TextBlock Text="{Binding PhaseLabelDisplay}"
+                                       FontSize="11" FontWeight="SemiBold" FontFamily="Segoe UI"
+                                       Foreground="#0284C7"/>
+                        </Border>
+
+                        <!-- Aircraft -->
+                        <TextBlock Text="{Binding AircraftStatusDisplay}"
+                                   FontSize="11" Foreground="#64748B" FontFamily="Segoe UI"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
                 </StackPanel>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                        <Button x:Name="BtnConnectMsfs"
-                                Style="{StaticResource ActionButtonStyle}"
-                                Click="BtnConnectMsfs_Click"
-                                Content="Conectar simulador"/>
-                        <Button x:Name="BtnRefreshFlight"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Click="BtnRefreshFlight_Click"
-                                Content="Reintentar"/>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0" HorizontalAlignment="Right">
-                        <Border Style="{StaticResource PillBorderStyle}">
-                            <TextBlock Foreground="{StaticResource AccentBrush}" FontSize="10" Text="{Binding SimBackendDisplay, Mode=OneWay, FallbackValue=Sin backend}"/>
-                        </Border>
-                        <Border Style="{StaticResource PillBorderStyle}">
-                            <TextBlock Foreground="{StaticResource OkBrush}" FontSize="10" Text="{Binding PhaseLabelDisplay, Mode=OneWay, FallbackValue=Desconectado}"/>
-                        </Border>
-                    </StackPanel>
+                <!-- Connect / Refresh buttons -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource ConnectBtn}" Click="BtnConnectMsfs_Click" Margin="0,0,6,0">
+                        <TextBlock Text="Conectar MSFS"/>
+                    </Button>
+                    <Button Style="{StaticResource ConnectBtn}" Click="BtnRefreshFlight_Click">
+                        <TextBlock Text="↺  Refrescar"/>
+                    </Button>
                 </StackPanel>
             </Grid>
-        </Border>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel>
-
-                <UniformGrid Columns="5" Margin="0,0,0,18">
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource LabelStyle}" Text="IAS"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding IASDisplay, Mode=OneWay, FallbackValue=---}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource LabelStyle}" Text="GS"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding GSDisplay, Mode=OneWay, FallbackValue=---}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource LabelStyle}" Text="ALTITUD"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding AltitudeDisplay, Mode=OneWay, FallbackValue=---}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource LabelStyle}" Text="V/S"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding VSDisplay, Mode=OneWay, FallbackValue=---}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Style="{StaticResource CardStyle}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource LabelStyle}" Text="TIEMPO"/>
-                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding ElapsedTimeDisplay, Mode=OneWay, FallbackValue=00:00:00}"/>
-                        </StackPanel>
-                    </Border>
-                </UniformGrid>
-
+            <!-- ═══ PRIMARY METRICS ROW ═══ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.7*"/>
-                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Grid.Column="0" Margin="0,0,16,0">
-                        <Border Style="{StaticResource PanelStyle}" Margin="0,0,0,18">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource TitleTextStyle}" Text="Motor y configuración"/>
-                                <UniformGrid Columns="4">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="FUEL KG"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding FuelKgDisplay, Mode=OneWay, FallbackValue=---}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="N1 ENG 1"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding N1Eng1Display, Mode=OneWay, FallbackValue=---}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="N1 ENG 2"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding N1Eng2Display, Mode=OneWay, FallbackValue=---}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="SQUAWK"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding SquawkDisplay, Mode=OneWay, FallbackValue=----}"/>
-                                        </StackPanel>
-                                    </Border>
-                                </UniformGrid>
-
-                                <UniformGrid Columns="4" Margin="0,12,0,0">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="HEADING"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding HeadingDisplay, Mode=OneWay, FallbackValue=---}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="FLAPS"/>
-                                            <TextBlock Style="{StaticResource ValueStyle}" Text="{Binding FlapsDisplay, Mode=OneWay, FallbackValue=---}"/>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="GEAR"/>
-                                            <TextBlock>
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}">
-                                                        <Setter Property="Text" Value="UP"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding GearDown, Mode=OneWay}" Value="True">
-                                                                <Setter Property="Text" Value="DOWN"/>
-                                                                <Setter Property="Foreground" Value="{StaticResource WarnBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="AUTOPILOT"/>
-                                            <TextBlock>
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}">
-                                                        <Setter Property="Text" Value="OFF"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding AutopilotOn, Mode=OneWay}" Value="True">
-                                                                <Setter Property="Text" Value="ON"/>
-                                                                <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-                                </UniformGrid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource PanelStyle}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource TitleTextStyle}" Text="Luces y señales"/>
-                                <UniformGrid Columns="4">
-                                    <!-- row 1 -->
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="BEACON"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding BeaconOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="NAV"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding NavOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="STROBE"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding StrobeOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="LANDING"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding LandingOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-                                    </Border>
-
-                                    <!-- row 2 -->
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="TAXI"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding TaxiOn, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="SEATBELT"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding SeatBeltSign, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="NO SMOKING"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding NoSmokingSign, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel><TextBlock Style="{StaticResource LabelStyle}" Text="CHARLIE"/><TextBlock><TextBlock.Style><Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}"><Setter Property="Text" Value="OFF"/><Style.Triggers><DataTrigger Binding="{Binding CharlieMode, Mode=OneWay}" Value="True"><Setter Property="Text" Value="ON"/><Setter Property="Foreground" Value="{StaticResource OkBrush}"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock></StackPanel>
-                                    </Border>
-                                </UniformGrid>
-                            </StackPanel>
-                        </Border>
+                    <!-- IAS -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="{Binding IASDisplay}" Style="{StaticResource MetricValue}"/>
+                        <TextBlock Text="IAS kt" Style="{StaticResource MetricLabel}"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1">
-                        <Border Style="{StaticResource PanelStyle}" Margin="0,0,0,18">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource TitleTextStyle}" Text="Condiciones y posición"/>
+                    <Rectangle Grid.Column="1" Fill="#E2E8F0" Width="1"/>
 
-                                <TextBlock Style="{StaticResource LabelStyle}" Text="POSICIÓN"/>
-                                <TextBlock Foreground="{StaticResource TextBrush}" FontFamily="Consolas" FontWeight="SemiBold" FontSize="16">
-                                    <Run Text="{Binding Lat, Mode=OneWay, StringFormat={}{0:F4}}"/>
-                                    <Run Text=", "/>
-                                    <Run Text="{Binding Lon, Mode=OneWay, StringFormat={}{0:F4}}"/>
-                                </TextBlock>
+                    <!-- GS -->
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="{Binding GSDisplay}" Style="{StaticResource MetricValue}"/>
+                        <TextBlock Text="GS kt" Style="{StaticResource MetricLabel}"/>
+                    </StackPanel>
 
-                                <TextBlock Style="{StaticResource LabelStyle}" Text="OAT" Margin="0,14,0,0"/>
-                                <TextBlock Foreground="{StaticResource TextBrush}" FontFamily="Consolas" FontWeight="SemiBold" FontSize="16">
-                                    <Run Text="{Binding OAT, Mode=OneWay, StringFormat={}{0:F1}}"/>
-                                    <Run Text=" °C"/>
-                                </TextBlock>
+                    <Rectangle Grid.Column="3" Fill="#E2E8F0" Width="1"/>
 
-                                <TextBlock Style="{StaticResource LabelStyle}" Text="VIENTO" Margin="0,14,0,0"/>
-                                <TextBlock Foreground="{StaticResource TextBrush}" FontFamily="Consolas" FontWeight="SemiBold" FontSize="16">
-                                    <Run Text="{Binding WindDir, Mode=OneWay, StringFormat={}{0:F0}}"/>
-                                    <Run Text="° / "/>
-                                    <Run Text="{Binding WindSpeed, Mode=OneWay, StringFormat={}{0:F0}}"/>
-                                    <Run Text=" KT"/>
-                                </TextBlock>
+                    <!-- ALT -->
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="{Binding AltitudeDisplay}" Style="{StaticResource MetricValue}"
+                                   Foreground="#0284C7"/>
+                        <TextBlock Text="ALT ft" Style="{StaticResource MetricLabel}"/>
+                    </StackPanel>
 
-                                <WrapPanel Margin="0,16,0,0">
-                                    <Border Style="{StaticResource PillBorderStyle}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Foreground="{StaticResource SubtleBrush}" FontSize="10" Text="On Ground: "/>
-                                            <TextBlock Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" FontSize="10">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="NO"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding OnGround, Mode=OneWay}" Value="True">
-                                                                <Setter Property="Text" Value="YES"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
+                    <Rectangle Grid.Column="5" Fill="#E2E8F0" Width="1"/>
 
-                                    <Border Style="{StaticResource PillBorderStyle}">
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Foreground="{StaticResource SubtleBrush}" FontSize="10" Text="Autopilot: "/>
-                                            <TextBlock Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" FontSize="10">
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock">
-                                                        <Setter Property="Text" Value="OFF"/>
-                                                        <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding AutopilotOn, Mode=OneWay}" Value="True">
-                                                                <Setter Property="Text" Value="ON"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-                                </WrapPanel>
-                            </StackPanel>
-                        </Border>
+                    <!-- VS -->
+                    <StackPanel Grid.Column="6">
+                        <TextBlock Text="{Binding VSDisplay}" Style="{StaticResource MetricValue}" FontSize="22"/>
+                        <TextBlock Text="V/S fpm" Style="{StaticResource MetricLabel}"/>
+                    </StackPanel>
 
-                        <Border Style="{StaticResource PanelStyle}" Margin="0,0,0,18">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource TitleTextStyle}" Text="Cabina y sistemas"/>
+                    <Rectangle Grid.Column="7" Fill="#E2E8F0" Width="1"/>
 
-                                <UniformGrid Columns="2">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="ALT. CABINA"/>
-                                                <TextBlock Style="{StaticResource ValueStyle}" FontSize="20">
-                                                <Run Text="{Binding CabinAlt, Mode=OneWay, StringFormat={}{0:F0}}"/>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="PRESS DIFF"/>
-                                                <TextBlock Style="{StaticResource ValueStyle}" FontSize="20">
-                                                <Run Text="{Binding PressDiff, Mode=OneWay, StringFormat={}{0:F2}}"/>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-                                </UniformGrid>
-
-                                <UniformGrid Columns="2" Margin="0,12,0,0">
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="APU"/>
-                                            <TextBlock>
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}">
-                                                        <Setter Property="Text" Value="OFF"/>
-                                                        <Style.Triggers>
-                                                             <DataTrigger Binding="{Binding ApuRunning, Mode=OneWay}" Value="True">
-                                                                <Setter Property="Text" Value="RUN"/>
-                                                                <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
-                                                            </DataTrigger>
-                                                             <DataTrigger Binding="{Binding ApuAvailable, Mode=OneWay}" Value="True">
-                                                                <Setter Property="Foreground" Value="{StaticResource WarnBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-                                    <Border Style="{StaticResource CardStyle}">
-                                        <StackPanel>
-                                            <TextBlock Style="{StaticResource LabelStyle}" Text="BLEED AIR"/>
-                                            <TextBlock>
-                                                <TextBlock.Style>
-                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource LightStateTextStyle}">
-                                                        <Setter Property="Text" Value="OFF"/>
-                                                        <Style.Triggers>
-                                                             <DataTrigger Binding="{Binding BleedAirOn, Mode=OneWay}" Value="True">
-                                                                <Setter Property="Text" Value="ON"/>
-                                                                <Setter Property="Foreground" Value="{StaticResource OkBrush}"/>
-                                                            </DataTrigger>
-                                                        </Style.Triggers>
-                                                    </Style>
-                                                </TextBlock.Style>
-                                            </TextBlock>
-                                        </StackPanel>
-                                    </Border>
-                                </UniformGrid>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource PanelStyle}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource TitleTextStyle}" Text="Resumen operativo"/>
-                                <TextBlock Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap">
-                                    <Run Text="{Binding SimBackendDisplay, Mode=OneWay, FallbackValue=Sin conexión}"/>
-                                </TextBlock>
-                                <TextBlock Foreground="{StaticResource TextBrush}" FontSize="13" TextWrapping="Wrap" Margin="0,6,0,0">
-                                    <Run Text="{Binding PhaseLabelDisplay, Mode=OneWay, FallbackValue=Desconectado}"/>
-                                </TextBlock>
-                                <TextBlock Foreground="{StaticResource SubtleBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,10,0,0"
-                                           Text="Si esta pantalla no cambia en vivo con MSFS abierto, el problema ya no es de diseño sino de telemetría o runtime."/>
-                            </StackPanel>
-                        </Border>
+                    <!-- Elapsed -->
+                    <StackPanel Grid.Column="8">
+                        <TextBlock Text="{Binding ElapsedTimeDisplay}" Style="{StaticResource MetricValue}"
+                                   FontSize="22" Foreground="#64748B"/>
+                        <TextBlock Text="Tiempo vuelo" Style="{StaticResource MetricLabel}"/>
                     </StackPanel>
                 </Grid>
+            </Border>
 
-            </StackPanel>
-        </ScrollViewer>
-    </Grid>
+            <!-- ═══ SYSTEMS ROW ═══ -->
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="200"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- LUCES -->
+                <Border Grid.Column="0" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="LUCES" Style="{StaticResource SHead}"/>
+
+                        <!-- Beacon -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Beacon" Style="{StaticResource SysLabel}"/>
+                            <Ellipse Grid.Column="1">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding BeaconOn}" Value="True">
+                                                <Setter Property="Fill" Value="#F59E0B"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+
+                        <!-- Nav -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Nav" Style="{StaticResource SysLabel}"/>
+                            <Ellipse Grid.Column="1">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding NavOn}" Value="True">
+                                                <Setter Property="Fill" Value="#10B981"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+
+                        <!-- Strobe -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Strobe" Style="{StaticResource SysLabel}"/>
+                            <Ellipse Grid.Column="1">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding StrobeOn}" Value="True">
+                                                <Setter Property="Fill" Value="#F8FAFC"/>
+                                                <Setter Property="Stroke" Value="#94A3B8"/>
+                                                <Setter Property="StrokeThickness" Value="1"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+
+                        <!-- Landing -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Landing" Style="{StaticResource SysLabel}"/>
+                            <Ellipse Grid.Column="1">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LandingOn}" Value="True">
+                                                <Setter Property="Fill" Value="#FEF08A"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+
+                        <!-- Taxi -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Taxi" Style="{StaticResource SysLabel}"/>
+                            <Ellipse Grid.Column="1">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding TaxiOn}" Value="True">
+                                                <Setter Property="Fill" Value="#FCD34D"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- SISTEMAS -->
+                <Border Grid.Column="2" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="SISTEMAS" Style="{StaticResource SHead}"/>
+
+                        <!-- Altitud -->
+                        <Grid Margin="0,0,0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Altitud" Style="{StaticResource SysLabel}"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding AltitudeDisplay, StringFormat='{}{0} ft'}"
+                                       FontSize="13" FontWeight="SemiBold" FontFamily="Consolas"
+                                       Foreground="#0284C7" VerticalAlignment="Center"/>
+                        </Grid>
+
+                        <!-- APU -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="APU" Style="{StaticResource SysLabel}"/>
+                            <Border Grid.Column="1">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding ApuRunning}" Value="True">
+                                                <Setter Property="Background" Value="#D1FAE5"/>
+                                                <Setter Property="BorderBrush" Value="#6EE7B7"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="10" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="OFF"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding ApuRunning}" Value="True">
+                                                    <Setter Property="Text" Value="ON"/>
+                                                    <Setter Property="Foreground" Value="#065F46"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </Grid>
+
+                        <!-- Bleed -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Bleed Air" Style="{StaticResource SysLabel}"/>
+                            <Border Grid.Column="1">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
+                                                <Setter Property="Background" Value="#D1FAE5"/>
+                                                <Setter Property="BorderBrush" Value="#6EE7B7"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="10" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="OFF"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
+                                                    <Setter Property="Text" Value="ON"/>
+                                                    <Setter Property="Foreground" Value="#065F46"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </Grid>
+
+                        <!-- SeatBelt -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Fasten Seatbelt" Style="{StaticResource SysLabel}"/>
+                            <Border Grid.Column="1">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding SeatBeltSign}" Value="True">
+                                                <Setter Property="Background" Value="#FEF3C7"/>
+                                                <Setter Property="BorderBrush" Value="#FCD34D"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="10" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="OFF"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding SeatBeltSign}" Value="True">
+                                                    <Setter Property="Text" Value="ON"/>
+                                                    <Setter Property="Foreground" Value="#92400E"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </Grid>
+
+                        <!-- Transponder / Charlie -->
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Squawk" Style="{StaticResource SysLabel}"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <TextBlock Text="{Binding SquawkDisplay}"
+                                           FontSize="13" FontWeight="Bold" FontFamily="Consolas"
+                                           Foreground="#0F172A" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <Border>
+                                    <Border.Style>
+                                        <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding CharlieMode}" Value="True">
+                                                    <Setter Property="Background" Value="#EDE9FE"/>
+                                                    <Setter Property="BorderBrush" Value="#A78BFA"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock FontSize="10" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="STBY"/>
+                                                <Setter Property="Foreground" Value="#94A3B8"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding CharlieMode}" Value="True">
+                                                        <Setter Property="Text" Value="MODE C"/>
+                                                        <Setter Property="Foreground" Value="#5B21B6"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+
+                        <!-- Autopilot -->
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Autopilot" Style="{StaticResource SysLabel}"/>
+                            <Border Grid.Column="1">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
+                                                <Setter Property="Background" Value="#EDE9FE"/>
+                                                <Setter Property="BorderBrush" Value="#A78BFA"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="10" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="MANUAL"/>
+                                            <Setter Property="Foreground" Value="#94A3B8"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
+                                                    <Setter Property="Text" Value="AP ON"/>
+                                                    <Setter Property="Foreground" Value="#5B21B6"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- POSICIÓN + COMBUSTIBLE -->
+                <Border Grid.Column="4" Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Text="ENTORNO" Style="{StaticResource SHead}"/>
+
+                        <TextBlock Text="OAT" FontSize="10" Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                        <TextBlock FontSize="16" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A" Margin="0,0,0,8">
+                            <TextBlock.Text>
+                                <Binding Path="OAT" StringFormat="{}{0:F0} °C" FallbackValue="—"/>
+                            </TextBlock.Text>
+                        </TextBlock>
+
+                        <TextBlock Text="Viento" FontSize="10" Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                        <TextBlock FontSize="13" FontWeight="SemiBold" FontFamily="Consolas" Foreground="#334155" Margin="0,0,0,8">
+                            <TextBlock.Text>
+                                <MultiBinding StringFormat="{}{0:000}° / {1:F0} kt">
+                                    <Binding Path="WindDir"/>
+                                    <Binding Path="WindSpeed"/>
+                                </MultiBinding>
+                            </TextBlock.Text>
+                        </TextBlock>
+
+                        <TextBlock Text="Combustible" FontSize="10" Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                        <TextBlock Text="{Binding FuelKgDisplay, StringFormat='{}{0} kg'}"
+                                   FontSize="13" FontWeight="SemiBold" FontFamily="Consolas"
+                                   Foreground="#334155" Margin="0,0,0,8"/>
+
+                        <TextBlock Text="En suelo" FontSize="10" Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                        <TextBlock FontSize="11" FontWeight="SemiBold" FontFamily="Segoe UI">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="En vuelo"/>
+                                    <Setter Property="Foreground" Value="#0284C7"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding OnGround}" Value="True">
+                                            <Setter Property="Text" Value="En tierra"/>
+                                            <Setter Property="Foreground" Value="#10B981"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- ═══ PUERTAS (solo aeronaves con cabina de pasajeros) ═══ -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,12"
+                    Visibility="{Binding ShowDoors, Converter={StaticResource BoolVis}}">
+                <StackPanel>
+                    <TextBlock Text="PUERTAS" Style="{StaticResource SHead}"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Estado de puertas disponible con aviones equipados con WASM/LVAR."
+                                   FontSize="11" Foreground="#94A3B8" FontFamily="Segoe UI"
+                                   VerticalAlignment="Center"/>
+                        <Border CornerRadius="8" Padding="8,3" Margin="12,0,0,0"
+                                Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1">
+                            <TextBlock Text="{Binding AircraftTitle}" FontSize="10"
+                                       Foreground="#0284C7" FontFamily="Segoe UI"/>
+                        </Border>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <!-- ═══ ALERT NO STROBE ═══ -->
+            <Border Margin="0,0,0,12" CornerRadius="10" Padding="16,12"
+                    Visibility="{Binding AlertNoStrobe, Converter={StaticResource BoolVis}}"
+                    Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1">
+                <TextBlock Text="⚠  Luces de posición apagadas en vuelo. Activa strobe y nav lights."
+                           FontSize="12" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="#DC2626"/>
+            </Border>
+
+            <!-- ═══ FINISH FLIGHT ═══ -->
+            <Border Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                        <TextBlock Text="Para finalizar el vuelo el avión debe estar en tierra con GS &lt; 3 kt."
+                                   FontSize="11" Foreground="#64748B" FontFamily="Segoe UI"/>
+                        <TextBlock Text="{Binding PhaseLabel, StringFormat='Fase actual: {0}'}"
+                                   FontSize="11" Foreground="#0284C7" FontFamily="Segoe UI" Margin="0,2,0,0"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Style="{StaticResource FinishBtn}"
+                            Command="{Binding FinishFlightCommand}">
+                        <TextBlock Text="FINALIZAR VUELO"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

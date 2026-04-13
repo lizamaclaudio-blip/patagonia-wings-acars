@@ -86,7 +86,21 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double WindDir { get => _windDir; set => SetField(ref _windDir, value); }
         public double Lat { get => _lat; set => SetField(ref _lat, value); }
         public double Lon { get => _lon; set => SetField(ref _lon, value); }
-        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); } } }
+        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); OnPropertyChanged(nameof(ShowDoors)); } } }
+
+        public bool ShowDoors
+        {
+            get
+            {
+                var t = (_aircraftTitle ?? string.Empty).ToUpperInvariant();
+                return t.Contains("A319") || t.Contains("A320") || t.Contains("A321") ||
+                       t.Contains("B737") || t.Contains("B738") || t.Contains("B777") || t.Contains("B787") || t.Contains("B78X") ||
+                       t.Contains("CRJ") || t.Contains("E170") || t.Contains("E175") || t.Contains("E190") ||
+                       t.Contains("ATR") || t.Contains("DHC-8") || t.Contains("DASH 8") || t.Contains("DASH8") ||
+                       t.Contains("PMDG") || t.Contains("FENIX") || t.Contains("HEADWIND") || t.Contains("INIBUILDS") ||
+                       t.Contains("FLYBYWIRE") || t.Contains("ACJ") || t.Contains("BBJ");
+            }
+        }
         public string AircraftStatus { get => _aircraftStatus; set => SetField(ref _aircraftStatus, value); }
         public bool RequiresLvars { get => _requiresLvars; set => SetField(ref _requiresLvars, value); }
         public string AircraftStatusDisplay => GetAircraftStatusDisplay();

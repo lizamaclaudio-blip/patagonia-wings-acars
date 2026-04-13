@@ -184,7 +184,7 @@
                             </Button.Style>
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="✈" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="En Vuelo" VerticalAlignment="Center"/>
+                                <TextBlock Text="Vuelo en Vivo" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
@@ -286,7 +286,7 @@
                             </StackPanel>
                         </Button>
                         <!-- Versión -->
-                        <TextBlock Text="ACARS v2.0.8" Foreground="#2A3440"
+                        <TextBlock Text="ACARS v3.0" Foreground="#2A3440"
                                    FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"
                                    FontFamily="Consolas"/>
                     </StackPanel>

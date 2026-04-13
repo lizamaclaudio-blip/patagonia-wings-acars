@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "2.0.17"
+  #define MyAppVersion   "3.0.0"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
@@ -34,7 +34,7 @@ DefaultGroupName=Patagonia Wings
 DisableProgramGroupPage=yes
 AllowNoIcons=no
 OutputDir=..\release
-OutputBaseFilename=PatagoniaWingsACARSSetup-2.0.17
+OutputBaseFilename=PatagoniaWingsACARSSetup-3.0.0
 SetupIconFile=..\PatagoniaWings.Acars.Master\Assets\patagonia-logo.ico
 UninstallDisplayIcon={app}\{#MyAppExe}
 Compression=lzma2/ultra64
