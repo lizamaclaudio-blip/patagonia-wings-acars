@@ -9,6 +9,7 @@ namespace PatagoniaWings.Acars.Core.Models
         
         // Identificación del avión
         public string AircraftTitle { get; set; } = string.Empty;
+        public string AircraftProfile { get; set; } = "MSFS Native";
 
         // Posicion
         public double Latitude { get; set; }

@@ -2,8 +2,8 @@
   "profiles": [
     {
       "name": "A319 Headwind",
-      "matches": ["A319", "Headwind", "ACJ319", "Airbus A319"],
-      "exact_titles": ["Private ACJ319 CFM"],
+      "matches": ["A319", "Headwind", "ACJ319", "Airbus A319", "A319_FENIX", "A319 FENIX", "A319-1"],
+      "exact_titles": ["Private ACJ319 CFM", "A319 Fenix", "Fenix A319"],
       "description": "Airbus A319 by Headwind Simulations",
       "fuel": {
         "primary": "FUEL TOTAL QUANTITY WEIGHT",
@@ -65,8 +65,35 @@
       "notes": "Complex WASM systems"
     },
     {
+      "name": "Headwind A320",
+      "matches": ["A320N", "A20N", "Headwind A320", "A320 Headwind", "Airbus A320-251"],
+      "exact_titles": [],
+      "description": "Airbus A320neo by Headwind Simulations",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
+        "unit": "pounds",
+        "status": "WORKING"
+      },
+      "engines": {
+        "n1_variable": "TURB ENG N1",
+        "status": "LVAR_REQUIRED",
+        "lvars": ["A32NX_ENGINE_N1:1", "A32NX_ENGINE_N1:2"]
+      },
+      "lights": {
+        "status": "LVAR_REQUIRED",
+        "notes": "Same LVARs as FBW A32NX"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "lvar_support": "REQUIRED_FOR_FULL_FUNCTIONALITY",
+      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Flaps", "Gear"],
+      "requires_lvars": ["Lights", "Engine N1", "Transponder"],
+      "notes": "Uses A32NX LVAR namespace"
+    },
+    {
       "name": "PMDG 737",
-      "matches": ["B737", "PMDG", "Boeing 737"],
+      "matches": ["B737", "PMDG 737", "Boeing 737", "737-800", "737-700", "737-900", "737 MAX"],
       "description": "Boeing 737 series by PMDG",
       "fuel": {
         "primary": "FUEL TOTAL QUANTITY WEIGHT",

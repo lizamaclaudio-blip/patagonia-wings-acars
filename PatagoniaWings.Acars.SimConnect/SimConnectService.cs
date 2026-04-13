@@ -241,21 +241,16 @@ namespace PatagoniaWings.Acars.SimConnect
                     simData.SimulatorType = DetectedSimulator == SimulatorType.None ? SimulatorType.MSFS2020 : DetectedSimulator;
                     simData.Pause = _isPaused;
                     
-                    // Detectar aviones FlyByWire A32NX (A319, A320, A321 usan las mismas LVARs A32NX_*)
-                    bool isFlyByWire = raw.Title != null && (
-                        raw.Title.Contains("A319") ||
-                        raw.Title.Contains("A320") ||
-                        raw.Title.Contains("A321") ||
-                        raw.Title.Contains("A32NX") ||
-                        raw.Title.Contains("FlyByWire") ||
-                        raw.Title.Contains("FBW") ||
-                        raw.Title.Contains("Headwind"));
-                    
-                    if (_mobiFlight?.IsAvailable == true && isFlyByWire)
+                    // Detectar perfil de aeronave desde AircraftProfiles.json
+                    string profileName = DetectProfileName(aircraftTitle);
+                    simData.AircraftProfile = profileName;
+                    Debug.WriteLine($"[SimConnect] Perfil detectado: '{profileName}' para '{aircraftTitle}'");
+
+                    if (_mobiFlight?.IsAvailable == true && ProfileRequiresLvars(profileName))
                     {
-                        _mobiFlight.RequestA319Lvars();
+                        _mobiFlight.RequestLvarsForProfile(profileName);
                         simData = _mobiFlight.EnrichWithLvars(simData);
-                        Debug.WriteLine($"[SimConnect] LVARs FBW aplicadas para: {raw.Title}");
+                        Debug.WriteLine($"[SimConnect] LVARs '{profileName}' aplicadas");
                     }
 
                     if (!_hasReceivedAircraftData)
@@ -487,16 +482,121 @@ namespace PatagoniaWings.Acars.SimConnect
             _disposed = true;
         }
 
+        // ──────────────────────────────────────────────────────────────────────
+        // AIRCRAFT PROFILE DETECTION — lee AircraftProfiles.json
+        // ──────────────────────────────────────────────────────────────────────
+
         /// <summary>
-        /// Integración con LVARs del A319 Headwind usando SimConnect DataDefinition
-        /// con la sintaxis especial "(L:NombreVar, unit)" disponible en MSFS 2020/2024.
+        /// Detecta el nombre del perfil en AircraftProfiles.json que mejor coincide
+        /// con el título del avión cargado en el simulador.
+        /// </summary>
+        private static string DetectProfileName(string aircraftTitle)
+        {
+            try
+            {
+                var exeDir = System.IO.Path.GetDirectoryName(
+                    System.Reflection.Assembly.GetExecutingAssembly().Location) ?? "";
+                var jsonPath = System.IO.Path.Combine(exeDir, "AircraftProfiles.json");
+                if (!System.IO.File.Exists(jsonPath))
+                {
+                    Debug.WriteLine($"[Profile] AircraftProfiles.json no encontrado en {jsonPath}");
+                    return "MSFS Native";
+                }
+
+                var json = System.IO.File.ReadAllText(jsonPath);
+                var title = aircraftTitle.ToUpperInvariant();
+
+                // Buscar coincidencia exacta primero (exact_titles)
+                int exactIdx = json.IndexOf("\"exact_titles\"", StringComparison.OrdinalIgnoreCase);
+                while (exactIdx >= 0)
+                {
+                    int start = json.IndexOf('[', exactIdx);
+                    int end   = json.IndexOf(']', start);
+                    if (start < 0 || end < 0) break;
+                    var block = json.Substring(start, end - start + 1);
+                    // Obtener el "name" de este perfil
+                    int nameIdx = json.LastIndexOf("\"name\"", exactIdx);
+                    if (nameIdx >= 0)
+                    {
+                        int q1 = json.IndexOf('"', nameIdx + 7);
+                        int q2 = json.IndexOf('"', q1 + 1);
+                        var profileName = json.Substring(q1 + 1, q2 - q1 - 1);
+                        // Verificar si algún exact_title coincide
+                        foreach (var segment in block.Split('"'))
+                        {
+                            var s = segment.Trim().Trim(',', '[', ']', ' ');
+                            if (s.Length > 2 && title.Contains(s.ToUpperInvariant()))
+                            {
+                                Debug.WriteLine($"[Profile] exact_title match: '{s}' → {profileName}");
+                                return profileName;
+                            }
+                        }
+                    }
+                    exactIdx = json.IndexOf("\"exact_titles\"", exactIdx + 1, StringComparison.OrdinalIgnoreCase);
+                }
+
+                // Buscar coincidencia en "matches"
+                int matchesIdx = json.IndexOf("\"matches\"", StringComparison.OrdinalIgnoreCase);
+                while (matchesIdx >= 0)
+                {
+                    int start = json.IndexOf('[', matchesIdx);
+                    int end   = json.IndexOf(']', start);
+                    if (start < 0 || end < 0) break;
+                    var block = json.Substring(start, end - start + 1);
+                    int nameIdx = json.LastIndexOf("\"name\"", matchesIdx);
+                    if (nameIdx >= 0)
+                    {
+                        int q1 = json.IndexOf('"', nameIdx + 7);
+                        int q2 = json.IndexOf('"', q1 + 1);
+                        var profileName = json.Substring(q1 + 1, q2 - q1 - 1);
+                        foreach (var segment in block.Split('"'))
+                        {
+                            var s = segment.Trim().Trim(',', '[', ']', ' ');
+                            if (s == "*") continue;
+                            if (s.Length > 1 && title.Contains(s.ToUpperInvariant()))
+                            {
+                                Debug.WriteLine($"[Profile] matches match: '{s}' → {profileName}");
+                                return profileName;
+                            }
+                        }
+                    }
+                    matchesIdx = json.IndexOf("\"matches\"", matchesIdx + 1, StringComparison.OrdinalIgnoreCase);
+                }
+
+                Debug.WriteLine($"[Profile] Sin coincidencia para '{aircraftTitle}' → MSFS Native");
+                return "MSFS Native";
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Profile] Error detectando perfil: {ex.Message}");
+                return "MSFS Native";
+            }
+        }
+
+        /// <summary>
+        /// Devuelve true si el perfil detectado requiere LVARs (A319, A320 FBW/Headwind, etc.)
+        /// </summary>
+        private static bool ProfileRequiresLvars(string profileName)
+        {
+            return profileName == "A319 Headwind"
+                || profileName == "Fenix A320"
+                || profileName == "Headwind A320";
+        }
+
+        // ──────────────────────────────────────────────────────────────────────
+        // LVAR INTEGRATION
+        // ──────────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Lee LVARs vía SimConnect DataDefinition usando la sintaxis "(L:var, unit)".
+        /// Compatible con A319 Headwind, Fenix A320 y cualquier aeronave con LVARs.
         /// </summary>
         private class MobiFlightIntegration : IDisposable
         {
             private Microsoft.FlightSimulator.SimConnect.SimConnect? _simConnect;
             private bool _isAvailable;
             private bool _disposed;
-            private bool _initialized;
+            private string _registeredProfile = "";
 
             private enum LvarDefId : uint { Block = 800 }
             private enum LvarReqId : uint { Block = 900 }
@@ -509,56 +609,70 @@ namespace PatagoniaWings.Acars.SimConnect
             {
                 _simConnect = simConnect;
                 _isAvailable = true;
-                Debug.WriteLine("[MobiFlight] Integración LVAR lista (se activa al detectar A319)");
+                Debug.WriteLine("[MobiFlight] LVAR integration lista — se activa al detectar aeronave");
             }
 
-            public void RequestA319Lvars()
+            // LVARs A32NX (FlyByWire A319/A320/A321 y Headwind A319)
+            private static readonly (string Var, string Key)[] A32NX_LVARS =
             {
-                if (!_isAvailable || _simConnect == null || _initialized) return;
+                ("(L:A32NX_ELEC_AC_ESS_BUS_IS_POWERED, bool)",     "Beacon"),
+                ("(L:A32NX_ELEC_AC_1_BUS_IS_POWERED, bool)",        "BusPowered"),
+                ("LIGHT BEACON",                                      "BeaconNative"),
+                ("LIGHT STROBE",                                      "StrobeNative"),
+                ("LIGHT LANDING",                                     "LandingNative"),
+                ("LIGHT NAV",                                         "NavNative"),
+                ("LIGHT TAXI",                                        "TaxiNative"),
+                ("(L:A32NX_ENGINE_N1:1, percent)",                   "N1_1"),
+                ("(L:A32NX_ENGINE_N1:2, percent)",                   "N1_2"),
+            };
+
+            // LVARs Fenix A320
+            private static readonly (string Var, string Key)[] FENIX_LVARS =
+            {
+                ("LIGHT BEACON",                                      "BeaconNative"),
+                ("LIGHT STROBE",                                      "StrobeNative"),
+                ("LIGHT LANDING",                                     "LandingNative"),
+                ("LIGHT NAV",                                         "NavNative"),
+                ("LIGHT TAXI",                                        "TaxiNative"),
+                ("TURB ENG N1:1",                                     "N1_1"),
+                ("TURB ENG N1:2",                                     "N1_2"),
+            };
+
+            public void RequestLvarsForProfile(string profileName)
+            {
+                if (!_isAvailable || _simConnect == null) return;
+                if (_registeredProfile == profileName) return;
+
+                var lvars = profileName == "Fenix A320" ? FENIX_LVARS : A32NX_LVARS;
 
                 try
                 {
                     uint sc = Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_UNUSED;
+                    foreach (var (varName, _) in lvars)
+                        _simConnect.AddToDataDefinition(LvarDefId.Block, varName, null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-                    // LVARs oficiales del A32NX según documentación FlyByWire
-                    // https://docs.flybywiresim.com/aircraft/a32nx/a32nx-api/a32nx-systems-api/
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "LIGHT BEACON",                         null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "LIGHT STROBE",                         null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "CIRCUIT SWITCH ON:18",                 null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "LIGHT NAV",                            null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "CIRCUIT SWITCH ON:17",                 null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:A32NX_ENGINE_N1:1, percent)",       null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.AddToDataDefinition(LvarDefId.Block, "(L:A32NX_ENGINE_N1:2, percent)",       null, SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-                    _simConnect.RegisterDataDefineStruct<A319LvarBlock>(LvarDefId.Block);
-
+                    _simConnect.RegisterDataDefineStruct<LvarBlock9>(LvarDefId.Block);
                     _simConnect.RequestDataOnSimObject(
-                        LvarReqId.Block,
-                        LvarDefId.Block,
+                        LvarReqId.Block, LvarDefId.Block,
                         Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_OBJECT_ID_USER,
-                        SIMCONNECT_PERIOD.SECOND,
-                        SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
-                        0, 0, 0);
+                        SIMCONNECT_PERIOD.SECOND, SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT, 0, 0, 0);
 
-                    _initialized = true;
-                    Debug.WriteLine("[MobiFlight] Solicitud de LVARs A319 enviada");
+                    _registeredProfile = profileName;
+                    Debug.WriteLine($"[MobiFlight] LVARs registradas para perfil '{profileName}' ({lvars.Length} vars)");
                 }
                 catch (Exception ex)
                 {
-                    _isAvailable = false;
-                    Debug.WriteLine($"[MobiFlight] Error solicitando LVARs: {ex.Message}");
+                    Debug.WriteLine($"[MobiFlight] Error registrando LVARs para '{profileName}': {ex.Message}");
                 }
             }
 
-            [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
-            private struct A319LvarBlock
+            [System.Runtime.InteropServices.StructLayout(
+                System.Runtime.InteropServices.LayoutKind.Sequential, Pack = 1)]
+            private struct LvarBlock9
             {
-                public double Beacon;
-                public double Strobe;
-                public double Landing;
-                public double Nav;
-                public double Taxi;
-                public double N1Eng1;
-                public double N1Eng2;
+                public double V0; public double V1; public double V2;
+                public double V3; public double V4; public double V5;
+                public double V6; public double V7; public double V8;
             }
 
             public void ProcessSimObjectData(SIMCONNECT_RECV_SIMOBJECT_DATA data)
@@ -566,15 +680,19 @@ namespace PatagoniaWings.Acars.SimConnect
                 if (data.dwRequestID != (uint)LvarReqId.Block) return;
                 try
                 {
-                    var block = (A319LvarBlock)data.dwData[0];
-                    _lvarCache["Beacon"]  = block.Beacon;
-                    _lvarCache["Strobe"]  = block.Strobe;
-                    _lvarCache["Landing"] = block.Landing;
-                    _lvarCache["Nav"]     = block.Nav;
-                    _lvarCache["Taxi"]    = block.Taxi;
-                    _lvarCache["N1_1"]    = block.N1Eng1;
-                    _lvarCache["N1_2"]    = block.N1Eng2;
-                    Debug.WriteLine($"[MobiFlight] LVARs A319: Beacon={block.Beacon} Strobe={block.Strobe} N1_1={block.N1Eng1:F1} N1_2={block.N1Eng2:F1}");
+                    var block = (LvarBlock9)data.dwData[0];
+                    double[] vals = { block.V0, block.V1, block.V2, block.V3, block.V4,
+                                      block.V5, block.V6, block.V7, block.V8 };
+                    var lvars = _registeredProfile == "Fenix A320" ? FENIX_LVARS : A32NX_LVARS;
+                    for (int i = 0; i < lvars.Length && i < vals.Length; i++)
+                        _lvarCache[lvars[i].Key] = vals[i];
+
+                    _lvarCache.TryGetValue("BeaconNative", out var dbg_b);
+                    _lvarCache.TryGetValue("StrobeNative", out var dbg_s);
+                    _lvarCache.TryGetValue("N1_1",         out var dbg_n1);
+                    _lvarCache.TryGetValue("N1_2",         out var dbg_n2);
+                    Debug.WriteLine($"[MobiFlight] Cache '{_registeredProfile}': " +
+                        $"Beacon={dbg_b} Strobe={dbg_s} N1_1={dbg_n1:F1} N1_2={dbg_n2:F1}");
                 }
                 catch (Exception ex)
                 {
@@ -588,13 +706,13 @@ namespace PatagoniaWings.Acars.SimConnect
             {
                 if (!_isAvailable || _lvarCache.Count == 0) return baseData;
 
-                if (_lvarCache.TryGetValue("Beacon",  out var beacon))  baseData.BeaconLightsOn  = beacon  > 0.5;
-                if (_lvarCache.TryGetValue("Strobe",  out var strobe))  baseData.StrobeLightsOn  = strobe  > 0.5;
-                if (_lvarCache.TryGetValue("Landing", out var landing)) baseData.LandingLightsOn = landing > 0.5;
-                if (_lvarCache.TryGetValue("Nav",     out var nav))     baseData.NavLightsOn     = nav     > 0.5;
-                if (_lvarCache.TryGetValue("Taxi",    out var taxi))    baseData.TaxiLightsOn    = taxi    > 0.5;
-                if (_lvarCache.TryGetValue("N1_1",    out var n1_1))    baseData.Engine1N1       = n1_1;
-                if (_lvarCache.TryGetValue("N1_2",    out var n1_2))    baseData.Engine2N1       = n1_2;
+                if (_lvarCache.TryGetValue("BeaconNative",  out var b)) baseData.BeaconLightsOn  = b  > 0.5;
+                if (_lvarCache.TryGetValue("StrobeNative",  out var s)) baseData.StrobeLightsOn  = s  > 0.5;
+                if (_lvarCache.TryGetValue("LandingNative", out var l)) baseData.LandingLightsOn = l  > 0.5;
+                if (_lvarCache.TryGetValue("NavNative",     out var n)) baseData.NavLightsOn     = n  > 0.5;
+                if (_lvarCache.TryGetValue("TaxiNative",    out var t)) baseData.TaxiLightsOn    = t  > 0.5;
+                if (_lvarCache.TryGetValue("N1_1",          out var n1)) baseData.Engine1N1      = n1;
+                if (_lvarCache.TryGetValue("N1_2",          out var n2)) baseData.Engine2N1      = n2;
 
                 return baseData;
             }
