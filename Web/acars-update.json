@@ -1,10 +1,10 @@
 {
-  "version": "3.0.0",
-  "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.0.exe",
+  "version": "2.0.17",
+  "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-2.0.17.exe",
   "mandatory": false,
-  "notes": "- Rediseño completo UI: tema blanco/celeste premium\n- Pre-Vuelo real: despacho Supabase + SimBrief OFP integrado\n- Vuelo en Vivo simplificado: luces, altitud, APU, bleed, seatbelt, transponder\n- Panel adaptativo por aeronave (ShowDoors según tipo)\n- Perfil real desde Supabase: métricas Pulso10, Ruta10, Legado\n- Versión 3.0.0",
+  "notes": "- Fix: GetDispatchPackageStatus con fallback a 'prepared'\n- Fix: ACARS ahora carga despachos sin requerir SimBrief\n- Web: SimBrief opcional, el ACARS puede generar plan de vuelo\n- Fix flujo web->ACARS con dispatch_ready\n- A32NX FBW lectura de luces corregida",
   "releaseDate": "2026-04-13",
   "minVersion": "2.0.5",
-  "fileSize": "10MB",
-  "hash": "sha256:8B145FE8E497D3515CBBC947D82FE3928BA37242E6135F365E69E03EBCD50EF4"
+  "fileSize": "48MB",
+  "hash": "sha256:EC4240D4D83568CAA2936CB93A31ABAD92FF53C38533039DB5F4F1A353F285D0"
 }
