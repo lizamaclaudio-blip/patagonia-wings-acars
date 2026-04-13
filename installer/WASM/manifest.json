@@ -1,0 +1,15 @@
+{
+  "dependencies": [],
+  "content_type": "WASM_MODULE",
+  "title": "Patagonia ACARS WASM Bridge",
+  "manufacturer": "Patagonia Wings",
+  "creator": "Patagonia Wings Virtual Airline",
+  "version": "1.0.0",
+  "minimum_game_version": "1.27.21",
+  "release_notes": {
+    "neutral": {
+      "LastUpdate": "",
+      "OlderHistory": ""
+    }
+  }
+}

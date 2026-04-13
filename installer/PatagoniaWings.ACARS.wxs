@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*" 
+           Name="Patagonia Wings ACARS" 
+           Language="1033" 
+           Version="1.0.0" 
+           Manufacturer="Patagonia Wings" 
+           UpgradeCode="A1B2C3D4-E5F6-7890-1234-567890ABCDEF">
+    
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perUser" />
+    
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate />
+    
+    <!-- Buscar MSFS Community Folder -->
+    <Property Id="MSFS_COMMUNITY_FOLDER">
+      <RegistrySearch Id="FindMsfsCommunity" 
+                      Root="HKCU" 
+                      Key="SOFTWARE\PatagoniaWings\ACARS" 
+                      Name="MsfsCommunityPath" 
+                      Type="directory" />
+    </Property>
+    
+    <!-- Características -->
+    <Feature Id="ProductFeature" Title="Patagonia Wings ACARS" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+      <ComponentGroupRef Id="WASMModuleComponents" />
+    </Feature>
+    
+    <!-- Directorio de instalación -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="INSTALLFOLDER" Name="PatagoniaWings\ACARS" />
+      </Directory>
+      
+      <!-- Directorio de MSFS Community (se detecta en runtime) -->
+      <Directory Id="MSFS_COMMUNITY">
+        <Directory Id="WASMFOLDER" Name="patagonia-acars-wasm" />
+      </Directory>
+    </Directory>
+    
+    <!-- Componentes del ACARS -->
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="B2C3D4E5-F6A7-8901-BCDE-F12345678901">
+        <File Id="ACARS_exe" Source="$(var.PublishDir)\PatagoniaWings.Acars.Master.exe" KeyPath="yes">
+          <Shortcut Id="startmenuShortcut" Directory="StartMenuFolder" Name="Patagonia Wings ACARS" 
+                    WorkingDirectory="INSTALLFOLDER" Icon="ACARS.ico" Advertise="yes" />
+          <Shortcut Id="desktopShortcut" Directory="DesktopFolder" Name="Patagonia Wings ACARS" 
+                    WorkingDirectory="INSTALLFOLDER" Icon="ACARS.ico" Advertise="yes" />
+        </File>
+      </Component>
+      
+      <Component Id="ConfigFiles" Guid="C3D4E5F6-A7B8-9012-CDEF-234567890123">
+        <File Id="AircraftProfiles" Source="$(var.PublishDir)\AircraftProfiles.json" />
+      </Component>
+    </ComponentGroup>
+    
+    <!-- Componentes del WASM Module -->
+    <ComponentGroup Id="WASMModuleComponents" Directory="WASMFOLDER">
+      <Component Id="WasmManifest" Guid="D4E5F6A7-B8C9-0123-DEF0-345678901234">
+        <File Id="manifest_json" Source="$(var.WasmDir)\manifest.json" KeyPath="yes" />
+      </Component>
+      
+      <Component Id="WasmModule" Guid="E5F6A7B8-C9D0-1234-EF01-456789012345">
+        <File Id="wasm_module" Source="$(var.WasmDir)\patagonia-acars-wasm.wasm" />
+      </Component>
+      
+      <Component Id="WasmConfig" Guid="F6A7B8C9-D0E1-2345-F012-567890123456">
+        <File Id="module_config" Source="$(var.WasmDir)\module.config" />
+      </Component>
+    </ComponentGroup>
+    
+    <!-- Acción personalizada para detectar MSFS -->
+    <CustomAction Id="DetectMsfsPath" 
+                  BinaryKey="CustomActions" 
+                  DllEntry="DetectMsfsCommunityFolder" 
+                  Execute="immediate" 
+                  Return="check" />
+    
+    <CustomAction Id="InstallWASM" 
+                  BinaryKey="CustomActions" 
+                  DllEntry="InstallWasmModule" 
+                  Execute="deferred" 
+                  Return="check" 
+                  Impersonate="no" />
+    
+    <InstallExecuteSequence>
+      <Custom Action="DetectMsfsPath" Before="InstallFiles">NOT Installed</Custom>
+      <Custom Action="InstallWASM" After="InstallFiles">NOT Installed</Custom>
+    </InstallExecuteSequence>
+    
+    <!-- Interfaz de usuario -->
+    <UIRef Id="WixUI_InstallDir" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+    
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    
+    <!-- Icono -->
+    <Icon Id="ACARS.ico" SourceFile="$(var.PublishDir)\ACARS.ico" />
+    
+  </Product>
+</Wix>
