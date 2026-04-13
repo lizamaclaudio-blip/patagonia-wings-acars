@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "2.0.12"
+  #define MyAppVersion   "2.0.13"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
@@ -34,7 +34,7 @@ DefaultGroupName=Patagonia Wings
 DisableProgramGroupPage=yes
 AllowNoIcons=no
 OutputDir=..\release
-OutputBaseFilename=PatagoniaWingsACARSSetup-2.0.12
+OutputBaseFilename=PatagoniaWingsACARSSetup-2.0.13
 SetupIconFile=..\PatagoniaWings.Acars.Master\Assets\patagonia-logo.ico
 UninstallDisplayIcon={app}\{#MyAppExe}
 Compression=lzma2/ultra64
@@ -72,6 +72,8 @@ Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\fsuipcClient.dll"; DestD
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.Master.exe.config"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\PatagoniaWings.Acars.Master\Assets\Sounds\*"; DestDir: "{app}\Assets\Sounds"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\\..\\PatagoniaWings.Acars.Master\\Assets\\Sounds'))
+; MobiFlight WASM Module - se copia a temp, el codigo lo instala en Community
+Source: "MobiFlightWasm\mobiflight-event-module\*"; DestDir: "{tmp}\mobiflight-event-module"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Patagonia Wings ACARS"; Filename: "{app}\{#MyAppExe}"; IconFilename: "{app}\{#MyAppExe}"
@@ -141,4 +143,77 @@ begin
     'Bienvenido al instalador de Patagonia Wings ACARS v{#MyAppVersion}.' + #13#10 + #13#10 +
     'Este asistente instalara el cliente ACARS en tu equipo.' + #13#10 + #13#10 +
     'Asegurate de tener MSFS 2020 o 2024 instalado antes de continuar.';
+end;
+
+function FindMSFSCommunityFolder(): String;
+var
+  // Rutas posibles de la carpeta Community de MSFS 2020/2024
+  Candidates: array of String;
+  LocalAppData, AppData: String;
+  I: Integer;
+begin
+  Result := '';
+  LocalAppData := ExpandConstant('{localappdata}');
+  AppData := ExpandConstant('{userappdata}');
+
+  SetArrayLength(Candidates, 6);
+  Candidates[0] := LocalAppData + '\Packages\Microsoft.FlightSimulator_8wekyb3d8bbwe\LocalCache\Packages\Community';
+  Candidates[1] := AppData + '\Microsoft Flight Simulator\Packages\Community';
+  Candidates[2] := LocalAppData + '\Packages\Microsoft.FlightDashboard_8wekyb3d8bbwe\LocalCache\Packages\Community';
+  Candidates[3] := 'C:\MSFSPackages\Community';
+  Candidates[4] := AppData + '\Microsoft Flight Simulator 2024\Packages\Community';
+  Candidates[5] := LocalAppData + '\Packages\Microsoft.Limitless_8wekyb3d8bbwe\LocalCache\Packages\Community';
+
+  for I := 0 to GetArrayLength(Candidates) - 1 do
+  begin
+    if DirExists(Candidates[I]) then
+    begin
+      Result := Candidates[I];
+      Exit;
+    end;
+  end;
+end;
+
+procedure InstallMobiFlightWasm();
+var
+  CommunityFolder, WasmDest, WasmSrc: String;
+begin
+  CommunityFolder := FindMSFSCommunityFolder();
+
+  if CommunityFolder = '' then
+  begin
+    MsgBox(
+      'No se encontro la carpeta Community de MSFS.' + #13#10 + #13#10 +
+      'El modulo MobiFlight WASM no fue instalado automaticamente.' + #13#10 +
+      'Puedes instalarlo manualmente desde:' + #13#10 +
+      'github.com/MobiFlight/MobiFlight-WASM-Module',
+      mbInformation, MB_OK);
+    Exit;
+  end;
+
+  WasmDest := CommunityFolder + '\mobiflight-event-module';
+  WasmSrc  := ExpandConstant('{tmp}\mobiflight-event-module');
+
+  if not DirExists(WasmDest) then
+    CreateDir(WasmDest);
+
+  // Copiar archivos del modulo WASM
+  if not DirExists(WasmDest + '\modules') then
+    CreateDir(WasmDest + '\modules');
+  if not DirExists(WasmDest + '\ContentInfo') then
+    CreateDir(WasmDest + '\ContentInfo');
+  if not DirExists(WasmDest + '\ContentInfo\mobiflight-event-module') then
+    CreateDir(WasmDest + '\ContentInfo\mobiflight-event-module');
+
+  FileCopy(WasmSrc + '\modules\MobiFlightWasmModule.wasm', WasmDest + '\modules\MobiFlightWasmModule.wasm', False);
+  FileCopy(WasmSrc + '\manifest.json',  WasmDest + '\manifest.json',  False);
+  FileCopy(WasmSrc + '\layout.json',    WasmDest + '\layout.json',    False);
+  FileCopy(WasmSrc + '\ContentInfo\mobiflight-event-module\Thumbnail.jpg',
+           WasmDest + '\ContentInfo\mobiflight-event-module\Thumbnail.jpg', False);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    InstallMobiFlightWasm();
 end;
