@@ -74,6 +74,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(ReadyFlightModeSummary));
                     OnPropertyChanged(nameof(OperationalQualificationsSummary));
                     OnPropertyChanged(nameof(CanStartFlight));
+                    OnPropertyChanged(nameof(IsDispatchReady));
+                    OnPropertyChanged(nameof(DispatchStatusLabel));
                 }
             }
         }
@@ -126,6 +128,28 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 ? "Modo operativo no informado."
                 : "Modo " + PreparedDispatch.FlightMode;
 
+        public bool IsDispatchReady => PreparedDispatch?.IsDispatchReady == true;
+
+        public string DispatchStatusLabel
+        {
+            get
+            {
+                if (PreparedDispatch == null) return "Sin reserva";
+                var status = (PreparedDispatch.ReservationStatus ?? string.Empty).Trim().ToLowerInvariant();
+                return status switch
+                {
+                    "dispatched" or "dispatch_ready" => "DESPACHADO",
+                    "in_flight" or "in_progress"    => "EN VUELO",
+                    "reserved"                       => "RESERVADO",
+                    "completed"                      => "COMPLETADO",
+                    _                                => status.ToUpperInvariant()
+                };
+            }
+        }
+
+        public bool HasStatusMessage    => !string.IsNullOrWhiteSpace(StatusMessage);
+        public bool HasSimbriefStatus   => !string.IsNullOrWhiteSpace(SimbriefStatus);
+
         public Airport? DepAirport { get => _depAirport; set => SetField(ref _depAirport, value); }
         public Airport? ArrAirport { get => _arrAirport; set => SetField(ref _arrAirport, value); }
         public WeatherInfo? DepWeather
@@ -175,7 +199,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
-        public string StatusMessage { get => _statusMessage; set => SetField(ref _statusMessage, value); }
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set
+            {
+                if (SetField(ref _statusMessage, value))
+                    OnPropertyChanged(nameof(HasStatusMessage));
+            }
+        }
         public bool FlightStarted
         {
             get => _flightStarted;
@@ -189,7 +221,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         }
 
         public bool IsLoadingSimbrief { get => _isLoadingSimbrief; set => SetField(ref _isLoadingSimbrief, value); }
-        public string SimbriefStatus   { get => _simbriefStatus;   set => SetField(ref _simbriefStatus, value); }
+        public string SimbriefStatus
+        {
+            get => _simbriefStatus;
+            set
+            {
+                if (SetField(ref _simbriefStatus, value))
+                    OnPropertyChanged(nameof(HasSimbriefStatus));
+            }
+        }
         public string SimbriefFuel     { get => _simbriefFuel;     set => SetField(ref _simbriefFuel, value); }
         public string SimbriefAlt      { get => _simbriefAlt;      set => SetField(ref _simbriefAlt, value); }
         public string SimbriefRoute    { get => _simbriefRoute;    set => SetField(ref _simbriefRoute, value); }
@@ -296,13 +336,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     if (AcarsContext.Runtime.CurrentReadyFlight != null)
                     {
                         ApplyReadyFlight(AcarsContext.Runtime.CurrentReadyFlight);
-                        StatusMessage = "Usando la última reserva activa almacenada en memoria.";
+                        StatusMessage = "Usando la última reserva almacenada en memoria.";
                         return;
                     }
 
                     ClearLoadedFlight(false);
                     StatusMessage = string.IsNullOrWhiteSpace(result.Error)
-                        ? "No hay un vuelo reservado/despachado listo para ACARS."
+                        ? "No hay ninguna reserva activa. Crea una desde la web de Patagonia Wings."
                         : result.Error;
                     return;
                 }
@@ -314,7 +354,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var dispatch = result.Data.ToPreparedDispatch();
                 Debug.WriteLine($"[PreFlight] ReservationStatus='{dispatch.ReservationStatus}' DispatchStatus='{dispatch.DispatchPackageStatus}' IsReady={dispatch.IsDispatchReady}");
 
-                StatusMessage = "Reserva activa cargada: " + result.Data.FlightNumber + " " + result.Data.OriginIdent + "-" + result.Data.DestinationIdent + ".";
+                if (dispatch.IsDispatchReady)
+                    StatusMessage = "Despacho listo: " + result.Data.FlightNumber + " " + result.Data.OriginIdent + " → " + result.Data.DestinationIdent + ". Puedes iniciar el vuelo.";
+                else
+                    StatusMessage = "Reserva cargada: " + result.Data.FlightNumber + " " + result.Data.OriginIdent + " → " + result.Data.DestinationIdent + ". Despacha desde la web para iniciar vuelo.";
                 await LoadMetarAsync();
             }
             catch (Exception ex)

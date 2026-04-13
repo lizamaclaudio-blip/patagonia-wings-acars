@@ -562,6 +562,7 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 Dictionary<string, object>? selectedRow = null;
 
+                // Intento 1: RPC centralizada
                 using (var request = CreateSupabaseRequest(HttpMethod.Post, "/rest/v1/rpc/pw_get_active_reservation_for_pilot", true))
                 {
                     var payload = _json.Serialize(new { p_callsign = pilotCallsign.Trim().ToUpperInvariant() });
@@ -569,51 +570,64 @@ namespace PatagoniaWings.Acars.Core.Services
 
                     var response = await _http.SendAsync(request);
                     var raw = await response.Content.ReadAsStringAsync();
-                    if (!response.IsSuccessStatusCode)
+                    if (response.IsSuccessStatusCode)
                     {
-                        return ApiResult<PreparedDispatch>.Fail($"No pude leer la reserva activa: {SimplifySupabaseError(raw)}");
-                    }
-
-                    var list = _json.DeserializeObject(raw) as object[];
-                    if (list == null || list.Length == 0)
-                    {
-                        return ApiResult<PreparedDispatch>.Fail("No hay reserva activa para este piloto.");
-                    }
-
-                    foreach (var item in list)
-                    {
-                        var row = item as Dictionary<string, object>;
-                        if (row == null) continue;
-
-                        var status = FirstNonEmpty(row, "status").Trim().ToLowerInvariant();
-                        if (status == "dispatch_ready" || status == "dispatched" || status == "in_progress" || status == "in_flight")
+                        var list = _json.DeserializeObject(raw) as object[];
+                        if (list != null && list.Length > 0)
                         {
-                            selectedRow = row;
-                            break;
+                            foreach (var item in list)
+                            {
+                                var row = item as Dictionary<string, object>;
+                                if (row == null) continue;
+                                var status = FirstNonEmpty(row, "status").Trim().ToLowerInvariant();
+                                if (status == "dispatch_ready" || status == "dispatched" || status == "in_progress" || status == "in_flight")
+                                { selectedRow = row; break; }
+                                if (selectedRow == null) selectedRow = row;
+                            }
                         }
+                    }
+                }
 
-                        if (selectedRow == null)
+                // Intento 2: fallback query directo a flight_reservations (sin RPC)
+                if (selectedRow == null)
+                {
+                    var excludedStatuses = Uri.EscapeDataString("completed") + "&status=neq." + Uri.EscapeDataString("cancelled");
+                    var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{Uri.EscapeDataString(pilotCallsign.Trim().ToUpperInvariant())}&status=neq.{excludedStatuses}&order=updated_at.desc.nullslast&limit=5";
+                    using (var req2 = CreateSupabaseRequest(HttpMethod.Get, directEp, true))
+                    {
+                        var resp2 = await _http.SendAsync(req2);
+                        var raw2 = await resp2.Content.ReadAsStringAsync();
+                        if (resp2.IsSuccessStatusCode)
                         {
-                            selectedRow = row;
+                            var rows2 = _json.DeserializeObject(raw2) as object[];
+                            if (rows2 != null)
+                            {
+                                foreach (var item in rows2)
+                                {
+                                    var row = item as Dictionary<string, object>;
+                                    if (row == null) continue;
+                                    var status = FirstNonEmpty(row, "status").Trim().ToLowerInvariant();
+                                    if (status == "dispatch_ready" || status == "dispatched" || status == "in_progress" || status == "in_flight")
+                                    { selectedRow = row; break; }
+                                    if (selectedRow == null) selectedRow = row;
+                                }
+                            }
                         }
                     }
                 }
 
                 if (selectedRow == null)
                 {
-                    return ApiResult<PreparedDispatch>.Fail("No se encontró una reserva válida para cargar en ACARS.");
+                    return ApiResult<PreparedDispatch>.Fail("No hay ninguna reserva activa para este piloto. Crea una desde la web.");
                 }
 
                 var reservationId = FirstNonEmpty(selectedRow, "reservation_id", "id");
                 var dispatchPackage = await GetDispatchPackageAsync(reservationId);
                 var prepared = MapPreparedDispatch(selectedRow, dispatchPackage);
 
-                if (!prepared.IsDispatchReady)
-                {
-                    return ApiResult<PreparedDispatch>.Fail("La reserva activa existe, pero todavía no está despachada desde la web.");
-                }
+                if (prepared.IsDispatchReady)
+                    _activePreparedDispatch = prepared;
 
-                _activePreparedDispatch = prepared;
                 return ApiResult<PreparedDispatch>.Ok(prepared);
             }
             catch (Exception ex)

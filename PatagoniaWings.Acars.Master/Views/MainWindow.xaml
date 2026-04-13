@@ -136,7 +136,7 @@
                             </StackPanel>
                         </Button>
 
-                        <!-- PRE-VUELO -->
+                        <!-- DESPACHO -->
                         <Button Command="{Binding NavPreFlightCommand}">
                             <Button.Style>
                                 <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
@@ -157,8 +157,8 @@
                                 </Style>
                             </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📋" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Pre-Vuelo" VerticalAlignment="Center"/>
+                                <TextBlock Text="✈" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Despacho" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
 
