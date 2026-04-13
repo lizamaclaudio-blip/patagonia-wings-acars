@@ -1740,10 +1740,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 RouteText          = routeText.Trim(),
                 FlightMode         = FirstNonEmpty(reservationRow, "flight_mode_code", "flight_mode"),
                 ReservationStatus  = FirstNonEmpty(reservationRow, "status").Trim().ToLowerInvariant(),
-                // dispatch_status: desde dispatch package o, como fallback, desde la columna del RPC enriquecido
-                DispatchPackageStatus = (string.IsNullOrEmpty(FirstNonEmpty(safeDispatchPackage, "dispatch_status", "status"))
-                    ? FirstNonEmpty(reservationRow, "dispatch_status")
-                    : FirstNonEmpty(safeDispatchPackage, "dispatch_status", "status")).Trim().ToLowerInvariant(),
+                // dispatch_status: desde dispatch package, fallback a reservation row, default a "prepared"
+                DispatchPackageStatus = GetDispatchPackageStatus(safeDispatchPackage, reservationRow),
                 SimbriefStatus     = FirstNonEmpty(safeDispatchPackage, "simbrief_status"),
                 SimbriefUsername   = FirstNonEmpty(safeDispatchPackage, "simbrief_username"),
                 // cruise_fl = nombre real de la columna en dispatch_packages
@@ -1971,6 +1969,22 @@ namespace PatagoniaWings.Acars.Core.Services
             if (score >= 70) return "C";
             if (score >= 60) return "D";
             return "F";
+        }
+
+        private static string GetDispatchPackageStatus(Dictionary<string, object> dispatchPackage, Dictionary<string, object> reservationRow)
+        {
+            // Primero intentar desde el dispatch_package
+            var status = FirstNonEmpty(dispatchPackage, "dispatch_status", "status");
+            if (!string.IsNullOrWhiteSpace(status))
+                return status.Trim().ToLowerInvariant();
+
+            // Fallback a la reserva
+            status = FirstNonEmpty(reservationRow, "dispatch_status");
+            if (!string.IsNullOrWhiteSpace(status))
+                return status.Trim().ToLowerInvariant();
+
+            // Default: prepared (asume que existe porque hay un dispatch package)
+            return "prepared";
         }
 
         private static string FirstNonEmpty(Dictionary<string, object> row, params string[] keys)
