@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.0.5.0</version>
-  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.5.exe</url>
-  <changelog>Fix critico: ACARS no cargaba la reserva desde Supabase. Query corregido a columnas reales origin_ident/destination_ident. Eliminada RPC inexistente.</changelog>
+  <version>3.0.6.0</version>
+  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.6.exe</url>
+  <changelog>Fix: comparacion de versiones corregida (3.0.6 == 3.0.6.0). Ya no aparece dialogo de actualizacion falso al estar al dia.</changelog>
   <mandatory>false</mandatory>
-  <hash>sha256:7F4C025ABA7CD50600B16AB00762B197A5084EEC38DF521A7A0B4FB1FE6C62A8</hash>
+  <hash>sha256:D92FC9C80087B912D461A44ABCA636343D3D3C43DFF2A39DF4A7F6FAE8DDC98B</hash>
 </item>

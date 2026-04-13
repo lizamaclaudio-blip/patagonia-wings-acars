@@ -140,9 +140,11 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private static string NormalizeVersion(string v)
         {
-            // Asegura formato Major.Minor.Build(.Revision) para Version.TryParse
-            var parts = (v ?? "").Split('.');
-            while (parts.Length < 3) v += ".0";
+            // Asegura formato Major.Minor.Build.Revision para Version.TryParse
+            // 3.0.5 → 3.0.5.0  |  3.0.5.0 → 3.0.5.0
+            var parts = (v ?? "0").Split('.');
+            while (parts.Length < 4)
+                v += ".0";
             return v;
         }
 
