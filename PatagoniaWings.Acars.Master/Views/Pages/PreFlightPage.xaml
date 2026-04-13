@@ -9,249 +9,258 @@
         <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
 
-    <StackPanel MaxWidth="900">
-        <TextBlock Text="PRE-VUELO · PLAN DE VUELO" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <StackPanel MaxWidth="960" Margin="0,0,0,24">
+
+        <!-- Encabezado -->
+        <TextBlock Text="PRE-VUELO · BRIEFING OPERACIONAL" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
         <TextBlock Text="Pre-Vuelo" Style="{StaticResource PageTitle}" Margin="0,0,0,20"/>
 
-        <Grid>
+        <!-- FILA 1: Despacho + SimBrief -->
+        <Grid Margin="0,0,0,14">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="16"/>
-                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Grid.Column="0">
-                <Border Margin="0,0,0,16" CornerRadius="10"
-                        BorderThickness="1" Padding="20">
-                    <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
-                            <GradientStop Color="#0D1520" Offset="0"/>
-                            <GradientStop Color="#0A1018" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.Background>
-                    <Border.BorderBrush>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Color="#1A3A5C" Offset="0"/>
-                            <GradientStop Color="#0CA789" Offset="1"/>
-                        </LinearGradientBrush>
-                    </Border.BorderBrush>
-                    <StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
-                            <Image Source="pack://application:,,,/Assets/icon-dispatch.png"
-                                   Height="20" Width="20" Margin="0,0,8,0" VerticalAlignment="Center"
-                                   Opacity="0.8"/>
-                            <TextBlock Text="Despacho Patagonia Wings" FontSize="15" FontWeight="SemiBold"
-                                       Foreground="White" FontFamily="Segoe UI" VerticalAlignment="Center"/>
-                            <Border Style="{StaticResource PillBlue}" Margin="12,0,0,0" VerticalAlignment="Center">
-                                <TextBlock Text="WEB · SUPABASE" Foreground="#2D9CDB" FontSize="9" FontWeight="Bold"/>
-                            </Border>
-                        </StackPanel>
-
-                        <Grid Margin="0,0,0,14">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="16"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="VUELO DESPACHADO" Style="{StaticResource FieldLabel}"/>
-                                <TextBlock Text="{Binding PreparedDispatch.FlightDesignator, TargetNullValue=Sin despacho cargado}"
-                                           Foreground="White" FontSize="18" FontWeight="Bold"
-                                           FontFamily="Consolas" Margin="0,6,0,0"/>
-                                <TextBlock Text="{Binding PreparedDispatch.RouteText, TargetNullValue=Despacha el vuelo desde la web antes de continuar.}"
-                                           Foreground="#606C7A" FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0"
-                                           MaxWidth="300"/>
-                                <TextBlock Text="{Binding PreparedDispatch.AircraftDisplayName, TargetNullValue=Selecciona la aeronave en la web para continuar.}"
-                                           Foreground="#9AA5B5" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"
-                                           MaxWidth="300"/>
-                                <TextBlock Text="{Binding ReadyFlightVariantSummary}"
-                                           Foreground="#7F8A9A" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"
-                                           MaxWidth="300"/>
-                                <TextBlock Text="{Binding ReadyFlightModeSummary}"
-                                           Foreground="#6E7A8B" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"
-                                           MaxWidth="300"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding PreparedDispatch.DepartureIcao}" FontFamily="Consolas"
-                                           FontSize="22" FontWeight="Bold" Foreground="#2D9CDB"
-                                           HorizontalAlignment="Center"/>
-                                <TextBlock Text="▼" Foreground="#252D3A" HorizontalAlignment="Center" Margin="0,2"/>
-                                <TextBlock Text="{Binding PreparedDispatch.ArrivalIcao}" FontFamily="Consolas"
-                                           FontSize="22" FontWeight="Bold" Foreground="#0CA789"
-                                           HorizontalAlignment="Center"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Button Content="↻  CARGAR DESPACHO DESDE LA WEB"
-                                Style="{StaticResource SecondaryButton}"
-                                Command="{Binding LoadDispatchCommand}"
-                                HorizontalAlignment="Left" Padding="14,9"/>
-
-                        <TextBlock Text="Cargando despacho desde Supabase..." Foreground="#2D9CDB"
-                                   FontSize="12" Margin="0,10,0,0"
-                                   Visibility="{Binding IsLoadingDispatch, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                    </StackPanel>
-                </Border>
-
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Text="Datos del Vuelo" FontSize="15" FontWeight="SemiBold"
-                                   Foreground="White" FontFamily="Segoe UI" Margin="0,0,0,18"/>
-
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="NUMERO DE VUELO *" Style="{StaticResource FieldLabel}"/>
-                                <TextBox Style="{StaticResource DarkTextBox}"
-                                         Text="{Binding FlightNumber, UpdateSourceTrigger=PropertyChanged}"
-                                         CharacterCasing="Upper" Height="40"
-                                         IsReadOnly="{Binding IsFlightDataLocked}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="AERONAVE (ICAO) *" Style="{StaticResource FieldLabel}"/>
-                                <TextBox Style="{StaticResource DarkTextBox}"
-                                         Text="{Binding AircraftIcao, UpdateSourceTrigger=PropertyChanged}"
-                                         CharacterCasing="Upper" Height="40"
-                                         IsReadOnly="{Binding IsFlightDataLocked}"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="AEROPUERTO ORIGEN *" Style="{StaticResource FieldLabel}"/>
-                                <TextBox Style="{StaticResource DarkTextBox}"
-                                         Text="{Binding DepartureIcao, UpdateSourceTrigger=PropertyChanged}"
-                                         CharacterCasing="Upper" Height="40" MaxLength="4"
-                                         IsReadOnly="{Binding IsFlightDataLocked}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="AEROPUERTO DESTINO *" Style="{StaticResource FieldLabel}"/>
-                                <TextBox Style="{StaticResource DarkTextBox}"
-                                         Text="{Binding ArrivalIcao, UpdateSourceTrigger=PropertyChanged}"
-                                         CharacterCasing="Upper" Height="40" MaxLength="4"
-                                         IsReadOnly="{Binding IsFlightDataLocked}"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <Grid Margin="0,0,0,12">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="12"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="ALTITUD CRUCERO (ft)" Style="{StaticResource FieldLabel}"/>
-                                <TextBox Style="{StaticResource DarkTextBox}" Height="40"
-                                         Text="{Binding PlannedAlt, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
-                            <StackPanel Grid.Column="2">
-                                <TextBlock Text="VELOCIDAD CRUCERO (kts)" Style="{StaticResource FieldLabel}"/>
-                                <TextBox Style="{StaticResource DarkTextBox}" Height="40"
-                                         Text="{Binding PlannedSpeed, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
-                        </Grid>
-
-                        <TextBlock Text="RUTA" Style="{StaticResource FieldLabel}"/>
-                        <TextBox Style="{StaticResource DarkTextBox}" Height="40" Margin="0,0,0,12"
-                                 Text="{Binding Route, UpdateSourceTrigger=PropertyChanged}"
-                                 CharacterCasing="Upper"/>
-
-                        <TextBlock Text="OBSERVACIONES" Style="{StaticResource FieldLabel}"/>
-                        <TextBox Style="{StaticResource DarkTextBox}" Height="56"
-                                 TextWrapping="Wrap" AcceptsReturn="True" Margin="0,0,0,14"
-                                 Text="{Binding Remarks, UpdateSourceTrigger=PropertyChanged}"/>
-
-                        <TextBlock Text="SIMULADOR" Style="{StaticResource FieldLabel}"/>
-                        <ComboBox Style="{StaticResource DarkComboBox}" Height="40"
-                                  ItemsSource="{Binding SimulatorOptions}"
-                                  SelectedItem="{Binding SelectedSim, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                  Margin="0,0,0,20"/>
-
-                        <Button Content="✈  INICIAR VUELO" Style="{StaticResource PrimaryButton}"
-                                Command="{Binding StartFlightCommand}" Height="48" FontSize="14"
-                                IsEnabled="{Binding CanStartFlight}"/>
-
-                        <TextBlock Text="{Binding StatusMessage}"
-                                   Foreground="{Binding FlightStarted,
-                                       Converter={StaticResource BoolToColorConverter},
-                                       ConverterParameter='#3FB950|#FF4444'}"
-                                   FontSize="13" Margin="0,14,0,0" TextWrapping="Wrap"
-                                   FontFamily="Segoe UI"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-
-            <StackPanel Grid.Column="2">
-                <Border Style="{StaticResource Card}" Margin="0,0,0,14">
-                    <StackPanel>
-                        <TextBlock Text="METAR · Meteorologia" FontSize="14" FontWeight="SemiBold"
-                                   Foreground="White" FontFamily="Segoe UI" Margin="0,0,0,14"/>
-                        <Button Content="↻  Actualizar METAR" Style="{StaticResource SecondaryButton}"
-                                Command="{Binding FetchMetarCommand}" Margin="0,0,0,16"
-                                HorizontalAlignment="Left" Padding="12,8"/>
-
-                        <TextBlock Text="ORIGEN" Style="{StaticResource FieldLabel}"/>
-                        <Border Background="#0A0E14" CornerRadius="6" Padding="10,8" Margin="0,4,0,12">
-                            <StackPanel>
-                                <TextBlock Text="{Binding DepMetar, TargetNullValue=—}" Foreground="#8B949E"
-                                           FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" MaxHeight="70"/>
-                                <TextBlock Text="{Binding DepartureWeatherSummary}" Foreground="#6E7A8B"
-                                           FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                            </StackPanel>
+            <!-- Bloque Despacho -->
+            <Border Grid.Column="0" CornerRadius="10" BorderThickness="1" Padding="18">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#0D1520" Offset="0"/>
+                        <GradientStop Color="#0A1018" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.BorderBrush>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#1A3A5C" Offset="0"/>
+                        <GradientStop Color="#0CA789" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.BorderBrush>
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="📋" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="Despacho Patagonia Wings" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="White" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                        <Border Style="{StaticResource PillBlue}" Margin="10,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="WEB · SUPABASE" Foreground="#2D9CDB" FontSize="9" FontWeight="Bold"/>
                         </Border>
+                    </StackPanel>
 
-                        <TextBlock Text="DESTINO" Style="{StaticResource FieldLabel}"/>
-                        <Border Background="#0A0E14" CornerRadius="6" Padding="10,8" Margin="0,4,0,0">
-                            <StackPanel>
-                                <TextBlock Text="{Binding ArrMetar, TargetNullValue=—}" Foreground="#8B949E"
-                                           FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" MaxHeight="70"/>
-                                <TextBlock Text="{Binding ArrivalWeatherSummary}" Foreground="#6E7A8B"
-                                           FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
-                            </StackPanel>
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="VUELO" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding PreparedDispatch.FlightDesignator, TargetNullValue=Sin despacho}"
+                                       Foreground="White" FontSize="22" FontWeight="Bold" FontFamily="Consolas" Margin="0,4,0,6"/>
+                            <TextBlock Text="{Binding PreparedDispatch.AircraftDisplayName, TargetNullValue=—}"
+                                       Foreground="#9AA5B5" FontSize="11" Margin="0,0,0,2"/>
+                            <TextBlock Text="{Binding ReadyFlightVariantSummary}"
+                                       Foreground="#7F8A9A" FontSize="11"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding PreparedDispatch.DepartureIcao, TargetNullValue=—}"
+                                       FontFamily="Consolas" FontSize="18" FontWeight="Bold"
+                                       Foreground="#2D9CDB" HorizontalAlignment="Center"/>
+                            <TextBlock Text="↓" Foreground="#3B4A5C" HorizontalAlignment="Center" FontSize="14" Margin="0,2"/>
+                            <TextBlock Text="{Binding PreparedDispatch.ArrivalIcao, TargetNullValue=—}"
+                                       FontFamily="Consolas" FontSize="18" FontWeight="Bold"
+                                       Foreground="#0CA789" HorizontalAlignment="Center"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="{Binding PreparedDispatch.RouteText, TargetNullValue=Despacha el vuelo desde la web.}"
+                               Foreground="#606C7A" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,14" MaxHeight="36"/>
+
+                    <Button Content="↻  CARGAR DESPACHO" Style="{StaticResource SecondaryButton}"
+                            Command="{Binding LoadDispatchCommand}" HorizontalAlignment="Left" Padding="12,8"/>
+
+                    <TextBlock Text="Cargando despacho..." Foreground="#2D9CDB" FontSize="11" Margin="0,8,0,0"
+                               Visibility="{Binding IsLoadingDispatch, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Bloque SimBrief -->
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <TextBlock Text="✈" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="SimBrief · Plan de Vuelo" FontSize="14" FontWeight="SemiBold"
+                                   Foreground="White" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                        <Border Margin="10,0,0,0" VerticalAlignment="Center" CornerRadius="4" Padding="6,2">
+                            <Border.Background>
+                                <SolidColorBrush Color="#1A2D1A"/>
+                            </Border.Background>
+                            <TextBlock Text="OFP" Foreground="#3FB950" FontSize="9" FontWeight="Bold"/>
                         </Border>
-
-                        <TextBlock Text="Cargando METAR..." Foreground="#2D9CDB" FontSize="12"
-                                   HorizontalAlignment="Center" Margin="0,10,0,0"
-                                   Visibility="{Binding IsLoadingMetar, Converter={StaticResource BoolToVisibilityConverter}}"/>
                     </StackPanel>
-                </Border>
 
-                <Border Style="{StaticResource Card}">
-                    <StackPanel>
-                        <TextBlock Text="Reglaje unificado" FontSize="13" FontWeight="SemiBold"
-                                   Foreground="White" FontFamily="Segoe UI" Margin="0,0,0,12"/>
-                        <StackPanel Margin="0,4,0,4" Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="#0CA789" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="Misma reserva activa de la web" Foreground="#8B949E" FontSize="12"/>
-                        </StackPanel>
-                        <StackPanel Margin="0,4,0,4" Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="#0CA789" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="Respeta dispatch_packages" Foreground="#8B949E" FontSize="12"/>
-                        </StackPanel>
-                        <StackPanel Margin="0,4,0,4" Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="#0CA789" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="flight_designator operativo" Foreground="#8B949E" FontSize="12"/>
-                        </StackPanel>
-                        <StackPanel Margin="0,4" Orientation="Horizontal">
-                            <Ellipse Width="6" Height="6" Fill="#0CA789" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                            <TextBlock Text="Mismo Supabase del dashboard" Foreground="#8B949E" FontSize="12"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding OperationalMinimaSummary}" Foreground="#7F8A9A"
-                                   FontSize="11" TextWrapping="Wrap" Margin="0,12,0,0"/>
-                        <TextBlock Text="{Binding OperationalQualificationsSummary}" Foreground="#6E7A8B"
-                                   FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    <!-- Resultado OFP si está cargado -->
+                    <Border Background="#060D0A" CornerRadius="8" Padding="12,10" Margin="0,0,0,12"
+                            Visibility="{Binding SimbriefLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="COMBUSTIBLE" Style="{StaticResource FieldLabel}" FontSize="9"/>
+                                <TextBlock Text="{Binding SimbriefFuel, TargetNullValue=—}"
+                                           Foreground="#3FB950" FontSize="15" FontWeight="Bold" FontFamily="Consolas"/>
+                                <TextBlock Text="ALTERNO" Style="{StaticResource FieldLabel}" FontSize="9" Margin="0,8,0,0"/>
+                                <TextBlock Text="{Binding SimbriefAlternate, TargetNullValue=—}"
+                                           Foreground="#E5C517" FontSize="13" FontWeight="Bold" FontFamily="Consolas"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="NIVEL CRUCERO" Style="{StaticResource FieldLabel}" FontSize="9"/>
+                                <TextBlock Text="{Binding SimbriefAlt, TargetNullValue=—}"
+                                           Foreground="#2D9CDB" FontSize="15" FontWeight="Bold" FontFamily="Consolas"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Ruta SimBrief -->
+                    <Border Background="#080E14" CornerRadius="6" Padding="10,8" Margin="0,0,0,12"
+                            Visibility="{Binding SimbriefLoaded, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="{Binding SimbriefRoute}" Foreground="#8B949E"
+                                   FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" MaxHeight="48"/>
+                    </Border>
+
+                    <!-- Botones SimBrief -->
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button Content="🌐  Generar en SimBrief" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding GenerateSimbriefCommand}" Padding="12,8" Margin="0,0,8,0"/>
+                        <Button Content="⬇  Importar OFP" Style="{StaticResource SecondaryButton}"
+                                Command="{Binding FetchSimbriefCommand}" Padding="12,8"/>
                     </StackPanel>
-                </Border>
-            </StackPanel>
+
+                    <TextBlock Text="Cargando OFP..." Foreground="#2D9CDB" FontSize="11" Margin="0,4,0,0"
+                               Visibility="{Binding IsLoadingSimbrief, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    <TextBlock Text="{Binding SimbriefStatus}" Foreground="#8B949E"
+                               FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0"/>
+                </StackPanel>
+            </Border>
         </Grid>
+
+        <!-- FILA 2: METAR Origen + METAR Destino -->
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- METAR Origen -->
+            <Border Grid.Column="0" Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="🛫" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="METAR · Origen" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="White" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding DepartureIcao}" FontFamily="Consolas" FontSize="13"
+                                   Foreground="#2D9CDB" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Border Background="#0A0E14" CornerRadius="6" Padding="10,8" Margin="0,0,0,8">
+                        <TextBlock Text="{Binding DepMetar, TargetNullValue=—}" Foreground="#8B949E"
+                                   FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" MaxHeight="60"/>
+                    </Border>
+                    <TextBlock Text="{Binding DepartureWeatherSummary}" Foreground="#6E7A8B"
+                               FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- METAR Destino -->
+            <Border Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                        <TextBlock Text="🛬" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <TextBlock Text="METAR · Destino" FontSize="13" FontWeight="SemiBold"
+                                   Foreground="White" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ArrivalIcao}" FontFamily="Consolas" FontSize="13"
+                                   Foreground="#0CA789" FontWeight="Bold" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <Border Background="#0A0E14" CornerRadius="6" Padding="10,8" Margin="0,0,0,8">
+                        <TextBlock Text="{Binding ArrMetar, TargetNullValue=—}" Foreground="#8B949E"
+                                   FontFamily="Consolas" FontSize="10" TextWrapping="Wrap" MaxHeight="60"/>
+                    </Border>
+                    <TextBlock Text="{Binding ArrivalWeatherSummary}" Foreground="#6E7A8B"
+                               FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Botón actualizar METAR -->
+        <Button Content="↻  Actualizar METAR" Style="{StaticResource SecondaryButton}"
+                Command="{Binding FetchMetarCommand}" HorizontalAlignment="Left"
+                Padding="12,8" Margin="0,0,0,14"/>
+
+        <!-- FILA 3: Datos de vuelo + Iniciar -->
+        <Border Style="{StaticResource Card}" Margin="0,0,0,14">
+            <StackPanel>
+                <TextBlock Text="Configuración del Vuelo" FontSize="14" FontWeight="SemiBold"
+                           Foreground="White" Margin="0,0,0,16"/>
+
+                <Grid Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="12"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="NRO. VUELO" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Style="{StaticResource DarkTextBox}" Height="38"
+                                 Text="{Binding FlightNumber, UpdateSourceTrigger=PropertyChanged}"
+                                 CharacterCasing="Upper" IsReadOnly="{Binding IsFlightDataLocked}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="AERONAVE (ICAO)" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Style="{StaticResource DarkTextBox}" Height="38"
+                                 Text="{Binding AircraftIcao, UpdateSourceTrigger=PropertyChanged}"
+                                 CharacterCasing="Upper" IsReadOnly="{Binding IsFlightDataLocked}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="4">
+                        <TextBlock Text="NIVEL CRUCERO (ft)" Style="{StaticResource FieldLabel}"/>
+                        <TextBox Style="{StaticResource DarkTextBox}" Height="38"
+                                 Text="{Binding PlannedAlt, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="6">
+                        <TextBlock Text="SIMULADOR" Style="{StaticResource FieldLabel}"/>
+                        <ComboBox Style="{StaticResource DarkComboBox}" Height="38"
+                                  ItemsSource="{Binding SimulatorOptions}"
+                                  SelectedItem="{Binding SelectedSim, Mode=TwoWay}"/>
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Text="RUTA" Style="{StaticResource FieldLabel}"/>
+                <TextBox Style="{StaticResource DarkTextBox}" Height="36" Margin="0,0,0,12"
+                         Text="{Binding Route, UpdateSourceTrigger=PropertyChanged}" CharacterCasing="Upper"/>
+
+                <!-- Mínimos operacionales -->
+                <Border Background="#080D14" CornerRadius="6" Padding="12,10" Margin="0,0,0,16">
+                    <TextBlock Text="{Binding OperationalMinimaSummary}" Foreground="#7F8A9A"
+                               FontSize="11" TextWrapping="Wrap"/>
+                </Border>
+
+                <!-- Botón iniciar vuelo -->
+                <Button Content="✈  INICIAR VUELO" Style="{StaticResource PrimaryButton}"
+                        Command="{Binding StartFlightCommand}" Height="48" FontSize="14"/>
+
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{Binding FlightStarted,
+                               Converter={StaticResource BoolToColorConverter},
+                               ConverterParameter='#3FB950|#FF4444'}"
+                           FontSize="12" Margin="0,12,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
     </StackPanel>
+    </ScrollViewer>
 </UserControl>

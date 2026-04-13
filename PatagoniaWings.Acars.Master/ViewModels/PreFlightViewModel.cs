@@ -1,7 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Net.Http;
 using System.Threading.Tasks;
+using System.Web.Script.Serialization;
 using System.Windows.Input;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
@@ -33,6 +36,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _statusMessage = string.Empty;
         private bool _flightStarted;
         private bool _isFlightDataLocked;
+        private bool _isLoadingSimbrief;
+        private string _simbriefStatus = string.Empty;
+        private string _simbriefFuel = string.Empty;
+        private string _simbriefAlt = string.Empty;
+        private string _simbriefRoute = string.Empty;
+        private string _simbriefAlternate = string.Empty;
+        private bool _simbriefLoaded;
 
         public ObservableCollection<SimulatorType> SimulatorOptions { get; } = new ObservableCollection<SimulatorType>
         {
@@ -178,15 +188,27 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
+        public bool IsLoadingSimbrief { get => _isLoadingSimbrief; set => SetField(ref _isLoadingSimbrief, value); }
+        public string SimbriefStatus   { get => _simbriefStatus;   set => SetField(ref _simbriefStatus, value); }
+        public string SimbriefFuel     { get => _simbriefFuel;     set => SetField(ref _simbriefFuel, value); }
+        public string SimbriefAlt      { get => _simbriefAlt;      set => SetField(ref _simbriefAlt, value); }
+        public string SimbriefRoute    { get => _simbriefRoute;    set => SetField(ref _simbriefRoute, value); }
+        public string SimbriefAlternate{ get => _simbriefAlternate;set => SetField(ref _simbriefAlternate, value); }
+        public bool   SimbriefLoaded   { get => _simbriefLoaded;   set { if (SetField(ref _simbriefLoaded, value)) OnPropertyChanged(nameof(CanStartFlight)); } }
+
         public ICommand FetchMetarCommand { get; }
         public ICommand LoadDispatchCommand { get; }
         public ICommand StartFlightCommand { get; }
+        public ICommand GenerateSimbriefCommand { get; }
+        public ICommand FetchSimbriefCommand { get; }
 
         public PreFlightViewModel()
         {
-            LoadDispatchCommand = new RelayCommand(async _ => await LoadPreparedDispatchAsync());
-            FetchMetarCommand = new RelayCommand(async _ => await LoadMetarAsync());
-            StartFlightCommand = new RelayCommand(async _ => await StartFlightAsync());
+            LoadDispatchCommand      = new RelayCommand(async _ => await LoadPreparedDispatchAsync());
+            FetchMetarCommand        = new RelayCommand(async _ => await LoadMetarAsync());
+            StartFlightCommand       = new RelayCommand(async _ => await StartFlightAsync());
+            GenerateSimbriefCommand  = new RelayCommand(_ => OpenSimbriefWebsite());
+            FetchSimbriefCommand     = new RelayCommand(async _ => await FetchSimbriefOfpAsync());
 
             AcarsContext.Runtime.Changed += OnRuntimeChanged;
             ApplyPilotPreferences();
@@ -549,6 +571,126 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private static string FormatOperationalList(string source)
         {
             return string.IsNullOrWhiteSpace(source) ? "sin registro" : source.Trim();
+        }
+
+        // ── SIMBRIEF ──────────────────────────────────────────────────────────
+
+        private void OpenSimbriefWebsite()
+        {
+            var dep  = DepartureIcao?.Trim().ToUpperInvariant() ?? string.Empty;
+            var arr  = ArrivalIcao?.Trim().ToUpperInvariant()  ?? string.Empty;
+            var acft = (PreparedDispatch?.AircraftIcao ?? AircraftIcao ?? string.Empty).Trim().ToUpperInvariant();
+            var alt  = PreparedDispatch?.AlternateIcao?.Trim().ToUpperInvariant() ?? string.Empty;
+            var fl   = PreparedDispatch?.CruiseLevel?.Trim() ?? PlannedAlt.ToString();
+            var route = (PreparedDispatch?.RouteText ?? Route ?? string.Empty).Trim().ToUpperInvariant();
+            var fn   = (PreparedDispatch?.FlightNumber ?? FlightNumber ?? string.Empty).Trim().ToUpperInvariant();
+            var user = PreparedDispatch?.SimbriefUsername ?? string.Empty;
+
+            var sb = new System.Text.StringBuilder("https://dispatch.simbrief.com/options/custom?");
+            sb.Append("type=").Append(Uri.EscapeDataString(acft));
+            if (!string.IsNullOrWhiteSpace(dep))   sb.Append("&orig=").Append(Uri.EscapeDataString(dep));
+            if (!string.IsNullOrWhiteSpace(arr))   sb.Append("&dest=").Append(Uri.EscapeDataString(arr));
+            if (!string.IsNullOrWhiteSpace(alt))   sb.Append("&altn=").Append(Uri.EscapeDataString(alt));
+            if (!string.IsNullOrWhiteSpace(fl))    sb.Append("&fl=").Append(Uri.EscapeDataString(fl));
+            if (!string.IsNullOrWhiteSpace(route)) sb.Append("&route=").Append(Uri.EscapeDataString(route));
+            if (!string.IsNullOrWhiteSpace(fn))    sb.Append("&flightnum=").Append(Uri.EscapeDataString(fn));
+            if (!string.IsNullOrWhiteSpace(user))  sb.Append("&airline=PWG");
+
+            try { Process.Start(new ProcessStartInfo(sb.ToString()) { UseShellExecute = true }); }
+            catch (Exception ex) { SimbriefStatus = "No se pudo abrir SimBrief: " + ex.Message; }
+
+            SimbriefStatus = "SimBrief abierto en el navegador. Genera el OFP y luego presiona 'Importar OFP'.";
+        }
+
+        private async Task FetchSimbriefOfpAsync()
+        {
+            var username = PreparedDispatch?.SimbriefUsername?.Trim();
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+                username = pilot?.SimbriefUsername?.Trim();
+            }
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                SimbriefStatus = "Usuario SimBrief no configurado. Ingresalo en tu perfil en la web.";
+                return;
+            }
+
+            IsLoadingSimbrief = true;
+            SimbriefStatus = "Buscando último OFP de SimBrief...";
+
+            try
+            {
+                using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) })
+                {
+                    var url = $"https://www.simbrief.com/api/xml.fetcher.php?username={Uri.EscapeDataString(username)}&json=1";
+                    var json = await http.GetStringAsync(url);
+                    var ser  = new JavaScriptSerializer();
+                    var obj  = ser.Deserialize<Dictionary<string, object>>(json);
+
+                    if (obj == null)
+                    {
+                        SimbriefStatus = "No se pudo leer la respuesta de SimBrief.";
+                        return;
+                    }
+
+                    // Extraer datos del OFP
+                    var origin  = GetSimbriefIcao(obj, "origin");
+                    var dest    = GetSimbriefIcao(obj, "destination");
+                    var altn    = GetSimbriefIcao(obj, "alternate");
+                    var fuel    = GetSimbriefValue(obj, "fuel", "plan_ramp");
+                    var fl      = GetSimbriefValue(obj, "general", "initial_altitude");
+                    var route   = GetSimbriefValue(obj, "general", "route");
+
+                    if (!string.IsNullOrWhiteSpace(origin) && !string.IsNullOrWhiteSpace(dest))
+                    {
+                        DepartureIcao     = origin;
+                        ArrivalIcao       = dest;
+                        SimbriefAlternate = altn ?? string.Empty;
+                        SimbriefFuel      = !string.IsNullOrWhiteSpace(fuel) ? (fuel + " kg") : string.Empty;
+                        SimbriefAlt       = !string.IsNullOrWhiteSpace(fl)   ? ("FL" + fl)    : string.Empty;
+                        SimbriefRoute     = route ?? string.Empty;
+
+                        if (!string.IsNullOrWhiteSpace(route))
+                            Route = route;
+                        if (!string.IsNullOrWhiteSpace(fl) && int.TryParse(fl, out var flInt))
+                            PlannedAlt = flInt >= 1000 ? flInt : flInt * 100;
+
+                        SimbriefLoaded = true;
+                        SimbriefStatus = $"OFP cargado: {origin}→{dest}  FL{fl}  Fuel {fuel} kg";
+                        await LoadMetarAsync();
+                    }
+                    else
+                    {
+                        SimbriefStatus = "SimBrief no tiene un OFP activo para este usuario. Genera el plan primero.";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                SimbriefStatus = "Error al conectar con SimBrief: " + ex.Message;
+                Debug.WriteLine("[SimBrief] " + ex);
+            }
+            finally
+            {
+                IsLoadingSimbrief = false;
+            }
+        }
+
+        private static string? GetSimbriefIcao(Dictionary<string, object> root, string section)
+        {
+            if (!root.TryGetValue(section, out var sec) || !(sec is Dictionary<string, object> d)) return null;
+            if (d.TryGetValue("icao_code", out var v)) return v?.ToString()?.Trim();
+            if (d.TryGetValue("icao",      out var v2)) return v2?.ToString()?.Trim();
+            return null;
+        }
+
+        private static string? GetSimbriefValue(Dictionary<string, object> root, string section, string key)
+        {
+            if (!root.TryGetValue(section, out var sec) || !(sec is Dictionary<string, object> d)) return null;
+            return d.TryGetValue(key, out var v) ? v?.ToString()?.Trim() : null;
         }
     }
 }

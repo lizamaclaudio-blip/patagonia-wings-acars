@@ -34,6 +34,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public int LegadoPoints { get; set; }
         public string ActiveQualifications { get; set; } = string.Empty;
         public string ActiveCertifications { get; set; } = string.Empty;
+        public string SimbriefUsername { get; set; } = string.Empty;
 
         public bool HasUsableToken
         {
