@@ -77,6 +77,7 @@ namespace PatagoniaWings.Acars.SimConnect
 
         public int SeatBeltSign;
         public int NoSmokingSign;
+        public int BleedAirOn;   // BLEED AIR ENGINE:1 — bool (switch ON = engine bleed air active)
     }
 
     /// <summary>

@@ -160,6 +160,7 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PRESSURIZATION PRESSURE DIFFERENTIAL","psi",    SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "CABIN SEATBELTS ALERT SWITCH",       "bool",    SIMCONNECT_DATATYPE.INT32, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "CABIN NO SMOKING ALERT SWITCH",      "bool",    SIMCONNECT_DATATYPE.INT32, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "BLEED AIR ENGINE:1",                 "bool",    SIMCONNECT_DATATYPE.INT32, 0, sc);
 
             _simConnect.RegisterDataDefineStruct<AircraftDataStruct>(DataDefineId.AircraftData);
 
@@ -432,7 +433,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 ApuAvailable       = r.ApuPct > 1,
                 ApuRunning         = r.ApuPct > 85,
 
-                BleedAirOn         = false,
+                BleedAirOn         = r.BleedAirOn != 0,
                 CabinAltitudeFeet  = (r.CabinAltitudeFeet >= 0 && r.CabinAltitudeFeet < 50000) ? r.CabinAltitudeFeet : 0,
                 PressureDiffPsi    = (r.PressureDiffPsi > 0 && r.PressureDiffPsi < 20) ? r.PressureDiffPsi : 0,
 

@@ -2,6 +2,6 @@
 <item>
   <version>3.0.9.0</version>
   <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.9.exe</url>
-  <changelog>v3.0.9: Luces en tiempo real via LIGHT ON STATES. Verde ON / Rojo OFF. SISTEMAS oculta APU y Bleed Air en aeronaves sin esos sistemas (C208, TBM, GA). Deteccion de +60 variantes de aeronaves MSFS. Scoring PIREP justo para aeronaves no presurizadas. SimConnect primario, FSUIPC7 fallback.</changelog>
+  <changelog>v3.0.9: Bleed Air leido en tiempo real desde SimConnect. Panel SISTEMAS completo con Bleed Air, No Smoking, Cabin Alt y Press Diff para aeronaves presurizadas. Luces via LIGHT ON STATES. APU y Bleed Air ocultos en C208/GA. +60 variantes MSFS. Scoring PIREP justo sin penalizacion en C208/BE58/GA. SimConnect primario, FSUIPC7 fallback.</changelog>
   <mandatory>false</mandatory>
 </item>

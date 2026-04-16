@@ -3,8 +3,8 @@
   "webVersion": "2.0",
   "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.9.exe",
   "mandatory": false,
-  "notes": "- Luces en tiempo real via LIGHT ON STATES bitmask (SimConnect nativo)\n- Luces verde = ON / rojo = OFF, todas las aeronaves igual\n- Panel SISTEMAS: oculta APU y Bleed Air en aeronaves sin esos sistemas\n- Deteccion de +60 variantes: jets, turbopropulsores, GA\n- Scoring PIREP justo: sin penalizacion de presurización en C208, BE58 y GA\n- SimConnect como backend primario, FSUIPC7 como fallback\n- King Air B350 y Q400 muestran APU correctamente",
+  "notes": "- Bleed Air leido en tiempo real desde SimConnect (BLEED AIR ENGINE:1)\n- Panel SISTEMAS completo: Bleed Air, No Smoking, Cabin Alt y Press Diff\n- Luces en tiempo real via LIGHT ON STATES bitmask (SimConnect nativo)\n- APU y Bleed Air ocultos en aeronaves sin esos sistemas (C208, GA)\n- Deteccion de +60 variantes: jets, turbopropulsores, GA\n- Scoring PIREP justo: sin penalizacion de presurizacion en C208, BE58 y GA\n- SimConnect como backend primario, FSUIPC7 como fallback",
   "releaseDate": "2026-04-16",
   "minVersion": "2.0.5",
-  "fileSize": "48MB"
+  "fileSize": "10MB"
 }

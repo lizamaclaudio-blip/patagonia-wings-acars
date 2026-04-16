@@ -444,6 +444,52 @@
                             </TextBlock>
                         </Border>
                     </Grid>
+                    <!-- No Smoking Sign — solo aeronaves presurizadas -->
+                    <Grid Margin="0,0,0,4" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="No Smoking" Style="{StaticResource SysLabel}"/>
+                        <Border Grid.Column="1">
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding NoSmokingSign}" Value="True">
+                                            <Setter Property="Background" Value="#FEF3C7"/>
+                                            <Setter Property="BorderBrush" Value="#FCD34D"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="OFF"/>
+                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding NoSmokingSign}" Value="True">
+                                                <Setter Property="Text" Value="ON"/>
+                                                <Setter Property="Foreground" Value="#92400E"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                    </Grid>
+                    <!-- Cabin Alt y Press Diff — solo aeronaves presurizadas -->
+                    <Grid Margin="0,0,0,4" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Cabin Alt" Style="{StaticResource SysLabel}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding CabinAlt, StringFormat='{}{0:0} ft'}"
+                                   FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
+                                   Foreground="#0284C7" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,4" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Press Diff" Style="{StaticResource SysLabel}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding PressDiff, StringFormat='{}{0:0.00} psi'}"
+                                   FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
+                                   Foreground="#0284C7" VerticalAlignment="Center"/>
+                    </Grid>
                     <Grid Margin="0,0,0,4">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Squawk" Style="{StaticResource SysLabel}"/>
