@@ -1,108 +1,240 @@
 {
   "profiles": [
     {
-      "name": "A319 Headwind",
-      "matches": ["A319", "Headwind", "ACJ319", "Airbus A319", "A319_FENIX", "A319 FENIX", "A319-1"],
-      "exact_titles": ["Private ACJ319 CFM", "A319 Fenix", "Fenix A319"],
-      "description": "Airbus A319 by Headwind Simulations",
+      "name": "C208 Asobo",
+      "matches": ["C208", "Cessna 208", "Grand Caravan", "Caravan"],
+      "exact_titles": [
+        "Cessna C208B Grand Caravan EX",
+        "Cessna C208B Grand Caravan",
+        "Cessna 208B Grand Caravan EX",
+        "Cessna 208 Grand Caravan"
+      ],
+      "description": "Cessna 208B Grand Caravan - Asobo/MSFS nativo",
+      "engine_type": "single_turboprop",
       "fuel": {
         "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY", "FUEL TOTAL CAPACITY"],
         "unit": "pounds",
         "status": "WORKING"
       },
       "engines": {
-        "n1_variable": "TURB ENG N1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH",
-        "status": "LVAR_REQUIRED",
-        "lvars": ["A319_Engine_N1_1", "A319_Engine_N1_2"]
+        "count": 1,
+        "n1_variable": "ENG N1 RPM:1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
+        "status": "WORKING"
       },
       "lights": {
-        "status": "LVAR_REQUIRED",
-        "lvars": ["A319_Light_Beacon", "A319_Light_Strobe", "A319_Light_Landing", "A319_Light_Nav", "A319_Light_Taxi"],
-        "notes": "SimConnect returns 0, real state in WASM LVARs"
+        "use_native": true,
+        "status": "WORKING",
+        "notes": "SimConnect LIGHT STROBE/BEACON/LANDING/TAXI/NAV funcionan correctamente"
       },
       "squawk": {
         "format": "BCO16",
-        "status": "LVAR_REQUIRED",
-        "lvar": "A319_Transponder_Code",
-        "notes": "SimConnect value is unreliable"
+        "status": "WORKING"
       },
-      "cabin": {
-        "status": "LVAR_REQUIRED",
-        "altitude_lvar": "A319_Cabin_Altitude",
-        "pressure_lvar": "A319_Cabin_Pressure",
-        "notes": "SimConnect returns garbage values"
+      "apu": {
+        "available": false,
+        "notes": "Turboprop - no tiene APU"
       },
       "supported": true,
       "recommended_backend": "SimConnect",
-      "lvar_support": "REQUIRED_FOR_FULL_FUNCTIONALITY",
-      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Flaps", "Gear"],
-      "requires_lvars": ["Lights", "Engine N1", "Transponder", "Cabin Pressure"],
-      "notes": "Uses WASM extensively. Basic flight data works via SimConnect, detailed systems require LVARs"
+      "lvar_support": "NOT_REQUIRED",
+      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "Transponder"],
+      "notes": "Avion Asobo nativo. Todas las simvars estandar funcionan via SimConnect."
+    },
+    {
+      "name": "C208 BlackSquare",
+      "matches": ["Black Square", "BlackSquare", "C208B Black Square", "C208 Black"],
+      "exact_titles": [
+        "Cessna C208B Grand Caravan EX Analog",
+        "Cessna C208B Grand Caravan EX - Black Square",
+        "Cessna C208B Grand Caravan Black Square",
+        "Cessna 208B Grand Caravan EX Analog"
+      ],
+      "description": "Cessna 208B Grand Caravan - Black Square Analog Systems",
+      "engine_type": "single_turboprop",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "unit": "pounds",
+        "status": "WORKING"
+      },
+      "engines": {
+        "count": 1,
+        "n1_variable": "ENG N1 RPM:1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
+        "status": "WORKING"
+      },
+      "lights": {
+        "use_native": true,
+        "status": "WORKING",
+        "notes": "Black Square mantiene simvars nativas para luces. SimConnect funciona."
+      },
+      "squawk": {
+        "format": "BCO16",
+        "status": "WORKING"
+      },
+      "apu": {
+        "available": false,
+        "notes": "Turboprop - no tiene APU"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "lvar_support": "NOT_REQUIRED",
+      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "Transponder"],
+      "notes": "Black Square usa sistemas analogicos pero expone simvars estandar. SimConnect completo."
+    },
+    {
+      "name": "PMDG 737-600",
+      "matches": ["PMDG 737-600", "B736", "737-600"],
+      "exact_titles": [
+        "PMDG 737-600",
+        "Boeing 737-600 PMDG",
+        "B736 PMDG"
+      ],
+      "description": "Boeing 737-600 by PMDG",
+      "engine_type": "twin_jet",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
+        "unit": "pounds",
+        "status": "WORKING"
+      },
+      "engines": {
+        "count": 2,
+        "n1_variable": "TURB ENG N1:1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
+        "status": "WORKING"
+      },
+      "lights": {
+        "use_native": true,
+        "status": "WORKING",
+        "notes": "PMDG 737 MSFS expone LIGHT STROBE/BEACON/LANDING/TAXI/NAV via SimConnect"
+      },
+      "squawk": {
+        "format": "BCO16",
+        "status": "WORKING"
+      },
+      "apu": {
+        "available": true,
+        "simvar": "APU PCT RPM",
+        "status": "WORKING"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "lvar_support": "OPTIONAL",
+      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "APU", "Transponder"],
+      "notes": "PMDG 737 MSFS 2020/2024 expone todas las simvars estandar. SimConnect completo sin PMDG SDK."
+    },
+    {
+      "name": "PMDG 737",
+      "matches": ["PMDG 737", "Boeing 737", "B737", "737-700", "737-800", "737-900", "737 MAX", "B737_PMDG", "B738_PMDG", "B739_PMDG"],
+      "exact_titles": [
+        "PMDG 737-700",
+        "PMDG 737-800",
+        "PMDG 737-900",
+        "Boeing 737-700 PMDG",
+        "Boeing 737-800 PMDG",
+        "Boeing 737-900 PMDG"
+      ],
+      "description": "Boeing 737 series (700/800/900) by PMDG",
+      "engine_type": "twin_jet",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
+        "unit": "pounds",
+        "status": "WORKING"
+      },
+      "engines": {
+        "count": 2,
+        "n1_variable": "TURB ENG N1:1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
+        "status": "WORKING"
+      },
+      "lights": {
+        "use_native": true,
+        "status": "WORKING",
+        "notes": "PMDG 737 MSFS expone LIGHT STROBE/BEACON/LANDING/TAXI/NAV via SimConnect"
+      },
+      "squawk": {
+        "format": "BCO16",
+        "status": "WORKING"
+      },
+      "apu": {
+        "available": true,
+        "simvar": "APU PCT RPM",
+        "status": "WORKING"
+      },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "lvar_support": "OPTIONAL",
+      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "APU", "Transponder", "SeatBelt"],
+      "notes": "PMDG 737 MSFS 2020/2024 expone todas las simvars estandar. SimConnect completo."
+    },
+    {
+      "name": "A319 Fenix",
+      "matches": ["A319", "Fenix", "A319-1", "Airbus A319"],
+      "exact_titles": ["Private ACJ319 CFM", "A319 Fenix", "Fenix A319"],
+      "description": "Airbus A319 by Fenix Simulations",
+      "engine_type": "twin_jet",
+      "fuel": {
+        "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
+        "unit": "pounds",
+        "status": "WORKING"
+      },
+      "engines": {
+        "count": 2,
+        "n1_variable": "TURB ENG N1:1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
+        "status": "WORKING"
+      },
+      "lights": {
+        "use_native": true,
+        "status": "WORKING"
+      },
+      "squawk": { "format": "BCO16", "status": "WORKING" },
+      "apu": { "available": true, "simvar": "APU PCT RPM", "status": "WORKING" },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "lvar_support": "OPTIONAL",
+      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "APU", "Transponder"],
+      "notes": "Fenix A319 expone simvars estandar."
     },
     {
       "name": "Fenix A320",
-      "matches": ["A320", "Fenix", "Airbus A320"],
+      "matches": ["A320", "Fenix A320", "Airbus A320"],
       "description": "Airbus A320 by Fenix Simulations",
+      "engine_type": "twin_jet",
       "fuel": {
         "primary": "FUEL TOTAL QUANTITY WEIGHT",
         "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
         "unit": "pounds"
       },
       "engines": {
-        "n1_variable": "TURB ENG N1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
+        "count": 2,
+        "n1_variable": "TURB ENG N1:1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1"
       },
-      "lights": {
-        "use_native": true
-      },
-      "squawk": {
-        "format": "BCO16"
-      },
+      "lights": { "use_native": true },
+      "squawk": { "format": "BCO16" },
+      "apu": { "available": true, "simvar": "APU PCT RPM" },
       "supported": true,
       "recommended_backend": "SimConnect",
-      "notes": "Complex WASM systems"
-    },
-    {
-      "name": "Headwind A320",
-      "matches": ["A320N", "A20N", "Headwind A320", "A320 Headwind", "Airbus A320-251"],
-      "exact_titles": [],
-      "description": "Airbus A320neo by Headwind Simulations",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
-        "unit": "pounds",
-        "status": "WORKING"
-      },
-      "engines": {
-        "n1_variable": "TURB ENG N1",
-        "status": "LVAR_REQUIRED",
-        "lvars": ["A32NX_ENGINE_N1:1", "A32NX_ENGINE_N1:2"]
-      },
-      "lights": {
-        "status": "LVAR_REQUIRED",
-        "notes": "Same LVARs as FBW A32NX"
-      },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "REQUIRED_FOR_FULL_FUNCTIONALITY",
-      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Flaps", "Gear"],
-      "requires_lvars": ["Lights", "Engine N1", "Transponder"],
-      "notes": "Uses A32NX LVAR namespace"
+      "lvar_support": "OPTIONAL",
+      "notes": "Fenix A320 expone simvars estandar. LVARs opcionales para mayor precision."
     },
     {
       "name": "FlyByWire A32NX",
-      "matches": ["A32NX", "Flybywire", "FlyByWire", "FBW", "FBW A320", "FlyByWire A32NX"],
+      "matches": ["A32NX", "Flybywire", "FlyByWire", "FBW", "FBW A320"],
       "description": "FlyByWire A32NX Airbus family",
+      "engine_type": "twin_jet",
       "fuel": {
         "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL TOTAL CAPACITY"],
         "unit": "pounds",
         "status": "WORKING"
       },
       "engines": {
-        "n1_variable": "(L:A32NX_ENGINE_N1:1, percent)",
+        "count": 2,
+        "n1_variable": "TURB ENG N1:1",
         "status": "LVAR_REQUIRED",
         "lvars": ["(L:A32NX_ENGINE_N1:1, percent)", "(L:A32NX_ENGINE_N1:2, percent)"]
       },
@@ -115,71 +247,73 @@
       "lvar_support": "REQUIRED_FOR_FULL_FUNCTIONALITY",
       "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Flaps", "Gear"],
       "requires_lvars": ["Lights", "Engine N1"],
-      "notes": "FlyByWire A32NX usa sus propios LVARs compatibles con la integración"
-    },
-    {
-      "name": "PMDG 737",
-      "matches": ["B737", "PMDG 737", "Boeing 737", "737-800", "737-700", "737-900", "737 MAX"],
-      "description": "Boeing 737 series by PMDG",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "unit": "pounds"
-      },
-      "engines": {
-        "n1_variable": "TURB ENG N1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
-      },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "notes": "PMDG SDK required for full functionality"
+      "notes": "FlyByWire A32NX usa sus propios LVARs."
     },
     {
       "name": "PMDG 777",
-      "matches": ["B777", "B77W", "PMDG 777"],
-      "description": "Boeing 777 by PMDG",
+      "matches": ["B777", "B77W", "B772", "PMDG 777", "Boeing 777"],
+      "exact_titles": ["PMDG 777-200ER", "PMDG 777-300ER", "Boeing 777 PMDG"],
+      "description": "Boeing 777 series by PMDG",
+      "engine_type": "twin_jet",
       "fuel": {
         "primary": "FUEL TOTAL QUANTITY WEIGHT",
+        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
         "unit": "pounds"
       },
       "engines": {
-        "n1_variable": "TURB ENG N1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
+        "count": 2,
+        "n1_variable": "TURB ENG N1:1",
+        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1"
       },
+      "lights": { "use_native": true },
+      "squawk": { "format": "BCO16" },
+      "apu": { "available": true, "simvar": "APU PCT RPM" },
       "supported": true,
       "recommended_backend": "SimConnect",
-      "notes": "PMDG SDK recommended"
+      "lvar_support": "OPTIONAL",
+      "notes": "PMDG 777 MSFS expone simvars estandar."
     },
     {
-      "name": "BlackSquare TBM8",
-      "matches": ["TBM8", "BlackSquare"],
-      "description": "TBM 850 by BlackSquare",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "unit": "pounds"
-      },
-      "engines": {
-        "n1_variable": "ENG N1 RPM",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
-      },
+      "name": "TBM9 Asobo",
+      "matches": ["TBM 930", "TBM930", "TBM9"],
+      "exact_titles": ["TBM 930"],
+      "description": "TBM 930 by Asobo",
+      "engine_type": "single_turboprop",
+      "fuel": { "primary": "FUEL TOTAL QUANTITY WEIGHT", "unit": "pounds" },
+      "engines": { "count": 1, "n1_variable": "ENG N1 RPM:1" },
+      "lights": { "use_native": true },
+      "apu": { "available": false },
       "supported": true,
       "recommended_backend": "SimConnect",
-      "notes": "High-fidelity turboprop"
+      "lvar_support": "NOT_REQUIRED"
+    },
+    {
+      "name": "TBM9 BlackSquare",
+      "matches": ["TBM 850", "TBM850", "TBM8", "BlackSquare TBM", "Black Square TBM"],
+      "exact_titles": ["TBM 850", "TBM 850 Black Square"],
+      "description": "TBM 850/930 by BlackSquare",
+      "engine_type": "single_turboprop",
+      "fuel": { "primary": "FUEL TOTAL QUANTITY WEIGHT", "unit": "pounds" },
+      "engines": { "count": 1, "n1_variable": "ENG N1 RPM:1" },
+      "lights": { "use_native": true },
+      "apu": { "available": false },
+      "supported": true,
+      "recommended_backend": "SimConnect",
+      "lvar_support": "NOT_REQUIRED",
+      "notes": "BlackSquare TBM. SimConnect nativo funciona."
     },
     {
       "name": "MSFS Native",
       "matches": ["*"],
-      "description": "Default profile for standard MSFS aircraft",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "unit": "pounds"
-      },
-      "engines": {
-        "n1_variable": "ENG N1 RPM",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH"
-      },
+      "description": "Default profile para aeronaves estandar MSFS",
+      "engine_type": "unknown",
+      "fuel": { "primary": "FUEL TOTAL QUANTITY WEIGHT", "unit": "pounds" },
+      "engines": { "n1_variable": "ENG N1 RPM:1", "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1" },
+      "lights": { "use_native": true },
       "supported": true,
-      "recommended_backend": "FSUIPC7",
-      "notes": "Standard aircraft work with both backends"
+      "recommended_backend": "SimConnect",
+      "lvar_support": "NOT_REQUIRED",
+      "notes": "Perfil fallback. Todas las simvars estandar MSFS."
     }
   ],
   "config": {

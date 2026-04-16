@@ -10,8 +10,8 @@
             <Setter Property="BorderBrush" Value="#D9EAF8"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
         </Style>
 
         <Style x:Key="LabelText" TargetType="TextBlock">
@@ -105,7 +105,7 @@
         <StackPanel Margin="0,0,0,0">
 
             <!-- Header -->
-            <Grid Margin="0,0,0,8">
+            <Grid Margin="0,0,0,5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -230,9 +230,9 @@
                         <TextBlock Style="{StaticResource SectionTitle}" Text="AERONAVE Y OPERACIÓN"/>
                         <TextBlock Style="{StaticResource LabelText}" Text="AERONAVE"/>
                         <TextBlock Style="{StaticResource ValueText}" Text="{Binding AircraftDisplayLine}"/>
-                        <TextBlock Margin="0,7,0,0" Style="{StaticResource LabelText}" Text="MODO"/>
+                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="MODO"/>
                         <TextBlock Style="{StaticResource ValueText}" Text="{Binding FlightModeLine}"/>
-                        <TextBlock Margin="0,7,0,0" Style="{StaticResource LabelText}" Text="ALTERNADO"/>
+                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="ALTERNADO"/>
                         <TextBlock Style="{StaticResource ValueText}" Text="{Binding PreparedDispatch.AlternateIcao, FallbackValue=No informado}"/>
                     </StackPanel>
                 </Border>
@@ -243,11 +243,11 @@
                         <TextBlock Style="{StaticResource SectionTitle}" Text="PLAN Y CARGA"/>
                         <TextBlock Style="{StaticResource LabelText}" Text="RUTA"/>
                         <TextBlock Style="{StaticResource ValueText}" Text="{Binding RouteDisplayLine}"/>
-                        <TextBlock Margin="0,7,0,0" Style="{StaticResource LabelText}" Text="COMBUSTIBLE"/>
+                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="COMBUSTIBLE"/>
                         <TextBlock Style="{StaticResource ValueText}" Text="{Binding FuelDisplayLine}"/>
-                        <TextBlock Margin="0,7,0,0" Style="{StaticResource LabelText}" Text="PESO / PAX"/>
+                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="PESO / PAX"/>
                         <TextBlock Style="{StaticResource ValueText}" Text="{Binding PayloadDisplayLine}"/>
-                        <TextBlock Margin="0,7,0,0" Style="{StaticResource LabelText}" Text="BLOCK"/>
+                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="BLOCK"/>
                         <TextBlock Style="{StaticResource ValueText}" Text="{Binding BlockDisplayLine}"/>
                     </StackPanel>
                 </Border>
@@ -257,7 +257,8 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionTitle}" Text="METAR ORIGEN"/>
                         <TextBlock Text="{Binding DepMetar, FallbackValue=Sin METAR}"
-                                   FontFamily="Consolas" FontSize="9" TextWrapping="Wrap" Foreground="#475569"/>
+                                   FontFamily="Consolas" FontSize="9" TextWrapping="Wrap"
+                                   MaxHeight="28" ClipToBounds="True" Foreground="#475569"/>
                         <TextBlock Margin="0,5,0,0" Text="{Binding DepartureWeatherSummary}"
                                    FontSize="10" Foreground="#334155" TextWrapping="Wrap"/>
                     </StackPanel>
@@ -268,7 +269,8 @@
                     <StackPanel>
                         <TextBlock Style="{StaticResource SectionTitle}" Text="METAR DESTINO"/>
                         <TextBlock Text="{Binding ArrMetar, FallbackValue=Sin METAR}"
-                                   FontFamily="Consolas" FontSize="9" TextWrapping="Wrap" Foreground="#475569"/>
+                                   FontFamily="Consolas" FontSize="9" TextWrapping="Wrap"
+                                   MaxHeight="28" ClipToBounds="True" Foreground="#475569"/>
                         <TextBlock Margin="0,5,0,0" Text="{Binding ArrivalWeatherSummary}"
                                    FontSize="10" Foreground="#334155" TextWrapping="Wrap"/>
                     </StackPanel>
