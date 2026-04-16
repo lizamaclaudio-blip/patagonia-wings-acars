@@ -71,6 +71,7 @@ Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\Microsoft.FlightSimulato
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\fsuipcClient.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\AutoUpdater.NET.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.Master.exe.config"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\PatagoniaWings.Acars.SimConnect\AircraftProfiles.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\PatagoniaWings.Acars.Master\Assets\Sounds\*"; DestDir: "{app}\Assets\Sounds"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\\..\\PatagoniaWings.Acars.Master\\Assets\\Sounds'))
 ; MobiFlight WASM Module - se copia a temp, el codigo lo instala en Community
