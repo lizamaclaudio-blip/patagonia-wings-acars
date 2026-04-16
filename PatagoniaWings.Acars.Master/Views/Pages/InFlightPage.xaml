@@ -347,12 +347,19 @@
             <Border Grid.Column="2" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="SISTEMAS" Style="{StaticResource SHead}"/>
-                    <Grid Margin="0,0,0,6">
+                    <Grid Margin="0,0,0,2">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Altitud" Style="{StaticResource SysLabel}"/>
+                        <TextBlock Grid.Column="0" Text="Alt Baro" Style="{StaticResource SysLabel}"/>
                         <TextBlock Grid.Column="1" Text="{Binding AltitudeDisplay, StringFormat='{}{0} ft'}"
                                    FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
                                    Foreground="#0284C7" VerticalAlignment="Center"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Alt Suelo" Style="{StaticResource SysLabel}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding AglDisplay, StringFormat='{}{0} ft'}"
+                                   FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
+                                   Foreground="#7C3AED" VerticalAlignment="Center"/>
                     </Grid>
                     <Grid Margin="0,0,0,4" Visibility="{Binding ShowApu, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -420,10 +427,12 @@
                         <Border Grid.Column="1">
                             <Border.Style>
                                 <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                    <Setter Property="BorderBrush" Value="#FCA5A5"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding SeatBeltSign}" Value="True">
-                                            <Setter Property="Background" Value="#FEF3C7"/>
-                                            <Setter Property="BorderBrush" Value="#FCD34D"/>
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -432,11 +441,11 @@
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Text" Value="OFF"/>
-                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                        <Setter Property="Foreground" Value="#991B1B"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding SeatBeltSign}" Value="True">
                                                 <Setter Property="Text" Value="ON"/>
-                                                <Setter Property="Foreground" Value="#92400E"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -451,10 +460,12 @@
                         <Border Grid.Column="1">
                             <Border.Style>
                                 <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                    <Setter Property="BorderBrush" Value="#FCA5A5"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding NoSmokingSign}" Value="True">
-                                            <Setter Property="Background" Value="#FEF3C7"/>
-                                            <Setter Property="BorderBrush" Value="#FCD34D"/>
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -463,11 +474,11 @@
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
                                         <Setter Property="Text" Value="OFF"/>
-                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                        <Setter Property="Foreground" Value="#991B1B"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding NoSmokingSign}" Value="True">
                                                 <Setter Property="Text" Value="ON"/>
-                                                <Setter Property="Foreground" Value="#92400E"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>

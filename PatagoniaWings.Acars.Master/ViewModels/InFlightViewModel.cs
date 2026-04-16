@@ -13,6 +13,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
     {
         private readonly MainViewModel _main;
         private double _altitude;
+        private double _altitudeAgl;
         private double _ias;
         private double _gs;
         private double _vs;
@@ -64,7 +65,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _alertPause;
         private bool _above10000;
 
-        public double Altitude { get => _altitude; set { if (SetField(ref _altitude, value)) OnPropertyChanged(nameof(AltitudeDisplay)); } }
+        public double Altitude    { get => _altitude;    set { if (SetField(ref _altitude,    value)) OnPropertyChanged(nameof(AltitudeDisplay)); } }
+        public double AltitudeAGL { get => _altitudeAgl; set { if (SetField(ref _altitudeAgl, value)) OnPropertyChanged(nameof(AglDisplay)); } }
         public double IAS { get => _ias; set { if (SetField(ref _ias, value)) { OnPropertyChanged(nameof(IasDisplay)); OnPropertyChanged(nameof(IASDisplay)); } } }
         public double GS { get => _gs; set { if (SetField(ref _gs, value)) { OnPropertyChanged(nameof(GsDisplay)); OnPropertyChanged(nameof(GSDisplay)); } } }
         public double VS { get => _vs; set { if (SetField(ref _vs, value)) { OnPropertyChanged(nameof(VsDisplay)); OnPropertyChanged(nameof(VSDisplay)); } } }
@@ -163,6 +165,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string GsDisplay => HasLiveTelemetry ? Math.Round(GS, 0).ToString("F0") : "---";
         public string GSDisplay => GsDisplay;
         public string AltitudeDisplay => HasLiveTelemetry ? Math.Round(Altitude, 0).ToString("F0") : "---";
+        public string AglDisplay      => HasLiveTelemetry ? Math.Round(AltitudeAGL, 0).ToString("F0") : "---";
         public string VsDisplay => HasLiveTelemetry ? Math.Round(VS, 0).ToString("+#;-#;0") : "---";
         public string VSDisplay => VsDisplay;
         public string HeadingDisplay => HasLiveTelemetry ? Math.Round(Heading, 0).ToString("000") + "°" : "---";
@@ -280,7 +283,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             Application.Current.Dispatcher.Invoke(() =>
             {
                 AircraftTitle = data.AircraftTitle;
-                Altitude = data.AltitudeFeet;
+                Altitude    = data.AltitudeFeet;
+                AltitudeAGL = data.AltitudeAGL;
                 IAS = data.IndicatedAirspeed;
                 GS = data.GroundSpeed;
                 VS = data.VerticalSpeed;
