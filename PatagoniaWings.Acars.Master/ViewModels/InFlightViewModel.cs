@@ -553,7 +553,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 t.Contains("PIPER M600") || t.Contains("M600") || t.Contains("MERIDIAN") ||
                 t.Contains("MALIBU") || t.Contains("PA-46");
 
-            HasApu          = isJet;                         // APU solo en jets
+            // King Air B350/B300/C90/1900 tienen APU estándar (Honeywell GTCP36-150)
+            // Q400 tiene APU opcional (RE220T) — incluido porque el modelo MSFS lo reporta
+            bool hasApuTurboprop =
+                t.Contains("KING AIR") || t.Contains("B350") || t.Contains("BE350") ||
+                t.Contains("B300") || t.Contains("C90") || t.Contains("1900") ||
+                t.Contains("Q400") || t.Contains("DASH8-400") || t.Contains("DASH 8-400");
+
+            HasApu            = isJet || hasApuTurboprop;
             HasPressurization = isJet || isPressurizedTurboprop; // Bleed Air en presurizados
 
             // ── 4. Motor único ────────────────────────────────────────────────────

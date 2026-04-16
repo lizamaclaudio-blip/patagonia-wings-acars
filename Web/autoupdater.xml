@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.0.8.0</version>
-  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.8.exe</url>
-  <changelog>v3.0.8: Rediseño visual compacto premium. Ventana reducida 50%. Sin scroll. Login con banner. Auto-update silencioso. Web 2.0.</changelog>
+  <version>3.0.9.0</version>
+  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.9.exe</url>
+  <changelog>v3.0.9: Luces en tiempo real via LIGHT ON STATES. Verde ON / Rojo OFF. SISTEMAS oculta APU y Bleed Air en aeronaves sin esos sistemas (C208, TBM, GA). Deteccion de +60 variantes de aeronaves MSFS. Scoring PIREP justo para aeronaves no presurizadas. SimConnect primario, FSUIPC7 fallback.</changelog>
   <mandatory>false</mandatory>
 </item>
