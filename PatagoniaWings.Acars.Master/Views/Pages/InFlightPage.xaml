@@ -55,7 +55,7 @@
         <Style x:Key="LightOff" TargetType="Ellipse">
             <Setter Property="Width" Value="8"/>
             <Setter Property="Height" Value="8"/>
-            <Setter Property="Fill" Value="#CBD5E1"/>
+            <Setter Property="Fill" Value="#EF4444"/>
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="Margin" Value="5,0,0,0"/>
         </Style>
@@ -273,7 +273,7 @@
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding BeaconOn}" Value="True">
-                                            <Setter Property="Fill" Value="#F59E0B"/>
+                                            <Setter Property="Fill" Value="#10B981"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -303,9 +303,7 @@
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding StrobeOn}" Value="True">
-                                            <Setter Property="Fill" Value="#F8FAFC"/>
-                                            <Setter Property="Stroke" Value="#94A3B8"/>
-                                            <Setter Property="StrokeThickness" Value="1"/>
+                                            <Setter Property="Fill" Value="#10B981"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -320,7 +318,7 @@
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding LandingOn}" Value="True">
-                                            <Setter Property="Fill" Value="#FEF08A"/>
+                                            <Setter Property="Fill" Value="#10B981"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -335,7 +333,7 @@
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding TaxiOn}" Value="True">
-                                            <Setter Property="Fill" Value="#FCD34D"/>
+                                            <Setter Property="Fill" Value="#10B981"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -356,7 +354,7 @@
                                    FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
                                    Foreground="#0284C7" VerticalAlignment="Center"/>
                     </Grid>
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,4" Visibility="{Binding ShowApu, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="APU" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">
@@ -386,7 +384,7 @@
                             </TextBlock>
                         </Border>
                     </Grid>
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,4" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Bleed Air" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">

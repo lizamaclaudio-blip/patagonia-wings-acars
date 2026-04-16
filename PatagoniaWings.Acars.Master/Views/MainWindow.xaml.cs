@@ -113,7 +113,7 @@ namespace PatagoniaWings.Acars.Master.Views
                 {
                     MessageBox.Show(
                         "No se pudo conectar con el simulador.\n" +
-                        "Se intentó FSUIPC7 primero y luego SimConnect.\n" +
+                        "Se intentó SimConnect primero y luego FSUIPC7.\n" +
                         "Asegúrate de tener MSFS abierto.\n\n" + ex.Message,
                         "Conexión Simulador",
                         MessageBoxButton.OK,

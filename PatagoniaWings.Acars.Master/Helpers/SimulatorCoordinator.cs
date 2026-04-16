@@ -9,7 +9,8 @@ using PatagoniaWings.Acars.SimConnect;
 namespace PatagoniaWings.Acars.Master.Helpers
 {
     /// <summary>
-    /// Intenta FSUIPC7 primero. Si falla, usa SimConnect como fallback.
+    /// Intenta SimConnect primero (nativo MSFS — luces, datos, todo funciona correctamente).
+    /// Si falla, usa FSUIPC7 como fallback.
     /// Solo marca conectado cuando entra telemetría real.
     /// </summary>
     public sealed class SimulatorCoordinator : IDisposable
@@ -56,24 +57,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             _lastFrameUtc = null;
             _consecutiveInvalidFrames = 0;
 
-            try
-            {
-                _fsuipc = new FsuipcService();
-                _fsuipc.Connected += OnProviderConnected;
-                _fsuipc.Disconnected += OnProviderDisconnected;
-                _fsuipc.DataReceived += OnDataReceived;
-                _fsuipc.Connect();
-                ActiveBackend = "FSUIPC7";
-                WriteLog("Backend activo: FSUIPC7");
-                StartHealthTimer();
-                return;
-            }
-            catch (Exception ex)
-            {
-                WriteLog("FSUIPC7 no disponible: " + ex.Message);
-                DisposeFsuipc();
-            }
-
+            // ── 1. SimConnect primero: nativo MSFS, luces y datos completos ──────
             try
             {
                 _simConnect = new SimConnectService();
@@ -84,11 +68,30 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 ActiveBackend = "SimConnect";
                 WriteLog("Backend activo: SimConnect");
                 StartHealthTimer();
+                return;
             }
             catch (Exception ex)
             {
                 WriteLog("SimConnect no disponible: " + ex.Message);
                 DisposeSimConnect();
+            }
+
+            // ── 2. FSUIPC7 como fallback ──────────────────────────────────────────
+            try
+            {
+                _fsuipc = new FsuipcService();
+                _fsuipc.Connected += OnProviderConnected;
+                _fsuipc.Disconnected += OnProviderDisconnected;
+                _fsuipc.DataReceived += OnDataReceived;
+                _fsuipc.Connect();
+                ActiveBackend = "FSUIPC7";
+                WriteLog("Backend activo: FSUIPC7 (fallback)");
+                StartHealthTimer();
+            }
+            catch (Exception ex)
+            {
+                WriteLog("FSUIPC7 no disponible: " + ex.Message);
+                DisposeFsuipc();
                 ActiveBackend = "None";
                 throw;
             }
@@ -111,33 +114,33 @@ namespace PatagoniaWings.Acars.Master.Helpers
             {
                 return;
             }
-            
+
             Debug.WriteLine($"[Coordinator] Datos recibidos de {ActiveBackend} - ALT={data.AltitudeFeet:F0} FUEL={data.FuelTotalLbs:F0}");
-            
-            // Validar que son datos reales del simulador
-            // Un dato válido debe tener latitud entre -90 y 90, y altitud > 0 o velocidad > 0
-            bool latValid = data.Latitude >= -90 && data.Latitude <= 90;
-            bool altValid = data.AltitudeFeet > 0 && data.AltitudeFeet < 100000;
-            bool speedValid = data.IndicatedAirspeed > 0 && data.IndicatedAirspeed < 1000;
+
+            // Validar que son datos reales del simulador.
+            // Latitude != 0 es la señal más fiable: el sim nunca envía lat=0 para un avión cargado.
+            // altValid acepta negativos para aeropuertos bajo nivel del mar (ej. Dead Sea, -1300 ft).
+            bool latValid   = data.Latitude >= -90 && data.Latitude <= 90 && Math.Abs(data.Latitude) > 0.0001;
+            bool altValid   = data.AltitudeFeet >= -2000 && data.AltitudeFeet < 100000;
+            bool speedValid = data.IndicatedAirspeed >= 0 && data.IndicatedAirspeed < 1000;
             bool hasValidData = latValid && (altValid || speedValid);
-            
+
             if (!hasValidData)
             {
                 _consecutiveInvalidFrames++;
                 Debug.WriteLine($"[Coordinator] Datos inválidos detectados - ignorando (frame {_consecutiveInvalidFrames}/{MaxInvalidFramesBeforeFallback}) LAT={data.Latitude:F2} ALT={data.AltitudeFeet:F0}");
-                
-                // Si recibimos muchos frames inválidos consecutivos, forzar fallback a SimConnect
-                if (ActiveBackend == "FSUIPC7" && _consecutiveInvalidFrames >= MaxInvalidFramesBeforeFallback)
+
+                // Si SimConnect envía muchos frames inválidos, intentar FSUIPC7
+                if (ActiveBackend == "SimConnect" && _consecutiveInvalidFrames >= MaxInvalidFramesBeforeFallback)
                 {
-                    Debug.WriteLine("[Coordinator] Demasiados frames inválidos - forzando fallback a SimConnect...");
-                    WriteLog("FSUIPC enviando datos vacíos - cambiando a SimConnect");
-                    ForceDisconnect("FSUIPC datos vacíos");
-                    TrySimConnectFallback();
+                    Debug.WriteLine("[Coordinator] Demasiados frames inválidos de SimConnect - intentando FSUIPC7...");
+                    WriteLog("SimConnect enviando datos vacíos - cambiando a FSUIPC7");
+                    ForceDisconnect("SimConnect datos vacíos");
+                    TryFsuipcFallback();
                 }
                 return;
             }
-            
-            // Resetear contador si recibimos datos válidos
+
             _consecutiveInvalidFrames = 0;
 
             var capturedAt = data.CapturedAtUtc == default(DateTime)
@@ -179,10 +182,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private void HealthTick()
         {
-            if (_disposed)
-            {
-                return;
-            }
+            if (_disposed) return;
 
             DateTime now = DateTime.UtcNow;
             bool shouldDisconnect = false;
@@ -191,9 +191,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             lock (_sync)
             {
                 if (_disconnectRaised || string.IsNullOrWhiteSpace(ActiveBackend) || ActiveBackend == "None")
-                {
                     return;
-                }
 
                 if (_lastFrameUtc.HasValue)
                 {
@@ -212,39 +210,38 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             if (shouldDisconnect)
             {
-                // Si FSUIPC no entregó datos válidos, intentar SimConnect automáticamente
-                if (ActiveBackend == "FSUIPC7" && reason.Contains("No llegó telemetría inicial"))
+                // Si SimConnect no entregó datos válidos, intentar FSUIPC7 automáticamente
+                if (ActiveBackend == "SimConnect" && reason.Contains("No llegó telemetría inicial"))
                 {
-                    Debug.WriteLine("[Coordinator] FSUIPC sin datos - intentando SimConnect...");
-                    WriteLog("FSUIPC sin datos válidos - cambiando a SimConnect");
+                    Debug.WriteLine("[Coordinator] SimConnect sin datos - intentando FSUIPC7...");
+                    WriteLog("SimConnect sin datos válidos - cambiando a FSUIPC7");
                     ForceDisconnect(reason);
-                    // Intentar SimConnect
-                    TrySimConnectFallback();
+                    TryFsuipcFallback();
                     return;
                 }
                 ForceDisconnect(reason);
             }
         }
-        
-        private void TrySimConnectFallback()
+
+        private void TryFsuipcFallback()
         {
             try
             {
-                _simConnect = new SimConnectService();
-                _simConnect.Connected += OnProviderConnected;
-                _simConnect.Disconnected += OnProviderDisconnected;
-                _simConnect.DataReceived += OnDataReceived;
-                _simConnect.Connect(_windowHandle);
-                ActiveBackend = "SimConnect";
-                Debug.WriteLine("[Coordinator] SimConnect fallback activado");
-                WriteLog("Backend activo: SimConnect (fallback)");
+                _fsuipc = new FsuipcService();
+                _fsuipc.Connected += OnProviderConnected;
+                _fsuipc.Disconnected += OnProviderDisconnected;
+                _fsuipc.DataReceived += OnDataReceived;
+                _fsuipc.Connect();
+                ActiveBackend = "FSUIPC7";
+                Debug.WriteLine("[Coordinator] FSUIPC7 fallback activado");
+                WriteLog("Backend activo: FSUIPC7 (fallback)");
                 StartHealthTimer();
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[Coordinator] SimConnect fallback falló: {ex.Message}");
-                WriteLog("SimConnect fallback falló: " + ex.Message);
-                DisposeSimConnect();
+                Debug.WriteLine($"[Coordinator] FSUIPC7 fallback falló: {ex.Message}");
+                WriteLog("FSUIPC7 fallback falló: " + ex.Message);
+                DisposeFsuipc();
                 ActiveBackend = "None";
             }
         }
@@ -254,10 +251,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             bool shouldRaise;
             lock (_sync)
             {
-                if (_disconnectRaised)
-                {
-                    return;
-                }
+                if (_disconnectRaised) return;
 
                 _disconnectRaised = true;
                 shouldRaise = IsConnected || !string.IsNullOrWhiteSpace(ActiveBackend);
@@ -283,12 +277,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private void DisposeFsuipc()
         {
-            if (_fsuipc == null)
-            {
-                return;
-            }
+            if (_fsuipc == null) return;
 
-            _fsuipc.Connected -= OnProviderConnected;
+            _fsuipc.Connected   -= OnProviderConnected;
             _fsuipc.Disconnected -= OnProviderDisconnected;
             _fsuipc.DataReceived -= OnDataReceived;
             _fsuipc.Dispose();
@@ -297,12 +288,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private void DisposeSimConnect()
         {
-            if (_simConnect == null)
-            {
-                return;
-            }
+            if (_simConnect == null) return;
 
-            _simConnect.Connected -= OnProviderConnected;
+            _simConnect.Connected    -= OnProviderConnected;
             _simConnect.Disconnected -= OnProviderDisconnected;
             _simConnect.DataReceived -= OnDataReceived;
             _simConnect.Dispose();
@@ -311,10 +299,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         public void Dispose()
         {
-            if (_disposed)
-            {
-                return;
-            }
+            if (_disposed) return;
 
             StopHealthTimer();
             DisposeProviders();
@@ -330,9 +315,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 File.AppendAllText(_logFile,
                     "[" + DateTime.UtcNow.ToString("o") + "] " + msg + Environment.NewLine);
             }
-            catch
-            {
-            }
+            catch { }
         }
     }
 }

@@ -5,28 +5,35 @@ namespace PatagoniaWings.Acars.SimConnect
 {
     internal enum DataDefineId
     {
-        AircraftData = 1,
-        EnvironmentData = 2
+        AircraftData  = 1,
+        EnvironmentData = 2,
+        LightsData    = 3    // ← separado, VISUAL_FRAME, LIGHT ON STATES bitmask
     }
 
     internal enum RequestId
     {
-        AircraftData = 1,
-        EnvironmentData = 2
+        AircraftData  = 1,
+        EnvironmentData = 2,
+        LightsData    = 3
     }
 
     internal enum EventId
     {
-        Pause = 1,
+        Pause   = 1,
         Crashed = 2
     }
 
+    /// <summary>
+    /// Struct principal: posición, velocidades, fuel, motores, gear, flaps, transponder, APU, presurización.
+    /// Las luces se leen por separado via LIGHT ON STATES (ver LightsDataStruct).
+    /// IMPORTANTE: el orden de campos debe coincidir EXACTAMENTE con las llamadas AddToDataDefinition.
+    /// </summary>
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     internal struct AircraftDataStruct
     {
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
         public string Title;
-        
+
         public double Latitude;
         public double Longitude;
         public double AltitudeFeet;
@@ -38,14 +45,12 @@ namespace PatagoniaWings.Acars.SimConnect
         public double Pitch;
         public double Bank;
 
-        // Fuel - múltiples variables para compatibilidad
         public double FuelTotalLbs;
         public double FuelTotalCapacity;
         public double FuelLeftQuantity;
         public double FuelRightQuantity;
         public double FuelCenterQuantity;
-        
-        // Motores - múltiples variables
+
         public double Engine1FuelFlowPph;
         public double Engine2FuelFlowPph;
         public double Engine1N1;
@@ -57,11 +62,7 @@ namespace PatagoniaWings.Acars.SimConnect
         public int ParkingBrake;
         public int AutopilotActive;
 
-        public int StrobeLights;
-        public int BeaconLights;
-        public int LandingLights;
-        public int TaxiLights;
-        public int NavLights;
+        // Luces eliminadas de aquí — se leen via LightsDataStruct (LIGHT ON STATES)
 
         public int GearHandleDown;
         public double FlapsPercent;
@@ -78,6 +79,30 @@ namespace PatagoniaWings.Acars.SimConnect
         public int NoSmokingSign;
     }
 
+    /// <summary>
+    /// Struct para luces: usa LIGHT ON STATES (bitmask MSFS nativo).
+    /// Actualizado via SIMCONNECT_PERIOD.VISUAL_FRAME para respuesta inmediata.
+    ///
+    /// Bits de LIGHT ON STATES:
+    ///   Bit 0  (0x001): Nav
+    ///   Bit 1  (0x002): Beacon
+    ///   Bit 2  (0x004): Landing
+    ///   Bit 3  (0x008): Taxi
+    ///   Bit 4  (0x010): Strobe
+    ///   Bit 5  (0x020): Panel
+    ///   Bit 6  (0x040): Recognition
+    ///   Bit 7  (0x080): Wing
+    ///   Bit 8  (0x100): Logo
+    ///   Bit 9  (0x200): Cabin
+    ///   Bit 10 (0x400): Head
+    ///   Bit 11 (0x800): Brake
+    /// </summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    internal struct LightsDataStruct
+    {
+        public int LightOnStates;   // LIGHT ON STATES — bitmask único, actualiza en tiempo real
+    }
+
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
     internal struct EnvironmentDataStruct
     {
@@ -85,6 +110,6 @@ namespace PatagoniaWings.Acars.SimConnect
         public double WindSpeed;
         public double WindDirection;
         public double SeaLevelPressure;
-        public int PrecipState;
+        public int    PrecipState;
     }
 }

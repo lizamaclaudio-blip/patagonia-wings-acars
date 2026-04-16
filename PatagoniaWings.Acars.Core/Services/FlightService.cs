@@ -288,8 +288,14 @@ namespace PatagoniaWings.Acars.Core.Services
             var approachPenalty = score - before;
 
             before = score;
-            ApplyCabinPressurePenalties(ref score, notes);
-            ApplyNoSmokingPenalties(ref score, notes);
+            // Las penalidades de presurización y NO-SMOKING solo aplican a aeronaves presurizadas.
+            // C208 Caravan, BE58 Baron y similares no tienen sistema de presurización —
+            // el simvar PRESSURIZATION CABIN ALTITUDE devuelve la altitud de vuelo para ellos.
+            if (IsAircraftPressurized())
+            {
+                ApplyCabinPressurePenalties(ref score, notes);
+                ApplyNoSmokingPenalties(ref score, notes);
+            }
             var cabinPenalty = score - before;
 
             var normalizedScore = Math.Max(0, Math.Min(100, score));
@@ -531,6 +537,48 @@ namespace PatagoniaWings.Acars.Core.Services
         }
 
         private static double DegToRad(double deg) => deg * Math.PI / 180.0;
+
+        /// <summary>
+        /// Determina si la aeronave activa tiene presurización de cabina.
+        /// Los aviones NO presurizados (C208 Caravan, BE58 Baron, GA monomotores) no deben
+        /// recibir penalidades de presurización: el simvar devuelve la altitud de vuelo.
+        /// </summary>
+        private bool IsAircraftPressurized()
+        {
+            if (_currentFlight == null) return true; // asumir presurizado si no hay vuelo
+
+            var icao = (_currentFlight.AircraftIcao ?? string.Empty).Trim().ToUpperInvariant();
+            var name = (_currentFlight.AircraftName  ?? string.Empty).Trim().ToUpperInvariant();
+            var combined = icao + " " + name;
+
+            // ── Aeronaves PRESURIZADAS (jets, turbohélices de línea, ejecutivos) ──
+            // Si coincide con alguna de estas, ES presurizado → aplicar penalidades
+            var pressurizedTokens = new[]
+            {
+                // Jets de fuselaje estrecho / ancho
+                "A318","A319","A320","A321","A330","A339","A340","A350","A359","A380",
+                "ACJ","BBJ","AIRBUS","FENIX","HEADWIND","FLYBYWIRE","INIBUILDS",
+                "TOLISS","PMDG","LEONARDO","MAJESTIC","QUALITYWINGS","FEELTHERE","ROTATE",
+                "B717","B727","B737","B738","B739","B38M","B747","B757","B767",
+                "B777","B787","B78X","B78","B77W","B772","B789","BOEING",
+                "CRJ","E170","E175","E190","E195","E2 1",
+                "MD80","MD82","MD83","MD88","MD90","MD11","DC9","DC10",
+                // Turbohélices presurizados
+                "ATR","AT76","DHC-8","DASH 8","DASH8","Q200","Q300","Q400",
+                "TBM","PC-12","PC12","PILATUS",
+                "KING AIR","B350","BE350","C90","B200","B300","1900",
+                "M600","MERIDIAN","MALIBU","PA-46"
+            };
+
+            foreach (var token in pressurizedTokens)
+            {
+                if (combined.Contains(token)) return true;
+            }
+
+            // ── Aeronaves NO presurizadas ────────────────────────────────────────
+            // C208 Caravan, BE58 Baron, GA monomotores, etc.
+            return false;
+        }
 
         public void Reset()
         {
