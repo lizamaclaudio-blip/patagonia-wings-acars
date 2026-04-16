@@ -40,29 +40,54 @@ namespace PatagoniaWings.Acars.Core.Models
         public int ExpectedBlockP50Minutes { get; set; }
         public int ExpectedBlockP80Minutes { get; set; }
 
+        public string FlightNumberDisplay
+        {
+            get
+            {
+                return !string.IsNullOrWhiteSpace(FlightDesignator)
+                    ? FlightDesignator
+                    : FlightNumber;
+            }
+        }
+
+        public bool HasAssignedAircraft
+        {
+            get
+            {
+                return !string.IsNullOrWhiteSpace(AircraftId)
+                    || !string.IsNullOrWhiteSpace(AircraftRegistration)
+                    || !string.IsNullOrWhiteSpace(AircraftIcao);
+            }
+        }
+
         public bool IsDispatchReady
         {
             get
             {
+                var reservationStatus = (ReservationStatus ?? string.Empty).Trim().ToLowerInvariant();
+                var dispatchStatus = (DispatchPackageStatus ?? string.Empty).Trim().ToLowerInvariant();
+
                 var reservationReady =
-                    ReservationStatus == "dispatch_ready"
-                    || ReservationStatus == "dispatched"
-                    || ReservationStatus == "in_progress"
-                    || ReservationStatus == "in_flight"
-                    || ReservationStatus == "despacho"
-                    || ReservationStatus == "despacho_ready"
-                    || ReservationStatus == "active"
-                    || ReservationStatus == "confirmed"
-                    || ReservationStatus == "booked"
-                    || ReservationStatus == "ready";
+                    reservationStatus == "dispatch_ready"
+                    || reservationStatus == "dispatched"
+                    || reservationStatus == "in_progress"
+                    || reservationStatus == "in_flight"
+                    || reservationStatus == "despacho"
+                    || reservationStatus == "despacho_ready"
+                    || reservationStatus == "active"
+                    || reservationStatus == "confirmed"
+                    || reservationStatus == "booked"
+                    || reservationStatus == "ready";
+
                 var packageReady =
-                    string.IsNullOrWhiteSpace(DispatchPackageStatus)
-                    || DispatchPackageStatus == "prepared"
-                    || DispatchPackageStatus == "dispatched"
-                    || DispatchPackageStatus == "released"
-                    || DispatchPackageStatus == "ready"
-                    || DispatchPackageStatus == "validated";
-                return reservationReady && packageReady;
+                    string.IsNullOrWhiteSpace(dispatchStatus)
+                    || dispatchStatus == "prepared"
+                    || dispatchStatus == "dispatched"
+                    || dispatchStatus == "released"
+                    || dispatchStatus == "ready"
+                    || dispatchStatus == "validated";
+
+                return reservationReady && packageReady && HasAssignedAircraft;
             }
         }
     }

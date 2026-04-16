@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
-using System.Net.Http;
+using System.Linq;
 using System.Threading.Tasks;
-using System.Web.Script.Serialization;
 using System.Windows.Input;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
@@ -14,8 +13,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 {
     public class PreFlightViewModel : ViewModelBase
     {
-        private AcarsReadyFlight? _readyFlight;
         private PreparedDispatch? _preparedDispatch;
+        private AcarsReadyFlight? _readyFlight;
         private string _flightNumber = string.Empty;
         private string _departureIcao = string.Empty;
         private string _arrivalIcao = string.Empty;
@@ -25,8 +24,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private int _plannedSpeed = 450;
         private string _remarks = string.Empty;
         private SimulatorType _selectedSim = SimulatorType.MSFS2020;
-        private Airport? _depAirport;
-        private Airport? _arrAirport;
         private WeatherInfo? _depWeather;
         private WeatherInfo? _arrWeather;
         private string _depMetar = string.Empty;
@@ -35,14 +32,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _isLoadingDispatch;
         private string _statusMessage = string.Empty;
         private bool _flightStarted;
-        private bool _isFlightDataLocked;
-        private bool _isLoadingSimbrief;
-        private string _simbriefStatus = string.Empty;
-        private string _simbriefFuel = string.Empty;
-        private string _simbriefAlt = string.Empty;
-        private string _simbriefRoute = string.Empty;
-        private string _simbriefAlternate = string.Empty;
-        private bool _simbriefLoaded;
 
         public ObservableCollection<SimulatorType> SimulatorOptions { get; } = new ObservableCollection<SimulatorType>
         {
@@ -50,111 +39,65 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             SimulatorType.MSFS2024
         };
 
-        public AcarsReadyFlight? ReadyFlight
+        public ICommand LoadDispatchCommand { get; }
+        public ICommand FetchMetarCommand { get; }
+        public ICommand StartFlightCommand { get; }
+
+        public PreFlightViewModel()
         {
-            get => _readyFlight;
-            set
-            {
-                if (SetField(ref _readyFlight, value))
-                {
-                    IsFlightDataLocked = value != null;
-                    OnPropertyChanged(nameof(CanStartFlight));
-                }
-            }
+            LoadDispatchCommand = new AsyncRelayCommand(async _ => await LoadPreparedDispatchAsync());
+            FetchMetarCommand = new AsyncRelayCommand(async _ => await LoadMetarAsync(), _ => HasFlightCoreData);
+            StartFlightCommand = new AsyncRelayCommand(async _ => await StartFlightAsync(), _ => CanStartFlight);
+
+            AcarsContext.Runtime.Changed += OnRuntimeChanged;
+            ApplyPilotPreferences();
+            SyncFromRuntime();
         }
 
         public PreparedDispatch? PreparedDispatch
         {
-            get => _preparedDispatch;
+            get { return _preparedDispatch; }
             set
             {
                 if (SetField(ref _preparedDispatch, value))
                 {
-                    OnPropertyChanged(nameof(ReadyFlightVariantSummary));
-                    OnPropertyChanged(nameof(ReadyFlightModeSummary));
-                    OnPropertyChanged(nameof(OperationalQualificationsSummary));
-                    OnPropertyChanged(nameof(CanStartFlight));
+                    OnPropertyChanged(nameof(HasPreparedDispatch));
                     OnPropertyChanged(nameof(IsDispatchReady));
                     OnPropertyChanged(nameof(DispatchStatusLabel));
+                    OnPropertyChanged(nameof(DispatchStateLine));
+                    OnPropertyChanged(nameof(DispatchSourceLine));
+                    OnPropertyChanged(nameof(FlightModeLine));
+                    OnPropertyChanged(nameof(AircraftDisplayLine));
+                    OnPropertyChanged(nameof(RouteDisplayLine));
+                    OnPropertyChanged(nameof(FuelDisplayLine));
+                    OnPropertyChanged(nameof(PayloadDisplayLine));
+                    OnPropertyChanged(nameof(BlockDisplayLine));
+                    OnPropertyChanged(nameof(StartButtonTitle));
+                    OnPropertyChanged(nameof(StartButtonSubtitle));
+                    OnPropertyChanged(nameof(CanStartFlight));
                 }
             }
         }
 
-        public string FlightNumber { get => _flightNumber; set => SetField(ref _flightNumber, value); }
-        public string DepartureIcao { get => _departureIcao; set => SetField(ref _departureIcao, value); }
-        public string ArrivalIcao { get => _arrivalIcao; set => SetField(ref _arrivalIcao, value); }
-        public string AircraftIcao { get => _aircraftIcao; set => SetField(ref _aircraftIcao, value); }
-        public string Route { get => _route; set => SetField(ref _route, value); }
-        public int PlannedAlt { get => _plannedAlt; set => SetField(ref _plannedAlt, value); }
-        public int PlannedSpeed { get => _plannedSpeed; set => SetField(ref _plannedSpeed, value); }
-        public string Remarks { get => _remarks; set => SetField(ref _remarks, value); }
-        public SimulatorType SelectedSim { get => _selectedSim; set => SetField(ref _selectedSim, value); }
-        public bool IsFlightDataLocked { get => _isFlightDataLocked; set => SetField(ref _isFlightDataLocked, value); }
-        public bool CanStartFlight => PreparedDispatch != null && PreparedDispatch.IsDispatchReady && !IsLoadingDispatch && !FlightStarted;
-
-        public string ReadyFlightVariantSummary
+        public AcarsReadyFlight? ReadyFlight
         {
-            get
-            {
-                if (PreparedDispatch == null)
-                {
-                    return string.Empty;
-                }
-
-                var variant = PreparedDispatch.AircraftVariantCode == null ? string.Empty : PreparedDispatch.AircraftVariantCode.Trim();
-                var addon = PreparedDispatch.AddonProvider == null ? string.Empty : PreparedDispatch.AddonProvider.Trim();
-
-                if (string.IsNullOrWhiteSpace(variant) && string.IsNullOrWhiteSpace(addon))
-                {
-                    return "Variante no informada por la web.";
-                }
-
-                if (string.IsNullOrWhiteSpace(variant))
-                {
-                    return addon;
-                }
-
-                if (string.IsNullOrWhiteSpace(addon))
-                {
-                    return variant;
-                }
-
-                return variant + " · " + addon;
-            }
+            get { return _readyFlight; }
+            set { SetField(ref _readyFlight, value); }
         }
 
-        public string ReadyFlightModeSummary =>
-            PreparedDispatch == null || string.IsNullOrWhiteSpace(PreparedDispatch.FlightMode)
-                ? "Modo operativo no informado."
-                : "Modo " + PreparedDispatch.FlightMode;
+        public string FlightNumber { get { return _flightNumber; } set { if (SetField(ref _flightNumber, value)) OnPropertyChanged(nameof(HasFlightCoreData)); } }
+        public string DepartureIcao { get { return _departureIcao; } set { if (SetField(ref _departureIcao, value)) OnPropertyChanged(nameof(HasFlightCoreData)); } }
+        public string ArrivalIcao { get { return _arrivalIcao; } set { if (SetField(ref _arrivalIcao, value)) OnPropertyChanged(nameof(HasFlightCoreData)); } }
+        public string AircraftIcao { get { return _aircraftIcao; } set { if (SetField(ref _aircraftIcao, value)) OnPropertyChanged(nameof(HasFlightCoreData)); } }
+        public string Route { get { return _route; } set { if (SetField(ref _route, value)) OnPropertyChanged(nameof(HasFlightCoreData)); } }
+        public int PlannedAlt { get { return _plannedAlt; } set { SetField(ref _plannedAlt, value); } }
+        public int PlannedSpeed { get { return _plannedSpeed; } set { SetField(ref _plannedSpeed, value); } }
+        public string Remarks { get { return _remarks; } set { SetField(ref _remarks, value); } }
+        public SimulatorType SelectedSim { get { return _selectedSim; } set { if (SetField(ref _selectedSim, value)) { OnPropertyChanged(nameof(StartButtonSubtitle)); OnPropertyChanged(nameof(CanStartFlight)); } } }
 
-        public bool IsDispatchReady => PreparedDispatch?.IsDispatchReady == true;
-
-        public string DispatchStatusLabel
-        {
-            get
-            {
-                if (PreparedDispatch == null) return "Sin reserva";
-                var status = (PreparedDispatch.ReservationStatus ?? string.Empty).Trim().ToLowerInvariant();
-                return status switch
-                {
-                    "dispatched" or "dispatch_ready" => "DESPACHADO",
-                    "in_flight" or "in_progress"    => "EN VUELO",
-                    "reserved"                       => "RESERVADO",
-                    "completed"                      => "COMPLETADO",
-                    _                                => status.ToUpperInvariant()
-                };
-            }
-        }
-
-        public bool HasStatusMessage    => !string.IsNullOrWhiteSpace(StatusMessage);
-        public bool HasSimbriefStatus   => !string.IsNullOrWhiteSpace(SimbriefStatus);
-
-        public Airport? DepAirport { get => _depAirport; set => SetField(ref _depAirport, value); }
-        public Airport? ArrAirport { get => _arrAirport; set => SetField(ref _arrAirport, value); }
         public WeatherInfo? DepWeather
         {
-            get => _depWeather;
+            get { return _depWeather; }
             set
             {
                 if (SetField(ref _depWeather, value))
@@ -168,7 +111,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         public WeatherInfo? ArrWeather
         {
-            get => _arrWeather;
+            get { return _arrWeather; }
             set
             {
                 if (SetField(ref _arrWeather, value))
@@ -180,20 +123,19 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
-        public string DepMetar { get => _depMetar; set => SetField(ref _depMetar, value); }
-        public string ArrMetar { get => _arrMetar; set => SetField(ref _arrMetar, value); }
-        public string DepartureWeatherSummary => BuildWeatherSummary(DepWeather);
-        public string ArrivalWeatherSummary => BuildWeatherSummary(ArrWeather);
-        public string OperationalMinimaSummary => BuildOperationalMinimaSummary();
-        public string OperationalQualificationsSummary => BuildOperationalQualificationsSummary();
-        public bool IsLoadingMetar { get => _isLoadingMetar; set => SetField(ref _isLoadingMetar, value); }
+        public string DepMetar { get { return _depMetar; } set { SetField(ref _depMetar, value); } }
+        public string ArrMetar { get { return _arrMetar; } set { SetField(ref _arrMetar, value); } }
+        public bool IsLoadingMetar { get { return _isLoadingMetar; } set { SetField(ref _isLoadingMetar, value); } }
+
         public bool IsLoadingDispatch
         {
-            get => _isLoadingDispatch;
+            get { return _isLoadingDispatch; }
             set
             {
                 if (SetField(ref _isLoadingDispatch, value))
                 {
+                    OnPropertyChanged(nameof(StartButtonTitle));
+                    OnPropertyChanged(nameof(StartButtonSubtitle));
                     OnPropertyChanged(nameof(CanStartFlight));
                 }
             }
@@ -201,74 +143,508 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         public string StatusMessage
         {
-            get => _statusMessage;
+            get { return _statusMessage; }
             set
             {
                 if (SetField(ref _statusMessage, value))
+                {
                     OnPropertyChanged(nameof(HasStatusMessage));
+                }
             }
         }
+
         public bool FlightStarted
         {
-            get => _flightStarted;
+            get { return _flightStarted; }
             set
             {
                 if (SetField(ref _flightStarted, value))
                 {
+                    OnPropertyChanged(nameof(StartButtonTitle));
+                    OnPropertyChanged(nameof(StartButtonSubtitle));
                     OnPropertyChanged(nameof(CanStartFlight));
                 }
             }
         }
 
-        public bool IsLoadingSimbrief { get => _isLoadingSimbrief; set => SetField(ref _isLoadingSimbrief, value); }
-        public string SimbriefStatus
+        public bool HasPreparedDispatch { get { return PreparedDispatch != null; } }
+        public bool HasStatusMessage { get { return !string.IsNullOrWhiteSpace(StatusMessage); } }
+        public bool HasFlightCoreData
         {
-            get => _simbriefStatus;
-            set
+            get
             {
-                if (SetField(ref _simbriefStatus, value))
-                    OnPropertyChanged(nameof(HasSimbriefStatus));
+                return !string.IsNullOrWhiteSpace(FlightNumber)
+                    || !string.IsNullOrWhiteSpace(DepartureIcao)
+                    || !string.IsNullOrWhiteSpace(ArrivalIcao)
+                    || !string.IsNullOrWhiteSpace(AircraftIcao)
+                    || !string.IsNullOrWhiteSpace(Route);
             }
         }
-        public string SimbriefFuel     { get => _simbriefFuel;     set => SetField(ref _simbriefFuel, value); }
-        public string SimbriefAlt      { get => _simbriefAlt;      set => SetField(ref _simbriefAlt, value); }
-        public string SimbriefRoute    { get => _simbriefRoute;    set => SetField(ref _simbriefRoute, value); }
-        public string SimbriefAlternate{ get => _simbriefAlternate;set => SetField(ref _simbriefAlternate, value); }
-        public bool   SimbriefLoaded   { get => _simbriefLoaded;   set { if (SetField(ref _simbriefLoaded, value)) OnPropertyChanged(nameof(CanStartFlight)); } }
 
-        public ICommand FetchMetarCommand { get; }
-        public ICommand LoadDispatchCommand { get; }
-        public ICommand StartFlightCommand { get; }
-        public ICommand GenerateSimbriefCommand { get; }
-        public ICommand FetchSimbriefCommand { get; }
+        public bool IsDispatchReady { get { return PreparedDispatch != null && PreparedDispatch.IsDispatchReady; } }
+        public bool CanStartFlight { get { return PreparedDispatch != null && PreparedDispatch.IsDispatchReady && !IsLoadingDispatch && !FlightStarted; } }
 
-        public PreFlightViewModel()
+        public string DispatchStatusLabel
         {
-            LoadDispatchCommand      = new AsyncRelayCommand(async _ => await LoadPreparedDispatchAsync());
-            FetchMetarCommand        = new AsyncRelayCommand(async _ => await LoadMetarAsync());
-            StartFlightCommand       = new AsyncRelayCommand(async _ => await StartFlightAsync());
-            GenerateSimbriefCommand  = new RelayCommand(_ => OpenSimbriefWebsite());
-            FetchSimbriefCommand     = new AsyncRelayCommand(async _ => await FetchSimbriefOfpAsync());
+            get
+            {
+                if (PreparedDispatch == null)
+                {
+                    return "SIN DESPACHO";
+                }
 
-            AcarsContext.Runtime.Changed += OnRuntimeChanged;
+                var reservationStatus = NormalizeToken(PreparedDispatch.ReservationStatus);
+                var packageStatus = NormalizeToken(PreparedDispatch.DispatchPackageStatus);
+
+                if (FlightStarted || reservationStatus == "IN_FLIGHT" || reservationStatus == "IN_PROGRESS")
+                {
+                    return "EN VUELO";
+                }
+
+                if (PreparedDispatch.IsDispatchReady)
+                {
+                    return "DESPACHO LISTO";
+                }
+
+                if (reservationStatus == "RESERVED")
+                {
+                    return "RESERVA ACTIVA";
+                }
+
+                if (!string.IsNullOrWhiteSpace(packageStatus))
+                {
+                    return packageStatus.Replace("_", " ");
+                }
+
+                return "SINCRONIZANDO";
+            }
+        }
+
+        public string DispatchStateLine
+        {
+            get
+            {
+                if (PreparedDispatch == null)
+                {
+                    return "Sin reserva o dispatch activo en la web.";
+                }
+
+                return "Reserva " + NormalizeReadable(PreparedDispatch.ReservationStatus) + " · Paquete " + NormalizeReadable(PreparedDispatch.DispatchPackageStatus);
+            }
+        }
+
+        public string DispatchSourceLine
+        {
+            get
+            {
+                if (PreparedDispatch == null)
+                {
+                    return "Fuente oficial: Web Patagonia Wings";
+                }
+
+                var origin = !string.IsNullOrWhiteSpace(PreparedDispatch.DispatchPackageStatus)
+                    ? "Web Patagonia Wings · package " + PreparedDispatch.DispatchPackageStatus.Trim()
+                    : "Web Patagonia Wings";
+                return "Fuente oficial: " + origin;
+            }
+        }
+
+        public string FlightModeLine
+        {
+            get
+            {
+                if (PreparedDispatch == null || string.IsNullOrWhiteSpace(PreparedDispatch.FlightMode))
+                {
+                    return "Modo operativo no informado por la web.";
+                }
+
+                return "Modo " + PreparedDispatch.FlightMode.Trim();
+            }
+        }
+
+        public string AircraftDisplayLine
+        {
+            get
+            {
+                if (PreparedDispatch == null)
+                {
+                    return "Sin aeronave asignada";
+                }
+
+                var parts = new List<string>();
+                var display = Safe(PreparedDispatch.AircraftDisplayName);
+                var reg = Safe(PreparedDispatch.AircraftRegistration);
+                var icao = Safe(PreparedDispatch.AircraftIcao);
+                var variant = Safe(PreparedDispatch.AircraftVariantCode);
+                var addon = Safe(PreparedDispatch.AddonProvider);
+
+                if (!string.IsNullOrWhiteSpace(display)) parts.Add(display);
+                if (!string.IsNullOrWhiteSpace(reg)) parts.Add(reg);
+                if (!string.IsNullOrWhiteSpace(icao)) parts.Add(icao);
+                if (!string.IsNullOrWhiteSpace(variant)) parts.Add(variant);
+                if (!string.IsNullOrWhiteSpace(addon)) parts.Add(addon);
+
+                return parts.Count == 0 ? "Sin aeronave asignada" : string.Join(" · ", parts.Distinct().ToArray());
+            }
+        }
+
+        public string RouteDisplayLine
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(Route))
+                {
+                    return Route;
+                }
+
+                if (PreparedDispatch != null && !string.IsNullOrWhiteSpace(PreparedDispatch.RouteCode))
+                {
+                    return PreparedDispatch.RouteCode;
+                }
+
+                return "Ruta pendiente desde despacho web.";
+            }
+        }
+
+        public string FuelDisplayLine
+        {
+            get
+            {
+                if (PreparedDispatch == null)
+                {
+                    return "—";
+                }
+
+                if (PreparedDispatch.FuelPlannedKg > 0)
+                {
+                    return FormatKg(PreparedDispatch.FuelPlannedKg);
+                }
+
+                return "No informado";
+            }
+        }
+
+        public string PayloadDisplayLine
+        {
+            get
+            {
+                if (PreparedDispatch == null)
+                {
+                    return "—";
+                }
+
+                var parts = new List<string>();
+                if (PreparedDispatch.PayloadKg > 0)
+                {
+                    parts.Add("Payload " + FormatKg(PreparedDispatch.PayloadKg));
+                }
+                if (PreparedDispatch.ZeroFuelWeightKg > 0)
+                {
+                    parts.Add("ZFW " + FormatKg(PreparedDispatch.ZeroFuelWeightKg));
+                }
+                if (PreparedDispatch.PassengerCount > 0)
+                {
+                    parts.Add(PreparedDispatch.PassengerCount + " pax");
+                }
+
+                return parts.Count == 0 ? "No informado" : string.Join(" · ", parts.ToArray());
+            }
+        }
+
+        public string BlockDisplayLine
+        {
+            get
+            {
+                if (PreparedDispatch == null)
+                {
+                    return "—";
+                }
+
+                var parts = new List<string>();
+                if (PreparedDispatch.ScheduledBlockMinutes > 0)
+                {
+                    parts.Add("STD " + FormatMinutes(PreparedDispatch.ScheduledBlockMinutes));
+                }
+                if (PreparedDispatch.ExpectedBlockP50Minutes > 0)
+                {
+                    parts.Add("P50 " + FormatMinutes(PreparedDispatch.ExpectedBlockP50Minutes));
+                }
+                if (PreparedDispatch.ExpectedBlockP80Minutes > 0)
+                {
+                    parts.Add("P80 " + FormatMinutes(PreparedDispatch.ExpectedBlockP80Minutes));
+                }
+                if (PreparedDispatch.ScheduledDepartureUtc.HasValue)
+                {
+                    parts.Add("ETD " + PreparedDispatch.ScheduledDepartureUtc.Value.ToString("HH:mm") + "Z");
+                }
+
+                return parts.Count == 0 ? "Sin block publicado" : string.Join(" · ", parts.ToArray());
+            }
+        }
+
+        public string StartButtonTitle
+        {
+            get
+            {
+                if (IsLoadingDispatch)
+                {
+                    return "SINCRONIZANDO DESPACHO";
+                }
+
+                if (FlightStarted)
+                {
+                    return "VUELO ACARS INICIADO";
+                }
+
+                if (CanStartFlight)
+                {
+                    return "INICIAR VUELO ACARS";
+                }
+
+                return "DESPACHO PENDIENTE";
+            }
+        }
+
+        public string StartButtonSubtitle
+        {
+            get
+            {
+                if (IsLoadingDispatch)
+                {
+                    return "Leyendo reserva activa y dispatch preparado desde Patagonia Wings Web.";
+                }
+
+                if (FlightStarted)
+                {
+                    return "El ACARS ya tomó control del vuelo y bloqueó la navegación operacional.";
+                }
+
+                if (PreparedDispatch == null)
+                {
+                    return "Necesitas una reserva activa con dispatch preparado en la web.";
+                }
+
+                if (!PreparedDispatch.IsDispatchReady)
+                {
+                    return "La reserva existe, pero el dispatch aún no está liberado para ACARS.";
+                }
+
+                return "Sim seleccionado: " + SelectedSim + " · el inicio validará la reserva web antes de entrar en vuelo.";
+            }
+        }
+
+        public string DepartureWeatherSummary { get { return BuildWeatherSummary(DepWeather); } }
+        public string ArrivalWeatherSummary { get { return BuildWeatherSummary(ArrWeather); } }
+        public string OperationalMinimaSummary { get { return BuildOperationalMinimaSummary(); } }
+        public string OperationalQualificationsSummary { get { return BuildOperationalQualificationsSummary(); } }
+
+        public async Task LoadPreparedDispatchAsync()
+        {
+            var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+            if (pilot == null || string.IsNullOrWhiteSpace(pilot.CallSign))
+            {
+                StatusMessage = "Inicia sesión para sincronizar la reserva activa desde Patagonia Wings Web.";
+                return;
+            }
+
+            if (IsLoadingDispatch)
+            {
+                return;
+            }
+
+            IsLoadingDispatch = true;
+            StatusMessage = "Sincronizando despacho web para " + pilot.CallSign.Trim().ToUpperInvariant() + "...";
+
+            try
+            {
+                PreparedDispatch dispatch = null;
+
+                var preparedTask = AcarsContext.Api.GetPreparedDispatchAsync(pilot.CallSign);
+                var preparedCompleted = await Task.WhenAny(preparedTask, Task.Delay(TimeSpan.FromSeconds(10)));
+                if (preparedCompleted == preparedTask)
+                {
+                    var preparedResult = await preparedTask;
+                    Debug.WriteLine("[PreFlight] prepared => success=" + preparedResult.Success + " error=" + preparedResult.Error);
+                    if (preparedResult.Success)
+                    {
+                        dispatch = preparedResult.Data;
+                    }
+                    else if (!string.IsNullOrWhiteSpace(preparedResult.Error))
+                    {
+                        StatusMessage = preparedResult.Error;
+                    }
+                }
+                else
+                {
+                    StatusMessage = "Timeout cargando despacho web. Revisa la conexión o vuelve a recargar.";
+                }
+
+                if (dispatch == null)
+                {
+                    var readyTask = AcarsContext.Api.GetReadyForAcarsFlightAsync(pilot.CallSign);
+                    var readyCompleted = await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(8)));
+                    if (readyCompleted == readyTask)
+                    {
+                        var readyResult = await readyTask;
+                        Debug.WriteLine("[PreFlight] ready => success=" + readyResult.Success + " error=" + readyResult.Error);
+                        if (readyResult.Success && readyResult.Data != null)
+                        {
+                            ReadyFlight = readyResult.Data;
+                            dispatch = readyResult.Data.ToPreparedDispatch();
+                        }
+                        else if (string.IsNullOrWhiteSpace(StatusMessage))
+                        {
+                            StatusMessage = string.IsNullOrWhiteSpace(readyResult.Error)
+                                ? "No hay una reserva activa disponible para ACARS."
+                                : readyResult.Error;
+                        }
+                    }
+                }
+
+                if (dispatch == null)
+                {
+                    if (AcarsContext.Runtime.CurrentReadyFlight != null)
+                    {
+                        ReadyFlight = AcarsContext.Runtime.CurrentReadyFlight;
+                        ApplyDispatchSnapshot(AcarsContext.Runtime.CurrentReadyFlight.ToPreparedDispatch());
+                        StatusMessage = "Usando el último despacho almacenado localmente.";
+                        _ = LoadMetarAsync();
+                        return;
+                    }
+
+                    ClearLoadedFlight(false);
+                    if (string.IsNullOrWhiteSpace(StatusMessage))
+                    {
+                        StatusMessage = "No hay ninguna reserva activa. Prepara el vuelo primero desde Patagonia Wings Web.";
+                    }
+                    return;
+                }
+
+                ApplyDispatchSnapshot(dispatch);
+                ReadyFlight = BuildReadyFlight(dispatch, pilot.CallSign);
+                if (ReadyFlight != null)
+                {
+                    AcarsContext.Runtime.SetReadyFlight(ReadyFlight);
+                }
+
+                FlightStarted = false;
+                StatusMessage = dispatch.IsDispatchReady
+                    ? "Despacho listo desde la web. Revisa METAR y simulador antes de iniciar el ACARS."
+                    : "Reserva cargada desde la web. El dispatch todavía no está liberado para ACARS.";
+
+                _ = LoadMetarAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[PreFlight] LoadPreparedDispatchAsync => " + ex);
+                if (AcarsContext.Runtime.CurrentReadyFlight != null)
+                {
+                    ReadyFlight = AcarsContext.Runtime.CurrentReadyFlight;
+                    ApplyDispatchSnapshot(AcarsContext.Runtime.CurrentReadyFlight.ToPreparedDispatch());
+                    StatusMessage = "Se mantuvo el último despacho local. Error remoto: " + ex.Message;
+                }
+                else
+                {
+                    ClearLoadedFlight(false);
+                    StatusMessage = "No se pudo sincronizar el despacho web: " + ex.Message;
+                }
+            }
+            finally
+            {
+                IsLoadingDispatch = false;
+            }
+        }
+
+        private void ApplyDispatchSnapshot(PreparedDispatch dispatch)
+        {
+            PreparedDispatch = dispatch;
+            FlightNumber = FirstNonEmpty(dispatch.FlightDesignator, dispatch.FlightNumber, dispatch.RouteCode);
+            DepartureIcao = Safe(dispatch.DepartureIcao).ToUpperInvariant();
+            ArrivalIcao = Safe(dispatch.ArrivalIcao).ToUpperInvariant();
+            AircraftIcao = FirstNonEmpty(dispatch.AircraftIcao, dispatch.AircraftDisplayName, dispatch.AircraftRegistration);
+            Route = FirstNonEmpty(dispatch.RouteText, dispatch.RouteCode);
+            Remarks = Safe(dispatch.Remarks);
+
+            if (!string.IsNullOrWhiteSpace(dispatch.CruiseLevel))
+            {
+                var normalized = dispatch.CruiseLevel.Trim().ToUpperInvariant().Replace("FL", string.Empty);
+                int parsed;
+                if (int.TryParse(normalized, out parsed))
+                {
+                    PlannedAlt = parsed >= 1000 ? parsed : parsed * 100;
+                }
+            }
+
             ApplyPilotPreferences();
-            SyncFromRuntime();
+            OnPropertyChanged(nameof(DepartureWeatherSummary));
+            OnPropertyChanged(nameof(ArrivalWeatherSummary));
+            OnPropertyChanged(nameof(OperationalMinimaSummary));
+            OnPropertyChanged(nameof(OperationalQualificationsSummary));
+        }
+
+        private AcarsReadyFlight BuildReadyFlight(PreparedDispatch dispatch, string pilotCallsign)
+        {
+            if (dispatch == null)
+            {
+                return null;
+            }
+
+            return new AcarsReadyFlight
+            {
+                ReservationId = dispatch.ReservationId,
+                DispatchPackageId = dispatch.DispatchId,
+                PilotCallsign = pilotCallsign,
+                PilotUserId = dispatch.PilotUserId,
+                RankCode = dispatch.RankCode,
+                CareerRankCode = dispatch.CareerRankCode,
+                BaseHubCode = dispatch.BaseHubCode,
+                CurrentAirportCode = dispatch.CurrentAirportCode,
+                FlightModeCode = dispatch.FlightMode,
+                RouteCode = dispatch.RouteCode,
+                FlightNumber = FirstNonEmpty(dispatch.FlightDesignator, dispatch.FlightNumber, dispatch.RouteCode),
+                OriginIdent = dispatch.DepartureIcao,
+                DestinationIdent = dispatch.ArrivalIcao,
+                AircraftId = dispatch.AircraftId,
+                AircraftRegistration = dispatch.AircraftRegistration,
+                AircraftTypeCode = dispatch.AircraftIcao,
+                AircraftDisplayName = dispatch.AircraftDisplayName,
+                AircraftVariantCode = dispatch.AircraftVariantCode,
+                AddonProvider = dispatch.AddonProvider,
+                RouteText = FirstNonEmpty(dispatch.RouteText, dispatch.RouteCode),
+                PlannedAltitude = PlannedAlt,
+                PlannedSpeed = PlannedSpeed,
+                CruiseLevel = dispatch.CruiseLevel,
+                AlternateIcao = dispatch.AlternateIcao,
+                DispatchToken = dispatch.DispatchToken,
+                SimbriefUsername = dispatch.SimbriefUsername,
+                Remarks = dispatch.Remarks,
+                ScheduledDepartureUtc = dispatch.ScheduledDepartureUtc,
+                ReadyForAcars = dispatch.IsDispatchReady,
+                SimbriefStatus = dispatch.SimbriefStatus,
+                ReservationStatus = dispatch.ReservationStatus,
+                DispatchStatus = dispatch.DispatchPackageStatus,
+                PassengerCount = dispatch.PassengerCount,
+                CargoKg = dispatch.CargoKg,
+                FuelPlannedKg = dispatch.FuelPlannedKg,
+                PayloadKg = dispatch.PayloadKg,
+                ZeroFuelWeightKg = dispatch.ZeroFuelWeightKg,
+                ScheduledBlockMinutes = dispatch.ScheduledBlockMinutes,
+                ExpectedBlockP50Minutes = dispatch.ExpectedBlockP50Minutes,
+                ExpectedBlockP80Minutes = dispatch.ExpectedBlockP80Minutes
+            };
         }
 
         private async Task StartFlightAsync()
         {
-            if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady || ReadyFlight == null)
+            if (PreparedDispatch == null)
             {
-                StatusMessage = "No hay vuelo reservado/despachado listo para ACARS. Preparalo primero desde la web.";
+                StatusMessage = "No existe un dispatch listo desde la web.";
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(FlightNumber) ||
-                string.IsNullOrWhiteSpace(DepartureIcao) ||
-                string.IsNullOrWhiteSpace(ArrivalIcao) ||
-                string.IsNullOrWhiteSpace(AircraftIcao))
+            if (!PreparedDispatch.IsDispatchReady)
             {
-                StatusMessage = "La reserva activa llegó incompleta. Recarga el despacho desde la web.";
+                StatusMessage = "La reserva todavía no está en estado despachable. Complétala primero en la web.";
                 return;
             }
 
@@ -277,24 +653,24 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 ReservationId = PreparedDispatch.ReservationId,
                 DispatchPackageId = PreparedDispatch.DispatchId,
                 AircraftId = PreparedDispatch.AircraftId,
-                FlightNumber = FlightNumber.ToUpperInvariant(),
-                DepartureIcao = DepartureIcao.ToUpperInvariant(),
-                ArrivalIcao = ArrivalIcao.ToUpperInvariant(),
-                AircraftIcao = AircraftIcao.ToUpperInvariant(),
+                FlightNumber = Safe(FlightNumber).ToUpperInvariant(),
+                DepartureIcao = Safe(DepartureIcao).ToUpperInvariant(),
+                ArrivalIcao = Safe(ArrivalIcao).ToUpperInvariant(),
+                AircraftIcao = Safe(AircraftIcao).ToUpperInvariant(),
                 AircraftTypeCode = PreparedDispatch.AircraftIcao,
                 AircraftName = string.IsNullOrWhiteSpace(PreparedDispatch.AircraftDisplayName)
-                    ? AircraftIcao.ToUpperInvariant()
+                    ? Safe(AircraftIcao).ToUpperInvariant()
                     : PreparedDispatch.AircraftDisplayName,
                 AircraftDisplayName = PreparedDispatch.AircraftDisplayName,
                 AircraftVariantCode = PreparedDispatch.AircraftVariantCode,
                 AddonProvider = PreparedDispatch.AddonProvider,
-                Route = Route,
+                Route = Safe(Route),
                 FlightModeCode = PreparedDispatch.FlightMode,
                 RouteCode = PreparedDispatch.RouteCode,
                 PlannedAltitude = PlannedAlt,
                 PlannedSpeed = PlannedSpeed,
-                Remarks = Remarks,
                 Simulator = SelectedSim,
+                Remarks = Safe(Remarks),
                 StartTime = DateTime.UtcNow
             };
 
@@ -309,135 +685,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 AcarsContext.Sound.PlayDing();
                 _ = AcarsContext.Sound.PlayGroundBienvenidoAsync();
                 FlightStarted = true;
-                StatusMessage = "Vuelo " + FlightNumber + " iniciado desde la reserva activa. El ACARS queda bloqueado en vista operacional.";
+                StatusMessage = "Vuelo " + FlightNumber + " iniciado. El ACARS tomó el despacho oficial desde la web.";
             }
             else
             {
-                StatusMessage = "Error al registrar vuelo: " + result.Error;
+                StatusMessage = "No se pudo iniciar el vuelo ACARS: " + result.Error;
             }
-        }
-
-        public async Task LoadPreparedDispatchAsync()
-        {
-            var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
-            if (pilot == null || string.IsNullOrWhiteSpace(pilot.CallSign))
-            {
-                StatusMessage = "Inicia sesión para cargar la reserva activa desde la web.";
-                return;
-            }
-
-            IsLoadingDispatch = true;
-
-            try
-            {
-                var result = await AcarsContext.Api.GetReadyForAcarsFlightAsync(pilot.CallSign);
-                if (!result.Success || result.Data == null)
-                {
-                    if (AcarsContext.Runtime.CurrentReadyFlight != null)
-                    {
-                        ApplyReadyFlight(AcarsContext.Runtime.CurrentReadyFlight);
-                        StatusMessage = "Usando la última reserva almacenada en memoria.";
-                        return;
-                    }
-
-                    ClearLoadedFlight(false);
-                    StatusMessage = string.IsNullOrWhiteSpace(result.Error)
-                        ? "No hay ninguna reserva activa. Crea una desde la web de Patagonia Wings."
-                        : result.Error;
-                    return;
-                }
-
-                ApplyReadyFlight(result.Data);
-                AcarsContext.Runtime.SetReadyFlight(result.Data);
-                FlightStarted = false;
-
-                var dispatch = result.Data.ToPreparedDispatch();
-                Debug.WriteLine($"[PreFlight] ReservationStatus='{dispatch.ReservationStatus}' DispatchStatus='{dispatch.DispatchPackageStatus}' IsReady={dispatch.IsDispatchReady}");
-
-                if (dispatch.IsDispatchReady)
-                    StatusMessage = "Despacho listo: " + result.Data.FlightNumber + " " + result.Data.OriginIdent + " → " + result.Data.DestinationIdent + ". Puedes iniciar el vuelo.";
-                else
-                    StatusMessage = "Reserva cargada: " + result.Data.FlightNumber + " " + result.Data.OriginIdent + " → " + result.Data.DestinationIdent + ". Despacha desde la web para iniciar vuelo.";
-                await LoadMetarAsync();
-            }
-            catch (Exception ex)
-            {
-                if (AcarsContext.Runtime.CurrentReadyFlight != null)
-                {
-                    ApplyReadyFlight(AcarsContext.Runtime.CurrentReadyFlight);
-                    StatusMessage = "Se mantuvo la reserva activa en memoria. Error remoto: " + ex.Message;
-                }
-                else
-                {
-                    ClearLoadedFlight(false);
-                    StatusMessage = "No se pudo cargar el vuelo listo para ACARS: " + ex.Message;
-                }
-            }
-            finally
-            {
-                IsLoadingDispatch = false;
-            }
-        }
-
-        private void ApplyReadyFlight(AcarsReadyFlight readyFlight)
-        {
-            ReadyFlight = readyFlight;
-            PreparedDispatch = readyFlight.ToPreparedDispatch();
-            FlightNumber = readyFlight.FlightNumber;
-            DepartureIcao = readyFlight.OriginIdent;
-            ArrivalIcao = readyFlight.DestinationIdent;
-            AircraftIcao = readyFlight.AircraftTypeCode;
-            Route = readyFlight.RouteText;
-            PlannedAlt = readyFlight.PlannedAltitude ?? PlannedAlt;
-            PlannedSpeed = readyFlight.PlannedSpeed ?? PlannedSpeed;
-            Remarks = readyFlight.Remarks;
-            ApplyPilotPreferences();
-        }
-
-        private void ClearLoadedFlight(bool clearRuntime)
-        {
-            ReadyFlight = null;
-            PreparedDispatch = null;
-            FlightStarted = false;
-            FlightNumber = string.Empty;
-            DepartureIcao = string.Empty;
-            ArrivalIcao = string.Empty;
-            AircraftIcao = string.Empty;
-            Route = string.Empty;
-            Remarks = string.Empty;
-            ResetWeatherContext();
-            if (clearRuntime)
-            {
-                AcarsContext.Runtime.ClearDispatch();
-            }
-        }
-
-        private void OnRuntimeChanged()
-        {
-            SyncFromRuntime();
-        }
-
-        private void SyncFromRuntime()
-        {
-            var runtimeFlight = AcarsContext.Runtime.CurrentReadyFlight;
-            if (runtimeFlight != null && (ReadyFlight == null || runtimeFlight.ReservationId != ReadyFlight.ReservationId))
-            {
-                ApplyReadyFlight(runtimeFlight);
-            }
-            ApplyPilotPreferences();
-        }
-
-        private void ApplyPilotPreferences()
-        {
-            var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
-            if (pilot == null)
-            {
-                SelectedSim = SimulatorType.MSFS2020;
-                return;
-            }
-
-            var preferred = (pilot.PreferredSimulator ?? string.Empty).Trim().ToUpperInvariant();
-            SelectedSim = preferred.Contains("2024") ? SimulatorType.MSFS2024 : SimulatorType.MSFS2020;
         }
 
         private async Task LoadMetarAsync()
@@ -459,12 +712,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     {
                         DepWeather = response.Data;
                         DepMetar = response.Data.RawMetar;
-                        DepAirport = new Airport
-                        {
-                            Icao = DepartureIcao,
-                            Metar = response.Data.RawMetar,
-                            QNH = response.Data.QNH > 0 ? Math.Round(response.Data.QNH, 0).ToString("F0") : string.Empty
-                        };
                     }
                 }
 
@@ -475,14 +722,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     {
                         ArrWeather = response.Data;
                         ArrMetar = response.Data.RawMetar;
-                        ArrAirport = new Airport
-                        {
-                            Icao = ArrivalIcao,
-                            Metar = response.Data.RawMetar,
-                            QNH = response.Data.QNH > 0 ? Math.Round(response.Data.QNH, 0).ToString("F0") : string.Empty
-                        };
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[PreFlight] LoadMetarAsync => " + ex);
             }
             finally
             {
@@ -496,11 +741,60 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             ArrWeather = null;
             DepMetar = string.Empty;
             ArrMetar = string.Empty;
-            DepAirport = null;
-            ArrAirport = null;
         }
 
-        private static string BuildWeatherSummary(WeatherInfo? weather)
+        private void ClearLoadedFlight(bool clearRuntime)
+        {
+            ReadyFlight = null;
+            PreparedDispatch = null;
+            FlightStarted = false;
+            FlightNumber = string.Empty;
+            DepartureIcao = string.Empty;
+            ArrivalIcao = string.Empty;
+            AircraftIcao = string.Empty;
+            Route = string.Empty;
+            Remarks = string.Empty;
+            ResetWeatherContext();
+
+            if (clearRuntime)
+            {
+                AcarsContext.Runtime.ClearDispatch();
+            }
+        }
+
+        private void OnRuntimeChanged()
+        {
+            SyncFromRuntime();
+        }
+
+        private void SyncFromRuntime()
+        {
+            var runtimeFlight = AcarsContext.Runtime.CurrentReadyFlight;
+            if (runtimeFlight != null)
+            {
+                ReadyFlight = runtimeFlight;
+                if (PreparedDispatch == null || runtimeFlight.ReservationId != PreparedDispatch.ReservationId)
+                {
+                    ApplyDispatchSnapshot(runtimeFlight.ToPreparedDispatch());
+                }
+            }
+            ApplyPilotPreferences();
+        }
+
+        private void ApplyPilotPreferences()
+        {
+            var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+            if (pilot == null)
+            {
+                SelectedSim = SimulatorType.MSFS2020;
+                return;
+            }
+
+            var preferred = Safe(pilot.PreferredSimulator).ToUpperInvariant();
+            SelectedSim = preferred.Contains("2024") ? SimulatorType.MSFS2024 : SimulatorType.MSFS2020;
+        }
+
+        private static string BuildWeatherSummary(WeatherInfo weather)
         {
             if (weather == null)
             {
@@ -516,7 +810,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             else if (weather.IsSnowing) fragments.Add("Nieve");
             else if (weather.IsRaining) fragments.Add("Lluvia");
 
-            return fragments.Count == 0 ? "METAR recibido, pero sin resumen operativo útil." : string.Join(" · ", fragments);
+            return fragments.Count == 0 ? "METAR recibido, pero sin resumen operativo útil." : string.Join(" · ", fragments.ToArray());
         }
 
         private string BuildOperationalMinimaSummary()
@@ -524,7 +818,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             var worstWeather = GetWorstWeather();
             if (worstWeather == null)
             {
-                return "Carga METAR para evaluar QNH, categoría y mínimos operativos.";
+                return "Carga METAR para evaluar categoría, QNH y mínimos operativos antes de liberar el vuelo.";
             }
 
             var advisories = new List<string>();
@@ -532,21 +826,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             if ((DepWeather != null && DepWeather.IsSnowing) || (ArrWeather != null && ArrWeather.IsSnowing)) advisories.Add("nieve");
             else if ((DepWeather != null && DepWeather.IsRaining) || (ArrWeather != null && ArrWeather.IsRaining)) advisories.Add("precipitación");
 
-            if ((DepWeather != null && DepWeather.QNH > 0 && (DepWeather.QNH < 995 || DepWeather.QNH > 1035)) ||
-                (ArrWeather != null && ArrWeather.QNH > 0 && (ArrWeather.QNH < 995 || ArrWeather.QNH > 1035)))
-            {
-                advisories.Add("QNH fuera de rango cómodo");
-            }
+            var baseSummary = GetFlightCategorySeverity(worstWeather.FlightCategory) >= 2
+                ? "Condiciones IFR/LIFR. Revisa alterno, briefing y mínimos con más margen."
+                : (GetFlightCategorySeverity(worstWeather.FlightCategory) == 1
+                    ? "Condiciones MVFR. Ajusta combustible y brief de llegada."
+                    : "Condiciones VFR estables para la operación prevista.");
 
-            var baseSummary = GetFlightCategorySeverity(worstWeather.FlightCategory) switch
-            {
-                3 => "Condiciones LIFR/IFR fuertes. Mínimos restringidos y despacho solo con criterio instrumental.",
-                2 => "Condiciones IFR. Requiere brief fino de aproximación, alterno y mínimos de llegada.",
-                1 => "Condiciones MVFR. Ajusta combustible, briefing y margen operacional.",
-                _ => "Condiciones VFR estables para la operación prevista."
-            };
-
-            return advisories.Count == 0 ? baseSummary : baseSummary + " Riesgos: " + string.Join(", ", advisories) + ".";
+            return advisories.Count == 0 ? baseSummary : baseSummary + " Riesgos: " + string.Join(", ", advisories.ToArray()) + ".";
         }
 
         private string BuildOperationalQualificationsSummary()
@@ -557,23 +843,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return "Sin sesión de piloto para evaluar habilitaciones operativas.";
             }
 
-            var qualificationText = FormatOperationalList(pilot.ActiveQualifications);
-            var certificationText = FormatOperationalList(pilot.ActiveCertifications);
-            var worstWeather = GetWorstWeather();
-            var severeWeather = worstWeather != null &&
-                (GetFlightCategorySeverity(worstWeather.FlightCategory) >= 2 || worstWeather.HasThunderstorm || worstWeather.IsSnowing);
-            var hasInstrumentQualification = HasOperationalToken(pilot.ActiveQualifications, "IFR", "INSTRUMENT", "RNAV", "ILS");
-
-            var advisory = severeWeather
-                ? (hasInstrumentQualification
-                    ? "Perfil instrumental detectado para condiciones degradadas."
-                    : "Verifica habilitación IFR/instrumental antes de liberar este tramo.")
-                : "Operación estándar con habilitaciones vivas cargadas en la sesión.";
-
-            return advisory + " Qual: " + qualificationText + ". Cert: " + certificationText + ".";
+            var qualifications = FormatOperationalList(pilot.ActiveQualifications);
+            var certifications = FormatOperationalList(pilot.ActiveCertifications);
+            return "Qual: " + qualifications + " · Cert: " + certifications;
         }
 
-        private WeatherInfo? GetWorstWeather()
+        private WeatherInfo GetWorstWeather()
         {
             var departureSeverity = GetFlightCategorySeverity(DepWeather == null ? null : DepWeather.FlightCategory);
             var arrivalSeverity = GetFlightCategorySeverity(ArrWeather == null ? null : ArrWeather.FlightCategory);
@@ -581,162 +856,73 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             return DepWeather ?? ArrWeather;
         }
 
-        private static int GetFlightCategorySeverity(string? category)
+        private static int GetFlightCategorySeverity(string category)
         {
-            var normalized = category == null ? string.Empty : category.Trim().ToUpperInvariant();
-            return normalized switch
-            {
-                "LIFR" => 3,
-                "IFR" => 2,
-                "MVFR" => 1,
-                _ => 0
-            };
+            var normalized = Safe(category).ToUpperInvariant();
+            if (normalized == "LIFR") return 3;
+            if (normalized == "IFR") return 2;
+            if (normalized == "MVFR") return 1;
+            return 0;
         }
 
-        private static bool HasOperationalToken(string source, params string[] candidates)
+        private static string Safe(string value)
         {
-            if (string.IsNullOrWhiteSpace(source)) return false;
+            return value == null ? string.Empty : value.Trim();
+        }
 
-            var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var raw in source.Split(new[] { ',', ';', '|', '/' }, StringSplitOptions.RemoveEmptyEntries))
+        private static string FirstNonEmpty(params string[] values)
+        {
+            if (values == null) return string.Empty;
+            foreach (var value in values)
             {
-                var token = raw.Trim();
-                if (token.Length == 0) continue;
-                values.Add(token);
-                values.Add(token.Replace("-", "_").Replace(" ", "_"));
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value.Trim();
+                }
+            }
+            return string.Empty;
+        }
+
+        private static string NormalizeToken(string value)
+        {
+            return Safe(value).ToUpperInvariant();
+        }
+
+        private static string NormalizeReadable(string value)
+        {
+            var normalized = Safe(value).ToLowerInvariant();
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return "sin estado";
+            }
+            return normalized.Replace("_", " ");
+        }
+
+        private static string FormatKg(double value)
+        {
+            return Math.Round(value, 0).ToString("F0") + " kg";
+        }
+
+        private static string FormatMinutes(int minutes)
+        {
+            if (minutes <= 0)
+            {
+                return "—";
             }
 
-            foreach (var candidate in candidates)
+            var hours = minutes / 60;
+            var rem = minutes % 60;
+            if (hours <= 0)
             {
-                if (values.Contains(candidate)) return true;
+                return rem + " min";
             }
 
-            return false;
+            return hours + "h " + rem.ToString("00") + "m";
         }
 
         private static string FormatOperationalList(string source)
         {
             return string.IsNullOrWhiteSpace(source) ? "sin registro" : source.Trim();
-        }
-
-        // ── SIMBRIEF ──────────────────────────────────────────────────────────
-
-        private void OpenSimbriefWebsite()
-        {
-            var dep  = DepartureIcao?.Trim().ToUpperInvariant() ?? string.Empty;
-            var arr  = ArrivalIcao?.Trim().ToUpperInvariant()  ?? string.Empty;
-            var acft = (PreparedDispatch?.AircraftIcao ?? AircraftIcao ?? string.Empty).Trim().ToUpperInvariant();
-            var alt  = PreparedDispatch?.AlternateIcao?.Trim().ToUpperInvariant() ?? string.Empty;
-            var fl   = PreparedDispatch?.CruiseLevel?.Trim() ?? PlannedAlt.ToString();
-            var route = (PreparedDispatch?.RouteText ?? Route ?? string.Empty).Trim().ToUpperInvariant();
-            var fn   = (PreparedDispatch?.FlightNumber ?? FlightNumber ?? string.Empty).Trim().ToUpperInvariant();
-            var user = PreparedDispatch?.SimbriefUsername ?? string.Empty;
-
-            var sb = new System.Text.StringBuilder("https://dispatch.simbrief.com/options/custom?");
-            sb.Append("type=").Append(Uri.EscapeDataString(acft));
-            if (!string.IsNullOrWhiteSpace(dep))   sb.Append("&orig=").Append(Uri.EscapeDataString(dep));
-            if (!string.IsNullOrWhiteSpace(arr))   sb.Append("&dest=").Append(Uri.EscapeDataString(arr));
-            if (!string.IsNullOrWhiteSpace(alt))   sb.Append("&altn=").Append(Uri.EscapeDataString(alt));
-            if (!string.IsNullOrWhiteSpace(fl))    sb.Append("&fl=").Append(Uri.EscapeDataString(fl));
-            if (!string.IsNullOrWhiteSpace(route)) sb.Append("&route=").Append(Uri.EscapeDataString(route));
-            if (!string.IsNullOrWhiteSpace(fn))    sb.Append("&flightnum=").Append(Uri.EscapeDataString(fn));
-            if (!string.IsNullOrWhiteSpace(user))  sb.Append("&airline=PWG");
-
-            try { Process.Start(new ProcessStartInfo(sb.ToString()) { UseShellExecute = true }); }
-            catch (Exception ex) { SimbriefStatus = "No se pudo abrir SimBrief: " + ex.Message; }
-
-            SimbriefStatus = "SimBrief abierto en el navegador. Genera el OFP y luego presiona 'Importar OFP'.";
-        }
-
-        private async Task FetchSimbriefOfpAsync()
-        {
-            var username = PreparedDispatch?.SimbriefUsername?.Trim();
-
-            if (string.IsNullOrWhiteSpace(username))
-            {
-                var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
-                username = pilot?.SimbriefUsername?.Trim();
-            }
-
-            if (string.IsNullOrWhiteSpace(username))
-            {
-                SimbriefStatus = "Usuario SimBrief no configurado. Ingresalo en tu perfil en la web.";
-                return;
-            }
-
-            IsLoadingSimbrief = true;
-            SimbriefStatus = "Buscando último OFP de SimBrief...";
-
-            try
-            {
-                using (var http = new HttpClient { Timeout = TimeSpan.FromSeconds(15) })
-                {
-                    var url = $"https://www.simbrief.com/api/xml.fetcher.php?username={Uri.EscapeDataString(username)}&json=1";
-                    var json = await http.GetStringAsync(url);
-                    var ser  = new JavaScriptSerializer();
-                    var obj  = ser.Deserialize<Dictionary<string, object>>(json);
-
-                    if (obj == null)
-                    {
-                        SimbriefStatus = "No se pudo leer la respuesta de SimBrief.";
-                        return;
-                    }
-
-                    // Extraer datos del OFP
-                    var origin  = GetSimbriefIcao(obj, "origin");
-                    var dest    = GetSimbriefIcao(obj, "destination");
-                    var altn    = GetSimbriefIcao(obj, "alternate");
-                    var fuel    = GetSimbriefValue(obj, "fuel", "plan_ramp");
-                    var fl      = GetSimbriefValue(obj, "general", "initial_altitude");
-                    var route   = GetSimbriefValue(obj, "general", "route");
-
-                    if (!string.IsNullOrWhiteSpace(origin) && !string.IsNullOrWhiteSpace(dest))
-                    {
-                        DepartureIcao     = origin;
-                        ArrivalIcao       = dest;
-                        SimbriefAlternate = altn ?? string.Empty;
-                        SimbriefFuel      = !string.IsNullOrWhiteSpace(fuel) ? (fuel + " kg") : string.Empty;
-                        SimbriefAlt       = !string.IsNullOrWhiteSpace(fl)   ? ("FL" + fl)    : string.Empty;
-                        SimbriefRoute     = route ?? string.Empty;
-
-                        if (!string.IsNullOrWhiteSpace(route))
-                            Route = route;
-                        if (!string.IsNullOrWhiteSpace(fl) && int.TryParse(fl, out var flInt))
-                            PlannedAlt = flInt >= 1000 ? flInt : flInt * 100;
-
-                        SimbriefLoaded = true;
-                        SimbriefStatus = $"OFP cargado: {origin}→{dest}  FL{fl}  Fuel {fuel} kg";
-                        await LoadMetarAsync();
-                    }
-                    else
-                    {
-                        SimbriefStatus = "SimBrief no tiene un OFP activo para este usuario. Genera el plan primero.";
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                SimbriefStatus = "Error al conectar con SimBrief: " + ex.Message;
-                Debug.WriteLine("[SimBrief] " + ex);
-            }
-            finally
-            {
-                IsLoadingSimbrief = false;
-            }
-        }
-
-        private static string? GetSimbriefIcao(Dictionary<string, object> root, string section)
-        {
-            if (!root.TryGetValue(section, out var sec) || !(sec is Dictionary<string, object> d)) return null;
-            if (d.TryGetValue("icao_code", out var v)) return v?.ToString()?.Trim();
-            if (d.TryGetValue("icao",      out var v2)) return v2?.ToString()?.Trim();
-            return null;
-        }
-
-        private static string? GetSimbriefValue(Dictionary<string, object> root, string section, string key)
-        {
-            if (!root.TryGetValue(section, out var sec) || !(sec is Dictionary<string, object> d)) return null;
-            return d.TryGetValue(key, out var v) ? v?.ToString()?.Trim() : null;
         }
     }
 }

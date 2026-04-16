@@ -15,6 +15,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public string FlightModeCode { get; set; } = string.Empty;
         public string RouteCode { get; set; } = string.Empty;
         public string FlightNumber { get; set; } = string.Empty;
+        public string FlightDesignator { get; set; } = string.Empty;
         public string OriginIdent { get; set; } = string.Empty;
         public string DestinationIdent { get; set; } = string.Empty;
         public string AircraftId { get; set; } = string.Empty;
@@ -47,6 +48,10 @@ namespace PatagoniaWings.Acars.Core.Models
 
         public PreparedDispatch ToPreparedDispatch()
         {
+            var flightDesignator = string.IsNullOrWhiteSpace(FlightDesignator)
+                ? FlightNumber
+                : FlightDesignator;
+
             return new PreparedDispatch
             {
                 ReservationId = ReservationId,
@@ -57,8 +62,8 @@ namespace PatagoniaWings.Acars.Core.Models
                 CareerRankCode = CareerRankCode,
                 BaseHubCode = BaseHubCode,
                 CurrentAirportCode = CurrentAirportCode,
-                FlightNumber = FlightNumber,
-                FlightDesignator = FlightNumber,
+                FlightNumber = string.IsNullOrWhiteSpace(FlightNumber) ? flightDesignator : FlightNumber,
+                FlightDesignator = flightDesignator,
                 RouteCode = RouteCode,
                 DepartureIcao = OriginIdent,
                 ArrivalIcao = DestinationIdent,

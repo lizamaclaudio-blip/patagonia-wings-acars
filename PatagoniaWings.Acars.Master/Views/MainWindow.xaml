@@ -4,8 +4,8 @@
         xmlns:pages="clr-namespace:PatagoniaWings.Acars.Master.Views.Pages"
         xmlns:vm="clr-namespace:PatagoniaWings.Acars.Master.ViewModels"
         Title="Patagonia Wings ACARS"
-        Width="1320" Height="820"
-        MinWidth="1100" MinHeight="680"
+        Width="920" Height="580"
+        MinWidth="820" MinHeight="520"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -14,11 +14,11 @@
     <Border CornerRadius="10" ClipToBounds="True">
         <Grid Background="{StaticResource BackgroundDarkBrush}">
             <Grid.RowDefinitions>
-                <RowDefinition Height="46"/>
+                <RowDefinition Height="36"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="220"/>
+                <ColumnDefinition Width="168"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
@@ -30,17 +30,17 @@
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="220"/>
+                        <ColumnDefinition Width="168"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- Logo -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal"
-                                VerticalAlignment="Center" Margin="14,0">
+                                VerticalAlignment="Center" Margin="10,0">
                         <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
-                               Height="22" Width="22" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="PATAGONIA WINGS" FontSize="12" FontWeight="Bold"
+                               Height="18" Width="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="PATAGONIA WINGS" FontSize="10" FontWeight="Bold"
                                    Foreground="{StaticResource AccentLightBlueBrush}" VerticalAlignment="Center"
                                    FontFamily="Segoe UI"/>
                     </StackPanel>
@@ -48,39 +48,36 @@
                     <!-- Info central -->
                     <StackPanel Grid.Column="1" Orientation="Horizontal"
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <!-- Sim status (click para reconectar) -->
-                        <StackPanel Orientation="Horizontal" Margin="0,0,20,0"
+                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0"
                                     MouseLeftButtonDown="SimStatus_Click" Cursor="Hand"
                                     ToolTip="Click para reconectar con MSFS">
-                            <Ellipse Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <Ellipse Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center">
                                 <Ellipse.Fill>
                                     <SolidColorBrush Color="{Binding SimStatusColor}"/>
                                 </Ellipse.Fill>
                             </Ellipse>
                             <TextBlock Text="{Binding SimStatusText}" Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="11" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                                       FontSize="10" FontFamily="Segoe UI" VerticalAlignment="Center"/>
                         </StackPanel>
-                        <TextBlock Text="|" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                        <!-- UTC -->
+                        <TextBlock Text="|" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,16,0"/>
                         <TextBlock Text="{Binding UtcTime}" Foreground="{StaticResource TextSecondaryBrush}"
-                                   FontSize="12" FontFamily="Consolas" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                        <TextBlock Text="|" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,20,0"/>
-                        <!-- Piloto -->
+                                   FontSize="11" FontFamily="Consolas" VerticalAlignment="Center" Margin="0,0,16,0"/>
+                        <TextBlock Text="|" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,16,0"/>
                         <TextBlock Text="{Binding PilotDisplay}" Foreground="{StaticResource TextPrimaryBrush}"
-                                   FontSize="12" FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                                   FontSize="10" FontFamily="Segoe UI" VerticalAlignment="Center"/>
                     </StackPanel>
 
                     <!-- Controles ventana -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal"
-                                VerticalAlignment="Center" Margin="0,0,6,0">
-                        <Button Content="—" Width="36" Height="32" Background="Transparent"
+                                VerticalAlignment="Center" Margin="0,0,4,0">
+                        <Button Content="—" Width="30" Height="28" Background="Transparent"
                                 BorderThickness="0" Foreground="{StaticResource TextSecondaryBrush}" Cursor="Hand"
-                                FontSize="14" Click="BtnMinimize_Click"/>
-                        <Button Content="⬜" Width="36" Height="32" Background="Transparent"
+                                FontSize="12" Click="BtnMinimize_Click"/>
+                        <Button Content="⬜" Width="30" Height="28" Background="Transparent"
                                 BorderThickness="0" Foreground="{StaticResource TextSecondaryBrush}" Cursor="Hand"
-                                FontSize="11" Click="BtnMaximize_Click"/>
-                        <Button Content="✕" Width="36" Height="32" Background="Transparent"
-                                BorderThickness="0" Cursor="Hand" FontSize="13" Click="BtnClose_Click">
+                                FontSize="10" Click="BtnMaximize_Click"/>
+                        <Button Content="✕" Width="30" Height="28" Background="Transparent"
+                                BorderThickness="0" Cursor="Hand" FontSize="11" Click="BtnClose_Click">
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="Background"  Value="Transparent"/>
@@ -108,7 +105,7 @@
                 <DockPanel>
 
                     <!-- Menú de navegación -->
-                    <StackPanel DockPanel.Dock="Top" Margin="8,14">
+                    <StackPanel DockPanel.Dock="Top" Margin="6,10">
 
                         <!-- DASHBOARD -->
                         <Button Command="{Binding NavDashboardCommand}">
@@ -131,7 +128,7 @@
                                 </Style>
                             </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⊞" FontSize="14" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="⊞" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -157,7 +154,7 @@
                                 </Style>
                             </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="✈" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="✈" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Despacho" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -183,7 +180,7 @@
                                 </Style>
                             </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="✈" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="✈" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Vuelo en Vivo" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -209,7 +206,7 @@
                                 </Style>
                             </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="👥" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="👥" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Comunidad" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -235,7 +232,7 @@
                                 </Style>
                             </Button.Style>
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="👤" FontSize="13" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="👤" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Mi Perfil" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -243,12 +240,12 @@
                     </StackPanel>
 
                     <!-- Info piloto + logout al fondo -->
-                    <StackPanel DockPanel.Dock="Bottom" Margin="12,0,12,14">
+                    <StackPanel DockPanel.Dock="Bottom" Margin="8,0,8,10">
                         <!-- Fase actual mini -->
-                        <Border Background="#F0F9FF" CornerRadius="6" Padding="10,7" Margin="0,0,0,10"
+                        <Border Background="#F0F9FF" CornerRadius="5" Padding="8,5" Margin="0,0,0,8"
                                 BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
                             <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="8" Height="8" VerticalAlignment="Center" Margin="0,0,7,0">
+                                <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">
                                             <Setter Property="Fill" Value="#CBD5E1"/>
@@ -273,70 +270,66 @@
                                     </Ellipse.Style>
                                 </Ellipse>
                                 <TextBlock Text="{Binding FlightPhase, Converter={StaticResource PhaseToStringConverter}}"
-                                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="11" FontFamily="Segoe UI"/>
+                                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="10" FontFamily="Segoe UI"/>
                             </StackPanel>
                         </Border>
 
-                        <Separator Background="{StaticResource BorderBrush}" Margin="0,0,0,8"/>
+                        <Separator Background="{StaticResource BorderBrush}" Margin="0,0,0,6"/>
                         <Button Style="{StaticResource SidebarButton}"
                                 Command="{Binding LogoutCommand}">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⏏" FontSize="13" Foreground="#FF4444" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="⏏" FontSize="11" Foreground="#FF4444" Margin="0,0,8,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Cerrar Sesión" Foreground="#FF4444" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <!-- Versión -->
-                        <TextBlock Text="ACARS v3.0" Foreground="#94A3B8"
-                                   FontSize="10" HorizontalAlignment="Center" Margin="0,8,0,0"
+                        <TextBlock Text="ACARS v3.0.8" Foreground="#94A3B8"
+                                   FontSize="9" HorizontalAlignment="Center" Margin="0,6,0,0"
                                    FontFamily="Consolas"/>
                     </StackPanel>
                 </DockPanel>
             </Border>
 
             <!-- ═══ CONTENT AREA ═════════════════════════════════════════════ -->
-            <ScrollViewer Grid.Row="1" Grid.Column="1"
-                          VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled"
-                          Background="{StaticResource BackgroundDarkBrush}">
-                <ContentControl x:Name="PageHost" Margin="24,20">
-                    <ContentControl.Style>
-                        <Style TargetType="ContentControl">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding CurrentPageName}" Value="Dashboard">
-                                    <Setter Property="Content">
-                                        <Setter.Value><pages:DashboardPage/></Setter.Value>
-                                    </Setter>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding CurrentPageName}" Value="PreFlight">
-                                    <Setter Property="Content">
-                                        <Setter.Value><pages:PreFlightPage/></Setter.Value>
-                                    </Setter>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding CurrentPageName}" Value="InFlight">
-                                    <Setter Property="Content">
-                                        <Setter.Value><pages:InFlightPage/></Setter.Value>
-                                    </Setter>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding CurrentPageName}" Value="PostFlight">
-                                    <Setter Property="Content">
-                                        <Setter.Value><pages:PostFlightPage/></Setter.Value>
-                                    </Setter>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding CurrentPageName}" Value="Profile">
-                                    <Setter Property="Content">
-                                        <Setter.Value><pages:ProfilePage/></Setter.Value>
-                                    </Setter>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding CurrentPageName}" Value="Community">
-                                    <Setter Property="Content">
-                                        <Setter.Value><pages:CommunityPage/></Setter.Value>
-                                    </Setter>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ContentControl.Style>
-                </ContentControl>
-            </ScrollViewer>
+            <ContentControl x:Name="PageHost" Grid.Row="1" Grid.Column="1"
+                            Margin="14,12"
+                            Background="{StaticResource BackgroundDarkBrush}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentPageName}" Value="Dashboard">
+                                <Setter Property="Content">
+                                    <Setter.Value><pages:DashboardPage/></Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CurrentPageName}" Value="PreFlight">
+                                <Setter Property="Content">
+                                    <Setter.Value><pages:PreFlightPage/></Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CurrentPageName}" Value="InFlight">
+                                <Setter Property="Content">
+                                    <Setter.Value><pages:InFlightPage/></Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CurrentPageName}" Value="PostFlight">
+                                <Setter Property="Content">
+                                    <Setter.Value><pages:PostFlightPage/></Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CurrentPageName}" Value="Profile">
+                                <Setter Property="Content">
+                                    <Setter.Value><pages:ProfilePage/></Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding CurrentPageName}" Value="Community">
+                                <Setter Property="Content">
+                                    <Setter.Value><pages:CommunityPage/></Setter.Value>
+                                </Setter>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
         </Grid>
     </Border>
 </Window>

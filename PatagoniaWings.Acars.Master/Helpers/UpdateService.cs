@@ -3,6 +3,7 @@ using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -11,9 +12,10 @@ using AutoUpdaterDotNET;
 namespace PatagoniaWings.Acars.Master.Helpers
 {
     /// <summary>
-    /// Servicio de actualización. Usa AutoUpdater.NET sólo para parsear el XML remoto.
-    /// El diálogo se implementa con WPF nativo para evitar el crash por
-    /// AutoUpdaterDotNET.UpdateForm.InitializeComponent (FileNotFoundException en WinForms).
+    /// Actualización automática y silenciosa.
+    /// Al detectar una versión nueva: descarga el instalador en background
+    /// y lo ejecuta con /VERYSILENT /SUPPRESSMSGBOXES, luego cierra la app.
+    /// No requiere ningún click del usuario.
     /// </summary>
     public static class UpdateService
     {
@@ -22,14 +24,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private static bool _checkedThisSession;
 
-        /// <summary>Versión instalada leída desde App.config.</summary>
         public static string CurrentVersion => ReadSetting("AppVersion", GetAssemblyVersion());
 
         static UpdateService()
         {
-            // Suscribimos CheckForUpdateEvent para interceptar el resultado y
-            // mostrar NUESTRO propio diálogo WPF en lugar del UpdateForm de WinForms
-            // (que crashea con FileNotFoundException al buscar satellite assemblies).
             AutoUpdater.CheckForUpdateEvent += OnCheckForUpdate;
         }
 
@@ -38,7 +36,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             if (_checkedThisSession) return;
             _checkedThisSession = true;
 
-            WriteLog($"Checking updates. Installed={CurrentVersion} XML={AutoUpdaterXmlUrl}");
+            WriteLog($"Checking updates silently. Installed={CurrentVersion}");
             try
             {
                 AutoUpdater.Start(AutoUpdaterXmlUrl);
@@ -80,46 +78,114 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 return;
             }
 
-            var available = args?.CurrentVersion?.ToString() ?? "";
-            var installed  = CurrentVersion;
-            var isNewer    = IsVersionNewer(available, installed);
+            var available = args?.CurrentVersion?.ToString() ?? string.Empty;
+            var installed = CurrentVersion;
+            var isNewer = IsVersionNewer(available, installed);
 
             WriteLog($"Check result: installed={installed} available={available} newer={isNewer}");
 
             if (!isNewer) return;
 
-            var downloadUrl = args?.DownloadURL ?? "";
+            var downloadUrl = args?.DownloadURL ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(downloadUrl)) return;
 
+            WriteLog($"Nueva versión {available} detectada. Descargando silenciosamente: {downloadUrl}");
+
+            // Mostrar banner informativo no bloqueante, luego actualizar sin click
             Application.Current?.Dispatcher?.Invoke(() =>
             {
-                try
-                {
-                    var msg = $"Hay una nueva versión disponible de Patagonia Wings ACARS.\n\n" +
-                              $"  Instalada : {installed}\n" +
-                              $"  Disponible: {available}\n\n" +
-                              $"¿Deseas descargar e instalar la actualización ahora?";
-
-                    var result = MessageBox.Show(
-                        msg,
-                        "Patagonia Wings ACARS — Actualización disponible",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information);
-
-                    if (result == MessageBoxResult.Yes && !string.IsNullOrWhiteSpace(downloadUrl))
-                    {
-                        WriteLog($"User accepted update. Opening: {downloadUrl}");
-                        Process.Start(new ProcessStartInfo(downloadUrl) { UseShellExecute = true });
-                    }
-                    else
-                    {
-                        WriteLog("User postponed update.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    WriteLog($"Dialog error: {ex.Message}");
-                }
+                try { ShowUpdateBanner(available); }
+                catch { }
             });
+
+            // Descargar e instalar en background
+            Task.Run(() => DownloadAndInstallSilent(downloadUrl, available));
+        }
+
+        private static void ShowUpdateBanner(string version)
+        {
+            // Ventana toast pequeña, no modal, se cierra sola en 4 segundos
+            var toast = new Window
+            {
+                Width = 320,
+                Height = 60,
+                WindowStyle = WindowStyle.None,
+                AllowsTransparency = true,
+                Background = System.Windows.Media.Brushes.Transparent,
+                Topmost = true,
+                ShowInTaskbar = false,
+                WindowStartupLocation = WindowStartupLocation.Manual,
+            };
+
+            var screen = System.Windows.SystemParameters.WorkArea;
+            toast.Left = screen.Right - 330;
+            toast.Top = screen.Bottom - 70;
+
+            var border = new System.Windows.Controls.Border
+            {
+                Background = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromArgb(230, 2, 132, 199)),
+                CornerRadius = new CornerRadius(8),
+                Child = new System.Windows.Controls.TextBlock
+                {
+                    Text = $"⬆  Actualizando ACARS a v{version}...",
+                    Foreground = System.Windows.Media.Brushes.White,
+                    FontSize = 12,
+                    FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
+                    FontWeight = FontWeights.SemiBold,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    Margin = new Thickness(16, 0, 16, 0)
+                }
+            };
+
+            toast.Content = border;
+            toast.Show();
+
+            var timer = new System.Windows.Threading.DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(4)
+            };
+            timer.Tick += (s, e) => { timer.Stop(); try { toast.Close(); } catch { } };
+            timer.Start();
+        }
+
+        private static void DownloadAndInstallSilent(string downloadUrl, string version)
+        {
+            try
+            {
+                var tempDir = Path.Combine(Path.GetTempPath(), "PWAcarsUpdate");
+                Directory.CreateDirectory(tempDir);
+                var installerPath = Path.Combine(tempDir, $"PatagoniaWingsACARSSetup-{version}.exe");
+
+                WriteLog($"Descargando a: {installerPath}");
+
+                using (var client = new WebClient())
+                {
+                    client.DownloadFile(downloadUrl, installerPath);
+                }
+
+                WriteLog($"Descarga completada. Ejecutando instalador silencioso.");
+
+                var psi = new ProcessStartInfo(installerPath)
+                {
+                    Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-",
+                    UseShellExecute = true
+                };
+
+                Process.Start(psi);
+
+                // Cerrar app para que el instalador pueda reemplazar el exe
+                Application.Current?.Dispatcher?.Invoke(() =>
+                {
+                    WriteLog("Cerrando app para instalar actualización.");
+                    Application.Current.Shutdown();
+                });
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"Error en descarga/instalación silenciosa: {ex.Message}");
+            }
         }
 
         // ── Helpers ──────────────────────────────────────────────────────────────
@@ -129,23 +195,39 @@ namespace PatagoniaWings.Acars.Master.Helpers
             try
             {
                 if (string.IsNullOrWhiteSpace(available)) return false;
-                var avVer   = NormalizeVersion(available);
+
+                var avVer = NormalizeVersion(available);
                 var instVer = NormalizeVersion(installed);
-                return Version.TryParse(avVer, out var a)
-                    && Version.TryParse(instVer, out var b)
-                    && a > b;
+
+                WriteLog($"Normalized => available={avVer} installed={instVer}");
+
+                if (!Version.TryParse(avVer, out var a) || !Version.TryParse(instVer, out var b))
+                    return false;
+
+                return a > b;
             }
-            catch { return false; }
+            catch (Exception ex)
+            {
+                WriteLog($"IsVersionNewer error: {ex.Message}");
+                return false;
+            }
         }
 
-        private static string NormalizeVersion(string v)
+        private static string NormalizeVersion(string value)
         {
-            // Asegura formato Major.Minor.Build.Revision para Version.TryParse
-            // 3.0.5 → 3.0.5.0  |  3.0.5.0 → 3.0.5.0
-            var parts = (v ?? "0").Split('.');
-            while (parts.Length < 4)
-                v += ".0";
-            return v;
+            var raw = string.IsNullOrWhiteSpace(value) ? "0" : value.Trim();
+            var source = raw.Split('.');
+            var normalized = new string[4];
+
+            for (var i = 0; i < normalized.Length; i++)
+            {
+                if (i < source.Length && !string.IsNullOrWhiteSpace(source[i]))
+                    normalized[i] = source[i].Trim();
+                else
+                    normalized[i] = "0";
+            }
+
+            return string.Join(".", normalized);
         }
 
         private static string GetAssemblyVersion()
@@ -154,10 +236,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
             {
                 var ver = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
                               ?.GetName()?.Version;
-                if (ver == null) return "3.0.3";
+                if (ver == null) return "3.0.8";
                 return $"{ver.Major}.{ver.Minor}.{ver.Build}";
             }
-            catch { return "3.0.3"; }
+            catch { return "3.0.8"; }
         }
 
         private static string ReadSetting(string key, string fallback)

@@ -562,11 +562,10 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 Dictionary<string, object>? selectedRow = null;
 
-                // Query directo a flight_reservations usando columnas reales de Supabase:
-                // origin_ident / destination_ident  (NO origin_icao / destination_icao)
-                // PostgREST: múltiples neq se encadenan como parámetros separados
+                // Query directo a flight_reservations usando columnas reales de Supabase.
+                // Priorizamos estados realmente activos del flujo web -> ACARS.
                 var cs = Uri.EscapeDataString(pilotCallsign.Trim().ToUpperInvariant());
-                var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{cs}&status=neq.completed&status=neq.cancelled&status=neq.expired&order=updated_at.desc&limit=5";
+                var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{cs}&status=in.(reserved,dispatch_ready,dispatched,in_progress,in_flight)&order=updated_at.desc.nullslast,created_at.desc.nullslast&limit=5";
                 using (var req = CreateSupabaseRequest(HttpMethod.Get, directEp, true))
                 {
                     var resp = await _http.SendAsync(req);
@@ -596,7 +595,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 }
 
                 var reservationId = FirstNonEmpty(selectedRow, "reservation_id", "id");
-                var dispatchPackage = await GetDispatchPackageAsync(reservationId);
+                var dispatchPackage = await GetDispatchPackageAsync(reservationId, pilotCallsign);
                 var prepared = MapPreparedDispatch(selectedRow, dispatchPackage);
 
                 if (prepared.IsDispatchReady)
@@ -620,8 +619,21 @@ namespace PatagoniaWings.Acars.Core.Services
 
             try
             {
+                Pilot effectivePilot = null;
                 var pilotResult = await GetCurrentPilotFromSupabaseAsync();
-                var readyFlight = MapAcarsReadyFlight(preparedResult.Data, pilotResult.Success ? pilotResult.Data : null);
+                if (pilotResult.Success && pilotResult.Data != null)
+                {
+                    effectivePilot = pilotResult.Data;
+                }
+                else if (!string.IsNullOrWhiteSpace(pilotCallsign))
+                {
+                    effectivePilot = new Pilot
+                    {
+                        CallSign = pilotCallsign.Trim().ToUpperInvariant()
+                    };
+                }
+
+                var readyFlight = MapAcarsReadyFlight(preparedResult.Data, effectivePilot);
                 return ApiResult<AcarsReadyFlight>.Ok(readyFlight);
             }
             catch (Exception ex)
@@ -735,19 +747,41 @@ namespace PatagoniaWings.Acars.Core.Services
             }
         }
 
-        private async Task<Dictionary<string, object>?> GetDispatchPackageAsync(string reservationId)
+        private async Task<Dictionary<string, object>?> GetDispatchPackageAsync(string reservationId, string pilotCallsign = "")
         {
-            if (string.IsNullOrWhiteSpace(reservationId))
+            Dictionary<string, object>? package = null;
+
+            if (!string.IsNullOrWhiteSpace(reservationId))
             {
-                return null;
+                using (var request = CreateSupabaseRequest(
+                           HttpMethod.Get,
+                           $"/rest/v1/dispatch_packages?select=*&reservation_id=eq.{Uri.EscapeDataString(reservationId)}&order=updated_at.desc.nullslast,created_at.desc.nullslast&limit=1",
+                           true))
+                {
+                    var response = await _http.SendAsync(request);
+                    var raw = await response.Content.ReadAsStringAsync();
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var list = _json.DeserializeObject(raw) as object[];
+                        if (list != null && list.Length > 0)
+                        {
+                            package = list[0] as Dictionary<string, object>;
+                        }
+                    }
+                }
             }
 
-            using (var request = CreateSupabaseRequest(
+            if (package != null || string.IsNullOrWhiteSpace(pilotCallsign))
+            {
+                return package;
+            }
+
+            using (var fallbackRequest = CreateSupabaseRequest(
                        HttpMethod.Get,
-                       $"/rest/v1/dispatch_packages?select=*&reservation_id=eq.{Uri.EscapeDataString(reservationId)}&order=updated_at.desc.nullslast&limit=1",
+                       $"/rest/v1/dispatch_packages?select=*&pilot_callsign=eq.{Uri.EscapeDataString(pilotCallsign.Trim().ToUpperInvariant())}&dispatch_status=in.(prepared,ready,validated,dispatched,released)&order=updated_at.desc.nullslast,created_at.desc.nullslast&limit=1",
                        true))
             {
-                var response = await _http.SendAsync(request);
+                var response = await _http.SendAsync(fallbackRequest);
                 var raw = await response.Content.ReadAsStringAsync();
                 if (!response.IsSuccessStatusCode)
                 {
@@ -1637,19 +1671,41 @@ namespace PatagoniaWings.Acars.Core.Services
             Dictionary<string, object> reservationRow,
             Dictionary<string, object>? dispatchPackage)
         {
-            var flightDesignator = NormalizeCommercialFlightNumber(
-                FirstNonEmpty(reservationRow, "flight_designator"),
-                FirstNonEmpty(reservationRow, "flight_number", "route_code"));
-            var aircraftIcao = ResolveAcarsAircraftIcao(
-                FirstNonEmpty(reservationRow, "aircraft_type_code", "aircraft_code"));
-
             var safeDispatchPackage = dispatchPackage ?? new Dictionary<string, object>();
 
-            // Extraer simbrief_normalized (jsonb) como fuente adicional de datos SimBrief.
-            // Supabase devuelve jsonb como Dictionary<string, object> al deserializar.
-            var sbNorm = new Dictionary<string, object>();
-            if (safeDispatchPackage.TryGetValue("simbrief_normalized", out var snRaw) && snRaw is Dictionary<string, object> snDict)
-                sbNorm = snDict;
+            var reservationFlightRef = FirstNonEmpty(reservationRow, "flight_designator", "flight_number", "route_code", "reservation_code");
+            var dispatchFlightRef = FirstNonEmpty(
+                safeDispatchPackage,
+                "flight_designator",
+                "flight_number",
+                "route_code",
+                "reservation_code");
+
+            var flightDesignator = NormalizeCommercialFlightNumber(reservationFlightRef, dispatchFlightRef);
+            if (string.IsNullOrWhiteSpace(flightDesignator))
+                flightDesignator = FirstNonEmpty(safeDispatchPackage, "flight_designator", "flight_number", "route_code",
+                    "reservation_code");
+            if (string.IsNullOrWhiteSpace(flightDesignator))
+                flightDesignator = FirstNonEmpty(reservationRow, "flight_designator", "flight_number", "route_code",
+                    "reservation_code");
+
+            var reservationAircraftRef = FirstNonEmpty(reservationRow, "aircraft_type_code", "aircraft_code");
+            var dispatchAircraftRef = FirstNonEmpty(safeDispatchPackage, "aircraft_type_code", "aircraft_code");
+            var aircraftIcao = ResolveAcarsAircraftIcao(
+                !string.IsNullOrWhiteSpace(reservationAircraftRef) ? reservationAircraftRef : dispatchAircraftRef);
+
+            // Extraer simbrief_normalized / simbrief_ofp_json como fuentes adicionales de datos SimBrief.
+            object rawSimbriefNormalized;
+            object rawSimbriefOfp;
+            safeDispatchPackage.TryGetValue("simbrief_normalized", out rawSimbriefNormalized);
+            safeDispatchPackage.TryGetValue("simbrief_ofp_json", out rawSimbriefOfp);
+
+            var sbNorm = rawSimbriefNormalized == null
+                ? new Dictionary<string, object>()
+                : TryDeserializeJsonObject(rawSimbriefNormalized);
+            var sbOfp = rawSimbriefOfp == null
+                ? new Dictionary<string, object>()
+                : TryDeserializeJsonObject(rawSimbriefOfp);
 
             var routeText = FirstNonEmpty(
                 safeDispatchPackage,
@@ -1665,43 +1721,60 @@ namespace PatagoniaWings.Acars.Core.Services
                 "route_text_compact");
 
             if (string.IsNullOrWhiteSpace(routeText))
+                routeText = FirstNonEmpty(sbNorm, "route_text", "route", "route_string", "route_full", "navlog_route", "simbrief_route", "ats_route");
+            if (string.IsNullOrWhiteSpace(routeText))
+                routeText = FirstNonEmpty(sbOfp, "route_text", "route", "route_string", "route_full", "navlog_route", "simbrief_route", "ats_route");
+            if (string.IsNullOrWhiteSpace(routeText))
                 routeText = FirstNonEmpty(reservationRow, "route_text");
 
-            // alternate_icao: columna directa (legado) o en simbrief_normalized
-            var alternateIcao = FirstNonEmpty(safeDispatchPackage, "alternate_icao", "alternate_ident");
+            // alternate_icao: columna directa, normalized u OFP.
+            var alternateIcao = FirstNonEmpty(safeDispatchPackage, "alternate_icao", "alternate_ident", "alternate");
             if (string.IsNullOrWhiteSpace(alternateIcao))
-                alternateIcao = FirstNonEmpty(sbNorm, "alternate_icao");
+                alternateIcao = FirstNonEmpty(sbNorm, "alternate_icao", "alternate_ident", "alternate");
+            if (string.IsNullOrWhiteSpace(alternateIcao))
+                alternateIcao = FirstNonEmpty(sbOfp, "alternate_icao", "alternate_ident", "alternate");
 
-            // dispatch_token: columna directa o en simbrief_normalized
+            // dispatch_token: columna directa, normalized u OFP
             var dispatchToken = FirstNonEmpty(safeDispatchPackage, "dispatch_token", "token");
             if (string.IsNullOrWhiteSpace(dispatchToken))
-                dispatchToken = FirstNonEmpty(sbNorm, "dispatch_token");
+                dispatchToken = FirstNonEmpty(sbNorm, "dispatch_token", "token");
+            if (string.IsNullOrWhiteSpace(dispatchToken))
+                dispatchToken = FirstNonEmpty(sbOfp, "dispatch_token", "token");
 
-            // Datos de carga/combustible: columnas reales de dispatch_packages o simbrief_normalized
+            // Datos de carga/combustible: columnas reales de dispatch_packages o payloads SimBrief.
             var passengerCount = ConvertToInt(safeDispatchPackage, "passenger_count",
                                      ConvertToInt(sbNorm, "passenger_count",
-                                         ConvertToInt(safeDispatchPackage, "pax_count", 0)));
+                                         ConvertToInt(sbOfp, "passenger_count",
+                                             ConvertToInt(safeDispatchPackage, "pax_count", 0))));
             var cargoKg = FirstNonEmptyNumber(safeDispatchPackage, "cargo_kg");
             if (cargoKg <= 0) cargoKg = FirstNonEmptyNumber(sbNorm, "cargo_kg");
+            if (cargoKg <= 0) cargoKg = FirstNonEmptyNumber(sbOfp, "cargo_kg");
 
-            // planned_fuel_kg  = nombre real de la columna (era fuel_planned_kg en versiones anteriores)
             var fuelPlannedKg = FirstNonEmptyNumber(safeDispatchPackage, "planned_fuel_kg", "fuel_planned_kg", "block_fuel_kg", "fuel_block_kg");
-            if (fuelPlannedKg <= 0) fuelPlannedKg = FirstNonEmptyNumber(sbNorm, "block_fuel_kg", "fuel_planned_kg");
+            if (fuelPlannedKg <= 0) fuelPlannedKg = FirstNonEmptyNumber(sbNorm, "block_fuel_kg", "fuel_planned_kg", "planned_fuel_kg");
+            if (fuelPlannedKg <= 0) fuelPlannedKg = FirstNonEmptyNumber(sbOfp, "block_fuel_kg", "fuel_planned_kg", "planned_fuel_kg");
 
-            // planned_payload_kg = nombre real de la columna (era payload_kg)
             var payloadKg = FirstNonEmptyNumber(safeDispatchPackage, "planned_payload_kg", "payload_kg");
-            if (payloadKg <= 0) payloadKg = FirstNonEmptyNumber(sbNorm, "payload_kg");
+            if (payloadKg <= 0) payloadKg = FirstNonEmptyNumber(sbNorm, "payload_kg", "planned_payload_kg");
+            if (payloadKg <= 0) payloadKg = FirstNonEmptyNumber(sbOfp, "payload_kg", "planned_payload_kg");
 
             var zfwKg = FirstNonEmptyNumber(safeDispatchPackage, "zero_fuel_weight_kg");
             if (zfwKg <= 0) zfwKg = FirstNonEmptyNumber(sbNorm, "zero_fuel_weight_kg", "zfw_kg");
+            if (zfwKg <= 0) zfwKg = FirstNonEmptyNumber(sbOfp, "zero_fuel_weight_kg", "zfw_kg");
 
             var scheduledBlock = ConvertToInt(safeDispatchPackage, "scheduled_block_minutes",
-                                     ConvertToInt(sbNorm, "scheduled_block_minutes", 0));
+                                     ConvertToInt(sbNorm, "scheduled_block_minutes",
+                                         ConvertToInt(sbOfp, "scheduled_block_minutes",
+                                             ConvertToInt(safeDispatchPackage, "estimated_enroute_min", 0))));
             var blockP50 = ConvertToInt(safeDispatchPackage, "expected_block_p50_minutes",
-                               ConvertToInt(sbNorm, "expected_block_p50_minutes", 0));
+                               ConvertToInt(sbNorm, "expected_block_p50_minutes",
+                                   ConvertToInt(sbOfp, "expected_block_p50_minutes", 0)));
             var blockP80 = ConvertToInt(safeDispatchPackage, "expected_block_p80_minutes",
-                               ConvertToInt(sbNorm, "expected_block_p80_minutes", 0));
-            var scheduledDeparture = ConvertToDateTime(reservationRow, "scheduled_departure");
+                               ConvertToInt(sbNorm, "expected_block_p80_minutes",
+                                   ConvertToInt(sbOfp, "expected_block_p80_minutes", 0)));
+            var scheduledDeparture = ConvertToDateTime(safeDispatchPackage, "planned_offblock_at")
+                                     ?? ConvertToDateTime(safeDispatchPackage, "planned_engine_start_at")
+                                     ?? ConvertToDateTime(reservationRow, "scheduled_departure");
 
             return new PreparedDispatch
             {
@@ -1715,16 +1788,32 @@ namespace PatagoniaWings.Acars.Core.Services
                 CurrentAirportCode = FirstNonEmpty(reservationRow, "current_airport_code", "current_airport_icao"),
                 FlightNumber       = flightDesignator,
                 FlightDesignator   = flightDesignator,
-                RouteCode          = FirstNonEmpty(reservationRow, "route_code"),
-                DepartureIcao      = FirstNonEmpty(reservationRow, "origin_ident", "origin_icao"),
-                ArrivalIcao        = FirstNonEmpty(reservationRow, "destination_ident", "destination_icao"),
+                RouteCode          = FirstNonEmpty(reservationRow, "route_code", "reservation_code") is string rc && !string.IsNullOrWhiteSpace(rc)
+                                        ? rc
+                                        : FirstNonEmpty(safeDispatchPackage, "route_code"),
+                DepartureIcao      = FirstNonEmpty(reservationRow, "origin_ident", "origin_icao") is string dep && !string.IsNullOrWhiteSpace(dep)
+                                        ? dep
+                                        : FirstNonEmpty(safeDispatchPackage, "origin_ident", "origin_icao"),
+                ArrivalIcao        = FirstNonEmpty(reservationRow, "destination_ident", "destination_icao") is string arr && !string.IsNullOrWhiteSpace(arr)
+                                        ? arr
+                                        : FirstNonEmpty(safeDispatchPackage, "planned_destination_ident", "destination_ident", "destination_icao"),
                 AlternateIcao      = alternateIcao,
-                AircraftId         = FirstNonEmpty(reservationRow, "aircraft_id"),
+                AircraftId         = FirstNonEmpty(reservationRow, "aircraft_id") is string aid && !string.IsNullOrWhiteSpace(aid)
+                                        ? aid
+                                        : FirstNonEmpty(safeDispatchPackage, "aircraft_id"),
                 AircraftIcao       = aircraftIcao,
-                AircraftRegistration  = FirstNonEmpty(reservationRow, "aircraft_registration", "registration"),
-                AircraftDisplayName   = FirstNonEmpty(reservationRow, "aircraft_display_name", "display_name", "aircraft_name"),
-                AircraftVariantCode   = FirstNonEmpty(reservationRow, "aircraft_variant_code", "variant_code"),
-                AddonProvider         = FirstNonEmpty(reservationRow, "addon_provider"),
+                AircraftRegistration  = FirstNonEmpty(reservationRow, "aircraft_registration", "registration") is string reg && !string.IsNullOrWhiteSpace(reg)
+                                        ? reg
+                                        : FirstNonEmpty(safeDispatchPackage, "aircraft_registration", "registration"),
+                AircraftDisplayName   = FirstNonEmpty(reservationRow, "aircraft_display_name", "display_name", "aircraft_name") is string ad && !string.IsNullOrWhiteSpace(ad)
+                                        ? ad
+                                        : FirstNonEmpty(safeDispatchPackage, "aircraft_display_name", "display_name", "aircraft_name"),
+                AircraftVariantCode   = FirstNonEmpty(reservationRow, "aircraft_variant_code", "variant_code") is string av && !string.IsNullOrWhiteSpace(av)
+                                        ? av
+                                        : FirstNonEmpty(safeDispatchPackage, "aircraft_variant_code", "variant_code"),
+                AddonProvider         = FirstNonEmpty(reservationRow, "addon_provider") is string ap && !string.IsNullOrWhiteSpace(ap)
+                                        ? ap
+                                        : FirstNonEmpty(safeDispatchPackage, "addon_provider"),
                 RouteText          = routeText.Trim(),
                 FlightMode         = FirstNonEmpty(reservationRow, "flight_mode_code", "flight_mode"),
                 ReservationStatus  = FirstNonEmpty(reservationRow, "status").Trim().ToLowerInvariant(),
@@ -1867,6 +1956,30 @@ namespace PatagoniaWings.Acars.Core.Services
             if (normalized.StartsWith("TBM9")) return "TBM9";
 
             return normalized;
+        }
+
+        private Dictionary<string, object> TryDeserializeJsonObject(object raw)
+        {
+            if (raw is Dictionary<string, object> dict)
+            {
+                return dict;
+            }
+
+            var rawString = raw as string ?? Convert.ToString(raw, CultureInfo.InvariantCulture);
+            if (string.IsNullOrWhiteSpace(rawString))
+            {
+                return new Dictionary<string, object>();
+            }
+
+            try
+            {
+                var parsed = _json.DeserializeObject(rawString) as Dictionary<string, object>;
+                return parsed ?? new Dictionary<string, object>();
+            }
+            catch
+            {
+                return new Dictionary<string, object>();
+            }
         }
 
         private void WriteAuthLog(string message)

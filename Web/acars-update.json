@@ -1,10 +1,10 @@
 {
-  "version": "3.0.1",
-  "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.1.exe",
+  "version": "3.0.8",
+  "webVersion": "2.0",
+  "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.8.exe",
   "mandatory": false,
-  "notes": "- Fix: GetDispatchPackageStatus con fallback a 'prepared'\n- Fix: ACARS carga despachos sin requerir SimBrief previo\n- Web: SimBrief opcional - el ACARS puede generar plan de vuelo\n- Rediseño UI: tema blanco/celeste premium\n- Perfil real: métricas Pulso10, Ruta10, habilitaciones",
-  "releaseDate": "2026-04-13",
+  "notes": "- Rediseño visual compacto premium (ventana ~50% más pequeña)\n- Sin scroll en ninguna página\n- Login con banner hero y logo Patagonia Wings\n- Auto-update silencioso: detecta y aplica sin clicks\n- Fuentes compactas, layout denso y profesional\n- Web 2.0",
+  "releaseDate": "2026-04-16",
   "minVersion": "2.0.5",
-  "fileSize": "48MB",
-  "hash": "sha256:F6BF56D2C4E532F4D1CCB4EECFC4097BA527B45B2DEE4ED1555092E112D65104"
+  "fileSize": "48MB"
 }

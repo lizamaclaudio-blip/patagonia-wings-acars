@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.0.7.0</version>
-  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.7.exe</url>
-  <changelog>Fix critico: login/despacho quedaban congelados. Creado AsyncRelayCommand para comandos async. Fix texto raro en pagina Despacho. Fix cancelacion libera aeronave.</changelog>
+  <version>3.0.8.0</version>
+  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.8.exe</url>
+  <changelog>v3.0.8: Rediseño visual compacto premium. Ventana reducida 50%. Sin scroll. Login con banner. Auto-update silencioso. Web 2.0.</changelog>
   <mandatory>false</mandatory>
-  <hash>sha256:F724F9DD9180A54325674A0687882645CC073E68C239A18397C6F876B89D5E48</hash>
 </item>
