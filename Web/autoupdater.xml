@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.0.9.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.0.9.exe</url>
-  <changelog>v3.0.9: Sistema SUR Air dual scoring — Score de Procedimientos y Performance con calificaciones por estrellas. PostFlight rediseñado. V/S corregido en tierra. Squawk Mode C correcto. Paneles compactos. Detección de variante/addon. +60 variantes MSFS. SimConnect primario, FSUIPC7 fallback.</changelog>
+  <version>3.1.0.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.0.exe</url>
+  <changelog>v3.1.0: Imágenes de aeronaves personalizadas en panel AERONAVE. Actualizador automático mejorado (sin bloqueo por sesión). Rutas de imágenes desde %AppData%\PatagoniaWings\Acars\Aircraft\. Detección de addon/variante refinada.</changelog>
   <mandatory>false</mandatory>
 </item>

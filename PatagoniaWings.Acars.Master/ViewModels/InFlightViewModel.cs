@@ -107,17 +107,22 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var code = AircraftImageInitials; // ej. "A320", "B738", "C208"
                 if (string.IsNullOrEmpty(code) || code == "---") return null;
 
-                // Carpeta: misma carpeta del exe → Assets\Aircraft\
-                var exeDir = System.IO.Path.GetDirectoryName(
-                    System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty;
-                var folder = System.IO.Path.Combine(exeDir, "Assets", "Aircraft");
+                // Carpeta primaria: %AppData%\PatagoniaWings\Acars\Aircraft\  (accesible al usuario, sobrevive actualizaciones)
+                var appData    = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                var userFolder = System.IO.Path.Combine(appData, "PatagoniaWings", "Acars", "Aircraft");
 
-                foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".webp" })
-                {
-                    var path = System.IO.Path.Combine(folder, code + ext);
-                    if (System.IO.File.Exists(path))
-                        return path;
-                }
+                // Carpeta alternativa: misma carpeta del exe → Assets\Aircraft\
+                var exeDir    = System.IO.Path.GetDirectoryName(
+                    System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+                var exeFolder = System.IO.Path.Combine(exeDir, "Assets", "Aircraft");
+
+                foreach (var folder in new[] { userFolder, exeFolder })
+                    foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".webp" })
+                    {
+                        var path = System.IO.Path.Combine(folder, code + ext);
+                        if (System.IO.File.Exists(path))
+                            return path;
+                    }
                 return null;
             }
         }

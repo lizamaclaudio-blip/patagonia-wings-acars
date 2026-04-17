@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "3.0.9"
+  #define MyAppVersion   "3.1.0"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
@@ -73,6 +73,8 @@ Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\AutoUpdater.NET.dll"; De
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.Master.exe.config"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.SimConnect\AircraftProfiles.json"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Carpeta de imágenes de aeronaves (el usuario guarda PNG/JPG aquí; nombre = código ICAO, ej. A320.png)
+Source: "..\PatagoniaWings.Acars.Master\Assets\Aircraft\.gitkeep"; DestDir: "{app}\Assets\Aircraft"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\Assets\Sounds\*"; DestDir: "{app}\Assets\Sounds"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\\..\\PatagoniaWings.Acars.Master\\Assets\\Sounds'))
 ; MobiFlight WASM Module - se copia a temp, el codigo lo instala en Community
 Source: "MobiFlightWasm\mobiflight-event-module\*"; DestDir: "{tmp}\mobiflight-event-module"; Flags: ignoreversion recursesubdirs createallsubdirs

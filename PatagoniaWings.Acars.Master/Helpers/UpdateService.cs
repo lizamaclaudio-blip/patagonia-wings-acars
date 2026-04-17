@@ -22,7 +22,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private const string AutoUpdaterXmlUrl =
             "https://raw.githubusercontent.com/lizamaclaudio-blip/patagonia-wings-acars/main/Web/autoupdater.xml";
 
-        private static bool _checkedThisSession;
+        // Cooldown: no volver a verificar si ya se verificó hace menos de 10 minutos
+        private static DateTime _lastCheckUtc = DateTime.MinValue;
+        private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(10);
 
         public static string CurrentVersion => ReadSetting("AppVersion", GetAssemblyVersion());
 
@@ -33,8 +35,13 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         public static void CheckAndStartUpdate(Window owner)
         {
-            if (_checkedThisSession) return;
-            _checkedThisSession = true;
+            var now = DateTime.UtcNow;
+            if ((now - _lastCheckUtc) < CheckCooldown)
+            {
+                WriteLog($"Saltando verificación: última hace {(now - _lastCheckUtc).TotalSeconds:F0}s (cooldown={CheckCooldown.TotalMinutes}m)");
+                return;
+            }
+            _lastCheckUtc = now;
 
             WriteLog($"Checking updates silently. Installed={CurrentVersion}");
             try
