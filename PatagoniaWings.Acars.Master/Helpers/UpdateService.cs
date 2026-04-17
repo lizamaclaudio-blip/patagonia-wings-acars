@@ -13,25 +13,44 @@ namespace PatagoniaWings.Acars.Master.Helpers
 {
     /// <summary>
     /// Actualización automática y silenciosa.
-    /// Al detectar una versión nueva: descarga el instalador en background
-    /// y lo ejecuta con /VERYSILENT /SUPPRESSMSGBOXES, luego cierra la app.
-    /// No requiere ningún click del usuario.
+    ///
+    /// Flujo completo:
+    ///  1. Detecta versión nueva leyendo autoupdater.xml desde GitHub.
+    ///  2. Muestra un banner de progreso DENTRO de la ventana principal (no una ventana aparte).
+    ///  3. Descarga el instalador en background con progreso visible al usuario.
+    ///  4. Escribe un archivo flag antes de cerrar para detectar "recién actualizado" al reabrir.
+    ///  5. Lanza un CMD diferido (+5 s) que ejecuta el instalador con /VERYSILENT.
+    ///  6. Inno Setup [Run] con Check:WizardSilent reabre el ACARS automáticamente.
+    ///  7. Al iniciar, si existe el flag, muestra "✓ Actualizado a vX.X.X" y borra el flag.
     /// </summary>
     public static class UpdateService
     {
         private const string AutoUpdaterXmlUrl =
             "https://raw.githubusercontent.com/lizamaclaudio-blip/patagonia-wings-acars/main/Web/autoupdater.xml";
 
+        private static readonly string JustUpdatedFlagPath =
+            Path.Combine(Path.GetTempPath(), "PatagoniaWings_JustUpdated.txt");
+
         // Cooldown: no volver a verificar si ya se verificó hace menos de 10 minutos
         private static DateTime _lastCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(10);
 
+        // ── Eventos para la barra de progreso dentro del ACARS ──────────────────
+        /// <summary>Progreso de descarga 0-100. Se dispara en el thread de background.</summary>
+        public static event Action<int>? DownloadProgressChanged;
+
+        /// <summary>Mensaje de estado textual durante la actualización.</summary>
+        public static event Action<string>? UpdateStatusChanged;
+
+        // ── Versión instalada ────────────────────────────────────────────────────
         public static string CurrentVersion => ReadSetting("AppVersion", GetAssemblyVersion());
 
         static UpdateService()
         {
             AutoUpdater.CheckForUpdateEvent += OnCheckForUpdate;
         }
+
+        // ── API pública ──────────────────────────────────────────────────────────
 
         public static void CheckAndStartUpdate(Window owner)
         {
@@ -43,7 +62,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             }
             _lastCheckUtc = now;
 
-            WriteLog($"Checking updates silently. Installed={CurrentVersion}");
+            WriteLog($"Checking updates. Installed={CurrentVersion}");
             try
             {
                 AutoUpdater.Start(AutoUpdaterXmlUrl);
@@ -64,6 +83,32 @@ namespace PatagoniaWings.Acars.Master.Helpers
         {
             await Task.CompletedTask;
             return new UpdateCheckResult { CurrentVersion = CurrentVersion, Success = true };
+        }
+
+        /// <summary>
+        /// Llama este método al arrancar la ventana principal.
+        /// Si el ACARS acaba de actualizarse, muestra una notificación breve.
+        /// </summary>
+        public static void CheckAndShowPostUpdateNotification()
+        {
+            try
+            {
+                if (!File.Exists(JustUpdatedFlagPath)) return;
+
+                var updatedTo = File.ReadAllText(JustUpdatedFlagPath).Trim();
+                File.Delete(JustUpdatedFlagPath);
+
+                Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
+                {
+                    ShowToast($"✓  Actualizado a v{updatedTo}  ·  Todo listo", "#16B989", 6);
+                }));
+
+                WriteLog($"Post-update notification: v{updatedTo}");
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"CheckAndShowPostUpdateNotification error: {ex.Message}");
+            }
         }
 
         public class UpdateCheckResult
@@ -96,68 +141,19 @@ namespace PatagoniaWings.Acars.Master.Helpers
             var downloadUrl = args?.DownloadURL ?? string.Empty;
             if (string.IsNullOrWhiteSpace(downloadUrl)) return;
 
-            WriteLog($"Nueva versión {available} detectada. Descargando silenciosamente: {downloadUrl}");
+            WriteLog($"Nueva versión {available} detectada. Iniciando descarga silenciosa: {downloadUrl}");
 
-            // Mostrar banner informativo no bloqueante, luego actualizar sin click
-            Application.Current?.Dispatcher?.Invoke(() =>
-            {
-                try { ShowUpdateBanner(available); }
-                catch { }
-            });
+            // Notificar status inicial → la barra del ACARS se hace visible
+            UpdateStatusChanged?.Invoke($"Descargando actualización v{available}...");
+            DownloadProgressChanged?.Invoke(0);
 
             // Descargar e instalar en background
-            Task.Run(() => DownloadAndInstallSilent(downloadUrl, available));
+            Task.Run(async () => await DownloadAndInstallSilentAsync(downloadUrl, available));
         }
 
-        private static void ShowUpdateBanner(string version)
-        {
-            // Ventana toast pequeña, no modal, se cierra sola en 4 segundos
-            var toast = new Window
-            {
-                Width = 320,
-                Height = 60,
-                WindowStyle = WindowStyle.None,
-                AllowsTransparency = true,
-                Background = System.Windows.Media.Brushes.Transparent,
-                Topmost = true,
-                ShowInTaskbar = false,
-                WindowStartupLocation = WindowStartupLocation.Manual,
-            };
+        // ── Descarga + instalación silenciosa ────────────────────────────────────
 
-            var screen = System.Windows.SystemParameters.WorkArea;
-            toast.Left = screen.Right - 330;
-            toast.Top = screen.Bottom - 70;
-
-            var border = new System.Windows.Controls.Border
-            {
-                Background = new System.Windows.Media.SolidColorBrush(
-                    System.Windows.Media.Color.FromArgb(230, 2, 132, 199)),
-                CornerRadius = new CornerRadius(8),
-                Child = new System.Windows.Controls.TextBlock
-                {
-                    Text = $"⬆  Actualizando ACARS a v{version}...",
-                    Foreground = System.Windows.Media.Brushes.White,
-                    FontSize = 12,
-                    FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
-                    FontWeight = FontWeights.SemiBold,
-                    VerticalAlignment = VerticalAlignment.Center,
-                    HorizontalAlignment = HorizontalAlignment.Center,
-                    Margin = new Thickness(16, 0, 16, 0)
-                }
-            };
-
-            toast.Content = border;
-            toast.Show();
-
-            var timer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(4)
-            };
-            timer.Tick += (s, e) => { timer.Stop(); try { toast.Close(); } catch { } };
-            timer.Start();
-        }
-
-        private static void DownloadAndInstallSilent(string downloadUrl, string version)
+        private static async Task DownloadAndInstallSilentAsync(string downloadUrl, string version)
         {
             try
             {
@@ -167,21 +163,34 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 WriteLog($"Descargando a: {installerPath}");
 
+                // Descargar con progreso
                 using (var client = new WebClient())
                 {
-                    client.DownloadFile(downloadUrl, installerPath);
+                    client.DownloadProgressChanged += (s, e) =>
+                    {
+                        DownloadProgressChanged?.Invoke(e.ProgressPercentage);
+                    };
+
+                    await client.DownloadFileTaskAsync(new Uri(downloadUrl), installerPath);
                 }
 
-                WriteLog($"Descarga completada. Preparando instalación silenciosa.");
+                WriteLog("Descarga completada. Preparando instalación.");
 
-                // Escribir un script CMD que espera 4 segundos (para que el proceso ACARS
-                // termine completamente) y luego lanza el instalador.
-                // Esto evita la condición de carrera donde Inno Setup intenta reemplazar
-                // el .exe mientras todavía está en uso.
+                // Notificar que la descarga terminó
+                DownloadProgressChanged?.Invoke(100);
+                UpdateStatusChanged?.Invoke($"Instalando v{version}...  El ACARS reabrirá automáticamente");
+
+                // Esperar 2 s para que el usuario vea el mensaje final
+                await Task.Delay(2000);
+
+                // Escribir flag ANTES de cerrar — al reabrir el ACARS verá que acaba de actualizar
+                try { File.WriteAllText(JustUpdatedFlagPath, version); } catch { }
+
+                // CMD diferido: espera 5 s (proceso ACARS termina) y luego lanza el instalador
                 var launcherPath = Path.Combine(tempDir, "launch_update.cmd");
                 File.WriteAllText(launcherPath,
                     "@echo off\r\n" +
-                    "ping 127.0.0.1 -n 5 >nul\r\n" +   // espera ~4 segundos
+                    "ping 127.0.0.1 -n 6 >nul\r\n" +
                     $"\"{installerPath}\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-\r\n");
 
                 var psi = new ProcessStartInfo("cmd.exe")
@@ -193,19 +202,77 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 };
 
                 Process.Start(psi);
-                WriteLog("Script de instalación lanzado. Cerrando app.");
+                WriteLog("Script de instalación lanzado. Cerrando ACARS.");
 
-                // Cerrar la app — el script CMD espera 4 s antes de ejecutar el instalador,
-                // garantizando que el proceso ACARS ya no tenga el .exe bloqueado.
+                // Cerrar el ACARS en el hilo UI
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
-                    WriteLog("Cerrando app para instalar actualización.");
+                    WriteLog("Application.Shutdown() — instalador tomará control en ~5s.");
                     Application.Current.Shutdown();
                 });
             }
             catch (Exception ex)
             {
                 WriteLog($"Error en descarga/instalación silenciosa: {ex.Message}");
+                UpdateStatusChanged?.Invoke($"Error en actualización: {ex.Message}");
+            }
+        }
+
+        // ── Toast genérico (solo se usa para la notificación post-update) ────────
+
+        private static void ShowToast(string message, string hexColor, int durationSeconds = 4)
+        {
+            try
+            {
+                var color = (System.Windows.Media.Color)
+                    System.Windows.Media.ColorConverter.ConvertFromString(hexColor);
+
+                var toast = new Window
+                {
+                    Width = 340,
+                    Height = 56,
+                    WindowStyle = WindowStyle.None,
+                    AllowsTransparency = true,
+                    Background = System.Windows.Media.Brushes.Transparent,
+                    Topmost = true,
+                    ShowInTaskbar = false,
+                    WindowStartupLocation = WindowStartupLocation.Manual,
+                };
+
+                var screen = SystemParameters.WorkArea;
+                toast.Left = screen.Right - 350;
+                toast.Top = screen.Bottom - 66;
+
+                toast.Content = new System.Windows.Controls.Border
+                {
+                    Background = new System.Windows.Media.SolidColorBrush(
+                        System.Windows.Media.Color.FromArgb(230, color.R, color.G, color.B)),
+                    CornerRadius = new CornerRadius(8),
+                    Child = new System.Windows.Controls.TextBlock
+                    {
+                        Text = message,
+                        Foreground = System.Windows.Media.Brushes.White,
+                        FontSize = 12,
+                        FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
+                        FontWeight = FontWeights.SemiBold,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(16, 0, 16, 0)
+                    }
+                };
+
+                toast.Show();
+
+                var timer = new System.Windows.Threading.DispatcherTimer
+                {
+                    Interval = TimeSpan.FromSeconds(durationSeconds)
+                };
+                timer.Tick += (s, e) => { timer.Stop(); try { toast.Close(); } catch { } };
+                timer.Start();
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"ShowToast error: {ex.Message}");
             }
         }
 
@@ -217,7 +284,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             {
                 if (string.IsNullOrWhiteSpace(available)) return false;
 
-                var avVer = NormalizeVersion(available);
+                var avVer   = NormalizeVersion(available);
                 var instVer = NormalizeVersion(installed);
 
                 WriteLog($"Normalized => available={avVer} installed={instVer}");
@@ -236,19 +303,15 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private static string NormalizeVersion(string value)
         {
-            var raw = string.IsNullOrWhiteSpace(value) ? "0" : value.Trim();
+            var raw    = string.IsNullOrWhiteSpace(value) ? "0" : value.Trim();
             var source = raw.Split('.');
-            var normalized = new string[4];
+            var norm   = new string[4];
 
-            for (var i = 0; i < normalized.Length; i++)
-            {
-                if (i < source.Length && !string.IsNullOrWhiteSpace(source[i]))
-                    normalized[i] = source[i].Trim();
-                else
-                    normalized[i] = "0";
-            }
+            for (var i = 0; i < norm.Length; i++)
+                norm[i] = (i < source.Length && !string.IsNullOrWhiteSpace(source[i]))
+                    ? source[i].Trim() : "0";
 
-            return string.Join(".", normalized);
+            return string.Join(".", norm);
         }
 
         private static string GetAssemblyVersion()
@@ -257,10 +320,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
             {
                 var ver = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
                               ?.GetName()?.Version;
-                if (ver == null) return "3.0.8";
-                return $"{ver.Major}.{ver.Minor}.{ver.Build}";
+                return ver == null ? "3.1.4" : $"{ver.Major}.{ver.Minor}.{ver.Build}";
             }
-            catch { return "3.0.8"; }
+            catch { return "3.1.4"; }
         }
 
         private static string ReadSetting(string key, string fallback)

@@ -282,11 +282,46 @@
                                 <TextBlock Text="Cerrar Sesión" Foreground="#FF4444" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <TextBlock Text="ACARS v3.0.8" Foreground="#94A3B8"
+                        <TextBlock x:Name="TxtSidebarVersion" Foreground="#94A3B8"
                                    FontSize="9" HorizontalAlignment="Center" Margin="0,6,0,0"
                                    FontFamily="Consolas"/>
                     </StackPanel>
                 </DockPanel>
+            </Border>
+
+            <!-- ═══ BARRA DE ACTUALIZACIÓN (oculta salvo durante descarga) ═════ -->
+            <!-- Abarca toda la fila 1 columna 1 (área de contenido), anclada al fondo -->
+            <Border x:Name="UpdateBanner"
+                    Grid.Row="1" Grid.Column="1"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                    Background="#E5000D1C"
+                    BorderBrush="#1D4ED8" BorderThickness="0,1,0,0"
+                    Padding="16,8" Panel.ZIndex="200"
+                    Visibility="Collapsed">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" LastChildFill="True">
+                        <TextBlock x:Name="TxtUpdatePercent"
+                                   DockPanel.Dock="Right"
+                                   Foreground="#60A5FA" FontSize="11"
+                                   FontFamily="Consolas" VerticalAlignment="Center"
+                                   Margin="8,0,0,0" Text="0 %"/>
+                        <TextBlock x:Name="TxtUpdateStatus"
+                                   Foreground="#93C5FD" FontSize="11"
+                                   FontFamily="Segoe UI" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   Text="Descargando actualización..."/>
+                    </DockPanel>
+                    <ProgressBar x:Name="UpdateProgress"
+                                 Grid.Row="1"
+                                 Margin="0,6,0,0" Height="4"
+                                 Minimum="0" Maximum="100" Value="0"
+                                 Background="#1E3A5F" Foreground="#3B82F6"
+                                 BorderThickness="0"/>
+                </Grid>
             </Border>
 
             <!-- ═══ CONTENT AREA ═════════════════════════════════════════════ -->

@@ -35,6 +35,13 @@ namespace PatagoniaWings.Acars.Master.Views
             DataContext = _vm;
             _vm.LoadPilot();
 
+            // Versión dinámica en el sidebar (refleja lo que está instalado realmente)
+            TxtSidebarVersion.Text = $"ACARS v{UpdateService.CurrentVersion}";
+
+            // Suscribirse a los eventos de progreso de actualización
+            UpdateService.DownloadProgressChanged += OnUpdateProgressChanged;
+            UpdateService.UpdateStatusChanged     += OnUpdateStatusChanged;
+
             Loaded += OnWindowLoaded;
             Closed += OnWindowClosed;
         }
@@ -56,14 +63,37 @@ namespace PatagoniaWings.Acars.Master.Views
                     }
                 });
             }, null, TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20));
+
+            // Si el ACARS acaba de actualizarse, mostrar notificación de éxito
+            UpdateService.CheckAndShowPostUpdateNotification();
         }
+
+        // ── Update progress (eventos del UpdateService) ──────────────────────────
+
+        private void OnUpdateProgressChanged(int percent)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                UpdateBanner.Visibility   = Visibility.Visible;
+                UpdateProgress.Value      = percent;
+                TxtUpdatePercent.Text     = $"{percent} %";
+            });
+        }
+
+        private void OnUpdateStatusChanged(string message)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                UpdateBanner.Visibility = Visibility.Visible;
+                TxtUpdateStatus.Text    = message;
+            });
+        }
+
+        // ── SimConnect ───────────────────────────────────────────────────────────
 
         private void TryConnectQuiet()
         {
-            if (_isConnecting)
-            {
-                return;
-            }
+            if (_isConnecting) return;
 
             _isConnecting = true;
             try
@@ -124,13 +154,16 @@ namespace PatagoniaWings.Acars.Master.Views
             }
         }
 
-        public void ConnectSim(bool silent = false)
-        {
-            ConnectSimulator(silent);
-        }
+        public void ConnectSim(bool silent = false) => ConnectSimulator(silent);
+
+        // ── Ventana cerrada ──────────────────────────────────────────────────────
 
         private void OnWindowClosed(object? sender, EventArgs e)
         {
+            // Desuscribir eventos de actualización para evitar callbacks tardíos
+            UpdateService.DownloadProgressChanged -= OnUpdateProgressChanged;
+            UpdateService.UpdateStatusChanged     -= OnUpdateStatusChanged;
+
             // Detener el timer primero para evitar que dispare mientras cerramos
             _reconnectTimer?.Dispose();
             _reconnectTimer = null;
@@ -141,13 +174,11 @@ namespace PatagoniaWings.Acars.Master.Views
             _coordinator = null;
         }
 
+        // ── Handlers de UI ──────────────────────────────────────────────────────
+
         private void SimStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (AcarsContext.Runtime.IsSimulatorConnected)
-            {
-                return;
-            }
-
+            if (AcarsContext.Runtime.IsSimulatorConnected) return;
             ConnectSimulator(false);
         }
 
@@ -158,34 +189,22 @@ namespace PatagoniaWings.Acars.Master.Views
 
         private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (e.ClickCount == 2)
-            {
-                ToggleMaximize();
-            }
-            else
-            {
-                DragMove();
-            }
+            if (e.ClickCount == 2) ToggleMaximize();
+            else DragMove();
         }
 
-        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
-        {
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e) =>
             WindowState = WindowState.Minimized;
-        }
 
-        private void BtnMaximize_Click(object sender, RoutedEventArgs e)
-        {
+        private void BtnMaximize_Click(object sender, RoutedEventArgs e) =>
             ToggleMaximize();
-        }
 
-        private void BtnClose_Click(object sender, RoutedEventArgs e)
-        {
+        private void BtnClose_Click(object sender, RoutedEventArgs e) =>
             Close();
-        }
 
-        private void ToggleMaximize()
-        {
-            WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-        }
+        private void ToggleMaximize() =>
+            WindowState = WindowState == WindowState.Maximized
+                ? WindowState.Normal
+                : WindowState.Maximized;
     }
 }

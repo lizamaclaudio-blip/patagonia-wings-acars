@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.1.4.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.4.exe</url>
-  <changelog>v3.1.4: Fix simulador colgado al cerrar/reabrir ACARS. ACARS se reabre solo tras actualización silenciosa. METAR directo aviationweather.gov. Badge de versión dinámico.</changelog>
+  <version>3.1.5.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.5.exe</url>
+  <changelog>v3.1.5: Barra de progreso dentro del ACARS durante descarga. Reapertura automática tras actualizar. Notificación de éxito al reiniciar. Fix simulador colgado al reabrir. Badge versión dinámico. METAR aviationweather.gov.</changelog>
   <mandatory>false</mandatory>
 </item>
