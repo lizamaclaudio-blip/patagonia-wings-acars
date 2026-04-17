@@ -571,11 +571,8 @@
 
                     <TextBlock Grid.Row="0" Text="AERONAVE" Style="{StaticResource SHead}"/>
 
-                    <!-- Placeholder visual de foto: muestra ICAO centrado.
-                         Para activar una imagen real, reemplaza este Border por:
-                         <Image Source="{Binding AircraftImageUrl}" Stretch="UniformToFill"
-                                RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
-                    -->
+                    <!-- Panel de aeronave: imagen real si existe en Assets\Aircraft\,
+                         placeholder con iniciales ICAO cuando no hay imagen. -->
                     <Border Grid.Row="1" CornerRadius="6" MinHeight="80" ClipToBounds="True">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
@@ -584,11 +581,38 @@
                             </LinearGradientBrush>
                         </Border.Background>
                         <Grid>
-                            <!-- Texto de fondo decorativo -->
+                            <!-- Imagen real (visible solo cuando existe el archivo) -->
+                            <Image Source="{Binding AircraftImageUrl}"
+                                   Stretch="UniformToFill"
+                                   RenderOptions.BitmapScalingMode="HighQuality"
+                                   SnapsToDevicePixels="True">
+                                <Image.Style>
+                                    <Style TargetType="Image">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasAircraftImage}" Value="False">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Image.Style>
+                            </Image>
+                            <!-- Placeholder iniciales ICAO (visible cuando NO hay imagen) -->
                             <TextBlock Text="{Binding AircraftImageInitials}"
                                        FontSize="38" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="#BFDBFE" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center" Opacity="0.7"/>
+                                       VerticalAlignment="Center" Opacity="0.7">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding HasAircraftImage}" Value="False">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <!-- Nombre completo + variante abajo -->
                             <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="6,0,6,5">
                                 <TextBlock Text="{Binding AircraftTitle}" FontSize="8"

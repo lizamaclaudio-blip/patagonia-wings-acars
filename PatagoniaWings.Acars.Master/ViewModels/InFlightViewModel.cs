@@ -91,7 +91,39 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double WindDir { get => _windDir; set => SetField(ref _windDir, value); }
         public double Lat { get => _lat; set => SetField(ref _lat, value); }
         public double Lon { get => _lon; set => SetField(ref _lon, value); }
-        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); OnPropertyChanged(nameof(ShowDoors)); OnPropertyChanged(nameof(AircraftImageInitials)); OnPropertyChanged(nameof(DetectedAddonLabel)); OnPropertyChanged(nameof(VariantMatchOk)); OnPropertyChanged(nameof(VariantMatchDisplay)); } } }
+        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); OnPropertyChanged(nameof(ShowDoors)); OnPropertyChanged(nameof(AircraftImageInitials)); OnPropertyChanged(nameof(AircraftImageUrl)); OnPropertyChanged(nameof(HasAircraftImage)); OnPropertyChanged(nameof(DetectedAddonLabel)); OnPropertyChanged(nameof(VariantMatchOk)); OnPropertyChanged(nameof(VariantMatchDisplay)); } } }
+
+        /// <summary>
+        /// Ruta absoluta a la imagen de la aeronave en Assets\Aircraft\.
+        /// Nombres admitidos (en orden de prioridad):
+        ///   1. {ICAO_detectado}.png  → ej. A320.png, B738.png, C208.png
+        ///   2. {ICAO_detectado}.jpg
+        /// Si no existe ningún archivo, retorna null y el XAML muestra el placeholder de iniciales.
+        /// </summary>
+        public string? AircraftImageUrl
+        {
+            get
+            {
+                var code = AircraftImageInitials; // ej. "A320", "B738", "C208"
+                if (string.IsNullOrEmpty(code) || code == "---") return null;
+
+                // Carpeta: misma carpeta del exe → Assets\Aircraft\
+                var exeDir = System.IO.Path.GetDirectoryName(
+                    System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+                var folder = System.IO.Path.Combine(exeDir, "Assets", "Aircraft");
+
+                foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".webp" })
+                {
+                    var path = System.IO.Path.Combine(folder, code + ext);
+                    if (System.IO.File.Exists(path))
+                        return path;
+                }
+                return null;
+            }
+        }
+
+        /// <summary>True cuando existe una imagen real para la aeronave activa.</summary>
+        public bool HasAircraftImage => AircraftImageUrl != null;
 
         /// <summary>Addon/variante esperado según el despacho activo.</summary>
         public string ExpectedVariantLabel
