@@ -416,7 +416,7 @@
                                     <Setter Property="Background" Value="#FEE2E2"/>
                                     <Setter Property="BorderBrush" Value="#FCA5A5"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding SeatBeltSign}" Value="True">
+                                        <DataTrigger Binding="{Binding LiveSeatBeltSign}" Value="True">
                                             <Setter Property="Background" Value="#D1FAE5"/>
                                             <Setter Property="BorderBrush" Value="#6EE7B7"/>
                                         </DataTrigger>
@@ -429,7 +429,7 @@
                                         <Setter Property="Text" Value="OFF"/>
                                         <Setter Property="Foreground" Value="#991B1B"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding SeatBeltSign}" Value="True">
+                                            <DataTrigger Binding="{Binding LiveSeatBeltSign}" Value="True">
                                                 <Setter Property="Text" Value="ON"/>
                                                 <Setter Property="Foreground" Value="#065F46"/>
                                             </DataTrigger>
@@ -450,7 +450,7 @@
                                     <Setter Property="Background" Value="#FEE2E2"/>
                                     <Setter Property="BorderBrush" Value="#FCA5A5"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding NoSmokingSign}" Value="True">
+                                        <DataTrigger Binding="{Binding LiveNoSmokingSign}" Value="True">
                                             <Setter Property="Background" Value="#D1FAE5"/>
                                             <Setter Property="BorderBrush" Value="#6EE7B7"/>
                                         </DataTrigger>
@@ -463,7 +463,7 @@
                                         <Setter Property="Text" Value="OFF"/>
                                         <Setter Property="Foreground" Value="#991B1B"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding NoSmokingSign}" Value="True">
+                                            <DataTrigger Binding="{Binding LiveNoSmokingSign}" Value="True">
                                                 <Setter Property="Text" Value="ON"/>
                                                 <Setter Property="Foreground" Value="#065F46"/>
                                             </DataTrigger>
@@ -502,7 +502,7 @@
                                 <Border.Style>
                                     <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding CharlieMode}" Value="True">
+                                            <DataTrigger Binding="{Binding LiveCharlieMode}" Value="True">
                                                 <Setter Property="Background" Value="#EDE9FE"/>
                                                 <Setter Property="BorderBrush" Value="#A78BFA"/>
                                             </DataTrigger>
@@ -515,7 +515,7 @@
                                             <Setter Property="Text" Value="STBY"/>
                                             <Setter Property="Foreground" Value="#94A3B8"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding CharlieMode}" Value="True">
+                                                <DataTrigger Binding="{Binding LiveCharlieMode}" Value="True">
                                                     <Setter Property="Text" Value="MODE C"/>
                                                     <Setter Property="Foreground" Value="#5B21B6"/>
                                                 </DataTrigger>
@@ -535,7 +535,7 @@
                             <Border.Style>
                                 <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
+                                        <DataTrigger Binding="{Binding LiveAutopilotOn}" Value="True">
                                             <Setter Property="Background" Value="#EDE9FE"/>
                                             <Setter Property="BorderBrush" Value="#A78BFA"/>
                                         </DataTrigger>
@@ -548,7 +548,7 @@
                                         <Setter Property="Text" Value="MANUAL"/>
                                         <Setter Property="Foreground" Value="#94A3B8"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding AutopilotOn}" Value="True">
+                                            <DataTrigger Binding="{Binding LiveAutopilotOn}" Value="True">
                                                 <Setter Property="Text" Value="AP ON"/>
                                                 <Setter Property="Foreground" Value="#5B21B6"/>
                                             </DataTrigger>

@@ -224,7 +224,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             _parkingBrake = new Offset<int>(0x0BC8);
 
-            _autopilot    = new Offset<short>(0x07D0);
+            _autopilot    = new Offset<short>(0x07DC);  // AP Master (FSUIPC7/MSFS — 0x07D0 = Attitude Hold, 0x07DC = AP Master)
 
             _pause        = new Offset<short>(0x0264);
 

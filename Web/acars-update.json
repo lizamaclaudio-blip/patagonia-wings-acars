@@ -1,7 +1,7 @@
 {
-  "version": "3.1.1",
+  "version": "3.1.2",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.1.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.2.exe",
   "mandatory": false,
   "notes": "- METAR en tiempo real (aviationweather.gov) para origen y destino\n- Instalador con lanzador diferido: fix actualización silenciosa\n- Fotos de aeronaves desde %AppData%\\PatagoniaWings\\Acars\\Aircraft\\\n- Tab Despacho bloqueado cuando hay vuelo activo (web)",
   "releaseDate": "2026-04-16",

@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "3.1.1"
+  #define MyAppVersion   "3.1.2"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"

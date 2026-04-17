@@ -235,15 +235,22 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             if (!HasLiveTelemetry) return "Sin conexión";
             return AircraftTitle;
         }
-        public bool AutopilotOn { get => _autopilotOn; set => SetField(ref _autopilotOn, value); }
+        public bool AutopilotOn { get => _autopilotOn; set { if (SetField(ref _autopilotOn, value)) OnPropertyChanged(nameof(LiveAutopilotOn)); } }
         public bool OnGround { get => _onGround; set => SetField(ref _onGround, value); }
         public bool StrobeOn { get => _strobeOn; set => SetField(ref _strobeOn, value); }
         public bool BeaconOn { get => _beaconOn; set => SetField(ref _beaconOn, value); }
         public bool LandingOn { get => _landingOn; set => SetField(ref _landingOn, value); }
         public bool TaxiOn { get => _taxiOn; set => SetField(ref _taxiOn, value); }
         public bool NavOn { get => _navOn; set => SetField(ref _navOn, value); }
-        public bool SeatBeltSign { get => _seatBeltSign; set => SetField(ref _seatBeltSign, value); }
-        public bool NoSmokingSign { get => _noSmokingSign; set => SetField(ref _noSmokingSign, value); }
+        public bool SeatBeltSign { get => _seatBeltSign; set { if (SetField(ref _seatBeltSign, value)) OnPropertyChanged(nameof(LiveSeatBeltSign)); } }
+        public bool NoSmokingSign { get => _noSmokingSign; set { if (SetField(ref _noSmokingSign, value)) OnPropertyChanged(nameof(LiveNoSmokingSign)); } }
+
+        // Props con guardia HasLiveTelemetry para el panel SISTEMAS
+        // Cuando no hay conexión activa, retornan false → badges muestran OFF/MANUAL
+        public bool LiveAutopilotOn   => HasLiveTelemetry && _autopilotOn;
+        public bool LiveSeatBeltSign  => HasLiveTelemetry && _seatBeltSign;
+        public bool LiveNoSmokingSign => HasLiveTelemetry && _noSmokingSign;
+        public bool LiveCharlieMode   => HasLiveTelemetry && _charlieMode;
         public bool GearDown { get => _gearDown; set => SetField(ref _gearDown, value); }
         public bool GearTransitioning { get => _gearTransitioning; set => SetField(ref _gearTransitioning, value); }
         public double FlapsPercent { get => _flapsPercent; set { if (SetField(ref _flapsPercent, value)) OnPropertyChanged(nameof(FlapsDisplay)); } }
@@ -391,6 +398,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(FuelRightTankDisplay));
             OnPropertyChanged(nameof(FuelCenterTankDisplay));
             OnPropertyChanged(nameof(FuelCapacityDisplay));
+            // Live* props del panel SISTEMAS dependen de HasLiveTelemetry
+            OnPropertyChanged(nameof(LiveAutopilotOn));
+            OnPropertyChanged(nameof(LiveSeatBeltSign));
+            OnPropertyChanged(nameof(LiveNoSmokingSign));
+            OnPropertyChanged(nameof(LiveCharlieMode));
 
             if (!AcarsContext.Runtime.IsSimulatorConnected)
             {

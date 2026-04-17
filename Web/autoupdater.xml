@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.1.1.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.1.exe</url>
-  <changelog>v3.1.1: METAR en tiempo real desde aviationweather.gov (origen y destino). Instalador con lanzador diferido (fix actualización silenciosa). Fotos de aeronaves desde AppData.</changelog>
+  <version>3.1.2.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.2.exe</url>
+  <changelog>v3.1.2: Panel SISTEMAS con guardia de conexión activa (badges OFF/MANUAL cuando sim no conectado). Offset FSUIPC autopilot corregido. METAR directo desde aviationweather.gov. Fix instalación silenciosa.</changelog>
   <mandatory>false</mandatory>
 </item>
