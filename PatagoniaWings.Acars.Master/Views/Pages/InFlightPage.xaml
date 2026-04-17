@@ -589,11 +589,42 @@
                                        FontSize="38" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="#BFDBFE" HorizontalAlignment="Center"
                                        VerticalAlignment="Center" Opacity="0.7"/>
-                            <!-- Nombre completo abajo -->
+                            <!-- Nombre completo + variante abajo -->
                             <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="6,0,6,5">
                                 <TextBlock Text="{Binding AircraftTitle}" FontSize="8"
                                            Foreground="#0284C7" FontFamily="Segoe UI"
                                            TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                    <TextBlock Text="▸ " FontSize="7" Foreground="#64748B" FontFamily="Segoe UI"/>
+                                    <TextBlock Text="{Binding DetectedAddonLabel}" FontSize="7"
+                                               Foreground="#64748B" FontFamily="Segoe UI"/>
+                                </StackPanel>
+                                <!-- Badge match variante -->
+                                <Border CornerRadius="3" Padding="4,1" Margin="0,2,0,0" HorizontalAlignment="Left">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding VariantMatchOk}" Value="False">
+                                                    <Setter Property="Background" Value="#FEF3C7"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock FontSize="7" FontWeight="Bold" FontFamily="Segoe UI">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="{Binding VariantMatchDisplay}"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding VariantMatchOk}" Value="False">
+                                                        <Setter Property="Foreground" Value="#92400E"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
                             </StackPanel>
                             <!-- Badge de estado suelo/vuelo -->
                             <Border HorizontalAlignment="Right" VerticalAlignment="Top"

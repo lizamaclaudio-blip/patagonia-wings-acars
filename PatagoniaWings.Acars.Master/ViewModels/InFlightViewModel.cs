@@ -91,7 +91,68 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double WindDir { get => _windDir; set => SetField(ref _windDir, value); }
         public double Lat { get => _lat; set => SetField(ref _lat, value); }
         public double Lon { get => _lon; set => SetField(ref _lon, value); }
-        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); OnPropertyChanged(nameof(ShowDoors)); OnPropertyChanged(nameof(AircraftImageInitials)); } } }
+        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); OnPropertyChanged(nameof(ShowDoors)); OnPropertyChanged(nameof(AircraftImageInitials)); OnPropertyChanged(nameof(DetectedAddonLabel)); OnPropertyChanged(nameof(VariantMatchOk)); OnPropertyChanged(nameof(VariantMatchDisplay)); } } }
+
+        /// <summary>Addon/variante esperado según el despacho activo.</summary>
+        public string ExpectedVariantLabel
+        {
+            get
+            {
+                var flight = AcarsContext.FlightService.CurrentFlight;
+                if (flight == null) return "—";
+                var addon   = (flight.AddonProvider      ?? string.Empty).Trim();
+                var variant = (flight.AircraftVariantCode ?? string.Empty).Trim();
+                if (string.IsNullOrEmpty(addon) && string.IsNullOrEmpty(variant)) return "Estándar";
+                if (!string.IsNullOrEmpty(addon) && !string.IsNullOrEmpty(variant))
+                    return $"{addon} · {variant}";
+                return !string.IsNullOrEmpty(addon) ? addon : variant;
+            }
+        }
+
+        /// <summary>Addon detectado en el título del avión del simulador.</summary>
+        public string DetectedAddonLabel
+        {
+            get
+            {
+                if (string.IsNullOrWhiteSpace(_aircraftTitle)) return "—";
+                var t = _aircraftTitle.ToUpperInvariant();
+                if (t.Contains("PMDG"))                                   return "PMDG";
+                if (t.Contains("FENIX"))                                  return "Fenix";
+                if (t.Contains("HEADWIND") || t.Contains("HJETS"))       return "Headwind";
+                if (t.Contains("INIBUILDS"))                              return "iniBuilds";
+                if (t.Contains("FLYBYWIRE") || t.Contains("A32NX") || t.Contains("FBW")) return "FlyByWire";
+                if (t.Contains("TOLISS"))                                 return "ToLiSS";
+                if (t.Contains("MAJESTIC"))                               return "Majestic";
+                if (t.Contains("QUALITYWINGS"))                           return "QualityWings";
+                if (t.Contains("LEONARDO"))                               return "Leonardo";
+                if (t.Contains("FEELTHERE"))                              return "FeelThere";
+                if (t.Contains("ROTATE"))                                 return "Rotate";
+                if (t.Contains("BLACK SQUARE") || t.Contains("BLACKSQUARE")) return "Black Square";
+                if (t.Contains("CARENADO"))                               return "Carenado";
+                if (t.Contains("MILVIZ"))                                 return "MilViz";
+                if (t.Contains("JUST FLIGHT") || t.Contains("JUSTFLIGHT")) return "Just Flight";
+                if (t.Contains("SALTY"))                                  return "Salty";
+                if (t.Contains("CAPTAIN SIM"))                            return "Captain Sim";
+                return "Asobo";
+            }
+        }
+
+        /// <summary>True si el addon detectado en el simulador coincide con el del despacho.</summary>
+        public bool VariantMatchOk
+        {
+            get
+            {
+                var flight = AcarsContext.FlightService.CurrentFlight;
+                if (flight == null) return true;
+                var expected = (flight.AddonProvider ?? string.Empty).Trim();
+                if (string.IsNullOrEmpty(expected)) return true; // sin restricción
+                var detected = DetectedAddonLabel;
+                return detected.IndexOf(expected, System.StringComparison.OrdinalIgnoreCase) >= 0
+                    || expected.IndexOf(detected, System.StringComparison.OrdinalIgnoreCase) >= 0;
+            }
+        }
+
+        public string VariantMatchDisplay => VariantMatchOk ? "✓ OK" : "⚠ Verificar";
 
         /// <summary>
         /// Iniciales para mostrar en el placeholder de foto de aeronave.
