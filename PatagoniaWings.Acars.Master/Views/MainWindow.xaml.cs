@@ -41,7 +41,9 @@ namespace PatagoniaWings.Acars.Master.Views
 
         private async void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
-            await System.Threading.Tasks.Task.Delay(1500);
+            // 3 s de espera: da tiempo a MSFS para limpiar la sesión SimConnect anterior
+            // (cierro ACARS → abro ACARS de nuevo → sin colgar el simulador)
+            await System.Threading.Tasks.Task.Delay(3000);
             TryConnectQuiet();
 
             _reconnectTimer = new Timer(_ =>
@@ -129,8 +131,14 @@ namespace PatagoniaWings.Acars.Master.Views
 
         private void OnWindowClosed(object? sender, EventArgs e)
         {
+            // Detener el timer primero para evitar que dispare mientras cerramos
             _reconnectTimer?.Dispose();
+            _reconnectTimer = null;
+
+            // Disponer coordinator (desconecta SimConnect limpiamente antes de que
+            // el handle de ventana sea destruido por Windows)
             _coordinator?.Dispose();
+            _coordinator = null;
         }
 
         private void SimStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)

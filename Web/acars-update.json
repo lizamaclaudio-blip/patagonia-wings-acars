@@ -1,9 +1,9 @@
 {
-  "version": "3.1.3",
+  "version": "3.1.4",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.3.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.4.exe",
   "mandatory": false,
-  "notes": "- Badge de versión dinámico: muestra la versión real instalada\n- Panel SISTEMAS: badges muestran OFF/MANUAL cuando sim no conectado\n- METAR en tiempo real desde aviationweather.gov\n- Fix actualización silenciosa (lanzador diferido 4s)",
+  "notes": "- Fix: simulador ya no se cuelga al cerrar y volver a abrir el ACARS\n- Fix: ACARS se reabre solo después de una actualización silenciosa\n- Badge de versión dinámico en login\n- METAR en tiempo real desde aviationweather.gov",
   "releaseDate": "2026-04-16",
   "minVersion": "2.0.5",
   "fileSize": "27.1MB",

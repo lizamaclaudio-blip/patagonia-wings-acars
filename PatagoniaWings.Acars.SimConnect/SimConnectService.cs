@@ -520,9 +520,15 @@ namespace PatagoniaWings.Acars.SimConnect
         public void Dispose()
         {
             if (_disposed) return;
-            Disconnect();
-            _hwndSource?.RemoveHook(WndProc);
             _disposed = true;
+
+            // Remover el hook ANTES de disponer SimConnect para evitar
+            // que mensajes tardíos de SimConnect lleguen a una ventana destruida,
+            // lo que colgaba MSFS al cerrar y volver a abrir el ACARS.
+            _hwndSource?.RemoveHook(WndProc);
+            _hwndSource = null;
+
+            Disconnect();
         }
 
         // ──────────────────────────────────────────────────────────────────────

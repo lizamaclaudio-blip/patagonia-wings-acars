@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "3.1.3"
+  #define MyAppVersion   "3.1.4"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
@@ -90,7 +90,10 @@ Root: HKCU; Subkey: "Software\PatagoniaWings\ACARS"; ValueType: string; ValueNam
 Root: HKCU; Subkey: "Software\PatagoniaWings\ACARS"; ValueType: string; ValueName: "Version"; ValueData: "{#MyAppVersion}"
 
 [Run]
-Filename: "{app}\{#MyAppExe}"; Description: "Iniciar Patagonia Wings ACARS ahora"; Flags: nowait postinstall skipifsilent unchecked
+; Modo interactivo: muestra checkbox "Iniciar ahora" al finalizar
+Filename: "{app}\{#MyAppExe}"; Description: "Iniciar Patagonia Wings ACARS ahora"; Flags: nowait postinstall skipifsilent unchecked runascurrentuser
+; Modo silencioso (actualizacion automatica): abre el ACARS automaticamente
+Filename: "{app}\{#MyAppExe}"; Flags: nowait runascurrentuser; Check: WizardSilent
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{localappdata}\PatagoniaWings\Acars\logs"
