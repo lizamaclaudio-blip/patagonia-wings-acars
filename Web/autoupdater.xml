@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.1.5.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.5.exe</url>
-  <changelog>v3.1.5: Barra de progreso dentro del ACARS durante descarga. Reapertura automática tras actualizar. Notificación de éxito al reiniciar. Fix simulador colgado al reabrir. Badge versión dinámico. METAR aviationweather.gov.</changelog>
+  <version>3.1.6.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.6.exe</url>
+  <changelog>v3.1.6: Panel de pesos SimBrief vs simulador en página InFlight. Log PIREP preliminar en tiempo real. Comparación combustible al arrancar motores (tolerancia ±10%). Fix simulador colgado al reabrir ACARS.</changelog>
   <mandatory>false</mandatory>
 </item>

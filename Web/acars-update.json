@@ -1,10 +1,10 @@
 {
-  "version": "3.1.5",
+  "version": "3.1.6",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.5.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.6.exe",
   "mandatory": false,
-  "notes": "- Barra de progreso de actualización dentro del ACARS (sin ventanas externas)\n- ACARS reabre automáticamente tras instalar una actualización\n- Notificación de éxito al reabrir después de actualizar\n- Fix: simulador ya no se cuelga al cerrar/reabrir el ACARS\n- Badge de versión dinámico\n- METAR en tiempo real desde aviationweather.gov",
-  "releaseDate": "2026-04-16",
+  "notes": "- Panel de pesos SimBrief vs simulador en página InFlight\n- Log PIREP preliminar en tiempo real (altitud máx, velocidad, distancia, combustible, VS)\n- Comparación de combustible al arrancar motores con tolerancia ±10%\n- Barra de progreso de actualización dentro del ACARS (sin ventanas externas)\n- ACARS reabre automáticamente tras instalar una actualización\n- Fix: simulador ya no se cuelga al cerrar/reabrir el ACARS",
+  "releaseDate": "2026-04-17",
   "minVersion": "2.0.5",
   "fileSize": "28 MB",
   "storageProvider": "supabase"
