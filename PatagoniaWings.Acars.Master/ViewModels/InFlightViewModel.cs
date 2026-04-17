@@ -91,7 +91,29 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double WindDir { get => _windDir; set => SetField(ref _windDir, value); }
         public double Lat { get => _lat; set => SetField(ref _lat, value); }
         public double Lon { get => _lon; set => SetField(ref _lon, value); }
-        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); OnPropertyChanged(nameof(ShowDoors)); } } }
+        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); OnPropertyChanged(nameof(ShowDoors)); OnPropertyChanged(nameof(AircraftImageInitials)); } } }
+
+        /// <summary>
+        /// Iniciales para mostrar en el placeholder de foto de aeronave.
+        /// Ej: "A320" → "A32", "B738" → "B73", "C208" → "C20"
+        /// </summary>
+        public string AircraftImageInitials
+        {
+            get
+            {
+                if (!HasLiveTelemetry || string.IsNullOrWhiteSpace(_aircraftTitle)) return "---";
+                // Tomar los primeros 4 caracteres del título en mayúsculas, eliminando espacios
+                var t = _aircraftTitle.ToUpperInvariant();
+                // Intentar extraer el tipo ICAO del título
+                var tokens = new[] { "A318","A319","A320","A321","A330","A350","A380",
+                    "B737","B738","B739","B747","B757","B767","B777","B787","B78X",
+                    "CRJ","E170","E175","E190","E195","ATR","DHC","Q400","TBM",
+                    "PC12","C208","C172","C152","SR22","DA40","BE58","B350" };
+                foreach (var tok in tokens)
+                    if (t.Contains(tok)) return tok;
+                return t.Length >= 4 ? t.Substring(0, 4) : t;
+            }
+        }
 
         public bool ShowDoors
         {
@@ -166,7 +188,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string GSDisplay => GsDisplay;
         public string AltitudeDisplay => HasLiveTelemetry ? Math.Round(Altitude, 0).ToString("F0") : "---";
         public string AglDisplay      => HasLiveTelemetry ? Math.Round(AltitudeAGL, 0).ToString("F0") : "---";
-        public string VsDisplay => HasLiveTelemetry ? Math.Round(VS, 0).ToString("+#;-#;0") : "---";
+        // V/S: clamp a 0 cuando en tierra (SimConnect puede retornar ±1 fpm en suelo)
+        public string VsDisplay => HasLiveTelemetry ? (OnGround ? "0" : Math.Round(VS, 0).ToString("+#;-#;0")) : "---";
         public string VSDisplay => VsDisplay;
         public string HeadingDisplay => HasLiveTelemetry ? Math.Round(Heading, 0).ToString("000") + "°" : "---";
         public string FuelDisplay => HasLiveTelemetry ? Math.Round(FuelKg, 0).ToString("F0") : "---";

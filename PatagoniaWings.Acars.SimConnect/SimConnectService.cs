@@ -389,7 +389,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 AltitudeAGL        = r.AltitudeAGL,
                 IndicatedAirspeed  = r.IndicatedAirspeed,
                 GroundSpeed        = r.GroundSpeed,
-                VerticalSpeed      = r.VerticalSpeed,
+                VerticalSpeed      = r.OnGround != 0 ? 0.0 : r.VerticalSpeed,
                 Heading            = r.Heading,
                 Pitch              = r.Pitch,
                 Bank               = r.Bank,
@@ -428,7 +428,9 @@ namespace PatagoniaWings.Acars.SimConnect
                 ReverserActive     = false,
 
                 TransponderCode         = squawk,
-                TransponderCharlieMode  = r.TransponderState >= 3,
+                // TRANSPONDER STATE: 0=Off, 1=Standby, 2=Test, 3=On(Mode A), 4=Alt(Mode C), 5=Ground/Mode S
+                // "Charlie mode" = altitud reportada = estado 4 o superior
+                TransponderCharlieMode  = r.TransponderState >= 4,
 
                 ApuAvailable       = r.ApuPct > 1,
                 ApuRunning         = r.ApuPct > 85,

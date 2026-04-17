@@ -254,72 +254,68 @@
         <!-- ═══ SISTEMAS ═══ -->
         <Grid Margin="0,0,0,8">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="110"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="190"/>
+                <ColumnDefinition Width="6"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="160"/>
+                <ColumnDefinition Width="6"/>
+                <ColumnDefinition Width="128"/>
             </Grid.ColumnDefinitions>
 
-            <!-- LUCES -->
+            <!-- ── LUCES (compacto) ── -->
             <Border Grid.Column="0" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="LUCES" Style="{StaticResource SHead}"/>
-                    <Grid Margin="0,0,0,4">
+
+                    <!-- Macro helper: Label + Dot por fila -->
+                    <Grid Margin="0,0,0,3">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Beacon" Style="{StaticResource SysLabel}"/>
                         <Ellipse Grid.Column="1">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding BeaconOn}" Value="True">
-                                            <Setter Property="Fill" Value="#10B981"/>
-                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding BeaconOn}" Value="True"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
                     </Grid>
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,3">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Nav" Style="{StaticResource SysLabel}"/>
                         <Ellipse Grid.Column="1">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding NavOn}" Value="True">
-                                            <Setter Property="Fill" Value="#10B981"/>
-                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding NavOn}" Value="True"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
                     </Grid>
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,3">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Strobe" Style="{StaticResource SysLabel}"/>
                         <Ellipse Grid.Column="1">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding StrobeOn}" Value="True">
-                                            <Setter Property="Fill" Value="#10B981"/>
-                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding StrobeOn}" Value="True"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
                         </Ellipse>
                     </Grid>
-                    <Grid Margin="0,0,0,4">
+                    <Grid Margin="0,0,0,3">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Landing" Style="{StaticResource SysLabel}"/>
                         <Ellipse Grid.Column="1">
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding LandingOn}" Value="True">
-                                            <Setter Property="Fill" Value="#10B981"/>
-                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding LandingOn}" Value="True"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
@@ -332,9 +328,7 @@
                             <Ellipse.Style>
                                 <Style TargetType="Ellipse" BasedOn="{StaticResource LightOff}">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding TaxiOn}" Value="True">
-                                            <Setter Property="Fill" Value="#10B981"/>
-                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding TaxiOn}" Value="True"><Setter Property="Fill" Value="#10B981"/></DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Ellipse.Style>
@@ -343,25 +337,13 @@
                 </StackPanel>
             </Border>
 
-            <!-- SISTEMAS -->
+            <!-- ── SISTEMAS (compacto, sin Alt Baro/Suelo) ── -->
             <Border Grid.Column="2" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="SISTEMAS" Style="{StaticResource SHead}"/>
-                    <Grid Margin="0,0,0,2">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Alt Baro" Style="{StaticResource SysLabel}"/>
-                        <TextBlock Grid.Column="1" Text="{Binding AltitudeDisplay, StringFormat='{}{0} ft'}"
-                                   FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
-                                   Foreground="#0284C7" VerticalAlignment="Center"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Alt Suelo" Style="{StaticResource SysLabel}"/>
-                        <TextBlock Grid.Column="1" Text="{Binding AglDisplay, StringFormat='{}{0} ft'}"
-                                   FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
-                                   Foreground="#7C3AED" VerticalAlignment="Center"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,4" Visibility="{Binding ShowApu, Converter={StaticResource BoolVis}}">
+
+                    <!-- APU — solo jets / turbohélices con APU -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding ShowApu, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="APU" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">
@@ -391,7 +373,9 @@
                             </TextBlock>
                         </Border>
                     </Grid>
-                    <Grid Margin="0,0,0,4" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+
+                    <!-- Bleed Air — solo presurizados -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Bleed Air" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">
@@ -421,7 +405,9 @@
                             </TextBlock>
                         </Border>
                     </Grid>
-                    <Grid Margin="0,0,0,4">
+
+                    <!-- Seatbelt — todas las aeronaves -->
+                    <Grid Margin="0,0,0,3">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Seatbelt" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">
@@ -453,8 +439,9 @@
                             </TextBlock>
                         </Border>
                     </Grid>
-                    <!-- No Smoking Sign — solo aeronaves presurizadas -->
-                    <Grid Margin="0,0,0,4" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+
+                    <!-- No Smoking — solo presurizados -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="No Smoking" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">
@@ -486,22 +473,25 @@
                             </TextBlock>
                         </Border>
                     </Grid>
-                    <!-- Cabin Alt y Press Diff — solo aeronaves presurizadas -->
-                    <Grid Margin="0,0,0,4" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+
+                    <!-- Cabin Alt / Press Diff — solo presurizados -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Cabin Alt" Style="{StaticResource SysLabel}"/>
                         <TextBlock Grid.Column="1" Text="{Binding CabinAlt, StringFormat='{}{0:0} ft'}"
                                    FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
                                    Foreground="#0284C7" VerticalAlignment="Center"/>
                     </Grid>
-                    <Grid Margin="0,0,0,4" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Press Diff" Style="{StaticResource SysLabel}"/>
                         <TextBlock Grid.Column="1" Text="{Binding PressDiff, StringFormat='{}{0:0.00} psi'}"
                                    FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
                                    Foreground="#0284C7" VerticalAlignment="Center"/>
                     </Grid>
-                    <Grid Margin="0,0,0,4">
+
+                    <!-- Squawk + Modo transponder -->
+                    <Grid Margin="0,0,0,3">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Squawk" Style="{StaticResource SysLabel}"/>
                         <StackPanel Grid.Column="1" Orientation="Horizontal">
@@ -536,6 +526,8 @@
                             </Border>
                         </StackPanel>
                     </Grid>
+
+                    <!-- Autopilot -->
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Autopilot" Style="{StaticResource SysLabel}"/>
@@ -569,18 +561,85 @@
                 </StackPanel>
             </Border>
 
-            <!-- ENTORNO -->
+            <!-- ── AERONAVE / FOTO ── -->
             <Border Grid.Column="4" Style="{StaticResource Card}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="AERONAVE" Style="{StaticResource SHead}"/>
+
+                    <!-- Placeholder visual de foto: muestra ICAO centrado.
+                         Para activar una imagen real, reemplaza este Border por:
+                         <Image Source="{Binding AircraftImageUrl}" Stretch="UniformToFill"
+                                RenderOptions.BitmapScalingMode="HighQuality" SnapsToDevicePixels="True"/>
+                    -->
+                    <Border Grid.Row="1" CornerRadius="6" MinHeight="80" ClipToBounds="True">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                                <GradientStop Color="#EFF6FF" Offset="0"/>
+                                <GradientStop Color="#DBEAFE" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid>
+                            <!-- Texto de fondo decorativo -->
+                            <TextBlock Text="{Binding AircraftImageInitials}"
+                                       FontSize="38" FontWeight="Bold" FontFamily="Consolas"
+                                       Foreground="#BFDBFE" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" Opacity="0.7"/>
+                            <!-- Nombre completo abajo -->
+                            <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="6,0,6,5">
+                                <TextBlock Text="{Binding AircraftTitle}" FontSize="8"
+                                           Foreground="#0284C7" FontFamily="Segoe UI"
+                                           TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                            </StackPanel>
+                            <!-- Badge de estado suelo/vuelo -->
+                            <Border HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    CornerRadius="4" Padding="5,2" Margin="0,0,4,0">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="#DBEAFE"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding OnGround}" Value="True">
+                                                <Setter Property="Background" Value="#D1FAE5"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock FontSize="8" FontWeight="Bold" FontFamily="Segoe UI">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="● VUELO"/>
+                                            <Setter Property="Foreground" Value="#1D4ED8"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding OnGround}" Value="True">
+                                                    <Setter Property="Text" Value="● TIERRA"/>
+                                                    <Setter Property="Foreground" Value="#065F46"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- ── ENTORNO ── -->
+            <Border Grid.Column="6" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="ENTORNO" Style="{StaticResource SHead}"/>
                     <TextBlock Text="OAT" FontSize="9" Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,1"/>
-                    <TextBlock FontSize="13" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A" Margin="0,0,0,6">
+                    <TextBlock FontSize="13" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A" Margin="0,0,0,5">
                         <TextBlock.Text>
                             <Binding Path="OAT" StringFormat="{}{0:F0} °C" FallbackValue="—"/>
                         </TextBlock.Text>
                     </TextBlock>
                     <TextBlock Text="Viento" FontSize="9" Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,1"/>
-                    <TextBlock FontSize="11" FontWeight="SemiBold" FontFamily="Consolas" Foreground="#334155" Margin="0,0,0,6">
+                    <TextBlock FontSize="11" FontWeight="SemiBold" FontFamily="Consolas" Foreground="#334155" Margin="0,0,0,5">
                         <TextBlock.Text>
                             <MultiBinding StringFormat="{}{0:000}° / {1:F0} kt">
                                 <Binding Path="WindDir"/>
@@ -591,16 +650,15 @@
                     <TextBlock Text="Combustible" FontSize="9" Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,1"/>
                     <TextBlock Text="{Binding FuelKgDisplay, StringFormat='{}{0} kg'}"
                                FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
-                               Foreground="#334155" Margin="0,0,0,6"/>
-                    <TextBlock Text="En suelo" FontSize="9" Foreground="#94A3B8" FontFamily="Segoe UI" Margin="0,0,0,1"/>
+                               Foreground="#334155" Margin="0,0,0,5"/>
                     <TextBlock FontSize="10" FontWeight="SemiBold" FontFamily="Segoe UI">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="En vuelo"/>
+                                <Setter Property="Text" Value="● En vuelo"/>
                                 <Setter Property="Foreground" Value="#0284C7"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding OnGround}" Value="True">
-                                        <Setter Property="Text" Value="En tierra"/>
+                                        <Setter Property="Text" Value="● En tierra"/>
                                         <Setter Property="Foreground" Value="#10B981"/>
                                     </DataTrigger>
                                 </Style.Triggers>
