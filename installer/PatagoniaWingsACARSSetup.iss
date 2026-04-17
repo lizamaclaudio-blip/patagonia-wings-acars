@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "3.1.7"
+  #define MyAppVersion   "3.1.8"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
@@ -72,7 +72,7 @@ Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\fsuipcClient.dll"; DestD
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\AutoUpdater.NET.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.Master.exe.config"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.SimConnect\AircraftProfiles.json"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\PatagoniaWings.Acars.Master\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\PatagoniaWings.Acars.Master\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "Aircraft\*.exe"
 ; Carpeta de imágenes de aeronaves (el usuario guarda PNG/JPG aquí; nombre = código ICAO, ej. A320.png)
 Source: "..\PatagoniaWings.Acars.Master\Assets\Aircraft\.gitkeep"; DestDir: "{app}\Assets\Aircraft"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\Assets\Sounds\*"; DestDir: "{app}\Assets\Sounds"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\\..\\PatagoniaWings.Acars.Master\\Assets\\Sounds'))

@@ -1,11 +1,11 @@
 {
-  "version": "3.1.7",
+  "version": "3.1.8",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.7.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.8.exe",
   "mandatory": false,
-  "notes": "- Fix luces: bitmask LIGHT ON STATES + simvars individuales como fallback (compatible con todos los addons)\n- Fix combustible: conversión libras→kg para SimConnect, kg nativo para FSUIPC\n- Fix squawk: decodificación BCD16 para FSUIPC (7000 se muestra correctamente)\n- Cronómetro de vuelo arranca desde block-out (PushbackTaxi) en vez de solo al despegar\n- Log de eventos de procedimiento en PIREP: beacon, luces, fases, AP, cinturones\n- UI más grande y premium: fuentes +2-6pt, indicadores de luz más visibles\n- Carpetas de sonido creadas: Ground/, Copiloto/, Checkride/",
+  "notes": "- Nuevo reglaje SUR Air v5.0 con score dual de Procedimientos y Performance\n- Post-vuelo rediseñado con infracciones, bonificaciones y resumen operativo\n- PIREP XML con scoring extendido y cierre enriquecido hacia Supabase\n- Persistencia ampliada: procedure_score, performance_score y score_payload\n- Fix luces robusto para addons, combustible kg/lbs y squawk FSUIPC mantenidos",
   "releaseDate": "2026-04-17",
   "minVersion": "2.0.5",
-  "fileSize": "28 MB",
+  "fileSize": "24 MB",
   "storageProvider": "supabase"
 }

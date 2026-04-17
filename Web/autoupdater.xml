@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.1.7.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.7.exe</url>
-  <changelog>v3.1.7: Fix luces (bitmask + simvars individuales), Fix combustible kg/lbs, Fix squawk FSUIPC BCD, Cronómetro desde block-out, Log eventos procedimiento en PIREP, UI premium letras más grandes.</changelog>
+  <version>3.1.8.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.8.exe</url>
+  <changelog>v3.1.8: reglaje SUR Air v5.0, scoring dual Procedimientos/Performance, PIREP XML con scoring extendido, cierre enriquecido a Supabase y post-vuelo rediseñado.</changelog>
   <mandatory>false</mandatory>
 </item>

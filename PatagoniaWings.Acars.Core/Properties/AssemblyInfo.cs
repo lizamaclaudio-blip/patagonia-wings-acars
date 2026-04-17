@@ -7,5 +7,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyProduct("Patagonia Wings ACARS")]
 [assembly: AssemblyCopyright("Copyright © 2026 Patagonia Wings")]
 [assembly: ComVisible(false)]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("3.1.8.0")]
+[assembly: AssemblyFileVersion("3.1.8.0")]
