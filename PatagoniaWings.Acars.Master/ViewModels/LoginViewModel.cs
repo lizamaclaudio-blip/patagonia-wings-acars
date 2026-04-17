@@ -21,6 +21,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool IsLoading { get => _isLoading; set => SetField(ref _isLoading, value); }
         public bool RememberMe { get => _rememberMe; set => SetField(ref _rememberMe, value); }
 
+        /// <summary>
+        /// Badge de versión dinámico: lee la versión real del App.config en tiempo de ejecución.
+        /// Siempre refleja la versión instalada actual sin necesidad de recompilar.
+        /// Ejemplo: "v3.1.2  ·  SimConnect + FSUIPC7"
+        /// </summary>
+        public string VersionBadge => $"v{UpdateService.CurrentVersion}  ·  SimConnect + FSUIPC7";
+
         public ICommand LoginCommand { get; }
         public Action? OnLoginSuccess { get; set; }
 

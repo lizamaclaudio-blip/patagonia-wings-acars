@@ -141,7 +141,7 @@
                 <Border Margin="0,14,0,12" Width="210" HorizontalAlignment="Left"
                         Padding="10,7" BorderBrush="#2ED3D0" BorderThickness="1"
                         Background="#30111E2E" CornerRadius="8">
-                    <TextBlock Text="v3.0.8  ·  FSUIPC7 + SimConnect"
+                    <TextBlock Text="{Binding VersionBadge}"
                                Foreground="#BFEFFF" FontSize="11" FontWeight="SemiBold"/>
                 </Border>
 
