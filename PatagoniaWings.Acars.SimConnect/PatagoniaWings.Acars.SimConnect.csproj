@@ -37,6 +37,8 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml" />
     <Reference Include="PresentationCore" />
     <Reference Include="WindowsBase" />
     <Reference Include="Microsoft.FlightSimulator.SimConnect">
@@ -50,6 +52,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AircraftProfileCatalog.cs" />
     <Compile Include="SimConnectService.cs" />
     <Compile Include="SimConnectStructs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

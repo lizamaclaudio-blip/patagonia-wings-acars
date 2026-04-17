@@ -42,6 +42,9 @@ namespace PatagoniaWings.Acars.Core.Models
         public double FuelRightTankLbs { get; set; }
         public double FuelCenterTankLbs { get; set; }
         public double FuelTotalCapacityLbs { get; set; }
+        public double TotalWeightLbs { get; set; }
+        public double TotalWeightKg { get; set; }
+        public double ZeroFuelWeightKg { get; set; }
 
         // Aterrizaje
         public double LandingVS { get; set; }

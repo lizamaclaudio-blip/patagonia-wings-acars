@@ -677,8 +677,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             var result = await AcarsContext.Api.StartFlightAsync(flight, PreparedDispatch);
             if (result.Success)
             {
-                var initialFuelLbs = PreparedDispatch.FuelPlannedKg > 0
-                    ? PreparedDispatch.FuelPlannedKg / 0.45359237d
+                var runtimeFuelLbs = AcarsContext.Runtime.LastTelemetry?.FuelTotalLbs ?? 0d;
+                var initialFuelLbs = runtimeFuelLbs > 0
+                    ? runtimeFuelLbs
                     : 0d;
 
                 AcarsContext.FlightService.StartFlight(flight, initialFuelLbs);

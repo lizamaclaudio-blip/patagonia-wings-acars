@@ -1,11 +1,11 @@
 {
-  "version": "3.1.8",
+  "version": "3.1.9",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.8.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.9.exe",
   "mandatory": false,
-  "notes": "- Nuevo reglaje SUR Air v5.0 con score dual de Procedimientos y Performance\n- Post-vuelo rediseñado con infracciones, bonificaciones y resumen operativo\n- PIREP XML con scoring extendido y cierre enriquecido hacia Supabase\n- Persistencia ampliada: procedure_score, performance_score y score_payload\n- Fix luces robusto para addons, combustible kg/lbs y squawk FSUIPC mantenidos",
+  "notes": "- Certificacion inicial C208 con perfiles de aeronave por addon en SimConnect\n- Luces del C208 leidas segun estrategia por perfil para reflejo mas estable en vivo\n- Pesos reales del simulador: total y ZFW visibles durante el vuelo\n- Inicio de vuelo toma combustible real del sim y el PIREP corrige el consumo en kg",
   "releaseDate": "2026-04-17",
   "minVersion": "2.0.5",
-  "fileSize": "24 MB",
+  "fileSize": "22.6 MB",
   "storageProvider": "supabase"
 }

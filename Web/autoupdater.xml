@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.1.8.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.8.exe</url>
-  <changelog>v3.1.8: reglaje SUR Air v5.0, scoring dual Procedimientos/Performance, PIREP XML con scoring extendido, cierre enriquecido a Supabase y post-vuelo rediseñado.</changelog>
+  <version>3.1.9.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.9.exe</url>
+  <changelog>v3.1.9: certificacion inicial C208 con perfiles por addon, luces mas estables por estrategia de perfil, pesos reales del simulador y consumo corregido en PIREP.</changelog>
   <mandatory>false</mandatory>
 </item>

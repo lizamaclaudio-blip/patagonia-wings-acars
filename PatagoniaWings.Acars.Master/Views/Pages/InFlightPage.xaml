@@ -786,8 +786,8 @@
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="ZFW" Style="{StaticResource SysLabel}"/>
-                            <TextBlock Grid.Column="1" Text="— (sim)"
-                                       FontSize="10" FontFamily="Consolas" Foreground="#94A3B8"/>
+                            <TextBlock Grid.Column="1" Text="{Binding WbActualZfwDisplay}"
+                                       FontSize="10" FontFamily="Consolas" Foreground="#334155"/>
                         </Grid>
                     </StackPanel>
 

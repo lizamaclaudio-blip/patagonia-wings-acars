@@ -50,6 +50,7 @@ namespace PatagoniaWings.Acars.SimConnect
         public double FuelLeftQuantity;
         public double FuelRightQuantity;
         public double FuelCenterQuantity;
+        public double TotalWeight;
 
         public double Engine1FuelFlowPph;
         public double Engine2FuelFlowPph;

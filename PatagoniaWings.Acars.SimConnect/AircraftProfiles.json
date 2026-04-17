@@ -24,9 +24,10 @@
         "status": "WORKING"
       },
       "lights": {
+        "mode": "bitmask",
         "use_native": true,
         "status": "WORKING",
-        "notes": "SimConnect LIGHT STROBE/BEACON/LANDING/TAXI/NAV funcionan correctamente"
+        "notes": "Certificado para LIGHT ON STATES como fuente principal en MSFS"
       },
       "squawk": {
         "format": "BCO16",
@@ -65,9 +66,10 @@
         "status": "WORKING"
       },
       "lights": {
+        "mode": "bitmask",
         "use_native": true,
         "status": "WORKING",
-        "notes": "Black Square mantiene simvars nativas para luces. SimConnect funciona."
+        "notes": "Certificado para LIGHT ON STATES como fuente principal en MSFS"
       },
       "squawk": {
         "format": "BCO16",

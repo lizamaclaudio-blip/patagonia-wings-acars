@@ -90,7 +90,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         // FuelKg: normalizado en kg por el backend (SimConnect convierte lbs→kg, FSUIPC es nativo en kg)
         // Usamos _fuelKgNorm que se actualiza en OnTelemetry desde data.FuelKg
         private double _fuelKgNorm;
+        private double _totalWeightKg;
+        private double _zeroFuelWeightKg;
         public double FuelKg => Math.Round(_fuelKgNorm, 0);
+        public double ActualTotalWeightKg => Math.Round(_totalWeightKg, 0);
+        public double ActualZeroFuelWeightKg => Math.Round(_zeroFuelWeightKg, 0);
         
         // Propiedades de tanques individuales (visibles para diagnóstico de aviones complejos)
         public double FuelLeftTank { get => _fuelLeftTank; set { if (SetField(ref _fuelLeftTank, value)) OnPropertyChanged(nameof(FuelLeftTankDisplay)); } }
@@ -386,6 +390,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         // ── Log de PIREP en tiempo real ──────────────────────────────────────────
 
+        public string WbActualZfwDisplay   => HasLiveTelemetry && ActualZeroFuelWeightKg > 0 ? $"{ActualZeroFuelWeightKg:F0} kg" : "â€”";
+
         public string PirepPreview
         {
             get => _pirepPreview;
@@ -426,7 +432,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             // Combustible usado (si el vuelo ya inició con combustible registrado)
             if (fs.FuelAtStartLbs > 0 && HasLiveTelemetry)
             {
-                var fuelUsed = Math.Max(0, fs.FuelAtStartLbs - FuelKg);
+                var fuelUsed = Math.Max(0, (fs.FuelAtStartLbs / 2.20462) - FuelKg);
                 sb.AppendLine($"   Comb. usado: {fuelUsed:F0} kg   (actual: {FuelKg:F0} kg)");
             }
 
@@ -599,6 +605,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(WbPlanPayloadDisplay));
             OnPropertyChanged(nameof(WbPlanZfwDisplay));
             OnPropertyChanged(nameof(WbActualFuelDisplay));
+            OnPropertyChanged(nameof(WbActualZfwDisplay));
             OnPropertyChanged(nameof(WbFuelStatusLabel));
 
             UpdatePirepPreview();
@@ -624,7 +631,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 FuelLbs = data.FuelTotalLbs;
                 // Combustible normalizado en kg (SimConnect convierte lbs→kg en SimConnectService)
                 _fuelKgNorm = data.FuelKg > 0 ? data.FuelKg : (data.FuelTotalLbs / 2.20462);
+                _totalWeightKg = data.TotalWeightKg > 0 ? data.TotalWeightKg : 0;
+                _zeroFuelWeightKg = data.ZeroFuelWeightKg > 0
+                    ? data.ZeroFuelWeightKg
+                    : Math.Max(0, _totalWeightKg - _fuelKgNorm);
                 OnPropertyChanged(nameof(FuelKg));
+                OnPropertyChanged(nameof(ActualTotalWeightKg));
+                OnPropertyChanged(nameof(ActualZeroFuelWeightKg));
 
                 // Tanques individuales (para diagnóstico)
                 FuelLeftTank = data.FuelLeftTankLbs;
@@ -697,6 +710,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 // ── Notificar pesos actuales y log PIREP ────────────────────────
                 OnPropertyChanged(nameof(WbActualFuelKg));
                 OnPropertyChanged(nameof(WbActualFuelDisplay));
+                OnPropertyChanged(nameof(WbActualZfwDisplay));
                 OnPropertyChanged(nameof(WbFuelStatusLabel));
                 UpdatePirepPreview();
 
@@ -745,6 +759,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             AlertPause = false;
             _fuelAtEngineStartKg = -1;    // resetear al desconectar
             _fuelKgNorm = 0;
+            _totalWeightKg = 0;
+            _zeroFuelWeightKg = 0;
             _startTime = default(DateTime);
             _elapsedTimer.Stop();
             ElapsedTime = "00:00:00";

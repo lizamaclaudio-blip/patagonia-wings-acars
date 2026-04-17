@@ -534,6 +534,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 FuelTotalLbs      = fuelKg,  // Contiene kg (nombre engañoso por compatibilidad)
                 FuelKg            = fuelKg,  // kg directo desde FSUIPC (offset 0x0B74)
+                TotalWeightLbs    = 0,
+                TotalWeightKg     = 0,
+                ZeroFuelWeightKg  = 0,
 
                 FuelFlowLbsHour   = 0,
 

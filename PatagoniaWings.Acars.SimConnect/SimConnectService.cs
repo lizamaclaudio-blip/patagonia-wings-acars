@@ -35,6 +35,7 @@ namespace PatagoniaWings.Acars.SimConnect
         // Última telemetría base para poder re-emitir al actualizar luces
         private AircraftDataStruct _lastAircraftRaw;
         private bool _hasAircraftRaw;
+        private AircraftProfileDefinition _lastProfile = new AircraftProfileDefinition();
 
         private MobiFlightIntegration? _mobiFlight;
 
@@ -129,6 +130,7 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL LEFT QUANTITY",        "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL RIGHT QUANTITY",       "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL CENTER QUANTITY",      "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TOTAL WEIGHT",              "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
             // Motores
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG FUEL FLOW PPH:1","pounds per hour",SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
@@ -284,12 +286,16 @@ namespace PatagoniaWings.Acars.SimConnect
             _lastAircraftRaw = raw;
             _hasAircraftRaw  = true;
 
-            var simData = BuildSimData(raw, _lastEnv, _lastLightStates);
+            var exeDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+            var profile = AircraftProfileCatalog.Resolve(exeDir, aircraftTitle);
+            _lastProfile = profile;
+
+            var simData = BuildSimData(raw, _lastEnv, _lastLightStates, _hasLightData, profile);
             simData.IsConnected    = true;
             simData.SimulatorType  = DetectedSimulator == SimulatorType.None ? SimulatorType.MSFS2020 : DetectedSimulator;
             simData.Pause          = _isPaused;
 
-            string profileName = DetectProfileName(aircraftTitle);
+            string profileName = profile.Name;
             simData.AircraftProfile = profileName;
 
             if (_mobiFlight?.IsAvailable == true && ProfileRequiresLvars(profileName))
@@ -328,7 +334,7 @@ namespace PatagoniaWings.Acars.SimConnect
             // Re-emitir datos con luces actualizadas si ya tenemos datos de vuelo
             if (!_hasAircraftRaw || !IsConnected) return;
 
-            var simData = BuildSimData(_lastAircraftRaw, _lastEnv, _lastLightStates);
+            var simData = BuildSimData(_lastAircraftRaw, _lastEnv, _lastLightStates, _hasLightData, _lastProfile);
             simData.IsConnected   = true;
             simData.SimulatorType = DetectedSimulator;
             simData.Pause         = _isPaused;
@@ -362,7 +368,12 @@ namespace PatagoniaWings.Acars.SimConnect
         // BUILD SIM DATA
         // ──────────────────────────────────────────────────────────────────────
 
-        private static SimData BuildSimData(AircraftDataStruct r, EnvironmentDataStruct e, int lightStates)
+        private static SimData BuildSimData(
+            AircraftDataStruct r,
+            EnvironmentDataStruct e,
+            int lightStates,
+            bool hasLightData,
+            AircraftProfileDefinition? profile)
         {
             // Fuel con fallback
             double fuelTotal = r.FuelTotalLbs;
@@ -380,18 +391,63 @@ namespace PatagoniaWings.Acars.SimConnect
             // ── LUCES: bitmask OR simvars individuales ──────────────────────────
             // Prioridad: si el simvar individual devuelve 1, la luz está ON
             // aunque el bitmask no lo haya capturado (máxima compatibilidad con addons)
-            bool navOn     = (lightStates & 0x001) != 0 || r.LightNav     != 0;
-            bool beaconOn  = (lightStates & 0x002) != 0 || r.LightBeacon  != 0;
-            bool landingOn = (lightStates & 0x004) != 0 || r.LightLanding != 0;
-            bool taxiOn    = (lightStates & 0x008) != 0 || r.LightTaxi    != 0;
-            bool strobeOn  = (lightStates & 0x010) != 0 || r.LightStrobe  != 0;
+            var lightStrategy = profile?.GetLightStrategy() ?? AircraftLightStrategy.Hybrid;
+            bool bitmaskNav     = (lightStates & 0x001) != 0;
+            bool bitmaskBeacon  = (lightStates & 0x002) != 0;
+            bool bitmaskLanding = (lightStates & 0x004) != 0;
+            bool bitmaskTaxi    = (lightStates & 0x008) != 0;
+            bool bitmaskStrobe  = (lightStates & 0x010) != 0;
+            bool indivNav       = r.LightNav     != 0;
+            bool indivBeacon    = r.LightBeacon  != 0;
+            bool indivLanding   = r.LightLanding != 0;
+            bool indivTaxi      = r.LightTaxi    != 0;
+            bool indivStrobe    = r.LightStrobe  != 0;
+
+            bool navOn;
+            bool beaconOn;
+            bool landingOn;
+            bool taxiOn;
+            bool strobeOn;
+
+            switch (lightStrategy)
+            {
+                case AircraftLightStrategy.Bitmask:
+                    navOn     = hasLightData ? bitmaskNav     : indivNav;
+                    beaconOn  = hasLightData ? bitmaskBeacon  : indivBeacon;
+                    landingOn = hasLightData ? bitmaskLanding : indivLanding;
+                    taxiOn    = hasLightData ? bitmaskTaxi    : indivTaxi;
+                    strobeOn  = hasLightData ? bitmaskStrobe  : indivStrobe;
+                    break;
+
+                case AircraftLightStrategy.Individual:
+                    navOn     = indivNav;
+                    beaconOn  = indivBeacon;
+                    landingOn = indivLanding;
+                    taxiOn    = indivTaxi;
+                    strobeOn  = indivStrobe;
+                    break;
+
+                default:
+                    navOn     = (hasLightData && bitmaskNav)     || indivNav;
+                    beaconOn  = (hasLightData && bitmaskBeacon)  || indivBeacon;
+                    landingOn = (hasLightData && bitmaskLanding) || indivLanding;
+                    taxiOn    = (hasLightData && bitmaskTaxi)    || indivTaxi;
+                    strobeOn  = (hasLightData && bitmaskStrobe)  || indivStrobe;
+                    break;
+            }
 
             // ── Combustible en kg ─────────────────────────────────────────────
             // SimConnect devuelve FUEL TOTAL QUANTITY WEIGHT en libras → convertir a kg
             double fuelKg = fuelTotal / 2.20462;
+            double totalWeightLbs = Math.Max(0, r.TotalWeight);
+            double totalWeightKg = totalWeightLbs / 2.20462;
+            double zeroFuelWeightKg = totalWeightKg > 0
+                ? Math.Max(0, totalWeightKg - fuelKg)
+                : 0;
 
             Debug.WriteLine($"[SimConnect] Fuel={fuelTotal:F0} lbs / {fuelKg:F0} kg  N1={n1Eng1:F1}/{n1Eng2:F1} Squawk={squawk} " +
-                $"Lights: Nav={navOn} Beacon={beaconOn} Landing={landingOn} Taxi={taxiOn} Strobe={strobeOn}");
+                $"Profile={profile?.Name ?? "MSFS Native"} Strategy={lightStrategy} Lights(mask={hasLightData}): Nav={navOn} Beacon={beaconOn} Landing={landingOn} Taxi={taxiOn} Strobe={strobeOn} " +
+                $"RawLights: B={r.LightBeacon} S={r.LightStrobe} L={r.LightLanding} T={r.LightTaxi} N={r.LightNav}");
 
             return new SimData
             {
@@ -419,6 +475,9 @@ namespace PatagoniaWings.Acars.SimConnect
                 FuelRightTankLbs   = r.FuelRightQuantity,
                 FuelCenterTankLbs  = r.FuelCenterQuantity,
                 FuelTotalCapacityLbs = r.FuelTotalCapacity,
+                TotalWeightLbs     = totalWeightLbs,
+                TotalWeightKg      = totalWeightKg,
+                ZeroFuelWeightKg   = zeroFuelWeightKg,
 
                 LandingVS          = r.VerticalSpeed,
                 LandingG           = 0,
