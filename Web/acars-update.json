@@ -1,9 +1,9 @@
 {
-  "version": "3.1.0",
+  "version": "3.0.9",
   "webVersion": "2.0",
-  "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.1.0.exe",
+  "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.9.exe",
   "mandatory": false,
-  "notes": "- Sistema de evaluacion SUR Air dual: Score de Procedimientos (0-100) + Score de Performance (0-100)\n- Calificaciones por estrellas: ★★★ Excelente / ★★ Satisfactorio / ★ Marginal / Insatisfactorio\n- PostFlight rediseñado: dos tarjetas de puntaje, lista de infracciones (rojo) y bonificaciones (verde)\n- V/S FPM corregido: muestra 0 en tierra (ya no +1)\n- Squawk Mode C corregido: detecta correctamente modo Charlie (estado ≥4)\n- Panel LUCES y SISTEMAS mas compacto\n- Nuevo panel AERONAVE con identificador visual de la aeronave activa\n- Scoring enviado completo a Supabase: procedure_score + performance_score + grades",
+  "notes": "- Sistema SUR Air dual scoring: Score Procedimientos (0-100) + Performance (0-100)\n- Calificaciones ★★★ Excelente / ★★ Satisfactorio / ★ Marginal / Insatisfactorio\n- PostFlight rediseñado: tarjetas de puntaje, infracciones y bonificaciones\n- V/S FPM corregido: muestra 0 en tierra\n- Squawk Mode C detectado correctamente\n- Paneles LUCES y SISTEMAS mas compactos\n- Panel AERONAVE con identificador visual\n- Bleed Air leido en tiempo real desde SimConnect\n- +60 variantes MSFS detectadas",
   "releaseDate": "2026-04-16",
   "minVersion": "2.0.5",
   "fileSize": "10MB"
