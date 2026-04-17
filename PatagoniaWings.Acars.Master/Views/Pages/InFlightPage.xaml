@@ -144,6 +144,7 @@
         </Style>
     </UserControl.Resources>
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel x:Name="PageRoot" Background="#EFF6FF">
 
         <!-- ═══ HEADER ═══ -->
@@ -724,6 +725,135 @@
             </Border>
         </Grid>
 
+        <!-- ═══ PESOS: PLAN SIMBRIEF vs ACTUAL SIMULADOR ═══ -->
+        <Border Margin="0,0,0,8" Style="{StaticResource Card}"
+                Visibility="{Binding HasDispatchWeights, Converter={StaticResource BoolVis}}">
+            <StackPanel>
+                <TextBlock Text="PESOS" Style="{StaticResource SHead}"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- PLAN SIMBRIEF -->
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="PLAN SIMBRIEF" FontSize="9" FontWeight="SemiBold"
+                                   Foreground="#0284C7" FontFamily="Segoe UI" Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,3">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Block Fuel" Style="{StaticResource SysLabel}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding WbPlanFuelDisplay}"
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,3">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Payload" Style="{StaticResource SysLabel}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding WbPlanPayloadDisplay}"
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A"/>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="ZFW" Style="{StaticResource SysLabel}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding WbPlanZfwDisplay}"
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="1" Fill="#E2E8F0"/>
+
+                    <!-- ACTUAL SIMULADOR -->
+                    <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                        <TextBlock Text="ACTUAL SIMULADOR" FontSize="9" FontWeight="SemiBold"
+                                   Foreground="#059669" FontFamily="Segoe UI" Margin="0,0,0,4"/>
+                        <Grid Margin="0,0,0,3">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Comb. ahora" Style="{StaticResource SysLabel}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding WbActualFuelDisplay}"
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#065F46"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,3">
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Al arranque" Style="{StaticResource SysLabel}"/>
+                            <TextBlock Grid.Column="1" Text="{Binding WbStartFuelDisplay}"
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#065F46"/>
+                        </Grid>
+                        <Grid>
+                            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="ZFW" Style="{StaticResource SysLabel}"/>
+                            <TextBlock Grid.Column="1" Text="— (sim)"
+                                       FontSize="10" FontFamily="Consolas" Foreground="#94A3B8"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="3" Fill="#E2E8F0"/>
+
+                    <!-- MATCH COMBUSTIBLE -->
+                    <StackPanel Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="MATCH COMB." FontSize="9" FontWeight="SemiBold"
+                                   Foreground="#7C3AED" FontFamily="Segoe UI" Margin="0,0,0,4"/>
+                        <Border CornerRadius="6" Padding="7,4" Margin="0,0,0,4">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Background"   Value="#D1FAE5"/>
+                                    <Setter Property="BorderBrush"  Value="#6EE7B7"/>
+                                    <Setter Property="BorderThickness" Value="1"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding WbFuelMatchOk}" Value="False">
+                                            <Setter Property="Background"  Value="#FEF3C7"/>
+                                            <Setter Property="BorderBrush" Value="#FCD34D"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="{Binding WbFuelStatusLabel}"
+                                       FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI"
+                                       TextWrapping="Wrap">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Foreground" Value="#065F46"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding WbFuelMatchOk}" Value="False">
+                                                <Setter Property="Foreground" Value="#92400E"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                        <TextBlock Text="Tolerancia ±10%  ·  se evalúa al arrancar motores"
+                                   FontSize="8" Foreground="#94A3B8" FontFamily="Segoe UI"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ═══ LOG PIREP EN TIEMPO REAL ═══ -->
+        <Border Margin="0,0,0,8" CornerRadius="8" Padding="10,8"
+                Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1">
+            <StackPanel>
+                <DockPanel LastChildFill="False" Margin="0,0,0,5">
+                    <TextBlock DockPanel.Dock="Left" Text="LOG PIREP"
+                               FontSize="9" FontWeight="SemiBold" Foreground="#0284C7"
+                               FontFamily="Segoe UI" VerticalAlignment="Center"/>
+                    <TextBlock DockPanel.Dock="Right"
+                               Text="Vista previa en tiempo real · se actualiza con cada paquete de telemetría"
+                               FontSize="8" Foreground="#94A3B8" FontFamily="Segoe UI"
+                               VerticalAlignment="Center"/>
+                </DockPanel>
+                <ScrollViewer MaxHeight="100" VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <TextBlock Text="{Binding PirepPreview}"
+                               FontFamily="Consolas" FontSize="10"
+                               Foreground="#334155" TextWrapping="Wrap" LineHeight="16"/>
+                </ScrollViewer>
+            </StackPanel>
+        </Border>
+
         <!-- ═══ ALERT NO STROBE ═══ -->
         <Border Margin="0,0,0,8" CornerRadius="8" Padding="12,8"
                 Visibility="{Binding AlertNoStrobe, Converter={StaticResource BoolVis}}"
@@ -753,4 +883,5 @@
         </Border>
 
     </StackPanel>
+    </ScrollViewer>
 </UserControl>

@@ -37,6 +37,12 @@ namespace PatagoniaWings.Acars.Core.Services
         public double FuelAtStartLbs => _fuelAtStart;
         public bool IsFlightLocked { get; private set; }
 
+        // Estadísticas en tiempo real (para el log de PIREP en vivo)
+        public double MaxAltitudeFeet   => _maxAltitude;
+        public double MaxSpeedKts       => _maxSpeed;
+        public double TotalDistanceNm   => _totalDistanceNm;
+        public double LastLandingVS     => _lastLandingVS;
+
         public event Action<FlightPhase>? PhaseChanged;
         public event Action<SimData>? TelemetryUpdated;
         public event Action<bool>? FlightLockChanged;

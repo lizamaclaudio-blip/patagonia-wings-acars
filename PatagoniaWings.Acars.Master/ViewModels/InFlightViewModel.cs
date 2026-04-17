@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 using PatagoniaWings.Acars.Core.Enums;
@@ -64,6 +65,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _alertNoStrobe;
         private bool _alertPause;
         private bool _above10000;
+
+        // ── Pesos / comparación SimBrief vs Sim ──────────────────────────────────
+        private double _fuelAtEngineStartKg = -1; // -1 = no capturado aún
+        private string _pirepPreview = string.Empty;
 
         public double Altitude    { get => _altitude;    set { if (SetField(ref _altitude,    value)) OnPropertyChanged(nameof(AltitudeDisplay)); } }
         public double AltitudeAGL { get => _altitudeAgl; set { if (SetField(ref _altitudeAgl, value)) OnPropertyChanged(nameof(AglDisplay)); } }
@@ -287,6 +292,139 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool AlertPause { get => _alertPause; set => SetField(ref _alertPause, value); }
         public bool HasLiveTelemetry => AcarsContext.Runtime.IsSimulatorConnected && AcarsContext.Runtime.LastTelemetry != null;
 
+        // ── Propiedades de pesos (Plan SimBrief vs Actual Sim) ───────────────────
+
+        private PreparedDispatch? Dispatch => AcarsContext.Runtime.CurrentDispatch;
+
+        /// <summary>True cuando hay un despacho SimBrief activo con datos de combustible.</summary>
+        public bool HasDispatchWeights => Dispatch != null && Dispatch.FuelPlannedKg > 0;
+
+        // Plan (desde SimBrief / despacho)
+        public double WbPlanFuelKg    => Dispatch?.FuelPlannedKg      ?? 0;
+        public double WbPlanPayloadKg => Dispatch?.PayloadKg          ?? 0;
+        public double WbPlanZfwKg     => Dispatch?.ZeroFuelWeightKg   ?? 0;
+
+        // Actual del simulador (combustible actual en pantalla)
+        public double WbActualFuelKg => HasLiveTelemetry ? FuelKg : 0;
+
+        /// <summary>Combustible capturado en el primer arranque de motores (N1 > 15%).</summary>
+        public double WbFuelAtEngineStartKg => _fuelAtEngineStartKg > 0 ? _fuelAtEngineStartKg : WbActualFuelKg;
+
+        /// <summary>True si el combustible al arranque está dentro del ±10% del plan.</summary>
+        public bool WbFuelMatchOk
+        {
+            get
+            {
+                if (WbPlanFuelKg <= 0) return true;
+                var actual = WbFuelAtEngineStartKg;
+                if (actual <= 0) return true;
+                return Math.Abs(actual - WbPlanFuelKg) / WbPlanFuelKg <= 0.10;
+            }
+        }
+
+        /// <summary>Diferencia porcentual entre combustible real al arranque y el plan.</summary>
+        public string WbFuelDiffDisplay
+        {
+            get
+            {
+                if (WbPlanFuelKg <= 0 || WbFuelAtEngineStartKg <= 0) return "—";
+                var pct = (WbFuelAtEngineStartKg - WbPlanFuelKg) / WbPlanFuelKg * 100.0;
+                return $"{pct:+0.0;-0.0;0.0}%";
+            }
+        }
+
+        /// <summary>
+        /// Etiqueta de estado del combustible al arranque:
+        ///   "Esperando arranque" → motores no iniciados aún
+        ///   "✓ ±4.2%  OK"       → dentro del ±10%
+        ///   "⚠ +14.5%  EXCESO"  → fuera del ±10%
+        /// </summary>
+        public string WbFuelStatusLabel
+        {
+            get
+            {
+                if (WbPlanFuelKg <= 0)          return "Sin plan SimBrief";
+                if (_fuelAtEngineStartKg < 0)   return "Esperando arranque de motores";
+                return WbFuelMatchOk
+                    ? $"✓  {WbFuelDiffDisplay}  COMBUSTIBLE OK"
+                    : $"⚠  {WbFuelDiffDisplay}  FUERA DE RANGO (±10%)";
+            }
+        }
+
+        public string WbPlanFuelDisplay    => WbPlanFuelKg    > 0 ? $"{WbPlanFuelKg:F0} kg"    : "—";
+        public string WbPlanPayloadDisplay => WbPlanPayloadKg > 0 ? $"{WbPlanPayloadKg:F0} kg"  : "—";
+        public string WbPlanZfwDisplay     => WbPlanZfwKg     > 0 ? $"{WbPlanZfwKg:F0} kg"     : "—";
+        public string WbActualFuelDisplay  => HasLiveTelemetry    ? $"{WbActualFuelKg:F0} kg"   : "—";
+        public string WbStartFuelDisplay   => _fuelAtEngineStartKg > 0 ? $"{_fuelAtEngineStartKg:F0} kg" : "—";
+
+        // ── Log de PIREP en tiempo real ──────────────────────────────────────────
+
+        public string PirepPreview
+        {
+            get => _pirepPreview;
+            private set => SetField(ref _pirepPreview, value);
+        }
+
+        private void UpdatePirepPreview()
+        {
+            var fs     = AcarsContext.FlightService;
+            var flight = fs.CurrentFlight;
+            var sb     = new StringBuilder();
+
+            if (flight == null)
+            {
+                sb.AppendLine("Sin vuelo activo. Inicia un despacho desde la página de Despacho.");
+                PirepPreview = sb.ToString();
+                return;
+            }
+
+            var dep = flight.DepartureIcao ?? "????";
+            var arr = flight.ArrivalIcao   ?? "????";
+            var fn  = flight.FlightNumber  ?? "—";
+            var ac  = !string.IsNullOrWhiteSpace(flight.AircraftName)
+                          ? flight.AircraftName : (flight.AircraftIcao ?? "—");
+
+            sb.AppendLine($"╔  PIREP PRELIMINAR  ·  {fn}");
+            sb.AppendLine($"   {dep} → {arr}   |   {ac}");
+            sb.AppendLine($"   Fase: {PhaseLabel}   |   Tiempo vuelo: {ElapsedTime}");
+            sb.AppendLine($"───────────────────────────────────────────");
+
+            if (fs.MaxAltitudeFeet > 0)
+                sb.AppendLine($"   Alt máx  : {fs.MaxAltitudeFeet:F0} ft");
+            if (fs.MaxSpeedKts > 0)
+                sb.AppendLine($"   Vel máx  : {fs.MaxSpeedKts:F0} kt");
+            if (fs.TotalDistanceNm > 0)
+                sb.AppendLine($"   Distancia: {fs.TotalDistanceNm:F1} nm");
+
+            // Combustible usado (si el vuelo ya inició con combustible registrado)
+            if (fs.FuelAtStartLbs > 0 && HasLiveTelemetry)
+            {
+                var fuelUsed = Math.Max(0, fs.FuelAtStartLbs - FuelKg);
+                sb.AppendLine($"   Comb. usado: {fuelUsed:F0} kg   (actual: {FuelKg:F0} kg)");
+            }
+
+            // V/S de aterrizaje (solo si ya aterrizó)
+            if (fs.LastLandingVS != 0)
+            {
+                var vsStr = fs.LastLandingVS < 0
+                    ? $"{fs.LastLandingVS:F0} fpm"
+                    : $"+{fs.LastLandingVS:F0} fpm";
+                var rating = fs.LastLandingVS >= -180 ? "✓ Suave"
+                           : fs.LastLandingVS >= -350 ? "▲ Normal"
+                           : "⚠ Duro";
+                sb.AppendLine($"   V/S aterrizaje: {vsStr}  {rating}");
+            }
+
+            // Entorno actual
+            if (HasLiveTelemetry)
+            {
+                sb.AppendLine($"───────────────────────────────────────────");
+                sb.AppendLine($"   OAT: {OAT:F0}°C   Viento: {WindDir:000}°/{WindSpeed:F0}kt");
+            }
+
+            PirepPreview = sb.ToString().TrimEnd();
+        }
+
         public string IasDisplay => HasLiveTelemetry ? Math.Round(IAS, 0).ToString("F0") : "---";
         public string IASDisplay => IasDisplay;
         public string GsDisplay => HasLiveTelemetry ? Math.Round(GS, 0).ToString("F0") : "---";
@@ -404,6 +542,19 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(LiveNoSmokingSign));
             OnPropertyChanged(nameof(LiveCharlieMode));
 
+            // Pesos
+            OnPropertyChanged(nameof(HasDispatchWeights));
+            OnPropertyChanged(nameof(WbPlanFuelKg));
+            OnPropertyChanged(nameof(WbPlanPayloadKg));
+            OnPropertyChanged(nameof(WbPlanZfwKg));
+            OnPropertyChanged(nameof(WbPlanFuelDisplay));
+            OnPropertyChanged(nameof(WbPlanPayloadDisplay));
+            OnPropertyChanged(nameof(WbPlanZfwDisplay));
+            OnPropertyChanged(nameof(WbActualFuelDisplay));
+            OnPropertyChanged(nameof(WbFuelStatusLabel));
+
+            UpdatePirepPreview();
+
             if (!AcarsContext.Runtime.IsSimulatorConnected)
             {
                 ClearTelemetrySnapshot();
@@ -461,6 +612,25 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 BleedAirOn = data.BleedAirOn;
                 CabinAlt = Math.Round(data.CabinAltitudeFeet, 0);
                 PressDiff = Math.Round(data.PressureDiffPsi, 2);
+                // ── Detectar primer arranque de motores ────────────────────────
+                // Cuando N1 supera el 15% por primera vez se captura el combustible actual.
+                // Ese valor se usa para comparar con el plan SimBrief (±10% de tolerancia).
+                if (_fuelAtEngineStartKg < 0 && (data.Engine1N1 > 15 || data.Engine2N1 > 15))
+                {
+                    _fuelAtEngineStartKg = FuelKg;
+                    OnPropertyChanged(nameof(WbFuelAtEngineStartKg));
+                    OnPropertyChanged(nameof(WbFuelMatchOk));
+                    OnPropertyChanged(nameof(WbFuelDiffDisplay));
+                    OnPropertyChanged(nameof(WbFuelStatusLabel));
+                    OnPropertyChanged(nameof(WbStartFuelDisplay));
+                }
+
+                // ── Notificar pesos actuales y log PIREP ────────────────────────
+                OnPropertyChanged(nameof(WbActualFuelKg));
+                OnPropertyChanged(nameof(WbActualFuelDisplay));
+                OnPropertyChanged(nameof(WbFuelStatusLabel));
+                UpdatePirepPreview();
+
                 ApplyRuntimeState();
                 CheckAlerts(data);
             });
@@ -504,6 +674,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             PressDiff = 0;
             AlertNoStrobe = false;
             AlertPause = false;
+            _fuelAtEngineStartKg = -1; // resetear al desconectar
         }
 
         private void CheckAlerts(SimData data)
@@ -564,6 +735,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             Application.Current.Dispatcher.Invoke(() =>
             {
                 Phase = newPhase;
+                UpdatePirepPreview();
                 CommandManager.InvalidateRequerySuggested();
                 switch (newPhase)
                 {
