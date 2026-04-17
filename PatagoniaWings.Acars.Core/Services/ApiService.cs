@@ -930,33 +930,41 @@ namespace PatagoniaWings.Acars.Core.Services
                     // route_text y remarks no son columnas de flight_reservations.
                     var scorePayload = new Dictionary<string, object>
                     {
-                        ["procedure_score"] = report.Score,
-                        ["grade"] = report.Grade,
-                        ["landing_vs_fpm"] = report.LandingVS,
-                        ["landing_g"] = report.LandingG,
-                        ["max_altitude_ft"] = report.MaxAltitudeFeet,
-                        ["max_speed_kts"] = report.MaxSpeedKts,
-                        ["approach_qnh_hpa"] = report.ApproachQnhHpa,
-                        ["landing_penalty"] = report.LandingPenalty,
-                        ["taxi_penalty"] = report.TaxiPenalty,
-                        ["airborne_penalty"] = report.AirbornePenalty,
-                        ["approach_penalty"] = report.ApproachPenalty,
-                        ["cabin_penalty"] = report.CabinPenalty,
-                        ["summary"] = report.ProceduralSummary,
-                        ["source"] = "acars_v2"
+                        ["procedure_score"]   = report.ProcedureScore,
+                        ["performance_score"] = report.PerformanceScore,
+                        ["procedure_grade"]   = report.ProcedureGrade,
+                        ["performance_grade"] = report.PerformanceGrade,
+                        ["grade"]             = report.Grade,       // legacy
+                        ["violations_count"]  = report.Violations?.Count ?? 0,
+                        ["bonuses_count"]     = report.Bonuses?.Count ?? 0,
+                        ["landing_vs_fpm"]    = report.LandingVS,
+                        ["landing_g"]         = report.LandingG,
+                        ["max_altitude_ft"]   = report.MaxAltitudeFeet,
+                        ["max_speed_kts"]     = report.MaxSpeedKts,
+                        ["approach_qnh_hpa"]  = report.ApproachQnhHpa,
+                        ["landing_penalty"]   = report.LandingPenalty,
+                        ["taxi_penalty"]      = report.TaxiPenalty,
+                        ["airborne_penalty"]  = report.AirbornePenalty,
+                        ["approach_penalty"]  = report.ApproachPenalty,
+                        ["cabin_penalty"]     = report.CabinPenalty,
+                        ["summary"]           = report.ProceduralSummary,
+                        ["source"]            = "acars_client_v3"
                     };
                     reservationRequest.Content = new StringContent(
                         _json.Serialize(new
                         {
-                            status = "completed",
-                            completed_at = nowUtcIso,
+                            status              = "completed",
+                            completed_at        = nowUtcIso,
                             actual_block_minutes = actualBlockMinutes,
-                            procedure_score = report.Score,
-                            mission_score = report.Score,
-                            scoring_status = "scored",
-                            scoring_applied_at = nowUtcIso,
-                            score_payload = scorePayload,
-                            updated_at = nowUtcIso
+                            procedure_score     = report.ProcedureScore,
+                            performance_score   = report.PerformanceScore,
+                            procedure_grade     = report.ProcedureGrade,
+                            performance_grade   = report.PerformanceGrade,
+                            mission_score       = report.ProcedureScore,   // legacy alias
+                            scoring_status      = "scored",
+                            scoring_applied_at  = nowUtcIso,
+                            score_payload       = scorePayload,
+                            updated_at          = nowUtcIso
                         }),
                         Encoding.UTF8,
                         "application/json");
@@ -1011,14 +1019,19 @@ namespace PatagoniaWings.Acars.Core.Services
                 var totalPenalty = report.LandingPenalty + report.TaxiPenalty + report.AirbornePenalty + report.ApproachPenalty + report.CabinPenalty;
                 var scoreReportPayload = new Dictionary<string, object>
                 {
-                    ["procedure_score"] = report.Score,
-                    ["landing_vs_fpm"] = report.LandingVS,
-                    ["landing_g_force"] = report.LandingG,
-                    ["max_altitude_ft"] = report.MaxAltitudeFeet,
-                    ["max_speed_kts"] = report.MaxSpeedKts,
-                    ["approach_qnh_hpa"] = report.ApproachQnhHpa,
+                    ["procedure_score"]   = report.ProcedureScore,
+                    ["performance_score"] = report.PerformanceScore,
+                    ["procedure_grade"]   = report.ProcedureGrade,
+                    ["performance_grade"] = report.PerformanceGrade,
+                    ["violations_count"]  = report.Violations?.Count ?? 0,
+                    ["bonuses_count"]     = report.Bonuses?.Count ?? 0,
+                    ["landing_vs_fpm"]    = report.LandingVS,
+                    ["landing_g_force"]   = report.LandingG,
+                    ["max_altitude_ft"]   = report.MaxAltitudeFeet,
+                    ["max_speed_kts"]     = report.MaxSpeedKts,
+                    ["approach_qnh_hpa"]  = report.ApproachQnhHpa,
                     ["procedural_summary"] = report.ProceduralSummary,
-                    ["simulator"] = report.Simulator.ToString()
+                    ["simulator"]         = report.Simulator.ToString()
                 };
                 using (var scoreRequest = CreateSupabaseRequest(HttpMethod.Post, "/rest/v1/pw_flight_score_reports", true))
                 {
@@ -1028,25 +1041,28 @@ namespace PatagoniaWings.Acars.Core.Services
                         {
                             new Dictionary<string, object?>
                             {
-                                ["reservation_id"] = dispatch.ReservationId,
-                                ["pilot_callsign"] = pilot.CallSign,
-                                ["route_code"] = NullIfEmpty(dispatch.RouteCode),
-                                ["flight_mode_code"] = NullIfEmpty(dispatch.FlightMode),
-                                ["block_minutes"] = actualBlockMinutes,
-                                ["block_hours"] = blockHours,
-                                ["landing_points"] = report.LandingPenalty,
-                                ["taxi_out_points"] = report.TaxiPenalty,
+                                ["reservation_id"]       = dispatch.ReservationId,
+                                ["pilot_callsign"]       = pilot.CallSign,
+                                ["route_code"]           = NullIfEmpty(dispatch.RouteCode),
+                                ["flight_mode_code"]     = NullIfEmpty(dispatch.FlightMode),
+                                ["block_minutes"]        = actualBlockMinutes,
+                                ["block_hours"]          = blockHours,
+                                ["landing_points"]       = report.LandingPenalty,
+                                ["taxi_out_points"]      = report.TaxiPenalty,
                                 ["takeoff_climb_points"] = report.AirbornePenalty,
-                                ["approach_points"] = report.ApproachPenalty,
-                                ["cruise_points"] = report.CabinPenalty,
-                                ["penalty_points"] = totalPenalty,
-                                ["procedure_score"] = report.Score,
-                                ["mission_score"] = report.Score,
-                                ["legado_credits"] = report.Score,
-                                ["valid_for_progression"] = report.Score >= 60,
-                                ["score_payload"] = scoreReportPayload,
-                                ["notes"] = report.ProceduralSummary,
-                                ["scored_at"] = nowUtcIso
+                                ["approach_points"]      = report.ApproachPenalty,
+                                ["cruise_points"]        = report.CabinPenalty,
+                                ["penalty_points"]       = totalPenalty,
+                                ["procedure_score"]      = report.ProcedureScore,
+                                ["performance_score"]    = report.PerformanceScore,
+                                ["procedure_grade"]      = NullIfEmpty(report.ProcedureGrade),
+                                ["performance_grade"]    = NullIfEmpty(report.PerformanceGrade),
+                                ["mission_score"]        = report.ProcedureScore,   // legacy alias
+                                ["legado_credits"]       = report.ProcedureScore,
+                                ["valid_for_progression"] = report.ProcedureScore >= 60,
+                                ["score_payload"]        = scoreReportPayload,
+                                ["notes"]                = report.ProceduralSummary,
+                                ["scored_at"]            = nowUtcIso
                             }
                         }),
                         Encoding.UTF8,
