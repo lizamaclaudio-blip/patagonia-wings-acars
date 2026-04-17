@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
   <version>3.0.9.0</version>
-  <url>https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.9.exe</url>
-  <changelog>v3.0.9: Bleed Air leido en tiempo real desde SimConnect. Panel SISTEMAS completo con Bleed Air, No Smoking, Cabin Alt y Press Diff para aeronaves presurizadas. Luces via LIGHT ON STATES. APU y Bleed Air ocultos en C208/GA. +60 variantes MSFS. Scoring PIREP justo sin penalizacion en C208/BE58/GA. SimConnect primario, FSUIPC7 fallback.</changelog>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.0.9.exe</url>
+  <changelog>v3.0.9: Sistema SUR Air dual scoring — Score de Procedimientos y Performance con calificaciones por estrellas. PostFlight rediseñado. V/S corregido en tierra. Squawk Mode C correcto. Paneles compactos. Detección de variante/addon. +60 variantes MSFS. SimConnect primario, FSUIPC7 fallback.</changelog>
   <mandatory>false</mandatory>
 </item>
