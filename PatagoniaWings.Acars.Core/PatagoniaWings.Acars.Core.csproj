@@ -79,6 +79,7 @@
     <Compile Include="Models\WeatherInfo.cs" />
     <Compile Include="Services\ApiService.cs" />
     <Compile Include="Services\AuthService.cs" />
+    <Compile Include="Services\FlightEvaluationService.cs" />
     <Compile Include="Services\FlightService.cs" />
     <Compile Include="Services\PirepXmlBuilder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

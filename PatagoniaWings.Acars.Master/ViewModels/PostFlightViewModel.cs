@@ -1,5 +1,6 @@
 using System;
-using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Input;
 using PatagoniaWings.Acars.Core.Models;
 using PatagoniaWings.Acars.Master.Helpers;
@@ -18,15 +19,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool Submitted { get => _submitted; set => SetField(ref _submitted, value); }
         public string SubmitMessage { get => _submitMessage; set => SetField(ref _submitMessage, value); }
 
-        public string GradeColor => Report?.Grade switch
-        {
-            "A+" or "A" => "#44CC44",
-            "B" => "#AACC44",
-            "C" => "#CCAA44",
-            "D" => "#CC7744",
-            _ => "#CC4444"
-        };
+        // ── Procedimientos ─────────────────────────────────────────────────────
+        public int ProcedureScore => Report?.ProcedureScore ?? 0;
+        public string ProcedureGrade => Report?.ProcedureGrade ?? "—";
+        public string ProcedureScoreColor => ScoreColor(ProcedureScore);
 
+        // ── Performance ────────────────────────────────────────────────────────
+        public int PerformanceScore => Report?.PerformanceScore ?? 0;
+        public string PerformanceGrade => Report?.PerformanceGrade ?? "—";
+        public string PerformanceScoreColor => ScoreColor(PerformanceScore);
+
+        // ── Violations / Bonuses ───────────────────────────────────────────────
+        public IReadOnlyList<ScoreEvent> Violations => Report?.Violations ?? new List<ScoreEvent>();
+        public IReadOnlyList<ScoreEvent> Bonuses    => Report?.Bonuses    ?? new List<ScoreEvent>();
+        public bool HasViolations => Violations.Count > 0;
+        public bool HasBonuses    => Bonuses.Count > 0;
+
+        // ── Aterrizaje ─────────────────────────────────────────────────────────
         public string LandingQuality
         {
             get
@@ -41,45 +50,41 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
-        public string ProceduralSummary => Report?.ProceduralSummary ?? string.Empty;
-
-        public string MaxAltDisplay => Report == null || Report.MaxAltitudeFeet <= 0
-            ? "—"
-            : $"{Report.MaxAltitudeFeet:F0} ft";
-
-        public string MaxSpeedDisplay => Report == null || Report.MaxSpeedKts <= 0
-            ? "—"
-            : $"{Report.MaxSpeedKts:F0} kts";
-
-        public string QnhDisplay => Report == null || Report.ApproachQnhHpa <= 0
-            ? "—"
-            : $"{Report.ApproachQnhHpa:F1} hPa";
-
-        public string ScoreBreakdown
+        public string LandingQualityColor
         {
             get
             {
-                if (Report == null) return string.Empty;
-                var sb = new StringBuilder();
-                AppendPhase(sb, "Aterrizaje", Report.LandingPenalty);
-                AppendPhase(sb, "Taxi", Report.TaxiPenalty);
-                AppendPhase(sb, "Vuelo", Report.AirbornePenalty);
-                AppendPhase(sb, "Aproximación", Report.ApproachPenalty);
-                AppendPhase(sb, "Cabina / QNH", Report.CabinPenalty);
-                return sb.Length == 0 ? "Sin penalizaciones" : sb.ToString().TrimEnd('·', ' ');
+                if (Report == null) return "#CBD5E1";
+                var vs = Math.Abs(Report.LandingVS);
+                if (vs < 200) return "#10B981";   // verde
+                if (vs < 400) return "#F59E0B";   // amarillo
+                if (vs < 700) return "#F97316";   // naranja
+                return "#EF4444";                  // rojo
             }
         }
 
+        // ── Stats ──────────────────────────────────────────────────────────────
+        public string MaxAltDisplay => Report == null || Report.MaxAltitudeFeet <= 0
+            ? "—" : $"{Report.MaxAltitudeFeet:F0} ft";
+
+        public string MaxSpeedDisplay => Report == null || Report.MaxSpeedKts <= 0
+            ? "—" : $"{Report.MaxSpeedKts:F0} kts";
+
+        public string QnhDisplay => Report == null || Report.ApproachQnhHpa <= 0
+            ? "—" : $"{Report.ApproachQnhHpa:F1} hPa";
+
+        // ── Habilitaciones ─────────────────────────────────────────────────────
         public bool HasQualifications =>
             Report != null &&
-            (!string.IsNullOrWhiteSpace(Report.PilotQualifications) || !string.IsNullOrWhiteSpace(Report.PilotCertifications));
+            (!string.IsNullOrWhiteSpace(Report.PilotQualifications) ||
+             !string.IsNullOrWhiteSpace(Report.PilotCertifications));
 
         public string QualificationsDisplay
         {
             get
             {
                 if (Report == null) return string.Empty;
-                var parts = new System.Collections.Generic.List<string>();
+                var parts = new List<string>();
                 if (!string.IsNullOrWhiteSpace(Report.PilotQualifications))
                     parts.Add(Report.PilotQualifications.Trim());
                 if (!string.IsNullOrWhiteSpace(Report.PilotCertifications))
@@ -88,14 +93,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
-        private static void AppendPhase(StringBuilder sb, string label, int penalty)
+        // ── Helpers ────────────────────────────────────────────────────────────
+        private static string ScoreColor(int score)
         {
-            if (penalty < 0)
-                sb.Append($"{label}: {penalty}  ·  ");
-            else
-                sb.Append($"{label}: ok  ·  ");
+            if (score >= 90) return "#10B981";   // verde esmeralda — Excelente
+            if (score >= 75) return "#3B82F6";   // azul — Satisfactorio
+            if (score >= 60) return "#F59E0B";   // ámbar — Marginal
+            return "#EF4444";                     // rojo — Insatisfactorio
         }
 
+        // ── Comando ────────────────────────────────────────────────────────────
         public ICommand SubmitCommand { get; }
 
         public PostFlightViewModel()
@@ -114,7 +121,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (result.Success)
                 {
                     Submitted = true;
-                    SubmitMessage = $"Vuelo cerrado · Score {Report.Score} pts ({Report.Grade}) guardado en Supabase.";
+                    SubmitMessage = string.Format(
+                        "Vuelo cerrado · Proc {0} pts ({1}) · Perf {2} pts ({3}) · guardado en Supabase.",
+                        Report.ProcedureScore, Report.ProcedureGrade,
+                        Report.PerformanceScore, Report.PerformanceGrade);
+
                     if (result.Data != null)
                     {
                         Report.PilotQualifications = result.Data.PilotQualifications;
@@ -140,13 +151,21 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             Report = report;
             Submitted = false;
             SubmitMessage = string.Empty;
-            OnPropertyChanged(nameof(GradeColor));
+            OnPropertyChanged(nameof(ProcedureScore));
+            OnPropertyChanged(nameof(ProcedureGrade));
+            OnPropertyChanged(nameof(ProcedureScoreColor));
+            OnPropertyChanged(nameof(PerformanceScore));
+            OnPropertyChanged(nameof(PerformanceGrade));
+            OnPropertyChanged(nameof(PerformanceScoreColor));
+            OnPropertyChanged(nameof(Violations));
+            OnPropertyChanged(nameof(Bonuses));
+            OnPropertyChanged(nameof(HasViolations));
+            OnPropertyChanged(nameof(HasBonuses));
             OnPropertyChanged(nameof(LandingQuality));
-            OnPropertyChanged(nameof(ProceduralSummary));
+            OnPropertyChanged(nameof(LandingQualityColor));
             OnPropertyChanged(nameof(MaxAltDisplay));
             OnPropertyChanged(nameof(MaxSpeedDisplay));
             OnPropertyChanged(nameof(QnhDisplay));
-            OnPropertyChanged(nameof(ScoreBreakdown));
             OnPropertyChanged(nameof(HasQualifications));
             OnPropertyChanged(nameof(QualificationsDisplay));
         }

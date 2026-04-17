@@ -101,6 +101,31 @@ namespace PatagoniaWings.Acars.Core.Services
                         Element("LastGroundSpeedKnots", lastSample == null ? string.Empty : FormatDouble(lastSample.GroundSpeed)),
                         Element("LastHeadingDegrees", lastSample == null ? string.Empty : FormatDouble(lastSample.Heading))
                     ),
+                    new XElement("Scoring",
+                        Element("Authority", "acars_client_v3"),
+                        Element("ProcedureScore", report.ProcedureScore.ToString(CultureInfo.InvariantCulture)),
+                        Element("ProcedureGrade", report.ProcedureGrade),
+                        Element("PerformanceScore", report.PerformanceScore.ToString(CultureInfo.InvariantCulture)),
+                        Element("PerformanceGrade", report.PerformanceGrade),
+                        new XElement("Violations",
+                            new XAttribute("count", report.Violations?.Count ?? 0),
+                            (report.Violations ?? new System.Collections.Generic.List<PatagoniaWings.Acars.Core.Models.ScoreEvent>())
+                                .Select(v => new XElement("Item",
+                                    new XAttribute("code", v.Code),
+                                    new XAttribute("phase", v.Phase),
+                                    new XAttribute("pts", v.Points),
+                                    v.Description))
+                        ),
+                        new XElement("Bonuses",
+                            new XAttribute("count", report.Bonuses?.Count ?? 0),
+                            (report.Bonuses ?? new System.Collections.Generic.List<PatagoniaWings.Acars.Core.Models.ScoreEvent>())
+                                .Select(b => new XElement("Item",
+                                    new XAttribute("code", b.Code),
+                                    new XAttribute("phase", b.Phase),
+                                    new XAttribute("pts", b.Points),
+                                    b.Description))
+                        )
+                    ),
                     new XElement("TelemetryLog",
                         telemetry.Select((sample, index) =>
                             new XElement("Sample",

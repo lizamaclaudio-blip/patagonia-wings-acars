@@ -1,8 +1,24 @@
 using System;
+using System.Collections.Generic;
 using PatagoniaWings.Acars.Core.Enums;
 
 namespace PatagoniaWings.Acars.Core.Models
 {
+    /// <summary>
+    /// Evento de scoring individual: penalización o bonificación detectada por el evaluador.
+    /// </summary>
+    public class ScoreEvent
+    {
+        /// <summary>Código de referencia, p.ej. "LDG-06", "TAX-02", "GEN-01".</summary>
+        public string Code { get; set; } = string.Empty;
+        /// <summary>Fase del vuelo: PRE, IGN, TAX, TO, ASC, CRU, DES, LDG, TAG, PAR, GEN, PLN, TIE.</summary>
+        public string Phase { get; set; } = string.Empty;
+        /// <summary>Descripción legible del evento.</summary>
+        public string Description { get; set; } = string.Empty;
+        /// <summary>Puntos aplicados: negativo = penalización, positivo = bonificación.</summary>
+        public int Points { get; set; }
+    }
+
     public class FlightReport
     {
         public int Id { get; set; }
@@ -18,7 +34,10 @@ namespace PatagoniaWings.Acars.Core.Models
         public double FuelUsed { get; set; }
         public double LandingVS { get; set; }
         public double LandingG { get; set; }
+
+        /// <summary>Score combinado (= ProcedureScore) para compatibilidad con Supabase.</summary>
         public int Score { get; set; }
+        /// <summary>Nota combinada (heredada). Usar ProcedureGrade / PerformanceGrade para la UI.</summary>
         public string Grade { get; set; } = string.Empty;
         public string ProceduralSummary { get; set; } = string.Empty;
         public SimulatorType Simulator { get; set; }
@@ -32,12 +51,26 @@ namespace PatagoniaWings.Acars.Core.Models
         public double MaxSpeedKts { get; set; }
         public double ApproachQnhHpa { get; set; }
 
-        // Desglose de penalizaciones por fase (valores negativos o cero)
+        // Desglose legado por fase (para compatibilidad con Supabase)
         public int LandingPenalty { get; set; }
         public int TaxiPenalty { get; set; }
         public int AirbornePenalty { get; set; }
         public int ApproachPenalty { get; set; }
         public int CabinPenalty { get; set; }
+
+        // ── SUR Air Dual Scoring ─────────────────────────────────────────────
+        /// <summary>Score de procedimientos: 0-100 (empieza en 100, solo descuenta).</summary>
+        public int ProcedureScore { get; set; }
+        /// <summary>Score de performance: 0-100 (empieza en base 60, sube o baja).</summary>
+        public int PerformanceScore { get; set; }
+        /// <summary>Calificación de procedimientos: ★★★ Excelente / ★★ Satisfactorio / ★ Marginal / INSATISFACTORIO.</summary>
+        public string ProcedureGrade { get; set; } = string.Empty;
+        /// <summary>Calificación de performance: ★★★ Excelente / ★★ Satisfactorio / ★ Marginal / INSATISFACTORIO.</summary>
+        public string PerformanceGrade { get; set; } = string.Empty;
+        /// <summary>Lista de infracciones detectadas con código, fase, descripción y puntos.</summary>
+        public List<ScoreEvent> Violations { get; set; } = new List<ScoreEvent>();
+        /// <summary>Lista de bonificaciones otorgadas con código, fase, descripción y puntos.</summary>
+        public List<ScoreEvent> Bonuses { get; set; } = new List<ScoreEvent>();
 
         // Perfil del piloto (para mostrar en PostFlight)
         public string PilotQualifications { get; set; } = string.Empty;

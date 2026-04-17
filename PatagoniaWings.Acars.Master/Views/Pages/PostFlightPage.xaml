@@ -3,213 +3,355 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              Background="Transparent">
 <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-    </UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+</UserControl.Resources>
 
-    <StackPanel x:Name="PageRoot" MaxWidth="760">
+<StackPanel x:Name="PageRoot" MaxWidth="760">
 
-        <TextBlock Text="REPORTE POST-VUELO" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
+    <TextBlock Text="REPORTE POST-VUELO" Style="{StaticResource FieldLabel}" Margin="0,0,0,4"/>
 
-        <!-- TARJETA PRINCIPAL -->
-        <Border Style="{StaticResource Card}" Margin="0,0,0,0">
-            <StackPanel>
+    <!-- TARJETA PRINCIPAL -->
+    <Border Style="{StaticResource Card}" Margin="0,0,0,10">
+        <StackPanel>
 
-                <!-- Header: vuelo + nota -->
-                <Grid Margin="0,0,0,12">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
+            <!-- Header: vuelo + ruta -->
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
 
-                    <StackPanel>
-                        <TextBlock Text="{Binding Report.FlightNumber}" FontSize="20" FontWeight="Bold"
-                                   Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{Binding Report.DepartureIcao}" FontSize="14"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontFamily="Consolas" FontWeight="Bold"/>
-                            <TextBlock Text="  ›  " Foreground="#CBD5E1" FontSize="14"/>
-                            <TextBlock Text="{Binding Report.ArrivalIcao}" FontSize="14"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontFamily="Consolas" FontWeight="Bold"/>
-                        </StackPanel>
-                        <TextBlock Text="{Binding Report.AircraftIcao}" FontSize="11"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
-                                   FontFamily="Segoe UI" Margin="0,4,0,0"/>
+                <StackPanel>
+                    <TextBlock Text="{Binding Report.FlightNumber}" FontSize="20" FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <TextBlock Text="{Binding Report.DepartureIcao}" FontSize="14"
+                                   Foreground="{StaticResource AccentLightBlueBrush}"
+                                   FontFamily="Consolas" FontWeight="Bold"/>
+                        <TextBlock Text="  ›  " Foreground="#CBD5E1" FontSize="14"/>
+                        <TextBlock Text="{Binding Report.ArrivalIcao}" FontSize="14"
+                                   Foreground="{StaticResource AccentLightBlueBrush}"
+                                   FontFamily="Consolas" FontWeight="Bold"/>
                     </StackPanel>
+                    <TextBlock Text="{Binding Report.AircraftIcao}" FontSize="11"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontFamily="Segoe UI" Margin="0,4,0,0"/>
+                </StackPanel>
 
-                    <!-- Círculo nota -->
-                    <Grid Grid.Column="1" HorizontalAlignment="Right">
-                        <Ellipse Width="70" Height="70">
-                            <Ellipse.Fill>
-                                <RadialGradientBrush>
-                                    <GradientStop Color="{Binding GradeColor}" Offset="0.3"/>
-                                    <GradientStop Color="#FFFFFF" Offset="1"/>
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
-                        <Ellipse Width="64" Height="64">
-                            <Ellipse.Stroke>
-                                <SolidColorBrush Color="{Binding GradeColor}"/>
-                            </Ellipse.Stroke>
-                            <Ellipse.StrokeThickness>2</Ellipse.StrokeThickness>
-                        </Ellipse>
-                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                            <TextBlock Text="{Binding Report.Grade}" FontSize="22" FontWeight="Bold"
-                                       Foreground="White" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding Report.Score, StringFormat={}{0} pts}"
-                                       FontSize="9" Foreground="{StaticResource TextSecondaryBrush}"
-                                       HorizontalAlignment="Center"/>
-                        </StackPanel>
-                    </Grid>
-                </Grid>
+                <!-- Stats rápidas arriba derecha -->
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <TextBlock Text="{Binding Report.Duration, StringFormat=hh\\:mm\\:ss}"
+                               FontFamily="Consolas" FontSize="16" FontWeight="Bold"
+                               Foreground="{StaticResource TextPrimaryBrush}" HorizontalAlignment="Right"/>
+                    <TextBlock Text="{Binding Report.Distance, StringFormat={}{0:F0} NM}"
+                               FontFamily="Consolas" FontSize="11"
+                               Foreground="{StaticResource TextSecondaryBrush}" HorizontalAlignment="Right"/>
+                </StackPanel>
+            </Grid>
 
-                <Rectangle Height="1" Fill="#E2E8F0" Margin="0,0,0,12"/>
+            <Rectangle Height="1" Fill="#E2E8F0" Margin="0,0,0,12"/>
 
-                <!-- Estadísticas fila 1 -->
-                <UniformGrid Columns="3" Margin="0,0,0,8">
-                    <StackPanel Margin="0,0,12,0">
-                        <TextBlock Text="DURACIÓN" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding Report.Duration, StringFormat=hh\\:mm\\:ss}"
-                                   Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas"
-                                   FontSize="15" FontWeight="Bold" Margin="0,4,0,0"/>
-                    </StackPanel>
-                    <StackPanel Margin="0,0,12,0">
-                        <TextBlock Text="DISTANCIA" Style="{StaticResource FieldLabel}"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{Binding Report.Distance, StringFormat={}{0:F0}}"
-                                       Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas"
-                                       FontSize="15" FontWeight="Bold"/>
-                            <TextBlock Text=" NM" Foreground="{StaticResource TextSecondaryBrush}" FontSize="10"
-                                       VerticalAlignment="Bottom" Margin="2,0,0,2"/>
-                        </StackPanel>
-                    </StackPanel>
-                    <StackPanel>
-                        <TextBlock Text="COMBUSTIBLE USADO" Style="{StaticResource FieldLabel}"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                            <TextBlock Text="{Binding Report.FuelUsed, StringFormat={}{0:F0}}"
-                                       Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas"
-                                       FontSize="15" FontWeight="Bold"/>
-                            <TextBlock Text=" lbs" Foreground="{StaticResource TextSecondaryBrush}" FontSize="10"
-                                       VerticalAlignment="Bottom" Margin="2,0,0,2"/>
-                        </StackPanel>
-                    </StackPanel>
-                </UniformGrid>
+            <!-- ═══ DUAL SCORE CARDS ════════════════════════════════════════ -->
+            <Grid Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
 
-                <!-- Estadísticas fila 2 -->
-                <UniformGrid Columns="3" Margin="0,0,0,12">
-                    <StackPanel Margin="0,0,12,0">
-                        <TextBlock Text="ALTITUD MÁX." Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding MaxAltDisplay}"
-                                   Foreground="{StaticResource AccentLightBlueBrush}" FontFamily="Consolas"
-                                   FontSize="13" FontWeight="Bold" Margin="0,4,0,0"/>
-                    </StackPanel>
-                    <StackPanel Margin="0,0,12,0">
-                        <TextBlock Text="VELOCIDAD MÁX." Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding MaxSpeedDisplay}"
-                                   Foreground="{StaticResource AccentLightBlueBrush}" FontFamily="Consolas"
-                                   FontSize="13" FontWeight="Bold" Margin="0,4,0,0"/>
-                    </StackPanel>
-                    <StackPanel>
-                        <TextBlock Text="QNH APROX." Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding QnhDisplay}"
-                                   Foreground="{StaticResource AccentLightBlueBrush}" FontFamily="Consolas"
-                                   FontSize="13" FontWeight="Bold" Margin="0,4,0,0"/>
-                    </StackPanel>
-                </UniformGrid>
-
-                <!-- Panel aterrizaje -->
-                <Border Background="#F0F9FF" CornerRadius="7" Padding="14,10" Margin="0,0,0,10">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="1"/>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="1"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="VS DE ATERRIZAJE" Style="{StaticResource FieldLabel}"/>
-                            <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                                <TextBlock Text="{Binding Report.LandingVS, StringFormat={}{0:F0}}"
-                                           Foreground="{StaticResource AccentLightBlueBrush}"
-                                           FontFamily="Consolas" FontSize="18" FontWeight="Bold"/>
-                                <TextBlock Text=" fpm" Foreground="{StaticResource TextSecondaryBrush}" FontSize="10"
-                                           VerticalAlignment="Bottom" Margin="2,0,0,2"/>
-                            </StackPanel>
-                        </StackPanel>
-                        <Rectangle Grid.Column="1" Fill="#E2E8F0"/>
-                        <StackPanel Grid.Column="2" Margin="14,0">
-                            <TextBlock Text="FACTOR G" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding Report.LandingG, StringFormat={}{0:F2} G}"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontFamily="Consolas" FontSize="18" FontWeight="Bold" Margin="0,5,0,0"/>
-                        </StackPanel>
-                        <Rectangle Grid.Column="3" Fill="#E2E8F0"/>
-                        <StackPanel Grid.Column="4" Margin="14,0">
-                            <TextBlock Text="CALIDAD" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding LandingQuality}"
-                                       Foreground="{StaticResource TextPrimaryBrush}" FontSize="15" FontWeight="Bold"
-                                       FontFamily="Segoe UI" Margin="0,5,0,0"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <!-- Score breakdown -->
-                <Border Background="#F0F9FF" CornerRadius="7" Padding="12,8" Margin="0,0,0,8">
-                    <StackPanel>
-                        <TextBlock Text="PROCEDURAL SCORE — DESGLOSE" Style="{StaticResource FieldLabel}" Margin="0,0,0,5"/>
-                        <TextBlock Text="{Binding ScoreBreakdown}" Foreground="{StaticResource TextSecondaryBrush}"
-                                   FontSize="11" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding ProceduralSummary}" Foreground="{StaticResource TextSecondaryBrush}"
-                                   FontSize="10" TextWrapping="Wrap" Margin="0,4,0,0"
-                                   Visibility="{Binding ProceduralSummary, Converter={StaticResource StringToVisibilityConverter}}"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Habilitaciones -->
-                <Border Background="#F0F9FF" CornerRadius="7" Padding="12,8" Margin="0,0,0,12"
-                        Visibility="{Binding HasQualifications, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <StackPanel>
-                        <TextBlock Text="HABILITACIONES" Style="{StaticResource FieldLabel}"/>
-                        <TextBlock Text="{Binding QualificationsDisplay}" Foreground="#065F46"
-                                   FontSize="11" TextWrapping="Wrap" Margin="0,5,0,0" FontFamily="Consolas"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Puntos -->
-                <Border CornerRadius="7" Padding="12,8" Margin="0,0,0,14">
+                <!-- PROCEDIMIENTOS -->
+                <Border Grid.Column="0" CornerRadius="10" Padding="14,12">
                     <Border.Background>
-                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                            <GradientStop Color="#D1FAE5" Offset="0"/>
-                            <GradientStop Color="#ECFDF5" Offset="1"/>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#F0F9FF" Offset="0"/>
+                            <GradientStop Color="#E0F2FE" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
-                    <Border.BorderBrush><SolidColorBrush Color="#6EE7B7"/></Border.BorderBrush>
-                    <Border.BorderThickness>1</Border.BorderThickness>
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="★" FontSize="14" Foreground="#FFD700"
-                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
-                        <TextBlock Foreground="#065F46" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center">
-                            <Run Text="Puntos ganados: "/>
-                            <Run Text="{Binding Report.PointsEarned}" FontSize="15" FontWeight="Bold" Foreground="#FFD700"/>
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="{Binding ProcedureScoreColor}"/>
+                    </Border.BorderBrush>
+                    <Border.BorderThickness>2</Border.BorderThickness>
+                    <StackPanel>
+                        <TextBlock Text="PROCEDIMIENTOS" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ProcedureScore}" FontSize="42" FontWeight="Bold"
+                                       FontFamily="Consolas" VerticalAlignment="Center">
+                                <TextBlock.Foreground>
+                                    <SolidColorBrush Color="{Binding ProcedureScoreColor}"/>
+                                </TextBlock.Foreground>
+                            </TextBlock>
+                            <TextBlock Text=" / 100" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"
+                                       VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding ProcedureGrade}" FontSize="12" FontWeight="SemiBold"
+                                   Margin="0,4,0,0">
+                            <TextBlock.Foreground>
+                                <SolidColorBrush Color="{Binding ProcedureScoreColor}"/>
+                            </TextBlock.Foreground>
                         </TextBlock>
+                        <TextBlock Text="empieza en 100 · solo penaliza" FontSize="9"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0"/>
                     </StackPanel>
                 </Border>
 
-                <!-- Botón enviar -->
-                <Button Content="ENVIAR REPORTE A SUPABASE" Style="{StaticResource PrimaryButton}"
-                        Command="{Binding SubmitCommand}" Height="36" FontSize="12"
-                        IsEnabled="{Binding Submitted, Converter={StaticResource BoolInverseConverter}}"/>
+                <!-- PERFORMANCE -->
+                <Border Grid.Column="2" CornerRadius="10" Padding="14,12">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#F0FDF4" Offset="0"/>
+                            <GradientStop Color="#DCFCE7" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="{Binding PerformanceScoreColor}"/>
+                    </Border.BorderBrush>
+                    <Border.BorderThickness>2</Border.BorderThickness>
+                    <StackPanel>
+                        <TextBlock Text="PERFORMANCE" Style="{StaticResource FieldLabel}" Margin="0,0,0,6"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding PerformanceScore}" FontSize="42" FontWeight="Bold"
+                                       FontFamily="Consolas" VerticalAlignment="Center">
+                                <TextBlock.Foreground>
+                                    <SolidColorBrush Color="{Binding PerformanceScoreColor}"/>
+                                </TextBlock.Foreground>
+                            </TextBlock>
+                            <TextBlock Text=" / 100" FontSize="14" Foreground="{StaticResource TextSecondaryBrush}"
+                                       VerticalAlignment="Bottom" Margin="0,0,0,8"/>
+                        </StackPanel>
+                        <TextBlock Text="{Binding PerformanceGrade}" FontSize="12" FontWeight="SemiBold"
+                                   Margin="0,4,0,0">
+                            <TextBlock.Foreground>
+                                <SolidColorBrush Color="{Binding PerformanceScoreColor}"/>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                        <TextBlock Text="base 60 · sube y baja" FontSize="9"
+                                   Foreground="{StaticResource TextSecondaryBrush}" Margin="0,3,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
 
-                <TextBlock Text="{Binding SubmitMessage}" Foreground="#065F46"
-                           FontSize="11" FontFamily="Segoe UI" TextWrapping="Wrap"
-                           HorizontalAlignment="Center" Margin="0,10,0,0"
-                           Visibility="{Binding SubmitMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+            <!-- ═══ ATERRIZAJE ══════════════════════════════════════════════ -->
+            <Border CornerRadius="8" Padding="14,10" Margin="0,0,0,10">
+                <Border.Background><SolidColorBrush Color="#F8FAFC"/></Border.Background>
+                <Border.BorderBrush><SolidColorBrush Color="#E2E8F0"/></Border.BorderBrush>
+                <Border.BorderThickness>1</Border.BorderThickness>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="1"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
 
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="VS ATERRIZAJE" Style="{StaticResource FieldLabel}"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                            <TextBlock Text="{Binding Report.LandingVS, StringFormat={}{0:F0}}"
+                                       FontFamily="Consolas" FontSize="18" FontWeight="Bold">
+                                <TextBlock.Foreground>
+                                    <SolidColorBrush Color="{Binding LandingQualityColor}"/>
+                                </TextBlock.Foreground>
+                            </TextBlock>
+                            <TextBlock Text=" fpm" Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="10" VerticalAlignment="Bottom" Margin="2,0,0,2"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="1" Fill="#E2E8F0"/>
+
+                    <StackPanel Grid.Column="2" Margin="14,0">
+                        <TextBlock Text="FACTOR G" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding Report.LandingG, StringFormat={}{0:F2} G}"
+                                   FontFamily="Consolas" FontSize="18" FontWeight="Bold"
+                                   Margin="0,5,0,0">
+                            <TextBlock.Foreground>
+                                <SolidColorBrush Color="{Binding LandingQualityColor}"/>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                    </StackPanel>
+
+                    <Rectangle Grid.Column="3" Fill="#E2E8F0"/>
+
+                    <StackPanel Grid.Column="4" Margin="14,0">
+                        <TextBlock Text="CALIDAD" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding LandingQuality}"
+                                   FontSize="15" FontWeight="Bold"
+                                   FontFamily="Segoe UI" Margin="0,5,0,0">
+                            <TextBlock.Foreground>
+                                <SolidColorBrush Color="{Binding LandingQualityColor}"/>
+                            </TextBlock.Foreground>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ═══ ESTADÍSTICAS ════════════════════════════════════════════ -->
+            <UniformGrid Columns="3" Margin="0,0,0,10">
+                <StackPanel Margin="0,0,8,0">
+                    <TextBlock Text="ALT. MÁX." Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding MaxAltDisplay}"
+                               Foreground="{StaticResource AccentLightBlueBrush}"
+                               FontFamily="Consolas" FontSize="13" FontWeight="Bold" Margin="0,4,0,0"/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,0">
+                    <TextBlock Text="VEL. MÁX." Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding MaxSpeedDisplay}"
+                               Foreground="{StaticResource AccentLightBlueBrush}"
+                               FontFamily="Consolas" FontSize="13" FontWeight="Bold" Margin="0,4,0,0"/>
+                </StackPanel>
+                <StackPanel>
+                    <TextBlock Text="QNH APROX." Style="{StaticResource FieldLabel}"/>
+                    <TextBlock Text="{Binding QnhDisplay}"
+                               Foreground="{StaticResource AccentLightBlueBrush}"
+                               FontFamily="Consolas" FontSize="13" FontWeight="Bold" Margin="0,4,0,0"/>
+                </StackPanel>
+            </UniformGrid>
+
+        </StackPanel>
+    </Border>
+
+    <!-- ═══ INFRACCIONES ══════════════════════════════════════════════════════ -->
+    <Border Style="{StaticResource Card}" Margin="0,0,0,10"
+            Visibility="{Binding HasViolations, Converter={StaticResource BoolToVisibilityConverter}}">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Text="⚠" FontSize="13" Foreground="#EF4444" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="INFRACCIONES DETECTADAS" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
             </StackPanel>
-        </Border>
+            <ItemsControl ItemsSource="{Binding Violations}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="5" Padding="10,6" Margin="0,0,0,4"
+                                Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Código -->
+                                <Border Grid.Column="0" Background="#FCA5A5" CornerRadius="3"
+                                        Padding="5,2" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding Code}" FontFamily="Consolas" FontSize="9"
+                                               FontWeight="Bold" Foreground="#7F1D1D"/>
+                                </Border>
+                                <!-- Fase -->
+                                <Border Grid.Column="1" Background="#FEE2E2" CornerRadius="3"
+                                        Padding="5,2" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding Phase}" FontFamily="Consolas" FontSize="9"
+                                               Foreground="#991B1B"/>
+                                </Border>
+                                <!-- Descripción -->
+                                <TextBlock Grid.Column="2" Text="{Binding Description}"
+                                           FontSize="11" Foreground="#7F1D1D"
+                                           VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                <!-- Puntos -->
+                                <TextBlock Grid.Column="3" Text="{Binding Points}" FontFamily="Consolas"
+                                           FontSize="12" FontWeight="Bold" Foreground="#DC2626"
+                                           VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
 
-    </StackPanel>
+    <!-- ═══ BONIFICACIONES ════════════════════════════════════════════════════ -->
+    <Border Style="{StaticResource Card}" Margin="0,0,0,10"
+            Visibility="{Binding HasBonuses, Converter={StaticResource BoolToVisibilityConverter}}">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                <TextBlock Text="★" FontSize="13" Foreground="#F59E0B" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                <TextBlock Text="BONIFICACIONES OBTENIDAS" Style="{StaticResource FieldLabel}" VerticalAlignment="Center"/>
+            </StackPanel>
+            <ItemsControl ItemsSource="{Binding Bonuses}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="5" Padding="10,6" Margin="0,0,0,4"
+                                Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Código -->
+                                <Border Grid.Column="0" Background="#6EE7B7" CornerRadius="3"
+                                        Padding="5,2" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding Code}" FontFamily="Consolas" FontSize="9"
+                                               FontWeight="Bold" Foreground="#064E3B"/>
+                                </Border>
+                                <!-- Fase -->
+                                <Border Grid.Column="1" Background="#D1FAE5" CornerRadius="3"
+                                        Padding="5,2" Margin="0,0,8,0">
+                                    <TextBlock Text="{Binding Phase}" FontFamily="Consolas" FontSize="9"
+                                               Foreground="#065F46"/>
+                                </Border>
+                                <!-- Descripción -->
+                                <TextBlock Grid.Column="2" Text="{Binding Description}"
+                                           FontSize="11" Foreground="#065F46"
+                                           VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                <!-- Puntos -->
+                                <TextBlock Grid.Column="3" Text="{Binding Points, StringFormat=+{0}}"
+                                           FontFamily="Consolas" FontSize="12" FontWeight="Bold"
+                                           Foreground="#059669" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </Border>
+
+    <!-- ═══ HABILITACIONES ════════════════════════════════════════════════════ -->
+    <Border Style="{StaticResource Card}" Margin="0,0,0,10"
+            Visibility="{Binding HasQualifications, Converter={StaticResource BoolToVisibilityConverter}}">
+        <StackPanel>
+            <TextBlock Text="HABILITACIONES" Style="{StaticResource FieldLabel}" Margin="0,0,0,5"/>
+            <TextBlock Text="{Binding QualificationsDisplay}" Foreground="#065F46"
+                       FontSize="11" TextWrapping="Wrap" FontFamily="Consolas"/>
+        </StackPanel>
+    </Border>
+
+    <!-- ═══ ENVIAR ════════════════════════════════════════════════════════════ -->
+    <Border Style="{StaticResource Card}" Margin="0,0,0,0">
+        <StackPanel>
+            <!-- Puntos ganados -->
+            <Border CornerRadius="7" Padding="12,8" Margin="0,0,0,12">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="#D1FAE5" Offset="0"/>
+                        <GradientStop Color="#ECFDF5" Offset="1"/>
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.BorderBrush><SolidColorBrush Color="#6EE7B7"/></Border.BorderBrush>
+                <Border.BorderThickness>1</Border.BorderThickness>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="★" FontSize="14" Foreground="#FFD700"
+                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Foreground="#065F46" FontSize="12" FontWeight="SemiBold"
+                               VerticalAlignment="Center">
+                        <Run Text="Puntos ganados: "/>
+                        <Run Text="{Binding Report.PointsEarned}" FontSize="15"
+                             FontWeight="Bold" Foreground="#FFD700"/>
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+
+            <Button Content="ENVIAR REPORTE A SUPABASE" Style="{StaticResource PrimaryButton}"
+                    Command="{Binding SubmitCommand}" Height="36" FontSize="12"
+                    IsEnabled="{Binding Submitted, Converter={StaticResource BoolInverseConverter}}"/>
+
+            <TextBlock Text="{Binding SubmitMessage}" Foreground="#065F46"
+                       FontSize="11" FontFamily="Segoe UI" TextWrapping="Wrap"
+                       HorizontalAlignment="Center" Margin="0,10,0,0"
+                       Visibility="{Binding SubmitMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+        </StackPanel>
+    </Border>
+
+</StackPanel>
 </UserControl>
