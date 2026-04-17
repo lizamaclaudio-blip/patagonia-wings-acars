@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.1.0.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.0.exe</url>
-  <changelog>v3.1.0: Imágenes de aeronaves personalizadas en panel AERONAVE. Actualizador automático mejorado (sin bloqueo por sesión). Rutas de imágenes desde %AppData%\PatagoniaWings\Acars\Aircraft\. Detección de addon/variante refinada.</changelog>
+  <version>3.1.1.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.1.exe</url>
+  <changelog>v3.1.1: METAR en tiempo real desde aviationweather.gov (origen y destino). Instalador con lanzador diferido (fix actualización silenciosa). Fotos de aeronaves desde AppData.</changelog>
   <mandatory>false</mandatory>
 </item>

@@ -172,17 +172,31 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     client.DownloadFile(downloadUrl, installerPath);
                 }
 
-                WriteLog($"Descarga completada. Ejecutando instalador silencioso.");
+                WriteLog($"Descarga completada. Preparando instalación silenciosa.");
 
-                var psi = new ProcessStartInfo(installerPath)
+                // Escribir un script CMD que espera 4 segundos (para que el proceso ACARS
+                // termine completamente) y luego lanza el instalador.
+                // Esto evita la condición de carrera donde Inno Setup intenta reemplazar
+                // el .exe mientras todavía está en uso.
+                var launcherPath = Path.Combine(tempDir, "launch_update.cmd");
+                File.WriteAllText(launcherPath,
+                    "@echo off\r\n" +
+                    "ping 127.0.0.1 -n 5 >nul\r\n" +   // espera ~4 segundos
+                    $"\"{installerPath}\" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-\r\n");
+
+                var psi = new ProcessStartInfo("cmd.exe")
                 {
-                    Arguments = "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-",
-                    UseShellExecute = true
+                    Arguments       = $"/c \"{launcherPath}\"",
+                    UseShellExecute = true,
+                    WindowStyle     = ProcessWindowStyle.Hidden,
+                    CreateNoWindow  = true
                 };
 
                 Process.Start(psi);
+                WriteLog("Script de instalación lanzado. Cerrando app.");
 
-                // Cerrar app para que el instalador pueda reemplazar el exe
+                // Cerrar la app — el script CMD espera 4 s antes de ejecutar el instalador,
+                // garantizando que el proceso ACARS ya no tenga el .exe bloqueado.
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
                     WriteLog("Cerrando app para instalar actualización.");

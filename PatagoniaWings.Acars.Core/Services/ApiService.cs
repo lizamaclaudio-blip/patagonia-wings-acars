@@ -218,7 +218,47 @@ namespace PatagoniaWings.Acars.Core.Services
             => await GetAsync<Airport>($"/api/airports/{icao.ToUpperInvariant()}");
 
         public async Task<ApiResult<WeatherInfo>> GetMetarAsync(string icao)
-            => await GetAsync<WeatherInfo>($"/api/weather/metar/{icao.ToUpperInvariant()}");
+        {
+            // Fuente primaria: aviationweather.gov directamente (misma fuente que la web)
+            // No depende del backend fly.dev.
+            var code = (icao ?? string.Empty).ToUpperInvariant().Trim();
+            if (string.IsNullOrEmpty(code)) return ApiResult<WeatherInfo>.Fail("ICAO vacío");
+
+            try
+            {
+                var url = $"https://aviationweather.gov/api/data/metar?ids={code}&format=json";
+                var request = new HttpRequestMessage(HttpMethod.Get, url);
+                request.Headers.TryAddWithoutValidation("User-Agent",
+                    "PatagoniaWingsACARSClient/3.1 (+preflight metar)");
+                request.Headers.TryAddWithoutValidation("Accept", "application/json");
+
+                var resp = await _http.SendAsync(request).ConfigureAwait(false);
+
+                if (!resp.IsSuccessStatusCode)
+                    return ApiResult<WeatherInfo>.Fail($"aviationweather.gov HTTP {(int)resp.StatusCode}");
+
+                var body = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                var arr  = _json.Deserialize<List<Dictionary<string, object>>>(body);
+
+                if (arr == null || arr.Count == 0)
+                    return ApiResult<WeatherInfo>.Fail("Sin datos METAR disponibles para " + code);
+
+                var row = arr[0];
+                string? raw = null;
+                foreach (var key in new[] { "rawOb", "raw_text", "raw" })
+                    if (row.TryGetValue(key, out var v) && v is string s && !string.IsNullOrWhiteSpace(s))
+                    { raw = s; break; }
+
+                if (string.IsNullOrWhiteSpace(raw))
+                    return ApiResult<WeatherInfo>.Fail("METAR vacío para " + code);
+
+                return ApiResult<WeatherInfo>.Ok(WeatherInfo.ParseRaw(raw));
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<WeatherInfo>.Fail("Error METAR: " + ex.Message);
+            }
+        }
 
         // ── COMUNIDAD ─────────────────────────────────────────────────────────
 

@@ -1,11 +1,11 @@
 {
-  "version": "3.1.0",
+  "version": "3.1.1",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.0.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.1.exe",
   "mandatory": false,
-  "notes": "- Imágenes de aeronaves en panel AERONAVE (PNG/JPG por código ICAO)\n- Carpeta de imágenes: %AppData%\\PatagoniaWings\\Acars\\Aircraft\\\n- Actualizador automático sin bloqueo por sesión\n- Sistema SUR Air dual scoring: Score Procedimientos (0-100) + Performance (0-100)\n- Calificaciones ★★★ Excelente / ★★ Satisfactorio / ★ Marginal / Insatisfactorio\n- Detección de variante/addon vs simulador",
+  "notes": "- METAR en tiempo real (aviationweather.gov) para origen y destino\n- Instalador con lanzador diferido: fix actualización silenciosa\n- Fotos de aeronaves desde %AppData%\\PatagoniaWings\\Acars\\Aircraft\\\n- Tab Despacho bloqueado cuando hay vuelo activo (web)",
   "releaseDate": "2026-04-16",
   "minVersion": "2.0.5",
-  "fileSize": "10.4MB",
+  "fileSize": "27.1MB",
   "storageProvider": "supabase"
 }
