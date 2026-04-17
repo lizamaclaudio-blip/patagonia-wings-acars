@@ -1,9 +1,9 @@
 {
-  "version": "3.0.9",
+  "version": "3.1.0",
   "webVersion": "2.0",
-  "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.0.9.exe",
+  "downloadUrl": "https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWingsACARSSetup-3.1.0.exe",
   "mandatory": false,
-  "notes": "- Bleed Air leido en tiempo real desde SimConnect (BLEED AIR ENGINE:1)\n- Panel SISTEMAS completo: Bleed Air, No Smoking, Cabin Alt y Press Diff\n- Luces en tiempo real via LIGHT ON STATES bitmask (SimConnect nativo)\n- APU y Bleed Air ocultos en aeronaves sin esos sistemas (C208, GA)\n- Deteccion de +60 variantes: jets, turbopropulsores, GA\n- Scoring PIREP justo: sin penalizacion de presurizacion en C208, BE58 y GA\n- SimConnect como backend primario, FSUIPC7 como fallback",
+  "notes": "- Sistema de evaluacion SUR Air dual: Score de Procedimientos (0-100) + Score de Performance (0-100)\n- Calificaciones por estrellas: ★★★ Excelente / ★★ Satisfactorio / ★ Marginal / Insatisfactorio\n- PostFlight rediseñado: dos tarjetas de puntaje, lista de infracciones (rojo) y bonificaciones (verde)\n- V/S FPM corregido: muestra 0 en tierra (ya no +1)\n- Squawk Mode C corregido: detecta correctamente modo Charlie (estado ≥4)\n- Panel LUCES y SISTEMAS mas compacto\n- Nuevo panel AERONAVE con identificador visual de la aeronave activa\n- Scoring enviado completo a Supabase: procedure_score + performance_score + grades",
   "releaseDate": "2026-04-16",
   "minVersion": "2.0.5",
   "fileSize": "10MB"
