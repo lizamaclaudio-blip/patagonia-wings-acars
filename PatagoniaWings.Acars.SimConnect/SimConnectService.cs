@@ -162,6 +162,14 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "CABIN NO SMOKING ALERT SWITCH",      "bool",    SIMCONNECT_DATATYPE.INT32, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "BLEED AIR ENGINE:1",                 "bool",    SIMCONNECT_DATATYPE.INT32, 0, sc);
 
+            // Luces individuales — fallback para addons que no actualizan LIGHT ON STATES
+            // (complementa el bitmask para máxima compatibilidad entre aeronaves)
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT BEACON",  "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT STROBE",  "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT LANDING", "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT TAXI",    "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT NAV",     "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
+
             _simConnect.RegisterDataDefineStruct<AircraftDataStruct>(DataDefineId.AircraftData);
 
             // ── ENVIRONMENT DATA ──────────────────────────────────────────────
@@ -369,15 +377,20 @@ namespace PatagoniaWings.Acars.SimConnect
             int squawk = DecodeBco16(r.TransponderCode);
             if (squawk < 0 || squawk > 9999) squawk = 0;
 
-            // ── LUCES desde LIGHT ON STATES bitmask ──
-            // Bit 0: Nav | Bit 1: Beacon | Bit 2: Landing | Bit 3: Taxi | Bit 4: Strobe
-            bool navOn     = (lightStates & 0x001) != 0;
-            bool beaconOn  = (lightStates & 0x002) != 0;
-            bool landingOn = (lightStates & 0x004) != 0;
-            bool taxiOn    = (lightStates & 0x008) != 0;
-            bool strobeOn  = (lightStates & 0x010) != 0;
+            // ── LUCES: bitmask OR simvars individuales ──────────────────────────
+            // Prioridad: si el simvar individual devuelve 1, la luz está ON
+            // aunque el bitmask no lo haya capturado (máxima compatibilidad con addons)
+            bool navOn     = (lightStates & 0x001) != 0 || r.LightNav     != 0;
+            bool beaconOn  = (lightStates & 0x002) != 0 || r.LightBeacon  != 0;
+            bool landingOn = (lightStates & 0x004) != 0 || r.LightLanding != 0;
+            bool taxiOn    = (lightStates & 0x008) != 0 || r.LightTaxi    != 0;
+            bool strobeOn  = (lightStates & 0x010) != 0 || r.LightStrobe  != 0;
 
-            Debug.WriteLine($"[SimConnect] Fuel={fuelTotal:F0} N1={n1Eng1:F1}/{n1Eng2:F1} Squawk={squawk} " +
+            // ── Combustible en kg ─────────────────────────────────────────────
+            // SimConnect devuelve FUEL TOTAL QUANTITY WEIGHT en libras → convertir a kg
+            double fuelKg = fuelTotal / 2.20462;
+
+            Debug.WriteLine($"[SimConnect] Fuel={fuelTotal:F0} lbs / {fuelKg:F0} kg  N1={n1Eng1:F1}/{n1Eng2:F1} Squawk={squawk} " +
                 $"Lights: Nav={navOn} Beacon={beaconOn} Landing={landingOn} Taxi={taxiOn} Strobe={strobeOn}");
 
             return new SimData
@@ -389,12 +402,16 @@ namespace PatagoniaWings.Acars.SimConnect
                 AltitudeAGL        = r.AltitudeAGL,
                 IndicatedAirspeed  = r.IndicatedAirspeed,
                 GroundSpeed        = r.GroundSpeed,
-                VerticalSpeed      = r.OnGround != 0 ? 0.0 : r.VerticalSpeed,
+                // Clamp VS a 0 en tierra: SIM ON GROUND puede oscilar brevemente
+                // devolviendo ±1-5 fpm incluso estacionado (ruido del sim)
+                VerticalSpeed      = (r.OnGround != 0 || Math.Abs(r.VerticalSpeed) < 10) && r.OnGround != 0
+                                     ? 0.0 : r.VerticalSpeed,
                 Heading            = r.Heading,
                 Pitch              = r.Pitch,
                 Bank               = r.Bank,
 
-                FuelTotalLbs       = fuelTotal,
+                FuelTotalLbs       = fuelTotal,          // en libras (nativo SimConnect)
+                FuelKg             = fuelKg,             // convertido a kg
                 FuelFlowLbsHour    = Math.Max(0, r.Engine1FuelFlowPph) + Math.Max(0, r.Engine2FuelFlowPph),
                 Engine1N1          = n1Eng1,
                 Engine2N1          = n1Eng2,

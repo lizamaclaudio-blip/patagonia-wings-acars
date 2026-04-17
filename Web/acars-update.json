@@ -1,9 +1,9 @@
 {
-  "version": "3.1.6",
+  "version": "3.1.7",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.6.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.7.exe",
   "mandatory": false,
-  "notes": "- Panel de pesos SimBrief vs simulador en página InFlight\n- Log PIREP preliminar en tiempo real (altitud máx, velocidad, distancia, combustible, VS)\n- Comparación de combustible al arrancar motores con tolerancia ±10%\n- Barra de progreso de actualización dentro del ACARS (sin ventanas externas)\n- ACARS reabre automáticamente tras instalar una actualización\n- Fix: simulador ya no se cuelga al cerrar/reabrir el ACARS",
+  "notes": "- Fix luces: bitmask LIGHT ON STATES + simvars individuales como fallback (compatible con todos los addons)\n- Fix combustible: conversión libras→kg para SimConnect, kg nativo para FSUIPC\n- Fix squawk: decodificación BCD16 para FSUIPC (7000 se muestra correctamente)\n- Cronómetro de vuelo arranca desde block-out (PushbackTaxi) en vez de solo al despegar\n- Log de eventos de procedimiento en PIREP: beacon, luces, fases, AP, cinturones\n- UI más grande y premium: fuentes +2-6pt, indicadores de luz más visibles\n- Carpetas de sonido creadas: Ground/, Copiloto/, Checkride/",
   "releaseDate": "2026-04-17",
   "minVersion": "2.0.5",
   "fileSize": "28 MB",

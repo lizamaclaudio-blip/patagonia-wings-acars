@@ -78,6 +78,14 @@ namespace PatagoniaWings.Acars.SimConnect
         public int SeatBeltSign;
         public int NoSmokingSign;
         public int BleedAirOn;   // BLEED AIR ENGINE:1 — bool (switch ON = engine bleed air active)
+
+        // Luces individuales: fallback para addons que no actualizan LIGHT ON STATES
+        // (ej. Black Square Cessna 208, algunos turbohélices custom)
+        public int LightBeacon;
+        public int LightStrobe;
+        public int LightLanding;
+        public int LightTaxi;
+        public int LightNav;
     }
 
     /// <summary>

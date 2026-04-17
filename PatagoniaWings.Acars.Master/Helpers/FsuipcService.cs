@@ -532,7 +532,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 Engine2N1         = n1e2,
 
-                FuelTotalLbs      = fuelKg,  // Offset 0x0B74 devuelve kg directamente
+                FuelTotalLbs      = fuelKg,  // Contiene kg (nombre engañoso por compatibilidad)
+                FuelKg            = fuelKg,  // kg directo desde FSUIPC (offset 0x0B74)
 
                 FuelFlowLbsHour   = 0,
 
@@ -548,7 +549,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 NoSmokingSign      = (_noSmoking?.Value ?? 0) != 0,
 
-                TransponderCode    = _xpdrCode?.Value   ?? 0,
+                TransponderCode    = DecodeBcd16(_xpdrCode?.Value ?? 0),
 
                 TransponderCharlieMode = (_xpdrMode?.Value ?? 0) >= 3,
 
@@ -579,6 +580,22 @@ namespace PatagoniaWings.Acars.Master.Helpers
         }
 
 
+
+        /// <summary>
+        /// Decodifica código de squawk desde formato BCD16 (usado por FSUIPC offset 0x0354).
+        /// En BCD16, cada nibble de 4 bits representa un dígito octal: 7700 → 0x7700 = 30464 → 7700.
+        /// </summary>
+        private static int DecodeBcd16(short bcdValue)
+        {
+            var val = (int)(ushort)bcdValue; // tratar como unsigned
+            int d3 = (val >> 12) & 0xF;
+            int d2 = (val >> 8)  & 0xF;
+            int d1 = (val >> 4)  & 0xF;
+            int d0 =  val        & 0xF;
+            // Validar dígitos octal (0-7)
+            if (d3 > 7 || d2 > 7 || d1 > 7 || d0 > 7) return 0;
+            return d3 * 1000 + d2 * 100 + d1 * 10 + d0;
+        }
 
         public void Dispose()
 

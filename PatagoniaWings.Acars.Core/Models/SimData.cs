@@ -28,7 +28,11 @@ namespace PatagoniaWings.Acars.Core.Models
         public double Bank { get; set; }
 
         // Motor / Combustible
+        /// <summary>Combustible en la unidad nativa del backend (lbs para SimConnect, kg para FSUIPC).
+        /// Usar siempre FuelKg para comparaciones y display.</summary>
         public double FuelTotalLbs { get; set; }
+        /// <summary>Combustible total en kg, normalizado por el backend (SimConnect convierte lbs→kg).</summary>
+        public double FuelKg { get; set; }
         public double FuelFlowLbsHour { get; set; }
         public double Engine1N1 { get; set; }
         public double Engine2N1 { get; set; }
