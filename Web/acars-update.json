@@ -1,9 +1,9 @@
-﻿{
-  "version": "3.2.3",
+{
+  "version": "3.2.4",
   "webVersion": "2.0",
   "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
   "mandatory": false,
-  "notes": "- Resultado final web, historial y apelaciones revisables\n- Cierre real de reservas completed/cancelled/interrupted/crashed/aborted\n- Redirect ACARS a https://patagoniaw.com tras submit OK\n- Score SUR unico visible en web",
+  "notes": "- SimConnect FLOAT64: luces individuales, struct 53 campos alineado con SUR Air\n- AutopilotHeadingLock, AltitudeLock, Nav1Lock, ApproachHold, WingLeveler añadidos\n- Patagonia Score (ex SUR Score) en toda la interfaz\n- Vuelos numerados PWG101–PWG113, retornos PWGxxx-2\n- Flota CC-XXX (Chile) y LV-XXX (Argentina) activa",
   "releaseDate": "2026-04-18",
   "minVersion": "2.0.5",
   "fileSize": "24.7 MB",

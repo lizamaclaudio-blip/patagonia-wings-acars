@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.2.3.0</version>
+  <version>3.2.4.0</version>
   <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>v3.2.3: cierre final de vuelo web, apelaciones revisables, redirect ACARS a produccion y score SUR unico visible.</changelog>
+  <changelog>v3.2.4: arquitectura SUR Air FLOAT64 — luces individuales, struct 53 campos, AutopilotHeadingLock/AltitudeLock/Nav1Lock/ApproachHold/WingLeveler. Patagonia Score (ex SUR Score). Vuelos PWG101–PWG113.</changelog>
   <mandatory>false</mandatory>
 </item>

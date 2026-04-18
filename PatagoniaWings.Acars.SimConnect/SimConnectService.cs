@@ -166,9 +166,14 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "CABIN SEATBELTS ALERT SWITCH", "Bool",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "BLEED AIR ENGINE:1",         "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // Bloque extendido AP/XPDR al final del struct (para no romper el bloque estable)
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT DISENGAGED",      "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER AVAILABLE",     "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            // Bloque extendido AP/XPDR al final del struct — orden EXACTO con la struct (campos 47-53)
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT HEADING LOCK",    "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 47
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT ALTITUDE LOCK",   "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 48
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT NAV1 LOCK",       "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 49
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT APPROACH HOLD",   "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 50
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT WING LEVELER",    "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 51
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT DISENGAGED",      "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 52
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER AVAILABLE",     "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 53
 
             _simConnect.RegisterDataDefineStruct<AircraftDataStruct>(DataDefineId.AircraftData);
 
