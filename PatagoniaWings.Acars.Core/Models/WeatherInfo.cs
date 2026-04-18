@@ -22,12 +22,13 @@ namespace PatagoniaWings.Acars.Core.Models
         /// Construye un WeatherInfo básico a partir de una cadena METAR cruda.
         /// Parsea viento, visibilidad, QNH, temperatura y categoría de vuelo.
         /// </summary>
-        public static WeatherInfo ParseRaw(string raw)
+        public static WeatherInfo ParseRaw(string? raw)
         {
             var w = new WeatherInfo { RawMetar = raw ?? string.Empty };
             if (string.IsNullOrWhiteSpace(raw)) return w;
+            var safeRaw = (raw ?? string.Empty).Trim();
 
-            var parts = raw.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            var parts = safeRaw.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length > 0) w.Station = parts[0];
 
             foreach (var p in parts)
@@ -65,11 +66,11 @@ namespace PatagoniaWings.Acars.Core.Models
             }
 
             // Nubes
-            var cloudsMatch = Regex.Match(raw, @"(FEW|SCT|BKN|OVC)\d{3}");
+            var cloudsMatch = Regex.Match(safeRaw, @"(FEW|SCT|BKN|OVC)\d{3}");
             if (cloudsMatch.Success) w.Clouds = cloudsMatch.Value;
 
             // Categoría de vuelo básica por visibilidad/nubes
-            w.FlightCategory = DetermineCategory(raw);
+            w.FlightCategory = DetermineCategory(safeRaw);
 
             return w;
         }

@@ -4,8 +4,11 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
+using PatagoniaWings.Acars.Core.Services;
 using PatagoniaWings.Acars.Master.Helpers;
 
 namespace PatagoniaWings.Acars.Master.ViewModels
@@ -35,6 +38,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _aircraftStatus = string.Empty;
         private bool _requiresLvars;
         private bool _autopilotOn;
+        private bool _parkingBrakeOn;
+        private bool _doorOpen;
         private bool _onGround;
         private bool _strobeOn;
         private bool _beaconOn;
@@ -49,6 +54,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _spoilersArmed;
         private bool _reverserActive;
         private bool _charlieMode;
+        private int _transponderStateRaw;
         private int _squawk;
         private bool _apuRunning;
         private bool _apuAvailable;
@@ -65,10 +71,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _alertNoStrobe;
         private bool _alertPause;
         private bool _above10000;
+        private ImageSource? _aircraftImageSource;
 
         // ── Pesos / comparación SimBrief vs Sim ──────────────────────────────────
         private double _fuelAtEngineStartKg = -1; // -1 = no capturado aún
         private string _pirepPreview = string.Empty;
+
+        // ── Perfil de aeronave normalizado ────────────────────────────────────
+        private string _detectedProfileCode = "MSFS_NATIVE";
 
         // ── Log de eventos de procedimiento (para PIREP en tiempo real) ───────
         private readonly System.Collections.Generic.List<string> _eventLog = new();
@@ -113,7 +123,32 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double WindDir { get => _windDir; set => SetField(ref _windDir, value); }
         public double Lat { get => _lat; set => SetField(ref _lat, value); }
         public double Lon { get => _lon; set => SetField(ref _lon, value); }
-        public string AircraftTitle { get => _aircraftTitle; set { if (SetField(ref _aircraftTitle, value)) { DetectAircraftType(value); OnPropertyChanged(nameof(AircraftStatusDisplay)); OnPropertyChanged(nameof(ShowDoors)); OnPropertyChanged(nameof(AircraftImageInitials)); OnPropertyChanged(nameof(AircraftImageUrl)); OnPropertyChanged(nameof(HasAircraftImage)); OnPropertyChanged(nameof(DetectedAddonLabel)); OnPropertyChanged(nameof(VariantMatchOk)); OnPropertyChanged(nameof(VariantMatchDisplay)); } } }
+        public string AircraftTitle
+        {
+            get => _aircraftTitle;
+            set
+            {
+                if (SetField(ref _aircraftTitle, value))
+                {
+                    _aircraftImageSource = null;
+                    DetectAircraftType(value);
+                    OnPropertyChanged(nameof(AircraftStatusDisplay));
+                    OnPropertyChanged(nameof(ShowDoors));
+                    OnPropertyChanged(nameof(AircraftImageInitials));
+                    OnPropertyChanged(nameof(AircraftImageUrl));
+                    OnPropertyChanged(nameof(AircraftImageSource));
+                    OnPropertyChanged(nameof(HasAircraftImage));
+                    OnPropertyChanged(nameof(DetectedAddonLabel));
+                    OnPropertyChanged(nameof(VariantMatchOk));
+                    OnPropertyChanged(nameof(VariantMatchDisplay));
+                    OnPropertyChanged(nameof(IsC208Family));
+                    OnPropertyChanged(nameof(ShowSeatbeltSystem));
+                    OnPropertyChanged(nameof(ShowAutopilotSystem));
+            OnPropertyChanged(nameof(ShowTransponderSystem));
+                    OnPropertyChanged(nameof(ShowDoorsSystem));
+                }
+            }
+        }
 
         /// <summary>
         /// Ruta absoluta a la imagen de la aeronave en Assets\Aircraft\.
@@ -129,28 +164,62 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var code = AircraftImageInitials; // ej. "A320", "B738", "C208"
                 if (string.IsNullOrEmpty(code) || code == "---") return null;
 
-                // Carpeta primaria: %AppData%\PatagoniaWings\Acars\Aircraft\  (accesible al usuario, sobrevive actualizaciones)
-                var appData    = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-                var userFolder = System.IO.Path.Combine(appData, "PatagoniaWings", "Acars", "Aircraft");
+                var localUserFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PatagoniaWings", "Acars", "Aircraft");
+                var roamingUserFolder = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "PatagoniaWings", "Acars", "Aircraft");
+                var exeFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Aircraft");
 
-                // Carpeta alternativa: misma carpeta del exe → Assets\Aircraft\
-                var exeDir    = System.IO.Path.GetDirectoryName(
-                    System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty;
-                var exeFolder = System.IO.Path.Combine(exeDir, "Assets", "Aircraft");
-
-                foreach (var folder in new[] { userFolder, exeFolder })
+                foreach (var folder in new[] { localUserFolder, roamingUserFolder, exeFolder })
                     foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".webp" })
                     {
-                        var path = System.IO.Path.Combine(folder, code + ext);
-                        if (System.IO.File.Exists(path))
+                        var path = Path.Combine(folder, code + ext);
+                        if (File.Exists(path))
                             return path;
                     }
                 return null;
             }
         }
 
+        public ImageSource? AircraftImageSource
+        {
+            get
+            {
+                if (_aircraftImageSource != null)
+                {
+                    return _aircraftImageSource;
+                }
+
+                var path = AircraftImageUrl;
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    return null;
+                }
+
+                try
+                {
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                    bitmap.UriSource = new Uri(path, UriKind.Absolute);
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+                    _aircraftImageSource = bitmap;
+                    return _aircraftImageSource;
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("[InFlightVM] Error cargando imagen de aeronave: " + ex.Message);
+                    return null;
+                }
+            }
+        }
+
         /// <summary>True cuando existe una imagen real para la aeronave activa.</summary>
-        public bool HasAircraftImage => AircraftImageUrl != null;
+        public bool HasAircraftImage => AircraftImageSource != null;
 
         /// <summary>Addon/variante esperado según el despacho activo.</summary>
         public string ExpectedVariantLabel
@@ -187,6 +256,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (t.Contains("FEELTHERE"))                              return "FeelThere";
                 if (t.Contains("ROTATE"))                                 return "Rotate";
                 if (t.Contains("BLACK SQUARE") || t.Contains("BLACKSQUARE")) return "Black Square";
+                if (t.Contains("LATINVFR") || t.Contains("LVFR"))         return "LVFR";
+                if ((t.Contains("AIRBUS A319") || t.Contains("AIRBUS A320") || t.Contains("AIRBUS A321"))
+                    && (t.Contains("CFM") || t.Contains("IAE"))
+                    && !t.Contains("FENIX") && !t.Contains("FLYBYWIRE") && !t.Contains("A32NX")
+                    && !t.Contains("HEADWIND") && !t.Contains("INIBUILDS"))
+                    return "LVFR";
                 if (t.Contains("CARENADO"))                               return "Carenado";
                 if (t.Contains("MILVIZ"))                                 return "MilViz";
                 if (t.Contains("JUST FLIGHT") || t.Contains("JUSTFLIGHT")) return "Just Flight";
@@ -265,6 +340,26 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string AircraftStatus { get => _aircraftStatus; set => SetField(ref _aircraftStatus, value); }
         public bool RequiresLvars { get => _requiresLvars; set => SetField(ref _requiresLvars, value); }
         public string AircraftStatusDisplay => GetAircraftStatusDisplay();
+
+        /// <summary>Código estable normalizado. Ej: C208_MSFS, B738_PMDG, A320_FENIX</summary>
+        public string DetectedProfileCode => _detectedProfileCode;
+
+        /// <summary>Nombre de display del perfil normalizado. Ej: "Boeing 737-800 (PMDG)"</summary>
+        public string DetectedDisplayName
+        {
+            get
+            {
+                var profile = AircraftNormalizationService.GetProfile(_detectedProfileCode);
+                if (profile == null)
+                {
+                    return string.IsNullOrWhiteSpace(_aircraftTitle) ? "MSFS Native" : _aircraftTitle;
+                }
+
+                return profile.Code == "MSFS_NATIVE" && !string.IsNullOrWhiteSpace(_aircraftTitle)
+                    ? _aircraftTitle
+                    : profile.DisplayName;
+            }
+        }
         
         private string GetAircraftStatusDisplay()
         {
@@ -272,6 +367,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             return AircraftTitle;
         }
         public bool AutopilotOn { get => _autopilotOn; set { if (SetField(ref _autopilotOn, value)) OnPropertyChanged(nameof(LiveAutopilotOn)); } }
+        public bool ParkingBrakeOn { get => _parkingBrakeOn; set { if (SetField(ref _parkingBrakeOn, value)) OnPropertyChanged(nameof(LiveParkingBrakeOn)); } }
+        public bool DoorOpen { get => _doorOpen; set { if (SetField(ref _doorOpen, value)) OnPropertyChanged(nameof(LiveDoorOpen)); } }
         public bool OnGround { get => _onGround; set => SetField(ref _onGround, value); }
         public bool StrobeOn { get => _strobeOn; set => SetField(ref _strobeOn, value); }
         public bool BeaconOn { get => _beaconOn; set => SetField(ref _beaconOn, value); }
@@ -281,18 +378,47 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool SeatBeltSign { get => _seatBeltSign; set { if (SetField(ref _seatBeltSign, value)) OnPropertyChanged(nameof(LiveSeatBeltSign)); } }
         public bool NoSmokingSign { get => _noSmokingSign; set { if (SetField(ref _noSmokingSign, value)) OnPropertyChanged(nameof(LiveNoSmokingSign)); } }
 
+        public bool IsC208Family => _detectedProfileCode == "C208_MSFS" || _detectedProfileCode == "C208_BLACKSQUARE" || (!string.IsNullOrWhiteSpace(_aircraftTitle) && _aircraftTitle.ToUpperInvariant().Contains("CARAVAN"));
+        public bool ShowGroundSpeedMetric => false;
+        public bool ShowSeatbeltSystem => HasPressurization && !IsC208Family;
+        public bool ShowAutopilotSystem => true;
+        public bool ShowDoorsSystem => ShowDoors && !IsC208Family;
+        public bool ShowTransponderSystem => true;
+
         // Props con guardia HasLiveTelemetry para el panel SISTEMAS
-        // Cuando no hay conexión activa, retornan false → badges muestran OFF/MANUAL
-        public bool LiveAutopilotOn   => HasLiveTelemetry && _autopilotOn;
-        public bool LiveSeatBeltSign  => HasLiveTelemetry && _seatBeltSign;
+        public bool LiveParkingBrakeOn => HasLiveTelemetry && _parkingBrakeOn;
+        public bool LiveAutopilotOn => ShowAutopilotSystem && HasLiveTelemetry && _autopilotOn && !OnGround;
+        public bool LiveSeatBeltSign => ShowSeatbeltSystem && HasLiveTelemetry && _seatBeltSign;
         public bool LiveNoSmokingSign => HasLiveTelemetry && _noSmokingSign;
-        public bool LiveCharlieMode   => HasLiveTelemetry && _charlieMode;
+        public bool LiveDoorOpen => ShowDoorsSystem && HasLiveTelemetry && _doorOpen;
+        public bool LiveCharlieMode => ShowTransponderSystem && HasLiveTelemetry && _charlieMode;
+        public bool LiveTransponderOff => ShowTransponderSystem && HasLiveTelemetry && _transponderStateRaw <= 0;
+        public bool LiveTransponderStandby => false;
+        public bool LiveTransponderTest => false;
+        public bool LiveTransponderOn => ShowTransponderSystem && HasLiveTelemetry && _transponderStateRaw > 0;
+        public bool LiveTransponderModeC => false;
         public bool GearDown { get => _gearDown; set => SetField(ref _gearDown, value); }
         public bool GearTransitioning { get => _gearTransitioning; set => SetField(ref _gearTransitioning, value); }
         public double FlapsPercent { get => _flapsPercent; set { if (SetField(ref _flapsPercent, value)) OnPropertyChanged(nameof(FlapsDisplay)); } }
         public bool SpoilersArmed { get => _spoilersArmed; set => SetField(ref _spoilersArmed, value); }
         public bool ReverserActive { get => _reverserActive; set => SetField(ref _reverserActive, value); }
-        public bool CharlieMode { get => _charlieMode; set => SetField(ref _charlieMode, value); }
+        public bool CharlieMode { get => _charlieMode; set { if (SetField(ref _charlieMode, value)) { OnPropertyChanged(nameof(LiveCharlieMode)); OnPropertyChanged(nameof(TransponderModeDisplay)); } } }
+        public int TransponderStateRaw
+        {
+            get => _transponderStateRaw;
+            set
+            {
+                if (SetField(ref _transponderStateRaw, value))
+                {
+                    OnPropertyChanged(nameof(LiveTransponderOff));
+                    OnPropertyChanged(nameof(LiveTransponderStandby));
+                    OnPropertyChanged(nameof(LiveTransponderTest));
+                    OnPropertyChanged(nameof(LiveTransponderOn));
+                    OnPropertyChanged(nameof(LiveTransponderModeC));
+                    OnPropertyChanged(nameof(TransponderModeDisplay));
+                }
+            }
+        }
         public int Squawk { get => _squawk; set { if (SetField(ref _squawk, value)) OnPropertyChanged(nameof(SquawkDisplay)); } }
         public bool ApuRunning   { get => _apuRunning;   set => SetField(ref _apuRunning,   value); }
         public bool ApuAvailable { get => _apuAvailable; set => SetField(ref _apuAvailable, value); }
@@ -494,7 +620,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string FlapsDisplay => HasLiveTelemetry ? Math.Round(FlapsPercent, 0).ToString("F0") + "%" : "---";
         public string N1Eng1Display => HasLiveTelemetry ? Math.Round(N1Eng1, 1).ToString("F1") : "---";
         public string N1Eng2Display => HasLiveTelemetry ? Math.Round(N1Eng2, 1).ToString("F1") : "---";
-        public string SquawkDisplay => HasLiveTelemetry ? Squawk.ToString("0000") : "----";
+        public string SquawkDisplay => !HasLiveTelemetry ? "----" : (Squawk > 0 ? Squawk.ToString("0000") : "----");
+
+        public string TransponderModeDisplay
+        {
+            get
+            {
+                if (!ShowTransponderSystem || !HasLiveTelemetry) return "OFF";
+                return _transponderStateRaw > 0 ? "ON" : "OFF";
+            }
+        }
+
         public string PhaseLabelDisplay => PhaseLabel;
         public string ElapsedTimeDisplay => ElapsedTime;
         public string SimBackendDisplay
@@ -567,6 +703,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private void ApplyRuntimeState()
         {
             OnPropertyChanged(nameof(HasLiveTelemetry));
+            OnPropertyChanged(nameof(ShowGroundSpeedMetric));
+            OnPropertyChanged(nameof(IsC208Family));
+            OnPropertyChanged(nameof(ShowSeatbeltSystem));
+            OnPropertyChanged(nameof(ShowAutopilotSystem));
+            OnPropertyChanged(nameof(ShowTransponderSystem));
+            OnPropertyChanged(nameof(ShowDoorsSystem));
             OnPropertyChanged(nameof(SimBackendDisplay));
             OnPropertyChanged(nameof(IsSimConnected));
             
@@ -586,14 +728,22 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(N1Eng1Display));
             OnPropertyChanged(nameof(N1Eng2Display));
             OnPropertyChanged(nameof(SquawkDisplay));
+            OnPropertyChanged(nameof(TransponderModeDisplay));
+            OnPropertyChanged(nameof(LiveTransponderOff));
+            OnPropertyChanged(nameof(LiveTransponderStandby));
+            OnPropertyChanged(nameof(LiveTransponderTest));
+            OnPropertyChanged(nameof(LiveTransponderOn));
+            OnPropertyChanged(nameof(LiveTransponderModeC));
             OnPropertyChanged(nameof(FuelLeftTankDisplay));
             OnPropertyChanged(nameof(FuelRightTankDisplay));
             OnPropertyChanged(nameof(FuelCenterTankDisplay));
             OnPropertyChanged(nameof(FuelCapacityDisplay));
             // Live* props del panel SISTEMAS dependen de HasLiveTelemetry
+            OnPropertyChanged(nameof(LiveParkingBrakeOn));
             OnPropertyChanged(nameof(LiveAutopilotOn));
             OnPropertyChanged(nameof(LiveSeatBeltSign));
             OnPropertyChanged(nameof(LiveNoSmokingSign));
+            OnPropertyChanged(nameof(LiveDoorOpen));
             OnPropertyChanged(nameof(LiveCharlieMode));
 
             // Pesos
@@ -621,6 +771,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             Debug.WriteLine($"[InFlightVM] OnTelemetry - ACFT:{data.AircraftTitle} ALT={data.AltitudeFeet:F0} FUEL={data.FuelTotalLbs:F0}");
             Application.Current.Dispatcher.Invoke(() =>
             {
+                // ── Perfil normalizado ─────────────────────────────────────────
+                if (_detectedProfileCode != data.DetectedProfileCode)
+                {
+                    _detectedProfileCode = data.DetectedProfileCode;
+                    OnPropertyChanged(nameof(DetectedProfileCode));
+                    OnPropertyChanged(nameof(DetectedDisplayName));
+                }
                 AircraftTitle = data.AircraftTitle;
                 Altitude    = data.AltitudeFeet;
                 AltitudeAGL = data.AltitudeAGL;
@@ -653,6 +810,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 Lat = data.Latitude;
                 Lon = data.Longitude;
                 AutopilotOn = data.AutopilotActive;
+                ParkingBrakeOn = data.ParkingBrake;
+                DoorOpen = data.DoorOpen;
                 OnGround = data.OnGround;
                 StrobeOn = data.StrobeLightsOn;
                 BeaconOn = data.BeaconLightsOn;
@@ -661,7 +820,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 NavOn = data.NavLightsOn;
                 
                 Debug.WriteLine($"[InFlightVM] Luces - STROBE:{data.StrobeLightsOn} BEACON:{data.BeaconLightsOn} LANDING:{data.LandingLightsOn} TAXI:{data.TaxiLightsOn} NAV:{data.NavLightsOn}");
-                Debug.WriteLine($"[InFlightVM] SQUAWK raw:{data.TransponderCode} -> display:{SquawkDisplay}");
                 SeatBeltSign = data.SeatBeltSign;
                 NoSmokingSign = data.NoSmokingSign;
                 GearDown = data.GearDown;
@@ -670,7 +828,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 SpoilersArmed = data.SpoilersArmed;
                 ReverserActive = data.ReverserActive;
                 CharlieMode = data.TransponderCharlieMode;
+                TransponderStateRaw = data.TransponderStateRaw;
                 Squawk = data.TransponderCode;
+                Debug.WriteLine($"[InFlightVM] XPDR state:{data.TransponderStateRaw} squawk:{data.TransponderCode} mode:{TransponderModeDisplay}");
                 ApuRunning = data.ApuRunning;
                 ApuAvailable = data.ApuAvailable;
                 BleedAirOn = data.BleedAirOn;
@@ -735,6 +895,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             Lat = 0;
             Lon = 0;
             AutopilotOn = false;
+            ParkingBrakeOn = false;
+            DoorOpen = false;
             OnGround = false;
             StrobeOn = false;
             BeaconOn = false;
@@ -749,6 +911,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             SpoilersArmed = false;
             ReverserActive = false;
             CharlieMode = false;
+            TransponderStateRaw = 0;
             Squawk = 0;
             ApuRunning = false;
             ApuAvailable = false;
@@ -888,111 +1051,77 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         
         private void DetectAircraftType(string title)
         {
+            // ── Perfil normalizado via AircraftNormalizationService ────────────────
+            var profile = AircraftNormalizationService.ResolveProfile(title);
             var t = (title ?? string.Empty).ToUpperInvariant();
 
-            // ── 1. Requiere LVARs para datos completos ─────────────────────────────
-            // Add-ons de alto detalle que usan LVARs propias para luces, N1, sistemas
+            // Usar capacidades del perfil para determinar APU, presurización y motores
+            HasApu            = profile.HasApu;
+            HasPressurization = profile.IsPressurized;
+            IsSingleEngine    = profile.EngineCount == 1;
+
+            // Si el perfil es MSFS_NATIVE (fallback), mantener la detección manual
+            // para aeronaves que aún no estén en el catálogo
+            if (profile.Code == "MSFS_NATIVE")
+            {
+                bool isJet =
+                    t.Contains("A318") || t.Contains("A319") || t.Contains("A320") || t.Contains("A321") ||
+                    t.Contains("A330") || t.Contains("A339") || t.Contains("A340") || t.Contains("A350") ||
+                    t.Contains("A380") || t.Contains("ACJ") || t.Contains("BBJ") || t.Contains("AIRBUS") ||
+                    t.Contains("B717") || t.Contains("B727") || t.Contains("B737") || t.Contains("B738") ||
+                    t.Contains("B739") || t.Contains("B38M") || t.Contains("B747") || t.Contains("B757") ||
+                    t.Contains("B767") || t.Contains("B777") || t.Contains("B787") || t.Contains("B78X") ||
+                    t.Contains("B77W") || t.Contains("B772") || t.Contains("B789") || t.Contains("BOEING") ||
+                    t.Contains("CRJ") || t.Contains("E170") || t.Contains("E175") || t.Contains("E190") ||
+                    t.Contains("E195") || t.Contains("MD80") || t.Contains("MD82") || t.Contains("MD83") ||
+                    t.Contains("MD88") || t.Contains("MD90") || t.Contains("MD11") || t.Contains("DC9") ||
+                    t.Contains("FENIX") || t.Contains("HEADWIND") || t.Contains("FLYBYWIRE") ||
+                    t.Contains("PMDG") || t.Contains("LEONARDO");
+
+                bool isPressurizedTurboprop =
+                    t.Contains("ATR") || t.Contains("DHC-8") || t.Contains("DASH 8") || t.Contains("DASH8") ||
+                    t.Contains("Q400") || t.Contains("TBM") || t.Contains("KING AIR") || t.Contains("B350") ||
+                    t.Contains("PC-12") || t.Contains("PC12") || t.Contains("PILATUS") ||
+                    t.Contains("M600") || t.Contains("MERIDIAN");
+
+                bool hasApuTurboprop =
+                    t.Contains("KING AIR") || t.Contains("B350") || t.Contains("B300") || t.Contains("Q400");
+
+                HasApu            = isJet || hasApuTurboprop;
+                HasPressurization = isJet || isPressurizedTurboprop;
+                IsSingleEngine    =
+                    t.Contains("C208") || t.Contains("CARAVAN") || t.Contains("GRAND CARAVAN") ||
+                    t.Contains("TBM") || t.Contains("PC-12") || t.Contains("PC12") || t.Contains("PILATUS") ||
+                    t.Contains("M600") || t.Contains("MERIDIAN") || t.Contains("SR20") || t.Contains("SR22") ||
+                    t.Contains("CIRRUS") || t.Contains("DA40") || t.Contains("C172") || t.Contains("C152") ||
+                    t.Contains("C182") || t.Contains("C206") || t.Contains("PA28") || t.Contains("PA-28");
+            }
+
+            // RequiresLvars: FlyByWire y Fenix usan sus propias variables avanzadas
             RequiresLvars =
-                t.Contains("A318") || t.Contains("A319") || t.Contains("A320") || t.Contains("A321") ||
-                t.Contains("ACJ")  || t.Contains("BBJ")  || t.Contains("ACJ319") || t.Contains("ACJ320") ||
-                t.Contains("FENIX") || t.Contains("HEADWIND") || t.Contains("FLYBYWIRE") || t.Contains("INIBUILDS") ||
-                t.Contains("TOLISS") || t.Contains("MAJESTIC") || t.Contains("QUALITYWINGS") ||
-                t.Contains("PMDG")  || t.Contains("LEONARDO") || t.Contains("FEELTHERE") ||
-                t.Contains("B737") || t.Contains("B738") || t.Contains("B739") || t.Contains("B38M") ||
-                t.Contains("B747") || t.Contains("B757") || t.Contains("B767") ||
-                t.Contains("B777") || t.Contains("B787") || t.Contains("B78X");
+                profile.Code == "A20N_FBW" || profile.Code == "A319_FENIX" ||
+                profile.Code == "A320_FENIX" || profile.Code == "A321_FENIX" ||
+                profile.Code == "A339_HEADWIND" ||
+                // Fallback para aeronaves no en catálogo
+                (profile.Code == "MSFS_NATIVE" && (
+                    t.Contains("FENIX") || t.Contains("FLYBYWIRE") || t.Contains("A32NX") ||
+                    t.Contains("HEADWIND") || t.Contains("TOLISS")));
 
             AircraftStatus = RequiresLvars
-                ? "Algunos datos requieren LVARs (Luces, N1 detallado)"
-                : "Datos completos vía SimConnect";
+                ? $"{profile.AddonProvider} · Algunos datos via LVARs"
+                : $"{profile.AddonProvider} · SimConnect completo";
 
-            // ── 2. Jets comerciales / ejecutivos con APU estándar ─────────────────
-            // Todos los aviones de fuselaje estrecho y ancho tienen APU
-            bool isJet =
-                // Airbus familia (incluyendo todos los add-ons)
-                t.Contains("A318") || t.Contains("A319") || t.Contains("A320") || t.Contains("A321") ||
-                t.Contains("A330") || t.Contains("A339") || t.Contains("A340") || t.Contains("A350") ||
-                t.Contains("A359") || t.Contains("A380") || t.Contains("A388") ||
-                t.Contains("ACJ") || t.Contains("BBJ") || t.Contains("AIRBUS") ||
-                // Boeing familia
-                t.Contains("B717") || t.Contains("B727") ||
-                t.Contains("B737") || t.Contains("B738") || t.Contains("B739") || t.Contains("B38M") ||
-                t.Contains("B747") || t.Contains("B757") || t.Contains("B767") ||
-                t.Contains("B777") || t.Contains("B787") || t.Contains("B78X") || t.Contains("B77W") ||
-                t.Contains("B772") || t.Contains("B789") || t.Contains("BOEING") ||
-                // Jets regionales
-                t.Contains("CRJ") || t.Contains("CRJ200") || t.Contains("CRJ700") || t.Contains("CRJ900") ||
-                t.Contains("E170") || t.Contains("E175") || t.Contains("E190") || t.Contains("E195") ||
-                t.Contains("E2 170") || t.Contains("E2 190") || t.Contains("E2 195") ||
-                // McDonnell Douglas
-                t.Contains("MD80") || t.Contains("MD82") || t.Contains("MD83") ||
-                t.Contains("MD88") || t.Contains("MD90") || t.Contains("MD11") ||
-                t.Contains("DC9") || t.Contains("DC-9") || t.Contains("DC10") || t.Contains("DC-10") ||
-                // Add-ons reconocidos
-                t.Contains("FENIX") || t.Contains("HEADWIND") || t.Contains("FLYBYWIRE") ||
-                t.Contains("INIBUILDS") || t.Contains("TOLISS") || t.Contains("MAJESTIC") ||
-                t.Contains("QUALITYWINGS") || t.Contains("PMDG") || t.Contains("LEONARDO") ||
-                t.Contains("FEELTHERE") || t.Contains("ROTATE") || t.Contains("SALTY") ||
-                t.Contains("CAPTAIN SIM");
-
-            // ── 3. Turbohélices presurizados (sin APU estándar) ───────────────────
-            // Tienen pressurización pero no APU (salvo King Air y algunos ATR)
-            bool isPressurizedTurboprop =
-                // ATR (presurizados — usados por Patagonia Wings)
-                t.Contains("ATR 42") || t.Contains("ATR42") ||
-                t.Contains("ATR 72") || t.Contains("ATR72") || t.Contains("AT76") ||
-                // De Havilland Canada DHC-8 / Bombardier Q-series
-                t.Contains("DHC-8") || t.Contains("DASH 8") || t.Contains("DASH8") ||
-                t.Contains("DASH-8") || t.Contains("Q200") || t.Contains("Q300") ||
-                t.Contains("Q400") || t.Contains("BOMBARDIER DASH") ||
-                // Daher TBM (monomotor turbohélice PRESURIZADO)
-                t.Contains("TBM") || t.Contains("TBM 700") || t.Contains("TBM 850") ||
-                t.Contains("TBM 900") || t.Contains("TBM 930") || t.Contains("TBM 940") ||
-                t.Contains("TBM700") || t.Contains("TBM850") || t.Contains("TBM900") ||
-                t.Contains("TBM930") || t.Contains("TBM940") ||
-                // Beechcraft King Air (presurizados)
-                t.Contains("KING AIR") || t.Contains("B350") || t.Contains("BE350") ||
-                t.Contains("C90") || t.Contains("B200") || t.Contains("B300") ||
-                t.Contains("1900") ||  // Beechcraft 1900 (presurizado regional)
-                // Pilatus PC-12 (monomotor turbohélice PRESURIZADO)
-                t.Contains("PC-12") || t.Contains("PC12") || t.Contains("PILATUS") ||
-                // Piper Meridian / M600 (presurizados)
-                t.Contains("PIPER M600") || t.Contains("M600") || t.Contains("MERIDIAN") ||
-                t.Contains("MALIBU") || t.Contains("PA-46");
-
-            // King Air B350/B300/C90/1900 tienen APU estándar (Honeywell GTCP36-150)
-            // Q400 tiene APU opcional (RE220T) — incluido porque el modelo MSFS lo reporta
-            bool hasApuTurboprop =
-                t.Contains("KING AIR") || t.Contains("B350") || t.Contains("BE350") ||
-                t.Contains("B300") || t.Contains("C90") || t.Contains("1900") ||
-                t.Contains("Q400") || t.Contains("DASH8-400") || t.Contains("DASH 8-400");
-
-            HasApu            = isJet || hasApuTurboprop;
-            HasPressurization = isJet || isPressurizedTurboprop; // Bleed Air en presurizados
-
-            // ── 4. Motor único ────────────────────────────────────────────────────
-            // Oculta el indicador de motor 2 en la UI y ajusta scoring
-            IsSingleEngine =
-                // Cessna Caravan (turbohélice monomotor NO presurizado)
-                t.Contains("C208") || t.Contains("CARAVAN") || t.Contains("GRAND CARAVAN") ||
-                t.Contains("CESSNA 208") ||
-                // TBM y PC-12 (monomotores presurizados)
-                t.Contains("TBM") || t.Contains("PC-12") || t.Contains("PC12") || t.Contains("PILATUS") ||
-                t.Contains("M600") || t.Contains("MERIDIAN") || t.Contains("MALIBU") ||
-                // GA monomotores comunes en MSFS
-                t.Contains("SR20") || t.Contains("SR22") || t.Contains("CIRRUS") ||
-                t.Contains("DA40") || t.Contains("DIAMOND DA40") || t.Contains("MOONEY") ||
-                t.Contains("C172") || t.Contains("CESSNA 172") || t.Contains("SKYHAWK") ||
-                t.Contains("C152") || t.Contains("C182") || t.Contains("C206") ||
-                t.Contains("ROBIN") || t.Contains("PA28") || t.Contains("PA-28") ||
-                t.Contains("PIPER WARRIOR") || t.Contains("PIPER ARCHER");
-
-            Debug.WriteLine($"[InFlightVM] '{title}' → APU:{HasApu} Presurizado:{HasPressurization} Monomotor:{IsSingleEngine} LVARs:{RequiresLvars}");
+            Debug.WriteLine($"[InFlightVM] '{title}' → Code:{profile.Code} APU:{HasApu} Presurizado:{HasPressurization} Monomotor:{IsSingleEngine} LVARs:{RequiresLvars}");
             OnPropertyChanged(nameof(RequiresLvars));
             OnPropertyChanged(nameof(AircraftStatus));
             OnPropertyChanged(nameof(ShowApu));
             OnPropertyChanged(nameof(HasPressurization));
             OnPropertyChanged(nameof(IsSingleEngine));
+            OnPropertyChanged(nameof(IsC208Family));
+            OnPropertyChanged(nameof(ShowSeatbeltSystem));
+            OnPropertyChanged(nameof(ShowAutopilotSystem));
+            OnPropertyChanged(nameof(ShowTransponderSystem));
+            OnPropertyChanged(nameof(ShowDoorsSystem));
         }
     }
 }

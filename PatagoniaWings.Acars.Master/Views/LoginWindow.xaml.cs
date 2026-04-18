@@ -232,7 +232,7 @@ namespace PatagoniaWings.Acars.Master.Views
             }
         }
 
-        private static bool ShouldIgnoreWindowDrag(DependencyObject source)
+        private static bool ShouldIgnoreWindowDrag(DependencyObject? source)
         {
             while (source != null)
             {
@@ -311,7 +311,7 @@ namespace PatagoniaWings.Acars.Master.Views
                 File.WriteAllText(FilePath, encoded, Encoding.UTF8);
             }
 
-            public static Payload Load()
+            public static Payload? Load()
             {
                 if (!File.Exists(FilePath))
                 {

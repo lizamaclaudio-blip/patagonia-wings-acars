@@ -9,7 +9,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
     public partial class PreFlightPage : UserControl
     {
         private bool _dispatchRequested;
-        private PreFlightViewModel _boundVm;
+        private PreFlightViewModel? _boundVm;
 
         public PreFlightPage()
         {
@@ -57,7 +57,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             await vm.LoadPreparedDispatchAsync();
         }
 
-        private PreFlightViewModel ResolveViewModel()
+        private PreFlightViewModel? ResolveViewModel()
         {
             var vm = PageRoot != null ? PageRoot.DataContext as PreFlightViewModel : null;
             if (vm != null)

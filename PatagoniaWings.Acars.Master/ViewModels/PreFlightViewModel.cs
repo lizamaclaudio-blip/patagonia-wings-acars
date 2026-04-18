@@ -457,7 +457,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             try
             {
-                PreparedDispatch dispatch = null;
+                PreparedDispatch? dispatch = null;
 
                 var preparedTask = AcarsContext.Api.GetPreparedDispatchAsync(pilot.CallSign);
                 var preparedCompleted = await Task.WhenAny(preparedTask, Task.Delay(TimeSpan.FromSeconds(10)));
@@ -582,7 +582,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(OperationalQualificationsSummary));
         }
 
-        private AcarsReadyFlight BuildReadyFlight(PreparedDispatch dispatch, string pilotCallsign)
+        private AcarsReadyFlight? BuildReadyFlight(PreparedDispatch? dispatch, string pilotCallsign)
         {
             if (dispatch == null)
             {
@@ -795,7 +795,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             SelectedSim = preferred.Contains("2024") ? SimulatorType.MSFS2024 : SimulatorType.MSFS2020;
         }
 
-        private static string BuildWeatherSummary(WeatherInfo weather)
+        private static string BuildWeatherSummary(WeatherInfo? weather)
         {
             if (weather == null)
             {
@@ -849,15 +849,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             return "Qual: " + qualifications + " · Cert: " + certifications;
         }
 
-        private WeatherInfo GetWorstWeather()
+        private WeatherInfo? GetWorstWeather()
         {
-            var departureSeverity = GetFlightCategorySeverity(DepWeather == null ? null : DepWeather.FlightCategory);
-            var arrivalSeverity = GetFlightCategorySeverity(ArrWeather == null ? null : ArrWeather.FlightCategory);
+            var departureSeverity = GetFlightCategorySeverity(DepWeather?.FlightCategory);
+            var arrivalSeverity = GetFlightCategorySeverity(ArrWeather?.FlightCategory);
             if (ArrWeather != null && arrivalSeverity >= departureSeverity) return ArrWeather;
             return DepWeather ?? ArrWeather;
         }
 
-        private static int GetFlightCategorySeverity(string category)
+        private static int GetFlightCategorySeverity(string? category)
         {
             var normalized = Safe(category).ToUpperInvariant();
             if (normalized == "LIFR") return 3;
@@ -866,19 +866,19 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             return 0;
         }
 
-        private static string Safe(string value)
+        private static string Safe(string? value)
         {
             return value == null ? string.Empty : value.Trim();
         }
 
-        private static string FirstNonEmpty(params string[] values)
+        private static string FirstNonEmpty(params string?[]? values)
         {
             if (values == null) return string.Empty;
             foreach (var value in values)
             {
                 if (!string.IsNullOrWhiteSpace(value))
                 {
-                    return value.Trim();
+                    return value!.Trim();
                 }
             }
             return string.Empty;

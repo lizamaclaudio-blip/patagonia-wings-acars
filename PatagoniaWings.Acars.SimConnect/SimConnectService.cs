@@ -6,15 +6,16 @@ using System.Windows.Interop;
 using Microsoft.FlightSimulator.SimConnect;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
+using PatagoniaWings.Acars.Core.Services;
 
 namespace PatagoniaWings.Acars.SimConnect
 {
     /// <summary>
     /// Integración MSFS 2020/2024 via SimConnect.
     ///
-    /// Luces: se leen via LIGHT ON STATES (bitmask único) con SIMCONNECT_PERIOD.VISUAL_FRAME.
-    /// Esto evita el bug conocido en MSFS donde los simvars individuales LIGHT STROBE/BEACON/etc.
-    /// no actualizan en tiempo real con PERIOD.SECOND.
+    /// Arquitectura SUR Air: todos los campos booleanos se registran como FLOAT64 (no INT32).
+    /// Las luces se leen como simvars individuales (LIGHT NAV/TAXI/LANDING/STROBE/BEACON)
+    /// directamente como FLOAT64 — más confiable que LIGHT ON STATES bitmask para addons MSFS.
     /// </summary>
     public sealed class SimConnectService : IDisposable
     {
@@ -28,14 +29,9 @@ namespace PatagoniaWings.Acars.SimConnect
 
         private EnvironmentDataStruct _lastEnv;
 
-        // Estado de luces: actualizado via LIGHT ON STATES (VISUAL_FRAME) para respuesta inmediata
-        private int _lastLightStates;
-        private bool _hasLightData;
-
-        // Última telemetría base para poder re-emitir al actualizar luces
+        // Última telemetría base para poder re-emitir cuando cambie el entorno
         private AircraftDataStruct _lastAircraftRaw;
-        private bool _hasAircraftRaw;
-        private AircraftProfileDefinition _lastProfile = new AircraftProfileDefinition();
+                private AircraftProfile _lastProfile = new AircraftProfile();
 
         private MobiFlightIntegration? _mobiFlight;
 
@@ -89,10 +85,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 IsConnected = false;
                 DetectedSimulator = SimulatorType.None;
                 _hasReceivedAircraftData = false;
-                _hasLightData  = false;
-                _hasAircraftRaw = false;
-                _lastLightStates = 0;
-            }
+                            }
             catch (Exception ex)
             {
                 Debug.WriteLine($"SimConnect Connect error: {ex}");
@@ -108,86 +101,84 @@ namespace PatagoniaWings.Acars.SimConnect
 
             uint sc = Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_UNUSED;
 
-            // ── AIRCRAFT DATA ─────────────────────────────────────────────────
-            // Debe coincidir EXACTAMENTE con los campos de AircraftDataStruct (en orden)
-
+            // AIRCRAFT DATA
+            // El orden debe coincidir EXACTAMENTE con AircraftDataStruct.
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TITLE", null, SIMCONNECT_DATATYPE.STRING256, 0, sc);
 
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE LATITUDE",           "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE LONGITUDE",          "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE ALTITUDE",           "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE ALT ABOVE GROUND",   "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AIRSPEED INDICATED",       "knots",            SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GROUND VELOCITY",          "knots",            SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "VERTICAL SPEED",           "feet per minute",  SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE HEADING DEGREES TRUE","degrees",         SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE PITCH DEGREES",      "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE BANK DEGREES",       "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            // Bloque base SUR-compatible
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "INDICATED ALTITUDE CALIBRATED", "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GROUND VELOCITY",            "knots",            SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "VERTICAL SPEED",             "feet per minute",  SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE LATITUDE",             "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE LONGITUDE",            "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE HEADING DEGREES TRUE", "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // Fuel
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL TOTAL QUANTITY WEIGHT","pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL TOTAL CAPACITY",       "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL LEFT QUANTITY",        "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL RIGHT QUANTITY",       "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL CENTER QUANTITY",      "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TOTAL WEIGHT",              "pounds",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "SIM ON GROUND",              "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "BRAKE PARKING POSITION",     "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // Motores
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG FUEL FLOW PPH:1","pounds per hour",SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG FUEL FLOW PPH:2","pounds per hour",SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "ENG N1 RPM:1",             "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "ENG N1 RPM:2",             "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TURB ENG N1:1",            "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TURB ENG N1:2",            "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT NAV",                  "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT TAXI",                 "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT LANDING",              "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT STROBE",               "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT BEACON",               "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // Estado
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "SIM ON GROUND",            "bool",             SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "BRAKE PARKING POSITION",   "bool",             SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT MASTER",         "bool",             SIMCONNECT_DATATYPE.INT32, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "ELECTRICAL MASTER BATTERY",  "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AVIONICS MASTER SWITCH",     "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "CABIN NO SMOKING ALERT SWITCH", "Bool",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // NOTA: LIGHT STROBE/BEACON/etc. eliminados — ahora vienen via LightsData (LIGHT ON STATES)
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "APU PCT RPM",                "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // Controles de vuelo
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GEAR HANDLE POSITION",     "bool",             SIMCONNECT_DATATYPE.INT32,   0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FLAPS HANDLE PERCENT",     "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "SPOILERS HANDLE POSITION", "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG COMBUSTION:1",   "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG COMBUSTION:2",   "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // Transponder
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER STATE:1",      "number",           SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER CODE:1",       "bco16",            SIMCONNECT_DATATYPE.INT32, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GEAR HANDLE POSITION",       "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // APU / Presurización / Cabina
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "APU PCT RPM",                        "percent", SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PRESSURIZATION CABIN ALTITUDE",      "feet",    SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PRESSURIZATION PRESSURE DIFFERENTIAL","psi",    SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "CABIN SEATBELTS ALERT SWITCH",       "bool",    SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "CABIN NO SMOKING ALERT SWITCH",      "bool",    SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "BLEED AIR ENGINE:1",                 "bool",    SIMCONNECT_DATATYPE.INT32, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL TOTAL QUANTITY WEIGHT", "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TOTAL WEIGHT",               "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "EMPTY WEIGHT",               "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "EXIT OPEN:0",                "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            // Luces individuales — fallback para addons que no actualizan LIGHT ON STATES
-            // (complementa el bitmask para máxima compatibilidad entre aeronaves)
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT BEACON",  "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT STROBE",  "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT LANDING", "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT TAXI",    "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "LIGHT NAV",     "bool", SIMCONNECT_DATATYPE.INT32, 0, sc);
+            // Bloque extendido PWG
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE ALT ABOVE GROUND",     "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AIRSPEED INDICATED",         "knots",            SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE PITCH DEGREES",        "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE BANK DEGREES",         "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL TOTAL CAPACITY",        "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL LEFT QUANTITY",         "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL RIGHT QUANTITY",        "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL CENTER QUANTITY",       "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG FUEL FLOW PPH:1","pounds per hour",  SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG FUEL FLOW PPH:2","pounds per hour",  SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TURB ENG N1:1",              "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TURB ENG N1:2",              "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT MASTER",           "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FLAPS HANDLE PERCENT",       "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "SPOILERS HANDLE POSITION",   "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER STATE:1",        "number",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER CODE:1",         "bco16",            SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PRESSURIZATION CABIN ALTITUDE", "feet",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PRESSURIZATION PRESSURE DIFFERENTIAL", "psi",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "CABIN SEATBELTS ALERT SWITCH", "Bool",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "BLEED AIR ENGINE:1",         "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+
+            // Bloque extendido AP/XPDR al final del struct (para no romper el bloque estable)
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT DISENGAGED",      "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER AVAILABLE",     "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
             _simConnect.RegisterDataDefineStruct<AircraftDataStruct>(DataDefineId.AircraftData);
 
-            // ── ENVIRONMENT DATA ──────────────────────────────────────────────
-            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "AMBIENT TEMPERATURE",   "celsius",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "AMBIENT WIND VELOCITY", "knots",     SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "AMBIENT WIND DIRECTION","degrees",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "SEA LEVEL PRESSURE",    "millibars", SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "AMBIENT PRECIP STATE",  "number",    SIMCONNECT_DATATYPE.INT32,   0, sc);
+            // Environment
+            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "AMBIENT TEMPERATURE",      "celsius",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "AMBIENT WIND VELOCITY",    "knots",            SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "AMBIENT WIND DIRECTION",   "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "SEA LEVEL PRESSURE",       "millibars",        SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.EnvironmentData, "AMBIENT PRECIP STATE",     "number",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.RegisterDataDefineStruct<EnvironmentDataStruct>(DataDefineId.EnvironmentData);
-
-            // ── LIGHTS DATA — LIGHT ON STATES bitmask ─────────────────────────
-            // Un único simvar nativo que agrupa TODAS las luces. Mucho más confiable
-            // que leer LIGHT STROBE/BEACON/etc. individualmente en MSFS 2020/2024.
-            // Se solicita con VISUAL_FRAME para respuesta inmediata al togglear.
-            _simConnect.AddToDataDefinition(DataDefineId.LightsData, "LIGHT ON STATES", "Mask", SIMCONNECT_DATATYPE.INT32, 0, sc);
-            _simConnect.RegisterDataDefineStruct<LightsDataStruct>(DataDefineId.LightsData);
         }
 
         private void RegisterEvents()
@@ -228,18 +219,6 @@ namespace PatagoniaWings.Acars.SimConnect
                 SIMCONNECT_PERIOD.SECOND,
                 SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT,
                 0, 0, 0);
-
-            // ── LUCES: VISUAL_FRAME + CHANGED ────────────────────────────────
-            // VISUAL_FRAME garantiza que capturamos el toggle de luz apenas ocurre
-            // (sin esperar hasta el próximo ciclo de SECOND).
-            // CHANGED evita inundar con datos cuando nada cambia.
-            _simConnect.RequestDataOnSimObject(
-                RequestId.LightsData,
-                DataDefineId.LightsData,
-                userObjectId,
-                SIMCONNECT_PERIOD.VISUAL_FRAME,
-                SIMCONNECT_DATA_REQUEST_FLAG.CHANGED,
-                0, 0, 0);
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -260,10 +239,6 @@ namespace PatagoniaWings.Acars.SimConnect
                 {
                     _lastEnv = (EnvironmentDataStruct)data.dwData[0];
                 }
-                else if (data.dwRequestID == (uint)RequestId.LightsData)
-                {
-                    HandleLightsData((LightsDataStruct)data.dwData[0]);
-                }
                 else
                 {
                     _mobiFlight?.ProcessSimObjectData(data);
@@ -281,26 +256,27 @@ namespace PatagoniaWings.Acars.SimConnect
             Debug.WriteLine($"[SimConnect AIRCRAFT] Title: {aircraftTitle}");
             Debug.WriteLine($"[SimConnect RAW] LAT={raw.Latitude:F4} ALT={raw.AltitudeFeet:F0}");
             Debug.WriteLine($"[SimConnect FUEL] Total={raw.FuelTotalLbs:F0}");
-            Debug.WriteLine($"[SimConnect LIGHTS] OnStates=0x{_lastLightStates:X3} Nav:{(_lastLightStates & 0x01) != 0} Beacon:{(_lastLightStates & 0x02) != 0} Landing:{(_lastLightStates & 0x04) != 0} Taxi:{(_lastLightStates & 0x08) != 0} Strobe:{(_lastLightStates & 0x10) != 0}");
+            Debug.WriteLine($"[SimConnect LIGHTS] Nav={raw.LightNav != 0} Beacon={raw.LightBeacon != 0} Landing={raw.LightLanding != 0} Taxi={raw.LightTaxi != 0} Strobe={raw.LightStrobe != 0}");
 
             _lastAircraftRaw = raw;
-            _hasAircraftRaw  = true;
-
+            
             var exeDir = System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) ?? string.Empty;
             var profile = AircraftProfileCatalog.Resolve(exeDir, aircraftTitle);
+            profile = NormalizeAddonProfile(profile, aircraftTitle);
             _lastProfile = profile;
 
-            var simData = BuildSimData(raw, _lastEnv, _lastLightStates, _hasLightData, profile);
+            var simData = BuildSimData(raw, _lastEnv, profile);
             simData.IsConnected    = true;
             simData.SimulatorType  = DetectedSimulator == SimulatorType.None ? SimulatorType.MSFS2020 : DetectedSimulator;
             simData.Pause          = _isPaused;
 
-            string profileName = profile.Name;
-            simData.AircraftProfile = profileName;
+            string profileCode = profile?.Code ?? "MSFS_NATIVE";
+            string profileDisplayName = profile?.DisplayName ?? "MSFS Native";
+            simData.AircraftProfile = profileDisplayName;
 
-            if (_mobiFlight?.IsAvailable == true && ProfileRequiresLvars(profileName))
+            if (_mobiFlight?.IsAvailable == true && ProfileRequiresLvars(profileCode))
             {
-                _mobiFlight.RequestLvarsForProfile(profileName);
+                _mobiFlight.RequestLvarsForProfile(profileCode);
                 simData = _mobiFlight.EnrichWithLvars(simData);
             }
 
@@ -314,35 +290,6 @@ namespace PatagoniaWings.Acars.SimConnect
                     Debug.WriteLine("[SimConnect] Primera conexión establecida");
                     Connected?.Invoke();
                 }
-            }
-
-            DataReceived?.Invoke(simData);
-        }
-
-        private void HandleLightsData(LightsDataStruct lightsRaw)
-        {
-            _lastLightStates = lightsRaw.LightOnStates;
-            _hasLightData    = true;
-
-            Debug.WriteLine($"[SimConnect LIGHTS UPDATE] 0x{_lastLightStates:X3} " +
-                $"Nav:{(_lastLightStates & 0x01) != 0} " +
-                $"Beacon:{(_lastLightStates & 0x02) != 0} " +
-                $"Landing:{(_lastLightStates & 0x04) != 0} " +
-                $"Taxi:{(_lastLightStates & 0x08) != 0} " +
-                $"Strobe:{(_lastLightStates & 0x10) != 0}");
-
-            // Re-emitir datos con luces actualizadas si ya tenemos datos de vuelo
-            if (!_hasAircraftRaw || !IsConnected) return;
-
-            var simData = BuildSimData(_lastAircraftRaw, _lastEnv, _lastLightStates, _hasLightData, _lastProfile);
-            simData.IsConnected   = true;
-            simData.SimulatorType = DetectedSimulator;
-            simData.Pause         = _isPaused;
-
-            if (_mobiFlight?.IsAvailable == true && !string.IsNullOrEmpty(simData.AircraftProfile)
-                && ProfileRequiresLvars(simData.AircraftProfile))
-            {
-                simData = _mobiFlight.EnrichWithLvars(simData);
             }
 
             DataReceived?.Invoke(simData);
@@ -371,9 +318,7 @@ namespace PatagoniaWings.Acars.SimConnect
         private static SimData BuildSimData(
             AircraftDataStruct r,
             EnvironmentDataStruct e,
-            int lightStates,
-            bool hasLightData,
-            AircraftProfileDefinition? profile)
+            AircraftProfile? profile)
         {
             // Fuel con fallback
             double fuelTotal = r.FuelTotalLbs;
@@ -381,73 +326,39 @@ namespace PatagoniaWings.Acars.SimConnect
             if (fuelTotal <= 0.1) fuelTotal = r.FuelTotalCapacity;
 
             // N1 con fallback
-            double n1Eng1 = r.Engine1N1 > 0.1 ? r.Engine1N1 : r.TurbEngN1_1;
-            double n1Eng2 = r.Engine2N1 > 0.1 ? r.Engine2N1 : r.TurbEngN1_2;
+            double n1Eng1 = r.TurbEngN1_1 > 0.1 ? r.TurbEngN1_1 : (r.EngineOneCombustion != 0 ? 20.0 : 0.0);
+            double n1Eng2 = r.TurbEngN1_2 > 0.1 ? r.TurbEngN1_2 : (r.EngineTwoCombustion != 0 ? 20.0 : 0.0);
 
-            // Squawk
-            int squawk = DecodeBco16(r.TransponderCode);
-            if (squawk < 0 || squawk > 9999) squawk = 0;
+            // Squawk: algunos aviones lo entregan ya en decimal, otros en BCO16
+            int rawTransponderCode = (int)r.TransponderCode;
+            int squawk = NormalizeTransponderCode(rawTransponderCode);
 
-            // ── LUCES: bitmask OR simvars individuales ──────────────────────────
-            // Prioridad: si el simvar individual devuelve 1, la luz está ON
-            // aunque el bitmask no lo haya capturado (máxima compatibilidad con addons)
-            var lightStrategy = profile?.GetLightStrategy() ?? AircraftLightStrategy.Hybrid;
-            bool bitmaskNav     = (lightStates & 0x001) != 0;
-            bool bitmaskBeacon  = (lightStates & 0x002) != 0;
-            bool bitmaskLanding = (lightStates & 0x004) != 0;
-            bool bitmaskTaxi    = (lightStates & 0x008) != 0;
-            bool bitmaskStrobe  = (lightStates & 0x010) != 0;
-            bool indivNav       = r.LightNav     != 0;
-            bool indivBeacon    = r.LightBeacon  != 0;
-            bool indivLanding   = r.LightLanding != 0;
-            bool indivTaxi      = r.LightTaxi    != 0;
-            bool indivStrobe    = r.LightStrobe  != 0;
+            // ── LUCES — lectura directa desde simvars individuales FLOAT64 ─────
+            // Arquitectura SUR Air: cada luz es un FLOAT64 individual, no bitmask.
+            // Un valor != 0.0 significa ON. Es el método más confiable en MSFS 2020/2024.
+            bool navOn     = r.LightNav     != 0;
+            bool beaconOn  = r.LightBeacon  != 0;
+            bool landingOn = r.LightLanding != 0;
+            bool taxiOn    = r.LightTaxi    != 0;
+            bool strobeOn  = r.LightStrobe  != 0;
 
-            bool navOn;
-            bool beaconOn;
-            bool landingOn;
-            bool taxiOn;
-            bool strobeOn;
-
-            switch (lightStrategy)
-            {
-                case AircraftLightStrategy.Bitmask:
-                    navOn     = hasLightData ? bitmaskNav     : indivNav;
-                    beaconOn  = hasLightData ? bitmaskBeacon  : indivBeacon;
-                    landingOn = hasLightData ? bitmaskLanding : indivLanding;
-                    taxiOn    = hasLightData ? bitmaskTaxi    : indivTaxi;
-                    strobeOn  = hasLightData ? bitmaskStrobe  : indivStrobe;
-                    break;
-
-                case AircraftLightStrategy.Individual:
-                    navOn     = indivNav;
-                    beaconOn  = indivBeacon;
-                    landingOn = indivLanding;
-                    taxiOn    = indivTaxi;
-                    strobeOn  = indivStrobe;
-                    break;
-
-                default:
-                    navOn     = (hasLightData && bitmaskNav)     || indivNav;
-                    beaconOn  = (hasLightData && bitmaskBeacon)  || indivBeacon;
-                    landingOn = (hasLightData && bitmaskLanding) || indivLanding;
-                    taxiOn    = (hasLightData && bitmaskTaxi)    || indivTaxi;
-                    strobeOn  = (hasLightData && bitmaskStrobe)  || indivStrobe;
-                    break;
-            }
-
-            // ── Combustible en kg ─────────────────────────────────────────────
-            // SimConnect devuelve FUEL TOTAL QUANTITY WEIGHT en libras → convertir a kg
-            double fuelKg = fuelTotal / 2.20462;
-            double totalWeightLbs = Math.Max(0, r.TotalWeight);
-            double totalWeightKg = totalWeightLbs / 2.20462;
+            // ── Pesos / combustible en kg ─────────────────────────────────────
+            double fuelKg          = fuelTotal / 2.20462;
+            double totalWeightLbs  = Math.Max(0, r.TotalWeight);
+            double totalWeightKg   = totalWeightLbs / 2.20462;
+            double emptyWeightLbs  = Math.Max(0, r.EmptyWeight);
+            double emptyWeightKg   = emptyWeightLbs / 2.20462;
             double zeroFuelWeightKg = totalWeightKg > 0
                 ? Math.Max(0, totalWeightKg - fuelKg)
                 : 0;
 
+            // ── Perfil de aeronave normalizado ────────────────────────────────
+            var profileCode = profile?.Code ?? AircraftNormalizationService.ResolveCode(r.Title ?? string.Empty);
+
             Debug.WriteLine($"[SimConnect] Fuel={fuelTotal:F0} lbs / {fuelKg:F0} kg  N1={n1Eng1:F1}/{n1Eng2:F1} Squawk={squawk} " +
-                $"Profile={profile?.Name ?? "MSFS Native"} Strategy={lightStrategy} Lights(mask={hasLightData}): Nav={navOn} Beacon={beaconOn} Landing={landingOn} Taxi={taxiOn} Strobe={strobeOn} " +
-                $"RawLights: B={r.LightBeacon} S={r.LightStrobe} L={r.LightLanding} T={r.LightTaxi} N={r.LightNav}");
+                $"Profile={profile?.DisplayName ?? "MSFS Native"} Code={profileCode} " +
+                $"Lights: Nav={navOn} Beacon={beaconOn} Landing={landingOn} Taxi={taxiOn} Strobe={strobeOn} " +
+                $"Eng1={r.EngineOneCombustion != 0} Batt={r.BatteryMaster != 0} Avionics={r.AvionicsMaster != 0} Door={r.DoorPercent:F0}%");
 
             return new SimData
             {
@@ -478,15 +389,17 @@ namespace PatagoniaWings.Acars.SimConnect
                 TotalWeightLbs     = totalWeightLbs,
                 TotalWeightKg      = totalWeightKg,
                 ZeroFuelWeightKg   = zeroFuelWeightKg,
+                EmptyWeightLbs     = emptyWeightLbs,
+                EmptyWeightKg      = emptyWeightKg,
 
                 LandingVS          = r.VerticalSpeed,
                 LandingG           = 0,
 
                 OnGround           = r.OnGround != 0,
                 ParkingBrake       = r.ParkingBrake != 0,
-                AutopilotActive    = r.AutopilotActive != 0,
+                AutopilotActive    = r.AutopilotActive != 0 && r.AutopilotDisengaged == 0,
 
-                // ── Luces desde LIGHT ON STATES ──
+                // ── Luces desde simvars individuales FLOAT64 (SUR Air) ──
                 NavLightsOn        = navOn,
                 BeaconLightsOn     = beaconOn,
                 LandingLightsOn    = landingOn,
@@ -504,9 +417,9 @@ namespace PatagoniaWings.Acars.SimConnect
                 ReverserActive     = false,
 
                 TransponderCode         = squawk,
-                // TRANSPONDER STATE: 0=Off, 1=Standby, 2=Test, 3=On(Mode A), 4=Alt(Mode C), 5=Ground/Mode S
-                // "Charlie mode" = altitud reportada = estado 4 o superior
-                TransponderCharlieMode  = r.TransponderState >= 4,
+                // Simplificado a ON/OFF para la UI.
+                TransponderStateRaw     = (r.TransponderAvailable != 0 && r.TransponderState >= 3) ? 1 : 0,
+                TransponderCharlieMode  = r.TransponderAvailable != 0 && r.TransponderState >= 3,
 
                 ApuAvailable       = r.ApuPct > 1,
                 ApuRunning         = r.ApuPct > 85,
@@ -519,8 +432,46 @@ namespace PatagoniaWings.Acars.SimConnect
                 WindSpeed          = e.WindSpeed,
                 WindDirection      = e.WindDirection,
                 QNH                = e.SeaLevelPressure,
-                IsRaining          = e.PrecipState > 0
+                IsRaining          = e.PrecipState > 0,
+
+                // ── Campos extendidos (arquitectura SUR Air) ──
+                EngineOneRunning   = r.EngineOneCombustion != 0,
+                EngineTwoRunning   = r.EngineTwoCombustion != 0,
+                BatteryMasterOn    = r.BatteryMaster       != 0,
+                AvionicsMasterOn   = r.AvionicsMaster      != 0,
+                DoorOpen           = r.DoorPercent > 5.0,   // umbral 5% (igual que SUR Air)
+                DetectedProfileCode = profileCode,
             };
+        }
+
+        private static int NormalizeTransponderCode(int rawCode)
+        {
+            if (LooksLikeOctalCode(rawCode))
+            {
+                return rawCode;
+            }
+
+            int decoded = DecodeBco16(rawCode);
+            if (LooksLikeOctalCode(decoded))
+            {
+                return decoded;
+            }
+
+            return 0;
+        }
+
+        private static bool LooksLikeOctalCode(int value)
+        {
+            if (value < 0 || value > 7777) return false;
+            int temp = value;
+            do
+            {
+                int digit = temp % 10;
+                if (digit > 7) return false;
+                temp /= 10;
+            } while (temp > 0);
+
+            return true;
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -691,11 +642,55 @@ namespace PatagoniaWings.Acars.SimConnect
             }
         }
 
-        private static bool ProfileRequiresLvars(string profileName) =>
-            profileName == "A319 Headwind"
-            || profileName == "Fenix A320"
-            || profileName == "Headwind A320"
-            || profileName == "FlyByWire A32NX";
+
+        private static AircraftProfile NormalizeAddonProfile(AircraftProfile profile, string aircraftTitle)
+        {
+            var t = (aircraftTitle ?? string.Empty).Trim().ToUpperInvariant();
+            if (t.Length == 0) return profile;
+
+            bool looksLikeLvfrAirbus =
+                !t.Contains("FENIX") && !t.Contains("FLYBYWIRE") && !t.Contains("A32NX")
+                && !t.Contains("HEADWIND") && !t.Contains("INIBUILDS")
+                && (
+                    t.Contains("LATINVFR") || t.Contains("LVFR")
+                    || (t.Contains("AIRBUS A319") && (t.Contains("CFM") || t.Contains("IAE")))
+                    || (t.Contains("AIRBUS A320") && (t.Contains("CFM") || t.Contains("IAE")))
+                    || (t.Contains("AIRBUS A321") && (t.Contains("CFM") || t.Contains("IAE")))
+                );
+
+            if (!looksLikeLvfrAirbus) return profile;
+            if (profile != null && profile.Code != "MSFS_NATIVE" && profile.Code != "A319_FENIX" && profile.Code != "A320_FENIX" && profile.Code != "A321_FENIX")
+                return profile;
+
+            string code = t.Contains("A321") ? "A321_LVFR"
+                        : t.Contains("A320") ? "A320_LVFR"
+                        : "A319_LVFR";
+
+            string display = code == "A321_LVFR" ? "Airbus A321 LVFR"
+                           : code == "A320_LVFR" ? "Airbus A320 LVFR"
+                           : "Airbus A319 LVFR";
+
+            return new AircraftProfile
+            {
+                Code = code,
+                DisplayName = display,
+                FamilyGroup = "AIRBUS_NB",
+                Simulator = "MSFS2020",
+                AddonProvider = "LVFR",
+                EngineCount = 2,
+                IsPressurized = true,
+                HasApu = true,
+                ImageAsset = code.StartsWith("A321") ? "A321.png" : code.StartsWith("A320") ? "A320.png" : "A319.png",
+                Supported = true
+            };
+        }
+
+        private static bool ProfileRequiresLvars(string profileCode) =>
+            profileCode == "A20N_FBW"
+            || profileCode == "A319_FENIX"
+            || profileCode == "A320_FENIX"
+            || profileCode == "A321_FENIX"
+            || profileCode == "A339_HEADWIND";
 
         // ──────────────────────────────────────────────────────────────────────
         // BCO16 DECODE (transponder)
@@ -763,10 +758,10 @@ namespace PatagoniaWings.Acars.SimConnect
                 ("TURB ENG N1:2", "N1_2"),
             };
 
-            public void RequestLvarsForProfile(string profileName)
+            public void RequestLvarsForProfile(string profileCode)
             {
-                if (!_isAvailable || _simConnect == null || _registeredProfile == profileName) return;
-                var lvars = profileName == "Fenix A320" ? FENIX_LVARS : A32NX_LVARS;
+                if (!_isAvailable || _simConnect == null || _registeredProfile == profileCode) return;
+                var lvars = (profileCode == "A319_FENIX" || profileCode == "A320_FENIX" || profileCode == "A321_FENIX") ? FENIX_LVARS : A32NX_LVARS;
                 try
                 {
                     uint sc = Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_UNUSED;
@@ -777,8 +772,8 @@ namespace PatagoniaWings.Acars.SimConnect
                         LvarReqId.Block, LvarDefId.Block,
                         Microsoft.FlightSimulator.SimConnect.SimConnect.SIMCONNECT_OBJECT_ID_USER,
                         SIMCONNECT_PERIOD.SECOND, SIMCONNECT_DATA_REQUEST_FLAG.DEFAULT, 0, 0, 0);
-                    _registeredProfile = profileName;
-                    Debug.WriteLine($"[MobiFlight] LVARs registradas para '{profileName}'");
+                    _registeredProfile = profileCode;
+                    Debug.WriteLine($"[MobiFlight] LVARs registradas para '{profileCode}'");
                 }
                 catch (Exception ex)
                 {
@@ -800,7 +795,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 {
                     var block = (LvarBlock9)data.dwData[0];
                     double[] vals = { block.V0, block.V1, block.V2, block.V3, block.V4, block.V5, block.V6, block.V7, block.V8 };
-                    var lvars = _registeredProfile == "Fenix A320" ? FENIX_LVARS : A32NX_LVARS;
+                    var lvars = (_registeredProfile == "A319_FENIX" || _registeredProfile == "A320_FENIX" || _registeredProfile == "A321_FENIX") ? FENIX_LVARS : A32NX_LVARS;
                     for (int i = 0; i < lvars.Length && i < vals.Length; i++)
                         _lvarCache[lvars[i].Key] = vals[i];
                 }

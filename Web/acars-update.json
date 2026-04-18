@@ -1,10 +1,10 @@
 {
-  "version": "3.1.9",
+  "version": "3.2.0",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.1.9.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.0.exe",
   "mandatory": false,
-  "notes": "- Certificacion inicial C208 con perfiles de aeronave por addon en SimConnect\n- Luces del C208 leidas segun estrategia por perfil para reflejo mas estable en vivo\n- Pesos reales del simulador: total y ZFW visibles durante el vuelo\n- Inicio de vuelo toma combustible real del sim y el PIREP corrige el consumo en kg",
-  "releaseDate": "2026-04-17",
+  "notes": "- Sistema de evaluacion SUR Air v5.0 completo: procedimientos (100pts) + performance (base 60)\n- Calificaciones corregidas: Proc 100/90/80, Perf 100/60/30 segun PDF oficial\n- Velocidad de taxi corregida a 25 kts (antes 30)\n- Luces NAV evaluadas en todas las fases (taxi, despegue, crucero, aterrizaje)\n- Fases PRE e IGN: freno estacionamiento, motores en orden, beacon antes de arrancar\n- VS de aterrizaje categorizadas segun SUR Air: perfecto 30-180, duro 300-500, accidente >1000\n- Bonificaciones: vuelo manual, lluvia, viento cruzado, alta elevacion, duracion de vuelo\n- Penalidades por viento de cola, alabeo excesivo, aproximacion inestable",
+  "releaseDate": "2026-04-18",
   "minVersion": "2.0.5",
   "fileSize": "22.6 MB",
   "storageProvider": "supabase"

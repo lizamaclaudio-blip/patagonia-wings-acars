@@ -26,6 +26,9 @@ namespace PatagoniaWings.Acars.Core.Services
         private double _lastLatitude;
         private double _lastLongitude;
         private bool _hasPosition;
+        private DamageEventCollector? _damageCollector;
+        private readonly List<AircraftDamageEvent> _finalDamageEvents = new List<AircraftDamageEvent>();
+        private bool _crashMarked;
 
         public FlightPhase CurrentPhase { get; private set; } = FlightPhase.Disconnected;
         public bool IsFlightActive => _currentFlight != null;
@@ -62,6 +65,17 @@ namespace PatagoniaWings.Acars.Core.Services
             _telemetryLog.Clear();
             _lastSimData = new SimData();
             _hasPosition = false;
+            _crashMarked = false;
+            _finalDamageEvents.Clear();
+
+            var profile = DamageRuleMapper.CreateProfile(
+                flight.AircraftTypeCode,
+                string.Concat(flight.AircraftName ?? string.Empty, " ", flight.AircraftDisplayName ?? string.Empty));
+
+            _damageCollector = string.IsNullOrWhiteSpace(flight.AircraftId)
+                ? null
+                : new DamageEventCollector(flight.AircraftId, flight.ReservationId, profile);
+
             SetFlightLock(true);
             SetPhase(FlightPhase.PreFlight);
         }
@@ -91,6 +105,11 @@ namespace PatagoniaWings.Acars.Core.Services
             // Estadísticas y log de telemetría solo cuando hay vuelo activo
             if (_currentFlight != null)
             {
+                if (_damageCollector != null)
+                {
+                    _damageCollector.RecordSample(data);
+                }
+
                 if (_hasPosition)
                 {
                     _totalDistanceNm += CalculateDistanceNm(
@@ -308,45 +327,59 @@ namespace PatagoniaWings.Acars.Core.Services
 
         /// <summary>
         /// Determina si la aeronave activa tiene presurización de cabina.
-        /// Los aviones NO presurizados (C208 Caravan, BE58 Baron, GA monomotores) no deben
-        /// recibir penalidades de presurización: el simvar devuelve la altitud de vuelo.
+        /// Usa AircraftNormalizationService (catálogo estable) con fallback a ICAO/nombre.
         /// </summary>
         private bool IsAircraftPressurized()
         {
-            if (_currentFlight == null) return true; // asumir presurizado si no hay vuelo
+            // Primero intentar con el título real del sim (más preciso)
+            var simTitle = _telemetryLog.Count > 0 ? _telemetryLog[0].AircraftTitle : string.Empty;
+            if (!string.IsNullOrWhiteSpace(simTitle))
+            {
+                var profile = AircraftNormalizationService.ResolveProfile(simTitle);
+                if (profile.Code != "MSFS_NATIVE")
+                    return profile.IsPressurized;
+            }
 
+            // Fallback: ICAO del despacho
+            if (_currentFlight == null) return true;
             var icao = (_currentFlight.AircraftIcao ?? string.Empty).Trim().ToUpperInvariant();
             var name = (_currentFlight.AircraftName  ?? string.Empty).Trim().ToUpperInvariant();
             var combined = icao + " " + name;
 
-            // ── Aeronaves PRESURIZADAS (jets, turbohélices de línea, ejecutivos) ──
-            // Si coincide con alguna de estas, ES presurizado → aplicar penalidades
-            var pressurizedTokens = new[]
-            {
-                // Jets de fuselaje estrecho / ancho
-                "A318","A319","A320","A321","A330","A339","A340","A350","A359","A380",
-                "ACJ","BBJ","AIRBUS","FENIX","HEADWIND","FLYBYWIRE","INIBUILDS",
-                "TOLISS","PMDG","LEONARDO","MAJESTIC","QUALITYWINGS","FEELTHERE","ROTATE",
-                "B717","B727","B737","B738","B739","B38M","B747","B757","B767",
-                "B777","B787","B78X","B78","B77W","B772","B789","BOEING",
-                "CRJ","E170","E175","E190","E195","E2 1",
-                "MD80","MD82","MD83","MD88","MD90","MD11","DC9","DC10",
-                // Turbohélices presurizados
-                "ATR","AT76","DHC-8","DASH 8","DASH8","Q200","Q300","Q400",
-                "TBM","PC-12","PC12","PILATUS",
-                "KING AIR","B350","BE350","C90","B200","B300","1900",
-                "M600","MERIDIAN","MALIBU","PA-46"
-            };
+            // Aeronaves NO presurizadas conocidas → retornar false
+            var unpressurized = new[] { "C208","CARAVAN","GRAND CARAVAN","BE58","BARON 58",
+                "C172","SKYHAWK","C152","C182","C206","SR20","SR22","DA40","DA20",
+                "PA28","PA-28","WARRIOR","ARCHER","MOONEY","ROBIN" };
+            foreach (var token in unpressurized)
+                if (combined.Contains(token)) return false;
 
-            foreach (var token in pressurizedTokens)
+            // Presurizado por defecto para jets y turbohélices de línea
+            return true;
+        }
+
+
+        public void MarkCrash()
+        {
+            _crashMarked = true;
+            if (_damageCollector != null)
             {
-                if (combined.Contains(token)) return true;
+                _damageCollector.MarkCrash();
+            }
+        }
+
+        public IReadOnlyList<AircraftDamageEvent> GetDamageEventsSnapshot()
+        {
+            if (_damageCollector == null)
+            {
+                return _finalDamageEvents.ToArray();
             }
 
-            // ── Aeronaves NO presurizadas ────────────────────────────────────────
-            // C208 Caravan, BE58 Baron, GA monomotores, etc.
-            return false;
+            _finalDamageEvents.Clear();
+            _finalDamageEvents.AddRange(_damageCollector.BuildDamageEvents(this));
+            return _finalDamageEvents.ToArray();
         }
+
+        public bool HasCrashMarked => _crashMarked;
 
         public void Reset()
         {
@@ -365,6 +398,9 @@ namespace PatagoniaWings.Acars.Core.Services
             _lastLatitude = 0;
             _lastLongitude = 0;
             _hasPosition = false;
+            _crashMarked = false;
+            _damageCollector = null;
+            _finalDamageEvents.Clear();
             SetFlightLock(false);
             SetPhase(FlightPhase.Disconnected);
         }

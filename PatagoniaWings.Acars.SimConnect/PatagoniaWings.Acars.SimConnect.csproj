@@ -58,9 +58,8 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <!-- AircraftProfiles.json se copia al directorio de salida del proyecto principal -->
-    <Content Include="AircraftProfiles.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    <Content Include="AircraftProfiles\**\*.*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -146,11 +146,14 @@
         </Style>
     </UserControl.Resources>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-    <StackPanel x:Name="PageRoot" Background="#EFF6FF">
+    <Grid Background="#EFF6FF">
+    <StackPanel x:Name="PageRoot" Background="#EFF6FF" RenderTransformOrigin="0.5,0">
+        <StackPanel.LayoutTransform>
+            <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
+        </StackPanel.LayoutTransform>
 
         <!-- ═══ HEADER ═══ -->
-        <Grid Margin="0,0,0,8">
+        <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
@@ -211,11 +214,9 @@
         </Grid>
 
         <!-- ═══ MÉTRICAS PRIMARIAS ═══ -->
-        <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+        <Border Style="{StaticResource Card}" Margin="0,0,0,6">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="1"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="1"/>
                     <ColumnDefinition Width="*"/>
@@ -231,22 +232,17 @@
                 </StackPanel>
                 <Rectangle Grid.Column="1" Fill="#E2E8F0" Width="1"/>
                 <StackPanel Grid.Column="2">
-                    <TextBlock Text="{Binding GSDisplay}" Style="{StaticResource MetricValue}"/>
-                    <TextBlock Text="GS kt" Style="{StaticResource MetricLabel}"/>
-                </StackPanel>
-                <Rectangle Grid.Column="3" Fill="#E2E8F0" Width="1"/>
-                <StackPanel Grid.Column="4">
                     <TextBlock Text="{Binding AltitudeDisplay}" Style="{StaticResource MetricValue}"
                                Foreground="#0284C7"/>
                     <TextBlock Text="ALT ft" Style="{StaticResource MetricLabel}"/>
                 </StackPanel>
-                <Rectangle Grid.Column="5" Fill="#E2E8F0" Width="1"/>
-                <StackPanel Grid.Column="6">
+                <Rectangle Grid.Column="3" Fill="#E2E8F0" Width="1"/>
+                <StackPanel Grid.Column="4">
                     <TextBlock Text="{Binding VSDisplay}" Style="{StaticResource MetricValue}" FontSize="15"/>
                     <TextBlock Text="V/S fpm" Style="{StaticResource MetricLabel}"/>
                 </StackPanel>
-                <Rectangle Grid.Column="7" Fill="#E2E8F0" Width="1"/>
-                <StackPanel Grid.Column="8">
+                <Rectangle Grid.Column="5" Fill="#E2E8F0" Width="1"/>
+                <StackPanel Grid.Column="6">
                     <TextBlock Text="{Binding ElapsedTimeDisplay}" Style="{StaticResource MetricValue}"
                                FontSize="15" Foreground="#64748B"/>
                     <TextBlock Text="Tiempo vuelo" Style="{StaticResource MetricLabel}"/>
@@ -255,7 +251,7 @@
         </Border>
 
         <!-- ═══ SISTEMAS ═══ -->
-        <Grid Margin="0,0,0,8">
+        <Grid Margin="0,0,0,6">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="110"/>
                 <ColumnDefinition Width="6"/>
@@ -340,77 +336,81 @@
                 </StackPanel>
             </Border>
 
-            <!-- ── SISTEMAS (compacto, sin Alt Baro/Suelo) ── -->
+            <!-- ── SISTEMAS (compacto, por perfil) ── -->
             <Border Grid.Column="2" Style="{StaticResource Card}">
                 <StackPanel>
                     <TextBlock Text="SISTEMAS" Style="{StaticResource SHead}"/>
 
-                    <!-- APU — solo jets / turbohélices con APU -->
-                    <Grid Margin="0,0,0,3" Visibility="{Binding ShowApu, Converter={StaticResource BoolVis}}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="APU" Style="{StaticResource SysLabel}"/>
-                        <Border Grid.Column="1">
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding ApuRunning}" Value="True">
-                                            <Setter Property="Background" Value="#D1FAE5"/>
-                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="OFF"/>
-                                        <Setter Property="Foreground" Value="#94A3B8"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding ApuRunning}" Value="True">
-                                                <Setter Property="Text" Value="ON"/>
-                                                <Setter Property="Foreground" Value="#065F46"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Border>
-                    </Grid>
-
-                    <!-- Bleed Air — solo presurizados -->
-                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Bleed Air" Style="{StaticResource SysLabel}"/>
-                        <Border Grid.Column="1">
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
-                                            <Setter Property="Background" Value="#D1FAE5"/>
-                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="OFF"/>
-                                        <Setter Property="Foreground" Value="#94A3B8"/>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
-                                                <Setter Property="Text" Value="ON"/>
-                                                <Setter Property="Foreground" Value="#065F46"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Border>
-                    </Grid>
-
-                    <!-- Seatbelt — todas las aeronaves -->
+                    <!-- Parking Brake -->
                     <Grid Margin="0,0,0,3">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Parking Brake" Style="{StaticResource SysLabel}"/>
+                        <Border Grid.Column="1">
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                    <Setter Property="BorderBrush" Value="#FCA5A5"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LiveParkingBrakeOn}" Value="True">
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="OFF"/>
+                                        <Setter Property="Foreground" Value="#991B1B"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LiveParkingBrakeOn}" Value="True">
+                                                <Setter Property="Text" Value="ON"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                    </Grid>
+
+                    <!-- Transponder (ON/OFF simple) -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding ShowTransponderSystem, Converter={StaticResource BoolVis}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Transponder" Style="{StaticResource SysLabel}"/>
+                        <Border Grid.Column="1">
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                    <Setter Property="BorderBrush" Value="#FCA5A5"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LiveTransponderOn}" Value="True">
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="OFF"/>
+                                        <Setter Property="Foreground" Value="#991B1B"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LiveTransponderOn}" Value="True">
+                                                <Setter Property="Text" Value="ON"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                    </Grid>
+
+                    <!-- Seatbelt -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding ShowSeatbeltSystem, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Seatbelt" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">
@@ -443,17 +443,17 @@
                         </Border>
                     </Grid>
 
-                    <!-- No Smoking — solo presurizados -->
-                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+                    <!-- Autopilot -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding ShowAutopilotSystem, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="No Smoking" Style="{StaticResource SysLabel}"/>
+                        <TextBlock Grid.Column="0" Text="Autopilot" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">
                             <Border.Style>
                                 <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
                                     <Setter Property="Background" Value="#FEE2E2"/>
                                     <Setter Property="BorderBrush" Value="#FCA5A5"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding LiveNoSmokingSign}" Value="True">
+                                        <DataTrigger Binding="{Binding LiveAutopilotOn}" Value="True">
                                             <Setter Property="Background" Value="#D1FAE5"/>
                                             <Setter Property="BorderBrush" Value="#6EE7B7"/>
                                         </DataTrigger>
@@ -466,7 +466,7 @@
                                         <Setter Property="Text" Value="OFF"/>
                                         <Setter Property="Foreground" Value="#991B1B"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding LiveNoSmokingSign}" Value="True">
+                                            <DataTrigger Binding="{Binding LiveAutopilotOn}" Value="True">
                                                 <Setter Property="Text" Value="ON"/>
                                                 <Setter Property="Foreground" Value="#065F46"/>
                                             </DataTrigger>
@@ -477,70 +477,19 @@
                         </Border>
                     </Grid>
 
-                    <!-- Cabin Alt / Press Diff — solo presurizados -->
-                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+                    <!-- APU -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding ShowApu, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Cabin Alt" Style="{StaticResource SysLabel}"/>
-                        <TextBlock Grid.Column="1" Text="{Binding CabinAlt, StringFormat='{}{0:0} ft'}"
-                                   FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
-                                   Foreground="#0284C7" VerticalAlignment="Center"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Press Diff" Style="{StaticResource SysLabel}"/>
-                        <TextBlock Grid.Column="1" Text="{Binding PressDiff, StringFormat='{}{0:0.00} psi'}"
-                                   FontSize="11" FontWeight="SemiBold" FontFamily="Consolas"
-                                   Foreground="#0284C7" VerticalAlignment="Center"/>
-                    </Grid>
-
-                    <!-- Squawk + Modo transponder -->
-                    <Grid Margin="0,0,0,3">
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Squawk" Style="{StaticResource SysLabel}"/>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal">
-                            <TextBlock Text="{Binding SquawkDisplay}"
-                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas"
-                                       Foreground="#0F172A" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                            <Border>
-                                <Border.Style>
-                                    <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding LiveCharlieMode}" Value="True">
-                                                <Setter Property="Background" Value="#EDE9FE"/>
-                                                <Setter Property="BorderBrush" Value="#A78BFA"/>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Border.Style>
-                                <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
-                                    <TextBlock.Style>
-                                        <Style TargetType="TextBlock">
-                                            <Setter Property="Text" Value="STBY"/>
-                                            <Setter Property="Foreground" Value="#94A3B8"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding LiveCharlieMode}" Value="True">
-                                                    <Setter Property="Text" Value="MODE C"/>
-                                                    <Setter Property="Foreground" Value="#5B21B6"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </TextBlock.Style>
-                                </TextBlock>
-                            </Border>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Autopilot -->
-                    <Grid>
-                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-                        <TextBlock Grid.Column="0" Text="Autopilot" Style="{StaticResource SysLabel}"/>
+                        <TextBlock Grid.Column="0" Text="APU" Style="{StaticResource SysLabel}"/>
                         <Border Grid.Column="1">
                             <Border.Style>
                                 <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                    <Setter Property="BorderBrush" Value="#FCA5A5"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding LiveAutopilotOn}" Value="True">
-                                            <Setter Property="Background" Value="#EDE9FE"/>
-                                            <Setter Property="BorderBrush" Value="#A78BFA"/>
+                                        <DataTrigger Binding="{Binding ApuRunning}" Value="True">
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -548,12 +497,80 @@
                             <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="MANUAL"/>
-                                        <Setter Property="Foreground" Value="#94A3B8"/>
+                                        <Setter Property="Text" Value="OFF"/>
+                                        <Setter Property="Foreground" Value="#991B1B"/>
                                         <Style.Triggers>
-                                            <DataTrigger Binding="{Binding LiveAutopilotOn}" Value="True">
-                                                <Setter Property="Text" Value="AP ON"/>
-                                                <Setter Property="Foreground" Value="#5B21B6"/>
+                                            <DataTrigger Binding="{Binding ApuRunning}" Value="True">
+                                                <Setter Property="Text" Value="ON"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                    </Grid>
+
+                    <!-- Bleed Air -->
+                    <Grid Margin="0,0,0,3" Visibility="{Binding HasPressurization, Converter={StaticResource BoolVis}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Bleed Air" Style="{StaticResource SysLabel}"/>
+                        <Border Grid.Column="1">
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                    <Setter Property="BorderBrush" Value="#FCA5A5"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
+                                            <Setter Property="Background" Value="#D1FAE5"/>
+                                            <Setter Property="BorderBrush" Value="#6EE7B7"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="OFF"/>
+                                        <Setter Property="Foreground" Value="#991B1B"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding BleedAirOn}" Value="True">
+                                                <Setter Property="Text" Value="ON"/>
+                                                <Setter Property="Foreground" Value="#065F46"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Border>
+                    </Grid>
+
+                    <!-- Doors -->
+                    <Grid Visibility="{Binding ShowDoorsSystem, Converter={StaticResource BoolVis}}">
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Doors" Style="{StaticResource SysLabel}"/>
+                        <Border Grid.Column="1">
+                            <Border.Style>
+                                <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                    <Setter Property="Background" Value="#D1FAE5"/>
+                                    <Setter Property="BorderBrush" Value="#6EE7B7"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LiveDoorOpen}" Value="True">
+                                            <Setter Property="Background" Value="#FEE2E2"/>
+                                            <Setter Property="BorderBrush" Value="#FCA5A5"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="CLOSED"/>
+                                        <Setter Property="Foreground" Value="#065F46"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LiveDoorOpen}" Value="True">
+                                                <Setter Property="Text" Value="OPEN"/>
+                                                <Setter Property="Foreground" Value="#991B1B"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
@@ -585,7 +602,7 @@
                         </Border.Background>
                         <Grid>
                             <!-- Imagen real (visible solo cuando existe el archivo) -->
-                            <Image Source="{Binding AircraftImageUrl}"
+                            <Image Source="{Binding AircraftImageSource}"
                                    Stretch="UniformToFill"
                                    RenderOptions.BitmapScalingMode="HighQuality"
                                    SnapsToDevicePixels="True">
@@ -728,7 +745,7 @@
         </Grid>
 
         <!-- ═══ PESOS: PLAN SIMBRIEF vs ACTUAL SIMULADOR ═══ -->
-        <Border Margin="0,0,0,8" Style="{StaticResource Card}"
+        <Border Margin="0,0,0,6" Style="{StaticResource Card}"
                 Visibility="{Binding HasDispatchWeights, Converter={StaticResource BoolVis}}">
             <StackPanel>
                 <TextBlock Text="PESOS" Style="{StaticResource SHead}"/>
@@ -749,52 +766,52 @@
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Block Fuel" Style="{StaticResource SysLabel}"/>
                             <TextBlock Grid.Column="1" Text="{Binding WbPlanFuelDisplay}"
-                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A"/>
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A" Margin="10,0,14,0"/>
                         </Grid>
                         <Grid Margin="0,0,0,3">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Payload" Style="{StaticResource SysLabel}"/>
                             <TextBlock Grid.Column="1" Text="{Binding WbPlanPayloadDisplay}"
-                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A"/>
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A" Margin="10,0,14,0"/>
                         </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="ZFW" Style="{StaticResource SysLabel}"/>
                             <TextBlock Grid.Column="1" Text="{Binding WbPlanZfwDisplay}"
-                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A"/>
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#0F172A" Margin="10,0,14,0"/>
                         </Grid>
                     </StackPanel>
 
                     <Rectangle Grid.Column="1" Fill="#E2E8F0"/>
 
                     <!-- ACTUAL SIMULADOR -->
-                    <StackPanel Grid.Column="2" Margin="10,0,0,0">
+                    <StackPanel Grid.Column="2" Margin="16,0,8,0">
                         <TextBlock Text="ACTUAL SIMULADOR" FontSize="9" FontWeight="SemiBold"
                                    Foreground="#059669" FontFamily="Segoe UI" Margin="0,0,0,4"/>
                         <Grid Margin="0,0,0,3">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Comb. ahora" Style="{StaticResource SysLabel}"/>
                             <TextBlock Grid.Column="1" Text="{Binding WbActualFuelDisplay}"
-                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#065F46"/>
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#065F46" Margin="10,0,14,0"/>
                         </Grid>
                         <Grid Margin="0,0,0,3">
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="Al arranque" Style="{StaticResource SysLabel}"/>
                             <TextBlock Grid.Column="1" Text="{Binding WbStartFuelDisplay}"
-                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#065F46"/>
+                                       FontSize="11" FontWeight="Bold" FontFamily="Consolas" Foreground="#065F46" Margin="10,0,14,0"/>
                         </Grid>
                         <Grid>
                             <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="ZFW" Style="{StaticResource SysLabel}"/>
                             <TextBlock Grid.Column="1" Text="{Binding WbActualZfwDisplay}"
-                                       FontSize="10" FontFamily="Consolas" Foreground="#334155"/>
+                                       FontSize="10" FontFamily="Consolas" Foreground="#334155" Margin="10,0,14,0"/>
                         </Grid>
                     </StackPanel>
 
                     <Rectangle Grid.Column="3" Fill="#E2E8F0"/>
 
                     <!-- MATCH COMBUSTIBLE -->
-                    <StackPanel Grid.Column="4" Margin="10,0,0,0" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="4" Margin="16,0,8,0" VerticalAlignment="Center">
                         <TextBlock Text="MATCH COMB." FontSize="9" FontWeight="SemiBold"
                                    Foreground="#7C3AED" FontFamily="Segoe UI" Margin="0,0,0,4"/>
                         <Border CornerRadius="6" Padding="7,4" Margin="0,0,0,4">
@@ -835,7 +852,7 @@
         </Border>
 
         <!-- ═══ LOG PIREP EN TIEMPO REAL ═══ -->
-        <Border Margin="0,0,0,8" CornerRadius="8" Padding="10,8"
+        <Border Margin="0,0,0,6" CornerRadius="8" Padding="10,8"
                 Background="#F8FAFC" BorderBrush="#CBD5E1" BorderThickness="1">
             <StackPanel>
                 <DockPanel LastChildFill="False" Margin="0,0,0,5">
@@ -847,7 +864,7 @@
                                FontSize="8" Foreground="#94A3B8" FontFamily="Segoe UI"
                                VerticalAlignment="Center"/>
                 </DockPanel>
-                <ScrollViewer MaxHeight="100" VerticalScrollBarVisibility="Auto"
+                <ScrollViewer MaxHeight="72" VerticalScrollBarVisibility="Auto"
                               HorizontalScrollBarVisibility="Disabled">
                     <TextBlock Text="{Binding PirepPreview}"
                                FontFamily="Consolas" FontSize="10"
@@ -857,7 +874,7 @@
         </Border>
 
         <!-- ═══ ALERT NO STROBE ═══ -->
-        <Border Margin="0,0,0,8" CornerRadius="8" Padding="12,8"
+        <Border Margin="0,0,0,6" CornerRadius="8" Padding="12,8"
                 Visibility="{Binding AlertNoStrobe, Converter={StaticResource BoolVis}}"
                 Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1">
             <TextBlock Text="⚠  Luces de posición apagadas en vuelo. Activa strobe y nav lights."
@@ -885,5 +902,5 @@
         </Border>
 
     </StackPanel>
-    </ScrollViewer>
+</Grid>
 </UserControl>

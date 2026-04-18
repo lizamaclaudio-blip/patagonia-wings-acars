@@ -7,7 +7,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
     public partial class ProfilePage : UserControl
     {
         private bool _initialProfileRequested;
-        private ProfileViewModel _boundVm;
+        private ProfileViewModel? _boundVm;
 
         public ProfilePage()
         {
@@ -55,7 +55,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             vm.LoadAsync();
         }
 
-        private ProfileViewModel ResolveViewModel()
+        private ProfileViewModel? ResolveViewModel()
         {
             if (PageRoot != null && PageRoot.DataContext is ProfileViewModel pageVm)
             {

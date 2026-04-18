@@ -125,6 +125,11 @@ namespace PatagoniaWings.Acars.Master.Views
                     AcarsContext.Runtime.SetSimulatorDisconnected(_coordinator?.ActiveBackend ?? "");
                 });
 
+                _coordinator.Crashed += () => Dispatcher.Invoke(() =>
+                {
+                    AcarsContext.FlightService.MarkCrash();
+                });
+
                 _coordinator.DataReceived += data =>
                 {
                     Dispatcher.Invoke(() =>

@@ -37,7 +37,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             }
         }
 
-        private CommunityViewModel ResolveViewModel()
+        private CommunityViewModel? ResolveViewModel()
         {
             if (PageRoot != null && PageRoot.DataContext is CommunityViewModel pageVm)
             {

@@ -74,6 +74,7 @@ namespace PatagoniaWings.Acars.Core.Models
         // Aviónica / Pressurización
         public bool TransponderCharlieMode { get; set; }
         public int TransponderCode { get; set; }
+        public int TransponderStateRaw { get; set; }
         public bool ApuRunning { get; set; }
         public bool ApuAvailable { get; set; }
         public bool BleedAirOn { get; set; }
@@ -86,6 +87,19 @@ namespace PatagoniaWings.Acars.Core.Models
         public double WindDirection { get; set; }
         public double QNH { get; set; }
         public bool IsRaining { get; set; }
+
+        // Sistemas adicionales (arquitectura SUR Air)
+        public bool EngineOneRunning { get; set; }
+        public bool EngineTwoRunning { get; set; }
+        public bool BatteryMasterOn { get; set; }
+        public bool AvionicsMasterOn { get; set; }
+        public bool DoorOpen { get; set; }
+        public double EmptyWeightLbs { get; set; }
+        public double EmptyWeightKg { get; set; }
+
+        // Perfil de aeronave normalizado (código estable Patagonia Wings)
+        // Ejemplos: C208_MSFS, C208_BLACKSQUARE, B738_PMDG, A320_FENIX, A20N_FBW
+        public string DetectedProfileCode { get; set; } = "MSFS_NATIVE";
 
         // Sim
         public SimulatorType SimulatorType { get; set; }

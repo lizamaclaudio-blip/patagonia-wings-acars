@@ -38,6 +38,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public event Action? Connected;
         public event Action? Disconnected;
         public event Action<SimData>? DataReceived;
+        public event Action? Crashed;
 
         public SimulatorCoordinator(string logFile)
         {
@@ -64,6 +65,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 _simConnect.Connected += OnProviderConnected;
                 _simConnect.Disconnected += OnProviderDisconnected;
                 _simConnect.DataReceived += OnDataReceived;
+                _simConnect.Crashed += OnProviderCrashed;
                 _simConnect.Connect(hwnd);
                 ActiveBackend = "SimConnect";
                 WriteLog("Backend activo: SimConnect");
@@ -106,6 +108,12 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private void OnProviderDisconnected()
         {
             ForceDisconnect("Proveedor desconectado: " + ActiveBackend);
+        }
+
+        private void OnProviderCrashed()
+        {
+            WriteLog("Crash detectado desde " + ActiveBackend);
+            Crashed?.Invoke();
         }
 
         private void OnDataReceived(SimData data)
@@ -293,6 +301,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             _simConnect.Connected    -= OnProviderConnected;
             _simConnect.Disconnected -= OnProviderDisconnected;
             _simConnect.DataReceived -= OnDataReceived;
+            _simConnect.Crashed -= OnProviderCrashed;
             _simConnect.Dispose();
             _simConnect = null;
         }

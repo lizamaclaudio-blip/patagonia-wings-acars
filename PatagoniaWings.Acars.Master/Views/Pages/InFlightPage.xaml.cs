@@ -43,7 +43,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             }
         }
 
-        private InFlightViewModel ResolveViewModel()
+        private InFlightViewModel? ResolveViewModel()
         {
             if (PageRoot != null && PageRoot.DataContext is InFlightViewModel pageVm)
             {
@@ -83,7 +83,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             return null;
         }
 
-        private MainWindow GetMainWindow()
+        private MainWindow? GetMainWindow()
         {
             return Window.GetWindow(this) as MainWindow;
         }

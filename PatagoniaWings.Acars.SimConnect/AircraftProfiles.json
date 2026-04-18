@@ -2,7 +2,8 @@
   "profiles": [
     {
       "name": "C208 Asobo",
-      "matches": ["C208", "Cessna 208", "Grand Caravan", "Caravan"],
+      "profile_code": "C208_MSFS",
+      "matches": ["Grand Caravan", "Cessna 208", "C208"],
       "exact_titles": [
         "Cessna C208B Grand Caravan EX",
         "Cessna C208B Grand Caravan",
@@ -12,40 +13,14 @@
       ],
       "description": "Cessna 208B Grand Caravan - Asobo/MSFS nativo",
       "engine_type": "single_turboprop",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "unit": "pounds",
-        "status": "WORKING"
-      },
-      "engines": {
-        "count": 1,
-        "n1_variable": "ENG N1 RPM:1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
-        "status": "WORKING"
-      },
-      "lights": {
-        "mode": "bitmask",
-        "use_native": true,
-        "status": "WORKING",
-        "notes": "Certificado para LIGHT ON STATES como fuente principal en MSFS"
-      },
-      "squawk": {
-        "format": "BCO16",
-        "status": "WORKING"
-      },
-      "apu": {
-        "available": false,
-        "notes": "Turboprop - no tiene APU"
-      },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "NOT_REQUIRED",
-      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "Transponder"],
-      "notes": "Avion Asobo nativo. Todas las simvars estandar funcionan via SimConnect."
+      "lights": { "mode": "individual" },
+      "apu": { "available": false },
+      "supported": true
     },
     {
       "name": "C208 BlackSquare",
-      "matches": ["Black Square", "BlackSquare", "C208B Black Square", "C208 Black"],
+      "profile_code": "C208_BLACKSQUARE",
+      "matches": ["Black Square", "BlackSquare", "Analog"],
       "exact_titles": [
         "Cessna C208B Grand Caravan EX Analog",
         "Cessna C208B Grand Caravan EX - Black Square",
@@ -54,269 +29,321 @@
       ],
       "description": "Cessna 208B Grand Caravan - Black Square Analog Systems",
       "engine_type": "single_turboprop",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "unit": "pounds",
-        "status": "WORKING"
-      },
-      "engines": {
-        "count": 1,
-        "n1_variable": "ENG N1 RPM:1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
-        "status": "WORKING"
-      },
-      "lights": {
-        "mode": "bitmask",
-        "use_native": true,
-        "status": "WORKING",
-        "notes": "Certificado para LIGHT ON STATES como fuente principal en MSFS"
-      },
-      "squawk": {
-        "format": "BCO16",
-        "status": "WORKING"
-      },
-      "apu": {
-        "available": false,
-        "notes": "Turboprop - no tiene APU"
-      },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "NOT_REQUIRED",
-      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "Transponder"],
-      "notes": "Black Square usa sistemas analogicos pero expone simvars estandar. SimConnect completo."
+      "lights": { "mode": "individual" },
+      "apu": { "available": false },
+      "supported": true
     },
     {
-      "name": "PMDG 737-600",
-      "matches": ["PMDG 737-600", "B736", "737-600"],
+      "name": "King Air 350 Asobo",
+      "profile_code": "B350_MSFS",
+      "matches": ["King Air 350", "Beechcraft King Air", "King Air"],
       "exact_titles": [
-        "PMDG 737-600",
-        "Boeing 737-600 PMDG",
-        "B736 PMDG"
+        "Beechcraft King Air 350",
+        "King Air 350"
       ],
-      "description": "Boeing 737-600 by PMDG",
-      "engine_type": "twin_jet",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
-        "unit": "pounds",
-        "status": "WORKING"
-      },
-      "engines": {
-        "count": 2,
-        "n1_variable": "TURB ENG N1:1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
-        "status": "WORKING"
-      },
-      "lights": {
-        "use_native": true,
-        "status": "WORKING",
-        "notes": "PMDG 737 MSFS expone LIGHT STROBE/BEACON/LANDING/TAXI/NAV via SimConnect"
-      },
-      "squawk": {
-        "format": "BCO16",
-        "status": "WORKING"
-      },
-      "apu": {
-        "available": true,
-        "simvar": "APU PCT RPM",
-        "status": "WORKING"
-      },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "OPTIONAL",
-      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "APU", "Transponder"],
-      "notes": "PMDG 737 MSFS 2020/2024 expone todas las simvars estandar. SimConnect completo sin PMDG SDK."
+      "description": "Beechcraft King Air 350 - Asobo/MSFS nativo",
+      "engine_type": "twin_turboprop",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": false },
+      "supported": true
     },
     {
-      "name": "PMDG 737",
-      "matches": ["PMDG 737", "Boeing 737", "B737", "737-700", "737-800", "737-900", "737 MAX", "B737_PMDG", "B738_PMDG", "B739_PMDG"],
+      "name": "King Air 350 BlackSquare",
+      "profile_code": "B350_BLACKSQUARE",
+      "matches": ["Black Square King Air", "BlackSquare King Air"],
+      "exact_titles": [],
+      "description": "Beechcraft King Air 350 - Black Square",
+      "engine_type": "twin_turboprop",
+      "lights": { "mode": "individual" },
+      "apu": { "available": false },
+      "supported": true
+    },
+    {
+      "name": "Baron 58 Asobo",
+      "profile_code": "BE58_MSFS",
+      "matches": ["Baron 58", "Beechcraft Baron", "BE58"],
       "exact_titles": [
-        "PMDG 737-700",
-        "PMDG 737-800",
-        "PMDG 737-900",
-        "Boeing 737-700 PMDG",
-        "Boeing 737-800 PMDG",
-        "Boeing 737-900 PMDG"
+        "Beechcraft Baron 58"
       ],
-      "description": "Boeing 737 series (700/800/900) by PMDG",
-      "engine_type": "twin_jet",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
-        "unit": "pounds",
-        "status": "WORKING"
-      },
-      "engines": {
-        "count": 2,
-        "n1_variable": "TURB ENG N1:1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
-        "status": "WORKING"
-      },
-      "lights": {
-        "use_native": true,
-        "status": "WORKING",
-        "notes": "PMDG 737 MSFS expone LIGHT STROBE/BEACON/LANDING/TAXI/NAV via SimConnect"
-      },
-      "squawk": {
-        "format": "BCO16",
-        "status": "WORKING"
-      },
-      "apu": {
-        "available": true,
-        "simvar": "APU PCT RPM",
-        "status": "WORKING"
-      },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "OPTIONAL",
-      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "APU", "Transponder", "SeatBelt"],
-      "notes": "PMDG 737 MSFS 2020/2024 expone todas las simvars estandar. SimConnect completo."
+      "description": "Beechcraft Baron 58 - Asobo/MSFS nativo",
+      "engine_type": "twin_piston",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": false },
+      "supported": true
+    },
+    {
+      "name": "Baron 58 BlackSquare",
+      "profile_code": "BE58_BLACKSQUARE",
+      "matches": ["Black Square Baron", "BlackSquare Baron"],
+      "exact_titles": [],
+      "description": "Beechcraft Baron 58 - Black Square",
+      "engine_type": "twin_piston",
+      "lights": { "mode": "individual" },
+      "apu": { "available": false },
+      "supported": true
     },
     {
       "name": "A319 Fenix",
-      "matches": ["A319", "Fenix", "A319-1", "Airbus A319"],
+      "profile_code": "A319_FENIX",
+      "matches": ["A319 Fenix", "Fenix A319", "Private ACJ319"],
       "exact_titles": ["Private ACJ319 CFM", "A319 Fenix", "Fenix A319"],
       "description": "Airbus A319 by Fenix Simulations",
       "engine_type": "twin_jet",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
-        "unit": "pounds",
-        "status": "WORKING"
-      },
-      "engines": {
-        "count": 2,
-        "n1_variable": "TURB ENG N1:1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1",
-        "status": "WORKING"
-      },
-      "lights": {
-        "use_native": true,
-        "status": "WORKING"
-      },
-      "squawk": { "format": "BCO16", "status": "WORKING" },
-      "apu": { "available": true, "simvar": "APU PCT RPM", "status": "WORKING" },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "OPTIONAL",
-      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Lights", "Flaps", "Gear", "N1", "APU", "Transponder"],
-      "notes": "Fenix A319 expone simvars estandar."
+      "lights": { "mode": "bitmask" },
+      "apu": { "available": true },
+      "supported": true
     },
     {
       "name": "Fenix A320",
-      "matches": ["A320", "Fenix A320", "Airbus A320"],
+      "profile_code": "A320_FENIX",
+      "matches": ["Fenix A320", "A320 Fenix", "Fenix Simulations A320"],
+      "exact_titles": [],
       "description": "Airbus A320 by Fenix Simulations",
       "engine_type": "twin_jet",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
-        "unit": "pounds"
-      },
-      "engines": {
-        "count": 2,
-        "n1_variable": "TURB ENG N1:1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1"
-      },
-      "lights": { "use_native": true },
-      "squawk": { "format": "BCO16" },
-      "apu": { "available": true, "simvar": "APU PCT RPM" },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "OPTIONAL",
-      "notes": "Fenix A320 expone simvars estandar. LVARs opcionales para mayor precision."
+      "lights": { "mode": "bitmask" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "A321 Fenix",
+      "profile_code": "A321_FENIX",
+      "matches": ["Fenix A321", "A321 Fenix"],
+      "exact_titles": [],
+      "description": "Airbus A321 by Fenix Simulations",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "bitmask" },
+      "apu": { "available": true },
+      "supported": true
     },
     {
       "name": "FlyByWire A32NX",
-      "matches": ["A32NX", "Flybywire", "FlyByWire", "FBW", "FBW A320"],
-      "description": "FlyByWire A32NX Airbus family",
+      "profile_code": "A20N_FBW",
+      "matches": ["A32NX", "FlyByWire", "flybywire", "FBW A320"],
+      "exact_titles": [],
+      "description": "FlyByWire A32NX Airbus A320neo",
       "engine_type": "twin_jet",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "unit": "pounds",
-        "status": "WORKING"
-      },
-      "engines": {
-        "count": 2,
-        "n1_variable": "TURB ENG N1:1",
-        "status": "LVAR_REQUIRED",
-        "lvars": ["(L:A32NX_ENGINE_N1:1, percent)", "(L:A32NX_ENGINE_N1:2, percent)"]
-      },
-      "lights": {
-        "status": "LVAR_REQUIRED",
-        "notes": "Usa LVARs A32NX para todas las luces principales"
-      },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "REQUIRED_FOR_FULL_FUNCTIONALITY",
-      "working_with_simconnect": ["Position", "Altitude", "Fuel", "Heading", "Speed", "Flaps", "Gear"],
-      "requires_lvars": ["Lights", "Engine N1"],
-      "notes": "FlyByWire A32NX usa sus propios LVARs."
+      "lights": { "mode": "bitmask" },
+      "apu": { "available": true },
+      "supported": true
     },
     {
-      "name": "PMDG 777",
-      "matches": ["B777", "B77W", "B772", "PMDG 777", "Boeing 777"],
-      "exact_titles": ["PMDG 777-200ER", "PMDG 777-300ER", "Boeing 777 PMDG"],
-      "description": "Boeing 777 series by PMDG",
+      "name": "PMDG 737-600",
+      "profile_code": "B736_PMDG",
+      "matches": ["PMDG 737-600", "737-600"],
+      "exact_titles": ["PMDG 737-600"],
+      "description": "Boeing 737-600 by PMDG",
       "engine_type": "twin_jet",
-      "fuel": {
-        "primary": "FUEL TOTAL QUANTITY WEIGHT",
-        "fallbacks": ["FUEL LEFT QUANTITY", "FUEL RIGHT QUANTITY", "FUEL CENTER QUANTITY"],
-        "unit": "pounds"
-      },
-      "engines": {
-        "count": 2,
-        "n1_variable": "TURB ENG N1:1",
-        "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1"
-      },
-      "lights": { "use_native": true },
-      "squawk": { "format": "BCO16" },
-      "apu": { "available": true, "simvar": "APU PCT RPM" },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "OPTIONAL",
-      "notes": "PMDG 777 MSFS expone simvars estandar."
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "PMDG 737-700",
+      "profile_code": "B737_PMDG",
+      "matches": ["PMDG 737-700", "737-700"],
+      "exact_titles": ["PMDG 737-700", "Boeing 737-700 PMDG"],
+      "description": "Boeing 737-700 by PMDG",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "PMDG 737-800",
+      "profile_code": "B738_PMDG",
+      "matches": ["PMDG 737-800", "737-800"],
+      "exact_titles": ["PMDG 737-800", "Boeing 737-800 PMDG"],
+      "description": "Boeing 737-800 by PMDG",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "PMDG 737-900",
+      "profile_code": "B739_PMDG",
+      "matches": ["PMDG 737-900", "737-900"],
+      "exact_titles": ["PMDG 737-900", "Boeing 737-900 PMDG"],
+      "description": "Boeing 737-900 by PMDG",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "iFly 737 MAX 8",
+      "profile_code": "B38M_IFLY",
+      "matches": ["iFly 737", "737 MAX 8", "737 MAX", "B737 MAX"],
+      "exact_titles": [],
+      "description": "Boeing 737 MAX 8 by iFly",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "PMDG 777-200ER",
+      "profile_code": "B772_PMDG",
+      "matches": ["PMDG 777-200", "Boeing 777-200"],
+      "exact_titles": ["PMDG 777-200ER"],
+      "description": "Boeing 777-200ER by PMDG",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "PMDG 777-300ER",
+      "profile_code": "B77W_PMDG",
+      "matches": ["PMDG 777-300", "Boeing 777-300", "PMDG 777", "B777"],
+      "exact_titles": ["PMDG 777-300ER"],
+      "description": "Boeing 777-300ER by PMDG",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "Boeing 787-10",
+      "profile_code": "B78X_MSFS",
+      "matches": ["Boeing 787-10", "787-10", "B78X"],
+      "exact_titles": [],
+      "description": "Boeing 787-10 MSFS",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "Boeing 787-9 Horizons",
+      "profile_code": "B789_HORIZONS",
+      "matches": ["Horizons 787", "Boeing 787-9", "787-9", "B789"],
+      "exact_titles": [],
+      "description": "Boeing 787-9 by Horizons Simulations",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "Headwind A330-900neo",
+      "profile_code": "A339_HEADWIND",
+      "matches": ["Headwind A339", "Headwind A330", "A330-900", "A330neo"],
+      "exact_titles": [],
+      "description": "Airbus A330-900neo by Headwind",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "bitmask" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "ATR 72-600",
+      "profile_code": "ATR72_MSFS",
+      "matches": ["ATR 72", "ATR-72", "ATR72"],
+      "exact_titles": ["ATR 72-600", "ATR72-600"],
+      "description": "ATR 72-600 MSFS",
+      "engine_type": "twin_turboprop",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": false },
+      "supported": true
+    },
+    {
+      "name": "Embraer 175 FlightSim",
+      "profile_code": "E175_FLIGHTSIM",
+      "matches": ["Embraer 175", "E-175", "E175"],
+      "exact_titles": [],
+      "description": "Embraer 175 by FlightSim Studio",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "Embraer 190 FlightSim",
+      "profile_code": "E190_FLIGHTSIM",
+      "matches": ["Embraer 190", "E-190", "E190"],
+      "exact_titles": [],
+      "description": "Embraer 190 by FlightSim Studio",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "Embraer 195 FlightSim",
+      "profile_code": "E195_FLIGHTSIM",
+      "matches": ["Embraer 195", "E-195", "E195"],
+      "exact_titles": [],
+      "description": "Embraer 195 by FlightSim Studio",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "Leonardo MadDog MD-82",
+      "profile_code": "MD82_MADDOG",
+      "matches": ["MD-82", "MD82", "MadDog", "Mad Dog"],
+      "exact_titles": ["MD-82"],
+      "description": "MD-82 by Leonardo / TFDi MadDog",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "Leonardo MadDog MD-83",
+      "profile_code": "MD83_MADDOG",
+      "matches": ["MD-83", "MD83"],
+      "exact_titles": ["MD-83"],
+      "description": "MD-83 by Leonardo / TFDi MadDog",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
+    },
+    {
+      "name": "Leonardo MadDog MD-88",
+      "profile_code": "MD88_MADDOG",
+      "matches": ["MD-88", "MD88"],
+      "exact_titles": ["MD-88"],
+      "description": "MD-88 by Leonardo / TFDi MadDog",
+      "engine_type": "twin_jet",
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": true },
+      "supported": true
     },
     {
       "name": "TBM9 Asobo",
+      "profile_code": "TBM9_MSFS",
       "matches": ["TBM 930", "TBM930", "TBM9"],
       "exact_titles": ["TBM 930"],
       "description": "TBM 930 by Asobo",
       "engine_type": "single_turboprop",
-      "fuel": { "primary": "FUEL TOTAL QUANTITY WEIGHT", "unit": "pounds" },
-      "engines": { "count": 1, "n1_variable": "ENG N1 RPM:1" },
-      "lights": { "use_native": true },
+      "lights": { "mode": "individual" },
       "apu": { "available": false },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "NOT_REQUIRED"
+      "supported": true
     },
     {
-      "name": "TBM9 BlackSquare",
-      "matches": ["TBM 850", "TBM850", "TBM8", "BlackSquare TBM", "Black Square TBM"],
+      "name": "TBM850 BlackSquare",
+      "profile_code": "TBM8_BLACKSQUARE",
+      "matches": ["TBM 850", "TBM850", "BlackSquare TBM", "Black Square TBM"],
       "exact_titles": ["TBM 850", "TBM 850 Black Square"],
-      "description": "TBM 850/930 by BlackSquare",
+      "description": "TBM 850 by Black Square",
       "engine_type": "single_turboprop",
-      "fuel": { "primary": "FUEL TOTAL QUANTITY WEIGHT", "unit": "pounds" },
-      "engines": { "count": 1, "n1_variable": "ENG N1 RPM:1" },
-      "lights": { "use_native": true },
+      "lights": { "mode": "individual" },
       "apu": { "available": false },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "NOT_REQUIRED",
-      "notes": "BlackSquare TBM. SimConnect nativo funciona."
+      "supported": true
     },
     {
       "name": "MSFS Native",
+      "profile_code": "MSFS_NATIVE",
       "matches": ["*"],
       "description": "Default profile para aeronaves estandar MSFS",
       "engine_type": "unknown",
-      "fuel": { "primary": "FUEL TOTAL QUANTITY WEIGHT", "unit": "pounds" },
-      "engines": { "n1_variable": "ENG N1 RPM:1", "fuel_flow_variable": "GENERAL ENG FUEL FLOW PPH:1" },
-      "lights": { "use_native": true },
-      "supported": true,
-      "recommended_backend": "SimConnect",
-      "lvar_support": "NOT_REQUIRED",
-      "notes": "Perfil fallback. Todas las simvars estandar MSFS."
+      "lights": { "mode": "hybrid" },
+      "apu": { "available": false },
+      "supported": true
     }
   ],
   "config": {

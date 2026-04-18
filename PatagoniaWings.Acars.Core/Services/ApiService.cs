@@ -22,6 +22,7 @@ namespace PatagoniaWings.Acars.Core.Services
         private readonly string _supabaseAnonKey;
         private readonly bool _useSupabaseDirect;
         private readonly PirepXmlBuilder _pirepXmlBuilder;
+        private readonly AircraftDamageApiClient _damageApi;
         private PreparedDispatch? _activePreparedDispatch;
         private readonly string _authLogFile;
         private string _token = string.Empty;
@@ -46,6 +47,7 @@ namespace PatagoniaWings.Acars.Core.Services
             _authLogFile = Path.Combine(logFolder, "auth.log");
 
             _pirepXmlBuilder = new PirepXmlBuilder();
+            _damageApi = new AircraftDamageApiClient(_supabaseUrl, _supabaseAnonKey, _useSupabaseDirect);
         }
 
         private bool CanUseSupabaseDirect
@@ -65,6 +67,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 _http.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", _token);
             }
+
+            _damageApi.SetAuthToken(_token);
         }
 
         // ── AUTH ──────────────────────────────────────────────────────────────
@@ -188,11 +192,12 @@ namespace PatagoniaWings.Acars.Core.Services
             FlightReport report,
             Flight? activeFlight = null,
             IReadOnlyList<SimData>? telemetryLog = null,
-            SimData? lastSimData = null)
+            SimData? lastSimData = null,
+            IReadOnlyList<AircraftDamageEvent>? damageEvents = null)
         {
             if (CanUseSupabaseDirect)
             {
-                return await SubmitFlightReportToSupabaseAsync(report, activeFlight, telemetryLog, lastSimData);
+                return await SubmitFlightReportToSupabaseAsync(report, activeFlight, telemetryLog, lastSimData, damageEvents);
             }
 
             var body = _json.Serialize(report);
@@ -659,7 +664,7 @@ namespace PatagoniaWings.Acars.Core.Services
 
             try
             {
-                Pilot effectivePilot = null;
+                Pilot? effectivePilot = null;
                 var pilotResult = await GetCurrentPilotFromSupabaseAsync();
                 if (pilotResult.Success && pilotResult.Data != null)
                 {
@@ -842,7 +847,8 @@ namespace PatagoniaWings.Acars.Core.Services
             FlightReport report,
             Flight? activeFlight,
             IReadOnlyList<SimData>? telemetryLog,
-            SimData? lastSimData)
+            SimData? lastSimData,
+            IReadOnlyList<AircraftDamageEvent>? damageEvents)
         {
             if (string.IsNullOrWhiteSpace(_token))
             {
@@ -906,6 +912,23 @@ namespace PatagoniaWings.Acars.Core.Services
                 if (!closeoutResult.Success || closeoutResult.Data == null)
                 {
                     return closeoutResult;
+                }
+
+                if (activeFlight != null)
+                {
+                    var flightHours = Math.Max(0, report.Duration.TotalHours);
+                    var landingCycles = report.LandingVS != 0 ? 1 : 0;
+                    var damageList = damageEvents ?? Array.Empty<AircraftDamageEvent>();
+                    var damageSync = await _damageApi.SubmitDamageAsync(activeFlight, flightHours, landingCycles, damageList);
+
+                    if (!damageSync.Success)
+                    {
+                        WriteAuthLog("Damage sync warning => " + damageSync.Error);
+                        var warning = "Damage sync warning: " + (damageSync.Error ?? "unknown");
+                        report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
+                            ? warning
+                            : report.Remarks + " | " + warning;
+                    }
                 }
 
                 _activePreparedDispatch = null;

@@ -116,7 +116,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     Report,
                     AcarsContext.FlightService.CurrentFlight,
                     AcarsContext.FlightService.GetTelemetrySnapshot(),
-                    AcarsContext.FlightService.LastSimData);
+                    AcarsContext.FlightService.LastSimData,
+                    AcarsContext.FlightService.GetDamageEventsSnapshot());
 
                 if (result.Success)
                 {

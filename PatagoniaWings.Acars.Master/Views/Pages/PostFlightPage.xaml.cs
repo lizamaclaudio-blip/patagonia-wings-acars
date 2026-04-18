@@ -37,7 +37,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             }
         }
 
-        private PostFlightViewModel ResolveViewModel()
+        private PostFlightViewModel? ResolveViewModel()
         {
             if (PageRoot != null && PageRoot.DataContext is PostFlightViewModel pageVm)
             {
