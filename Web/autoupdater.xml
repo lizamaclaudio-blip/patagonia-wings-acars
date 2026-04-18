@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <item>
   <version>3.2.4.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>v3.2.4: arquitectura SUR Air FLOAT64 — luces individuales, struct 53 campos, AutopilotHeadingLock/AltitudeLock/Nav1Lock/ApproachHold/WingLeveler. Patagonia Score (ex SUR Score). Vuelos PWG101–PWG113.</changelog>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.4.exe</url>
+  <changelog>v3.2.4: filtro real por rango y aeropuerto para Cadete, itinerarios alineados y updater con reapertura estable.</changelog>
   <mandatory>false</mandatory>
 </item>

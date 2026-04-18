@@ -26,7 +26,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
     public static class UpdateService
     {
         private static string AutoUpdaterXmlUrl =>
-            ReadSetting("AutoUpdaterXmlUrl", "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/autoupdater.xml");
+            ReadSetting("AutoUpdaterXmlUrl", "https://patagoniaw.com/downloads/autoupdater.xml");
 
         private static readonly string JustUpdatedFlagPath =
             Path.Combine(Path.GetTempPath(), "PatagoniaWings_JustUpdated.txt");

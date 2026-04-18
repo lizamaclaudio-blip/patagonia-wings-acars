@@ -26,22 +26,18 @@ CREATE POLICY "acars_releases_public_read"
     USING (true);
 
 -- ============================================================
--- INSERTAR VERSIÃ“N 3.2.3
+-- INSERTAR VERSIÃ“N 3.2.4
 -- ============================================================
 INSERT INTO acars_releases (version, download_url, notes, mandatory, is_active)
 VALUES (
-    '3.2.3',
-    'https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.3.exe',
-    'Novedades v3.2.3:
+    '3.2.4',
+    'https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.4.exe',
+    'Novedades v3.2.4:
 
-â€¢ Soporte completo Airbus A319 Headwind
-â€¢ IntegraciÃ³n MobiFlight WASM Module (lectura de LVARs)
-â€¢ Lectura correcta de luces: Beacon, Strobe, Landing, Nav, Taxi
-â€¢ Lectura N1 de motores
-â€¢ Fallback automÃ¡tico FSUIPC â†’ SimConnect
-â€¢ DetecciÃ³n automÃ¡tica del tipo de aviÃ³n
-â€¢ Mejoras en UI de login
-â€¢ Correcciones en telemetrÃ­a (squawk, cabin altitude)',
+â€¢ Filtro real por rango y aeropuerto para Cadete
+â€¢ Itinerarios alineados a aeronaves realmente autorizadas
+â€¢ Reapertura estable del ACARS tras update
+â€¢ ConfirmaciÃ³n visual al volver a abrir',
     false,
     true
 );
@@ -52,7 +48,7 @@ VALUES (
 -- ============================================================
 /*
 -- Desactivar versiÃ³n anterior (opcional)
-UPDATE acars_releases SET is_active = false WHERE version = '3.2.3';
+UPDATE acars_releases SET is_active = false WHERE version = '3.2.4';
 
 -- Activar nueva versiÃ³n
 INSERT INTO acars_releases (version, download_url, notes, mandatory, is_active)
