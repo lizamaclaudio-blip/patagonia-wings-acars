@@ -27,7 +27,7 @@ namespace PatagoniaWings.Acars.Master
                 "/Resources/Styles/AppStyles.xaml"
             };
 
-            Exception lastError = null;
+            Exception? lastError = null;
 
             foreach (var candidate in candidates)
             {
@@ -64,7 +64,7 @@ namespace PatagoniaWings.Acars.Master
 
                 if (!string.IsNullOrWhiteSpace(reservationId) && AcarsContext.Api != null)
                 {
-                    AcarsContext.Api.CloseReservationAsync(reservationId, "cancelled")
+                    AcarsContext.Api.CloseReservationAsync(reservationId!, "cancelled")
                         .GetAwaiter().GetResult();
                 }
             }

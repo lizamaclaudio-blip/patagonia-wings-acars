@@ -18,6 +18,7 @@ namespace PatagoniaWings.Acars.Core.Services
         private readonly HttpClient _http;
         private readonly JavaScriptSerializer _json;
         private readonly string _baseUrl;
+        private readonly string _webBaseUrl;
         private readonly string _supabaseUrl;
         private readonly string _supabaseAnonKey;
         private readonly bool _useSupabaseDirect;
@@ -30,9 +31,10 @@ namespace PatagoniaWings.Acars.Core.Services
         public PreparedDispatch? ActiveDispatch => _activePreparedDispatch;
         private string _token = string.Empty;
 
-        public ApiService(string baseUrl, string supabaseUrl = "", string supabaseAnonKey = "", bool useSupabaseDirect = false)
+        public ApiService(string baseUrl, string webBaseUrl = "", string supabaseUrl = "", string supabaseAnonKey = "", bool useSupabaseDirect = false)
         {
             _baseUrl = (baseUrl ?? string.Empty).TrimEnd('/');
+            _webBaseUrl = (webBaseUrl ?? string.Empty).TrimEnd('/');
             _supabaseUrl = (supabaseUrl ?? string.Empty).TrimEnd('/');
             _supabaseAnonKey = supabaseAnonKey ?? string.Empty;
             _useSupabaseDirect = useSupabaseDirect;
@@ -57,6 +59,16 @@ namespace PatagoniaWings.Acars.Core.Services
             => _useSupabaseDirect
                && !string.IsNullOrWhiteSpace(_supabaseUrl)
                && !string.IsNullOrWhiteSpace(_supabaseAnonKey);
+
+        public string BuildFlightResultUrl(string reservationId)
+        {
+            if (string.IsNullOrWhiteSpace(_webBaseUrl) || string.IsNullOrWhiteSpace(reservationId))
+            {
+                return string.Empty;
+            }
+
+            return _webBaseUrl + "/flights/" + Uri.EscapeDataString(reservationId.Trim());
+        }
 
         public void SetAuthToken(string token)
         {
@@ -217,6 +229,12 @@ namespace PatagoniaWings.Acars.Core.Services
             try
             {
                 var nowUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+                var closeoutPayload = new Dictionary<string, object>
+                {
+                    ["closeout_status"] = (status ?? "cancelled").Trim().ToLowerInvariant(),
+                    ["closeout_source"] = "acars_client_v3",
+                    ["closed_at_utc"] = nowUtc
+                };
                 using (var req = CreateSupabaseRequest(
                            new HttpMethod("PATCH"),
                            $"/rest/v1/flight_reservations?id=eq.{Uri.EscapeDataString(reservationId)}",
@@ -224,7 +242,17 @@ namespace PatagoniaWings.Acars.Core.Services
                 {
                     req.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
                     req.Content = new StringContent(
-                        _json.Serialize(new { status, updated_at = nowUtc }),
+                        _json.Serialize(new
+                        {
+                            status,
+                            completed_at = nowUtc,
+                            scoring_status = "closed_without_score",
+                            score_payload = new Dictionary<string, object>
+                            {
+                                ["closeout"] = closeoutPayload
+                            },
+                            updated_at = nowUtc
+                        }),
                         Encoding.UTF8, "application/json");
                     await _http.SendAsync(req).ConfigureAwait(false);
                 }
@@ -946,7 +974,8 @@ namespace PatagoniaWings.Acars.Core.Services
                     report,
                     activeFlight,
                     telemetryLog,
-                    lastSimData);
+                    lastSimData,
+                    damageEvents);
 
                 if (!closeoutResult.Success || closeoutResult.Data == null)
                 {
@@ -985,7 +1014,8 @@ namespace PatagoniaWings.Acars.Core.Services
             FlightReport report,
             Flight? activeFlight,
             IReadOnlyList<SimData>? telemetryLog,
-            SimData? lastSimData)
+            SimData? lastSimData,
+            IReadOnlyList<AircraftDamageEvent>? damageEvents)
         {
             try
             {
@@ -997,6 +1027,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 var fuelUsedKg = Math.Max(0, report.FuelUsed) * 0.45359237d;
                 var fuelEndKg = lastSample != null ? Math.Max(0, lastSample.FuelTotalLbs) * 0.45359237d : 0;
                 var fuelStartKg = 0d;
+                var damageSummary = BuildDamageSummary(damageEvents);
 
                 if (dispatch.FuelPlannedKg > 0)
                 {
@@ -1049,6 +1080,7 @@ namespace PatagoniaWings.Acars.Core.Services
                         ["airborne_penalty"]  = report.AirbornePenalty,
                         ["approach_penalty"]  = report.ApproachPenalty,
                         ["cabin_penalty"]     = report.CabinPenalty,
+                        ["damage_summary"]    = damageSummary,
                         ["summary"]           = report.ProceduralSummary,
                         ["source"]            = "acars_client_v3"
                     };
@@ -1215,14 +1247,41 @@ namespace PatagoniaWings.Acars.Core.Services
                 // Enriquecer reporte con datos del piloto
                 report.PilotQualifications = pilot.ActiveQualifications ?? string.Empty;
                 report.PilotCertifications = pilot.ActiveCertifications ?? string.Empty;
-
-                report.Status = FlightStatus.Pending;
+                report.ReservationId = dispatch.ReservationId ?? string.Empty;
+                report.ResultUrl = BuildFlightResultUrl(dispatch.ReservationId ?? string.Empty);
+                report.ResultStatus = "completed";
+                report.Status = FlightStatus.Approved;
                 return ApiResult<FlightReport>.Ok(report);
             }
             catch (Exception ex)
             {
                 return ApiResult<FlightReport>.Fail(ex.Message);
             }
+        }
+
+        private Dictionary<string, object> BuildDamageSummary(IReadOnlyList<AircraftDamageEvent>? damageEvents)
+        {
+            var summary = new Dictionary<string, object>();
+            var events = damageEvents ?? Array.Empty<AircraftDamageEvent>();
+            if (events.Count == 0)
+            {
+                summary["events_count"] = 0;
+                return summary;
+            }
+
+            summary["events_count"] = events.Count;
+            summary["events"] = events
+                .Select(evt => new Dictionary<string, object>
+                {
+                    ["event_code"] = evt.EventCode ?? string.Empty,
+                    ["phase"] = evt.Phase ?? string.Empty,
+                    ["severity"] = evt.Severity ?? string.Empty,
+                    ["captured_at_utc"] = evt.CapturedAtUtc.ToString("o", CultureInfo.InvariantCulture),
+                    ["details"] = evt.Details ?? new Dictionary<string, object>()
+                })
+                .ToArray();
+
+            return summary;
         }
 
         private async Task<string> CompleteFlightAndRepositionAsync(
@@ -1665,9 +1724,13 @@ namespace PatagoniaWings.Acars.Core.Services
             var score = ConvertToInt(row, "procedure_score", 0);
             if (score <= 0) score = ConvertToInt(row, "mission_score", 0);
 
+            var reservationId = FirstNonEmpty(row, "id", "reservation_id");
+
             return new FlightReport
             {
                 FlightNumber = FirstNonEmpty(row, "reservation_code", "route_code"),
+                ReservationId = reservationId,
+                ResultUrl = BuildFlightResultUrl(reservationId),
                 DepartureIcao = FirstNonEmpty(row, "origin_ident"),
                 ArrivalIcao = FirstNonEmpty(row, "destination_ident"),
                 AircraftIcao = FirstNonEmpty(row, "aircraft_type_code"),
@@ -1676,6 +1739,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 Score = score,
                 Grade = ScoreToGrade(score),
                 PointsEarned = ConvertToInt(row, "legado_credits", 0),
+                ResultStatus = FirstNonEmpty(row, "status"),
                 Status = ParseFlightStatus(FirstNonEmpty(row, "status"))
             };
         }
@@ -2173,6 +2237,9 @@ namespace PatagoniaWings.Acars.Core.Services
                 case "closed":
                     return FlightStatus.Approved;
                 case "cancelled":
+                case "interrupted":
+                case "aborted":
+                case "crashed":
                 case "rejected":
                     return FlightStatus.Rejected;
                 default:

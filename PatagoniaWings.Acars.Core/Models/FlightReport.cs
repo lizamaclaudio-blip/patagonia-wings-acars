@@ -22,6 +22,9 @@ namespace PatagoniaWings.Acars.Core.Models
     public class FlightReport
     {
         public int Id { get; set; }
+        public string ReservationId { get; set; } = string.Empty;
+        public string ResultUrl { get; set; } = string.Empty;
+        public string ResultStatus { get; set; } = string.Empty;
         public string FlightNumber { get; set; } = string.Empty;
         public string PilotCallSign { get; set; } = string.Empty;
         public string DepartureIcao { get; set; } = string.Empty;

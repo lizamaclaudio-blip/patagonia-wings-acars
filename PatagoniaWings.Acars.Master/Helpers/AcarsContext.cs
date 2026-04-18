@@ -8,6 +8,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
     public static class AcarsContext
     {
         private const string DefaultApiBaseUrl = "https://patagonia-wings-acars.fly.dev";
+        private const string DefaultWebBaseUrl = "http://localhost:3001";
 
         public static ApiService Api { get; private set; } = null!;
         public static AuthService Auth { get; private set; } = null!;
@@ -21,6 +22,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             Auth = new AuthService();
 
             var apiBaseUrl = ReadSetting("ApiBaseUrl", DefaultApiBaseUrl);
+            var webBaseUrl = ReadSetting("WebBaseUrl", DefaultWebBaseUrl);
             var supabaseUrl = ReadSecret("PWG_SUPABASE_URL", "SupabaseUrl");
             var supabaseAnonKey = ReadSecret("PWG_SUPABASE_ANON_KEY", "SupabaseAnonKey");
             var useSupabaseDirect = ReadSetting("UseSupabaseDirect", "false")
@@ -31,12 +33,13 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             WriteBootLog(
                 "AcarsContext.Initialize => ApiBaseUrl=" + apiBaseUrl +
+                " | WebBaseUrl=" + webBaseUrl +
                 " | UseSupabaseDirectSetting=" + ReadSetting("UseSupabaseDirect", "false") +
                 " | SupabaseUrlPresent=" + (!string.IsNullOrWhiteSpace(supabaseUrl)) +
                 " | SupabaseAnonKeyPresent=" + (!string.IsNullOrWhiteSpace(supabaseAnonKey)) +
                 " | EffectiveDirectMode=" + useSupabaseDirect);
 
-            Api = new ApiService(apiBaseUrl, supabaseUrl, supabaseAnonKey, useSupabaseDirect);
+            Api = new ApiService(apiBaseUrl, webBaseUrl, supabaseUrl, supabaseAnonKey, useSupabaseDirect);
             FlightService = new FlightService();
             Sound = new AcarsSoundPlayer();
 

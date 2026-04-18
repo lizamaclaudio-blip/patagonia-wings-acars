@@ -128,10 +128,10 @@ namespace PatagoniaWings.Acars.Master.Views
                 _coordinator.Crashed += () => Dispatcher.Invoke(() =>
                 {
                     AcarsContext.FlightService.MarkCrash();
-                    // Cerrar reserva como "interrupted" para que no quede in_flight
+                    // Persistir cierre real por crash y evitar reservas vivas.
                     var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
                     if (!string.IsNullOrWhiteSpace(reservationId))
-                        _ = AcarsContext.Api!.CloseReservationAsync(reservationId, "interrupted");
+                        _ = AcarsContext.Api!.CloseReservationAsync(reservationId!, "crashed");
                 });
 
                 _coordinator.DataReceived += data =>

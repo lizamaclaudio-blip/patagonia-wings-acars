@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows.Input;
 using PatagoniaWings.Acars.Core.Models;
@@ -129,6 +130,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                     if (result.Data != null)
                     {
+                        Report.ReservationId = result.Data.ReservationId;
+                        Report.ResultUrl = result.Data.ResultUrl;
+                        Report.ResultStatus = result.Data.ResultStatus;
                         Report.PilotQualifications = result.Data.PilotQualifications;
                         Report.PilotCertifications = result.Data.PilotCertifications;
                         OnPropertyChanged(nameof(HasQualifications));
@@ -137,6 +141,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     AcarsContext.FlightService.Reset();
                     AcarsContext.Sound.PlayDing();
                     _ = AcarsContext.Sound.PlayGroundArrivedAsync();
+
+                    var resultUrl = Report?.ResultUrl;
+                    if (!string.IsNullOrWhiteSpace(resultUrl))
+                    {
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = resultUrl,
+                                UseShellExecute = true
+                            });
+                        }
+                        catch (Exception ex)
+                        {
+                            SubmitMessage += $" · No pude abrir la web: {ex.Message}";
+                        }
+                    }
                 }
                 else
                 {
