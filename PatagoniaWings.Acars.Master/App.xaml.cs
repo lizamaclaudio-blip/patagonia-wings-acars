@@ -1,6 +1,7 @@
 using System;
 using System.Windows;
 using PatagoniaWings.Acars.Master.Helpers;
+using Velopack;
 
 namespace PatagoniaWings.Acars.Master
 {
@@ -8,6 +9,9 @@ namespace PatagoniaWings.Acars.Master
     {
         protected override void OnStartup(StartupEventArgs e)
         {
+            // Velopack: inicialización temprana, sin Main custom para no romper el pipeline XAML del proyecto WPF clásico.
+            VelopackApp.Build().Run();
+
             LoadGlobalStyles();
             base.OnStartup(e);
             AcarsContext.Initialize();
@@ -23,7 +27,7 @@ namespace PatagoniaWings.Acars.Master
                 "/Resources/Styles/AppStyles.xaml"
             };
 
-            Exception? lastError = null;
+            Exception lastError = null;
 
             foreach (var candidate in candidates)
             {
@@ -52,17 +56,22 @@ namespace PatagoniaWings.Acars.Master
 
         protected override void OnExit(ExitEventArgs e)
         {
-            // Si hay despacho activo al cerrar, cerrar la reserva para no dejarla en in_flight
             try
             {
-                var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
-                if (!string.IsNullOrWhiteSpace(reservationId))
+                var reservationId = AcarsContext.Api != null && AcarsContext.Api.ActiveDispatch != null
+                    ? AcarsContext.Api.ActiveDispatch.ReservationId
+                    : null;
+
+                if (!string.IsNullOrWhiteSpace(reservationId) && AcarsContext.Api != null)
                 {
-                    AcarsContext.Api!.CloseReservationAsync(reservationId, "cancelled")
+                    AcarsContext.Api.CloseReservationAsync(reservationId, "cancelled")
                         .GetAwaiter().GetResult();
                 }
             }
-            catch { /* best-effort */ }
+            catch
+            {
+                // best-effort
+            }
 
             AcarsContext.Shutdown();
             base.OnExit(e);
