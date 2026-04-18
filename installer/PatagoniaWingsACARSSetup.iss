@@ -92,8 +92,6 @@ Root: HKCU; Subkey: "Software\PatagoniaWings\ACARS"; ValueType: string; ValueNam
 [Run]
 ; Modo interactivo: muestra checkbox "Iniciar ahora" al finalizar
 Filename: "{app}\{#MyAppExe}"; Description: "Iniciar Patagonia Wings ACARS ahora"; Flags: nowait postinstall skipifsilent unchecked runascurrentuser
-; Modo silencioso (actualizacion automatica): abre el ACARS automaticamente
-Filename: "{app}\{#MyAppExe}"; Flags: nowait runascurrentuser; Check: WizardSilent
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{localappdata}\PatagoniaWings\Acars\logs"

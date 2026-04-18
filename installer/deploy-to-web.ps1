@@ -50,7 +50,7 @@ Write-Host "Copied: $dest ($sizeMB MB)" -ForegroundColor Green
 
 $manifest = [ordered]@{
     version = $appVersion
-    downloadUrl = "$supabaseBase/PatagoniaWingsACARSSetup-$appVersion.exe"
+    downloadUrl = "$supabaseBase/PatagoniaWingsACARSSetup.exe"
     notes = "Nueva version disponible de Patagonia Wings ACARS."
     mandatory = $false
     publishedAtUtc = [DateTime]::UtcNow.ToString("o")
@@ -63,7 +63,7 @@ $xml = @"
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
   <version>$appVersion.0</version>
-  <url>$supabaseBase/PatagoniaWingsACARSSetup-$appVersion.exe</url>
+  <url>$supabaseBase/PatagoniaWingsACARSSetup.exe</url>
   <changelog>Patagonia Wings ACARS v$appVersion</changelog>
   <mandatory>false</mandatory>
 </item>
@@ -73,6 +73,6 @@ Write-Host "Manifest updated: $xmlDest" -ForegroundColor Green
 Write-Host ""
 Write-Host "Installer available at:" -ForegroundColor White
 Write-Host "  /downloads/PatagoniaWingsACARSSetup.exe" -ForegroundColor Cyan
-Write-Host "  $supabaseBase/PatagoniaWingsACARSSetup-$appVersion.exe" -ForegroundColor Cyan
+Write-Host "  $supabaseBase/PatagoniaWingsACARSSetup.exe" -ForegroundColor Cyan
 Write-Host "  /downloads/acars-update.json" -ForegroundColor Cyan
 Write-Host "  /downloads/autoupdater.xml" -ForegroundColor Cyan

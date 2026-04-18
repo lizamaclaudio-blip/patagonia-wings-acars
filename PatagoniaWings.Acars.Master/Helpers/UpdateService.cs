@@ -31,6 +31,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static readonly string JustUpdatedFlagPath =
             Path.Combine(Path.GetTempPath(), "PatagoniaWings_JustUpdated.txt");
 
+        private static readonly string SplashCloseFlagPath =
+            Path.Combine(Path.GetTempPath(), "PatagoniaWings_UpdateSplashClose.txt");
+
         // Cooldown: no volver a verificar si ya se verificó hace menos de 10 minutos
         private static DateTime _lastCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(10);
@@ -44,6 +47,18 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         // ── Versión instalada ────────────────────────────────────────────────────
         public static string CurrentVersion => ReadSetting("AppVersion", GetAssemblyVersion());
+
+        public static void NotifyStartupComplete()
+        {
+            try
+            {
+                File.WriteAllText(SplashCloseFlagPath, DateTime.UtcNow.ToString("O"));
+            }
+            catch
+            {
+                // best-effort
+            }
+        }
 
         static UpdateService()
         {
@@ -187,7 +202,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 try { File.WriteAllText(JustUpdatedFlagPath, version); } catch { }
 
                 var splashScriptPath = Path.Combine(tempDir, "show_update_splash.ps1");
-                File.WriteAllText(splashScriptPath, BuildUpdateSplashScript(installerPath, version));
+                var appExePath = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())?.Location
+                                 ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PatagoniaWings.Acars.Master.exe");
+                File.WriteAllText(splashScriptPath, BuildUpdateSplashScript(installerPath, appExePath, version, SplashCloseFlagPath));
 
                 var psi = new ProcessStartInfo("powershell.exe")
                 {
@@ -346,7 +363,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             catch { }
         }
 
-        private static string BuildUpdateSplashScript(string installerPath, string version)
+        private static string BuildUpdateSplashScript(string installerPath, string appExePath, string version, string splashCloseFlagPath)
         {
             string Escape(string value) => value.Replace("'", "''");
 
@@ -361,6 +378,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 "  'Enviando un mecanico a revisar el datalink...',\r\n" +
                 "  'Puliendo la cabina para la nueva version...'\r\n" +
                 ")\r\n" +
+                "$script:installerStarted = $false\r\n" +
+                "$script:installerDone = $false\r\n" +
+                "$script:appLaunched = $false\r\n" +
+                "$script:installerPid = 0\r\n" +
                 "$form = New-Object System.Windows.Forms.Form\r\n" +
                 "$form.Text = 'Patagonia Wings ACARS'\r\n" +
                 "$form.StartPosition = 'CenterScreen'\r\n" +
@@ -399,12 +420,24 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 "$rotate.Interval = 1600\r\n" +
                 "$rotate.Add_Tick({ $script:tick++; $fun.Text = $phrases[$script:tick % $phrases.Count] })\r\n" +
                 "$start = New-Object System.Windows.Forms.Timer\r\n" +
-                "$start.Interval = 3200\r\n" +
-                "$start.Add_Tick({ $start.Stop(); Start-Process '" + Escape(installerPath) + "' -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' })\r\n" +
+                "$start.Interval = 1800\r\n" +
+                "$start.Add_Tick({ " +
+                "$start.Stop(); " +
+                "$p = Start-Process '" + Escape(installerPath) + "' -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' -PassThru; " +
+                "$script:installerPid = $p.Id; " +
+                "$script:installerStarted = $true; " +
+                "})\r\n" +
+                "$watch = New-Object System.Windows.Forms.Timer\r\n" +
+                "$watch.Interval = 1000\r\n" +
+                "$watch.Add_Tick({ " +
+                "if (Test-Path '" + Escape(splashCloseFlagPath) + "') { try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }; $watch.Stop(); $form.Close(); return }; " +
+                "if ($script:installerStarted -and -not $script:installerDone) { try { $null = Get-Process -Id $script:installerPid -ErrorAction Stop } catch { $script:installerDone = $true } }; " +
+                "if ($script:installerDone -and -not $script:appLaunched -and (Test-Path '" + Escape(appExePath) + "')) { Start-Process '" + Escape(appExePath) + "'; $script:appLaunched = $true } " +
+                "})\r\n" +
                 "$close = New-Object System.Windows.Forms.Timer\r\n" +
-                "$close.Interval = 18000\r\n" +
-                "$close.Add_Tick({ $close.Stop(); $form.Close() })\r\n" +
-                "$form.Add_Shown({ $rotate.Start(); $start.Start(); $close.Start() })\r\n" +
+                "$close.Interval = 90000\r\n" +
+                "$close.Add_Tick({ $close.Stop(); $watch.Stop(); $form.Close() })\r\n" +
+                "$form.Add_Shown({ try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }; $rotate.Start(); $start.Start(); $watch.Start(); $close.Start() })\r\n" +
                 "[void]$form.ShowDialog()\r\n";
         }
     }

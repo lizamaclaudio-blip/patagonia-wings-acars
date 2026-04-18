@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Windows;
 using PatagoniaWings.Acars.Master.Helpers;
 using Velopack;
@@ -9,7 +9,9 @@ namespace PatagoniaWings.Acars.Master
     {
         protected override void OnStartup(StartupEventArgs e)
         {
-            // Velopack: inicialización temprana, sin Main custom para no romper el pipeline XAML del proyecto WPF clásico.
+            UpdateService.NotifyStartupComplete();
+
+            // Velopack: inicializacion temprana, sin Main custom para no romper el pipeline XAML del proyecto WPF clasico.
             VelopackApp.Build().Run();
 
             LoadGlobalStyles();

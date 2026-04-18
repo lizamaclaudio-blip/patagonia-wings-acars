@@ -1,7 +1,7 @@
 ﻿{
   "version": "3.2.3",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.3.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
   "mandatory": false,
   "notes": "- Resultado final web, historial y apelaciones revisables\n- Cierre real de reservas completed/cancelled/interrupted/crashed/aborted\n- Redirect ACARS a https://patagoniaw.com tras submit OK\n- Score SUR unico visible en web",
   "releaseDate": "2026-04-18",
