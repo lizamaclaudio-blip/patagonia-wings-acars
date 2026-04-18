@@ -6,6 +6,6 @@
   "notes": "- Resultado final web, historial y apelaciones revisables\n- Cierre real de reservas completed/cancelled/interrupted/crashed/aborted\n- Redirect ACARS a https://patagoniaw.com tras submit OK\n- Score SUR unico visible en web",
   "releaseDate": "2026-04-18",
   "minVersion": "2.0.5",
-  "fileSize": "22.7 MB",
+  "fileSize": "24.7 MB",
   "storageProvider": "supabase"
 }

@@ -6,12 +6,16 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$installerSrc = Join-Path $PSScriptRoot "..\\release\\PatagoniaWingsACARSSetup.exe"
+$appVersion = "3.2.3"
+$releaseVersioned = Join-Path $PSScriptRoot "..\\release\\PatagoniaWingsACARSSetup-$appVersion.exe"
+$releaseGeneric = Join-Path $PSScriptRoot "..\\release\\PatagoniaWingsACARSSetup.exe"
+$installerSrc = if (Test-Path -LiteralPath $releaseVersioned) { $releaseVersioned } else { $releaseGeneric }
 $webPublic = "C:\\Users\\lizam\\Desktop\\PatagoniaWingsACARS\\PATAGONIA WINGS WEB 2.0\\patagonia-wings-site\\public\\downloads"
 $dest = Join-Path $webPublic "PatagoniaWingsACARSSetup.exe"
 $manifestDest = Join-Path $webPublic "acars-update.json"
+$xmlDest = Join-Path $webPublic "autoupdater.xml"
 $appConfigPath = Join-Path $PSScriptRoot "..\\PatagoniaWings.Acars.Master\\App.config"
-$appVersion = "2.0.1"
+$supabaseBase = "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases"
 
 Write-Host ""
 Write-Host "Patagonia Wings - Deploy ACARS installer to web" -ForegroundColor Cyan
@@ -46,7 +50,7 @@ Write-Host "Copied: $dest ($sizeMB MB)" -ForegroundColor Green
 
 $manifest = [ordered]@{
     version = $appVersion
-    downloadUrl = "https://www.patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe"
+    downloadUrl = "$supabaseBase/PatagoniaWingsACARSSetup-$appVersion.exe"
     notes = "Nueva version disponible de Patagonia Wings ACARS."
     mandatory = $false
     publishedAtUtc = [DateTime]::UtcNow.ToString("o")
@@ -54,7 +58,21 @@ $manifest = [ordered]@{
 
 $manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestDest -Encoding UTF8
 Write-Host "Manifest updated: $manifestDest" -ForegroundColor Green
+
+$xml = @"
+<?xml version="1.0" encoding="UTF-8"?>
+<item>
+  <version>$appVersion.0</version>
+  <url>$supabaseBase/PatagoniaWingsACARSSetup-$appVersion.exe</url>
+  <changelog>Patagonia Wings ACARS v$appVersion</changelog>
+  <mandatory>false</mandatory>
+</item>
+"@
+$xml | Set-Content -LiteralPath $xmlDest -Encoding UTF8
+Write-Host "Manifest updated: $xmlDest" -ForegroundColor Green
 Write-Host ""
 Write-Host "Installer available at:" -ForegroundColor White
 Write-Host "  /downloads/PatagoniaWingsACARSSetup.exe" -ForegroundColor Cyan
+Write-Host "  $supabaseBase/PatagoniaWingsACARSSetup-$appVersion.exe" -ForegroundColor Cyan
 Write-Host "  /downloads/acars-update.json" -ForegroundColor Cyan
+Write-Host "  /downloads/autoupdater.xml" -ForegroundColor Cyan
