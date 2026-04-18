@@ -46,6 +46,12 @@ namespace PatagoniaWings.Acars.Core.Services
         // Contexto extendido (opcional, se infiere del log cuando es posible)
         private readonly double _departureElevationFt;
         private readonly double _arrivalElevationFt;
+        /// <summary>
+        /// true = el perfil del avión lee sistemas de cabina de forma confiable
+        /// (seatbelt, nosmoking, transponder).
+        /// false = esos sistemas NO se usan como penalidad dura (Rule 14 matriz Patagonia Wings).
+        /// </summary>
+        private readonly bool _cabinSystemsReliable;
 
         public FlightEvaluationService(
             IReadOnlyList<SimData> telemetryLog,
@@ -55,7 +61,8 @@ namespace PatagoniaWings.Acars.Core.Services
             string aircraftName,
             bool isPressurized,
             double departureElevationFt = 0,
-            double arrivalElevationFt = 0)
+            double arrivalElevationFt = 0,
+            bool cabinSystemsReliable = true)
         {
             _log = telemetryLog ?? Array.Empty<SimData>();
             _landingVS = landingVS;
@@ -65,6 +72,7 @@ namespace PatagoniaWings.Acars.Core.Services
             _isPressurized = isPressurized;
             _departureElevationFt = departureElevationFt;
             _arrivalElevationFt = arrivalElevationFt;
+            _cabinSystemsReliable = cabinSystemsReliable;
         }
 
         // ── Punto de entrada ───────────────────────────────────────────────────
@@ -257,13 +265,14 @@ namespace PatagoniaWings.Acars.Core.Services
             if (rollSamples.Count(s => !s.BeaconLightsOn) > rollSamples.Count / 3)
                 Penalize(violations, ref score, "TO-05", "TO", "Despegue sin luces BEACON", -5);
 
-            // TO-06: Transponder Modo Charlie
-            if (rollSamples.Count(s => !s.TransponderCharlieMode) > rollSamples.Count / 3)
-                Penalize(violations, ref score, "TO-06", "TO", "Transponder no en Modo C al despegar", -8);
+            // TO-06: Transponder Modo Charlie — solo si el perfil lo lee de forma confiable
+            // (Transponder no es núcleo del reglaje final — Rule 15 matriz)
+            if (_cabinSystemsReliable && rollSamples.Count(s => !s.TransponderCharlieMode) > rollSamples.Count / 3)
+                Penalize(violations, ref score, "TO-06", "TO", "Transponder no en Modo C al despegar", -4);
 
-            // TO-08: Señal de cinturones
-            if (rollSamples.Count(s => !s.SeatBeltSign) > rollSamples.Count / 3)
-                Penalize(violations, ref score, "TO-08", "TO", "Señal de cinturones apagada al despegar", -5);
+            // TO-08: Señal de cinturones — solo si perfil confiable
+            if (_cabinSystemsReliable && rollSamples.Count(s => !s.SeatBeltSign) > rollSamples.Count / 3)
+                Penalize(violations, ref score, "TO-08", "TO", "Señal de cinturones apagada al despegar", -4);
 
             // TO-10: Retracción del tren — detectar si el tren tardó más de 30 seg en subirse
             var airSamples = _log.Where(s => !s.OnGround && s.AltitudeAGL > 50 && s.AltitudeAGL < 2000).ToList();
@@ -326,9 +335,9 @@ namespace PatagoniaWings.Acars.Core.Services
             if (_log.Any(s => s.Pause))
                 Penalize(violations, ref score, "CRU-02", "CRU", "Pausa activa durante el vuelo", -10);
 
-            // CRU-03: Transponder Modo C/S en crucero
-            if (cruSamples.Count(s => !s.TransponderCharlieMode) > cruSamples.Count / 3)
-                Penalize(violations, ref score, "CRU-03", "CRU", "Transponder no en Modo C en crucero", -6);
+            // CRU-03: Transponder — solo informativo si perfil no es confiable (Rule 15 matriz)
+            if (_cabinSystemsReliable && cruSamples.Count(s => !s.TransponderCharlieMode) > cruSamples.Count / 3)
+                Penalize(violations, ref score, "CRU-03", "CRU", "Transponder no en Modo C en crucero", -4);
 
             // CRU-04: Beacon encendido en crucero
             if (cruSamples.Count(s => !s.BeaconLightsOn) > cruSamples.Count / 3)
@@ -342,8 +351,8 @@ namespace PatagoniaWings.Acars.Core.Services
             if (cruSamples.Any(s => Math.Abs(s.Bank) > 45))
                 Penalize(violations, ref score, "CRU-06", "CRU", "Banco >45° en crucero", -5);
 
-            // CRU-07: Señal de cinturones en turbulencia (banco >20° sostenido)
-            if (cruSamples.Count(s => Math.Abs(s.Bank) > 20 && !s.SeatBeltSign) > 5)
+            // CRU-07: Señal de cinturones en turbulencia — solo si perfil confiable
+            if (_cabinSystemsReliable && cruSamples.Count(s => Math.Abs(s.Bank) > 20 && !s.SeatBeltSign) > 5)
                 Penalize(violations, ref score, "CRU-07", "CRU", "Sin señal de cinturones en maniobra/turbulencia", -3);
         }
 
@@ -437,24 +446,23 @@ namespace PatagoniaWings.Acars.Core.Services
                     Penalize(violations, ref score, "LDG-06", "LDG", "Señal de cinturones apagada al aterrizar", -4);
             }
 
-            // LDG VS per SUR Air PDF:
-            // < -30 fpm = demasiado suave → penal
-            // -30 a -180 fpm = perfecto (bonif en perf)
-            // -181 a -300 fpm = bueno (neutral)
-            // -300 a -500 fpm = duro (-5 proc)
-            // -500 a -700 fpm = muy duro (-10 proc)
-            // -700 a -1000 fpm = daño en tren (-20 proc)
-            // > -1000 fpm = accidente (-30 proc)
-            if (vs > 1000)
-                Penalize(violations, ref score, "LDG-15", "LDG", $"Toque accidentado — rotura de tren ({vs:F0} fpm)", -30);
-            else if (vs > 700)
-                Penalize(violations, ref score, "LDG-14", "LDG", $"Toque con daño en tren ({vs:F0} fpm)", -20);
+            // TABLA OFICIAL Patagonia Wings (matriz reglaje final):
+            //   0  a  -59 fpm → demasiado suave   (-5 proc)
+            //  -60 a -180 fpm → perfecto           (bonif en perf, 0 proc)
+            // -181 a -250 fpm → bueno              (neutral)
+            // -251 a -500 fpm → duro               (-8 proc)
+            // -501 a -700 fpm → mantenimiento      (-15 proc)
+            //       < -701 fpm → accidentado        (-30 proc)
+            if (vs > 700)
+                Penalize(violations, ref score, "LDG-15", "LDG", $"Toque accidentado — aeronave a mantenimiento ({vs:F0} fpm)", -30);
             else if (vs > 500)
-                Penalize(violations, ref score, "LDG-13", "LDG", $"Toque demasiado duro ({vs:F0} fpm)", -10);
-            else if (vs > 300)
-                Penalize(violations, ref score, "LDG-12", "LDG", $"Toque duro ({vs:F0} fpm)", -5);
-            // 0-30: demasiado suave (solo penaliza en performance)
-            // No hay penalidad proc para toques perfectos
+                Penalize(violations, ref score, "LDG-14", "LDG", $"Toque duro — requiere mantenimiento ({vs:F0} fpm)", -15);
+            else if (vs > 250)
+                Penalize(violations, ref score, "LDG-12", "LDG", $"Toque duro ({vs:F0} fpm)", -8);
+            else if (vs < 60 && vs > 0)
+                Penalize(violations, ref score, "LDG-09", "LDG", $"Toque demasiado suave ({vs:F0} fpm)", -5);
+            // -60 a -180: perfecto → sin penalidad en procedimientos
+            // -181 a -250: bueno → neutral
 
             // LDG-05: Altímetro — detectar si QNH era correcto (aprox. diferente a 1013 en arr.)
             var arrSamples = _log.Where(s => !s.OnGround && s.AltitudeAGL < 3000 && s.AltitudeFeet < 5000).ToList();
@@ -613,26 +621,24 @@ namespace PatagoniaWings.Acars.Core.Services
         {
             var vs = Math.Abs(_landingVS);
 
-            // Toque per SUR Air PDF:
-            // < 30 fpm = demasiado suave → penalidad
-            if (vs < 30 && vs > 0)
-                PenalizePerf(violations, ref perf, "LDP-09", "LDG", $"Toque demasiado suave (<30 fpm): {vs:F0} fpm", -4);
-            // 30-180 fpm = precisión perfecta → bono
-            else if (vs >= 30 && vs <= 180)
-                BonusPerf(bonuses, ref perf, "LDP-10", "LDG", $"Toque de precisión perfecto ({vs:F0} fpm)", +12);
-            // 181-300 fpm = bueno (neutral, 0 pts)
-            // 300-500 fpm = duro → penal
-            else if (vs > 300 && vs <= 500)
+            // TABLA OFICIAL Patagonia Wings — Performance (mismos rangos que procedimientos):
+            //   0  a  -59 fpm → suave    → penal
+            //  -60 a -180 fpm → perfecto → bono +12
+            // -181 a -250 fpm → bueno   → neutral
+            // -251 a -500 fpm → duro    → penal -8
+            // -501 a -700 fpm → mant.   → penal -20
+            //       < -701 fpm → accident → penal -40
+            if (vs > 700)
+                PenalizePerf(violations, ref perf, "LDP-15", "LDG", $"Toque accidentado — aeronave AOG ({vs:F0} fpm)", -40);
+            else if (vs > 500)
+                PenalizePerf(violations, ref perf, "LDP-14", "LDG", $"Toque duro — mantenimiento ({vs:F0} fpm)", -20);
+            else if (vs > 250)
                 PenalizePerf(violations, ref perf, "LDP-12", "LDG", $"Toque duro ({vs:F0} fpm)", -8);
-            // 500-700 fpm = muy duro
-            else if (vs > 500 && vs <= 700)
-                PenalizePerf(violations, ref perf, "LDP-13", "LDG", $"Toque muy duro ({vs:F0} fpm)", -15);
-            // 700-1000 fpm = daño en tren
-            else if (vs > 700 && vs <= 1000)
-                PenalizePerf(violations, ref perf, "LDP-14", "LDG", $"Toque con daño en tren ({vs:F0} fpm)", -25);
-            // >1000 fpm = accidente
-            else if (vs > 1000)
-                PenalizePerf(violations, ref perf, "LDP-15", "LDG", $"Toque accidentado ({vs:F0} fpm)", -40);
+            else if (vs >= 60 && vs <= 180)
+                BonusPerf(bonuses, ref perf, "LDP-10", "LDG", $"Toque perfecto ({vs:F0} fpm)", +12);
+            else if (vs < 60 && vs > 0)
+                PenalizePerf(violations, ref perf, "LDP-09", "LDG", $"Toque demasiado suave ({vs:F0} fpm)", -4);
+            // -181 a -250: bueno → neutral (0 pts)
 
             // Fuerza G durante toque (SUR Air: 1.0-1.3G ideal, 1.3-1.6G aceptable, >1.6 requiere revisión, >2G peligroso)
             if (_landingG > 0)

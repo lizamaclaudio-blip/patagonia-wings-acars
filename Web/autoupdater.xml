@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.2.0.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.0.exe</url>
-  <changelog>v3.2.0: Sistema de evaluacion SUR Air v5.0 completo, calificaciones corregidas segun PDF oficial, velocidad taxi 25kts, luces NAV en todas las fases, VS aterrizaje categorizado, bonificaciones por vuelo manual/lluvia/viento cruzado/alta elevacion.</changelog>
+  <version>3.2.1.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.1.exe</url>
+  <changelog>v3.2.1: Matriz de reglaje final aplicada — tabla de aterrizaje oficial, sistemas de cabina confiables por perfil, transponder solo informativo, contrato unico Supabase/Web/ACARS.</changelog>
   <mandatory>false</mandatory>
 </item>

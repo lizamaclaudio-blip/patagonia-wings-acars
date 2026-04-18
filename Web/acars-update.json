@@ -1,9 +1,9 @@
 {
-  "version": "3.2.0",
+  "version": "3.2.1",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.0.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.1.exe",
   "mandatory": false,
-  "notes": "- Sistema de evaluacion SUR Air v5.0 completo: procedimientos (100pts) + performance (base 60)\n- Calificaciones corregidas: Proc 100/90/80, Perf 100/60/30 segun PDF oficial\n- Velocidad de taxi corregida a 25 kts (antes 30)\n- Luces NAV evaluadas en todas las fases (taxi, despegue, crucero, aterrizaje)\n- Fases PRE e IGN: freno estacionamiento, motores en orden, beacon antes de arrancar\n- VS de aterrizaje categorizadas segun SUR Air: perfecto 30-180, duro 300-500, accidente >1000\n- Bonificaciones: vuelo manual, lluvia, viento cruzado, alta elevacion, duracion de vuelo\n- Penalidades por viento de cola, alabeo excesivo, aproximacion inestable",
+  "notes": "- Matriz de reglaje final Patagonia Wings aplicada al nucleo de evaluacion\n- Tabla de aterrizaje oficial: 0/-59 demasiado suave, -60/-180 perfecto, -181/-250 bueno, -251/-500 duro, -501/-700 mantenimiento, <-701 accidentado\n- Sistemas de cabina solo penalizan si el perfil del avion los lee de forma confiable (cabinSystemsReliable)\n- Transponder: informativo, no penalizacion dura (P3)\n- Reglas de emergencias / abortos / crash consolidadas\n- Contrato unico Supabase/Web/ACARS sin duplicidades",
   "releaseDate": "2026-04-18",
   "minVersion": "2.0.5",
   "fileSize": "22.6 MB",
