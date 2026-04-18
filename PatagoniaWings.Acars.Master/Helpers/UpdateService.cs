@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Configuration;
 using System.Diagnostics;
@@ -7,21 +7,22 @@ using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Win32;
 using AutoUpdaterDotNET;
 
 namespace PatagoniaWings.Acars.Master.Helpers
 {
     /// <summary>
-    /// Actualización automática y silenciosa.
+    /// ActualizaciÃ³n automÃ¡tica y silenciosa.
     ///
     /// Flujo completo:
-        ///  1. Detecta versión nueva leyendo autoupdater.xml desde producción.
+        ///  1. Detecta versiÃ³n nueva leyendo autoupdater.xml desde producciÃ³n.
     ///  2. Muestra un banner de progreso dentro de la ventana principal.
     ///  3. Descarga el instalador en background con progreso visible al usuario.
-    ///  4. Escribe un archivo flag antes de cerrar para detectar "recién actualizado" al reabrir.
+    ///  4. Escribe un archivo flag antes de cerrar para detectar "reciÃ©n actualizado" al reabrir.
     ///  5. Lanza un CMD diferido (+5 s) que ejecuta el instalador con /VERYSILENT.
-    ///  6. Inno Setup [Run] con Check:WizardSilent reabre el ACARS automáticamente.
-    ///  7. Al iniciar, si existe el flag, muestra "✓ Actualizado a vX.X.X" y borra el flag.
+    ///  6. Inno Setup [Run] con Check:WizardSilent reabre el ACARS automÃ¡ticamente.
+    ///  7. Al iniciar, si existe el flag, muestra "âœ“ Actualizado a vX.X.X" y borra el flag.
     /// </summary>
     public static class UpdateService
     {
@@ -34,18 +35,18 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static readonly string SplashCloseFlagPath =
             Path.Combine(Path.GetTempPath(), "PatagoniaWings_UpdateSplashClose.txt");
 
-        // Cooldown: no volver a verificar si ya se verificó hace menos de 10 minutos
+        // Cooldown: no volver a verificar si ya se verificÃ³ hace menos de 10 minutos
         private static DateTime _lastCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(10);
 
-        // ── Eventos para la barra de progreso dentro del ACARS ──────────────────
+        // â”€â”€ Eventos para la barra de progreso dentro del ACARS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         /// <summary>Progreso de descarga 0-100. Se dispara en el thread de background.</summary>
         public static event Action<int>? DownloadProgressChanged;
 
-        /// <summary>Mensaje de estado textual durante la actualización.</summary>
+        /// <summary>Mensaje de estado textual durante la actualizaciÃ³n.</summary>
         public static event Action<string>? UpdateStatusChanged;
 
-        // ── Versión instalada ────────────────────────────────────────────────────
+        // â”€â”€ VersiÃ³n instalada â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         public static string CurrentVersion => ReadSetting("AppVersion", GetAssemblyVersion());
 
         public static void NotifyStartupComplete()
@@ -65,14 +66,14 @@ namespace PatagoniaWings.Acars.Master.Helpers
             AutoUpdater.CheckForUpdateEvent += OnCheckForUpdate;
         }
 
-        // ── API pública ──────────────────────────────────────────────────────────
+        // â”€â”€ API pÃºblica â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         public static void CheckAndStartUpdate(Window owner)
         {
             var now = DateTime.UtcNow;
             if ((now - _lastCheckUtc) < CheckCooldown)
             {
-                WriteLog($"Saltando verificación: última hace {(now - _lastCheckUtc).TotalSeconds:F0}s (cooldown={CheckCooldown.TotalMinutes}m)");
+                WriteLog($"Saltando verificaciÃ³n: Ãºltima hace {(now - _lastCheckUtc).TotalSeconds:F0}s (cooldown={CheckCooldown.TotalMinutes}m)");
                 return;
             }
             _lastCheckUtc = now;
@@ -101,8 +102,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
         }
 
         /// <summary>
-        /// Llama este método al arrancar la ventana principal.
-        /// Si el ACARS acaba de actualizarse, muestra una notificación breve.
+        /// Llama este mÃ©todo al arrancar la ventana principal.
+        /// Si el ACARS acaba de actualizarse, muestra una notificaciÃ³n breve.
         /// </summary>
         public static void CheckAndShowPostUpdateNotification()
         {
@@ -115,7 +116,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                 {
-                    ShowToast($"✓  Actualizado a v{updatedTo}  ·  Todo listo", "#16B989", 6);
+                    ShowToast("Actualizacion completada correctamente", "#16B989", 6);
                 }));
 
                 WriteLog($"Post-update notification: v{updatedTo}");
@@ -135,7 +136,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             public string Error { get; set; } = string.Empty;
         }
 
-        // ── Handler principal ────────────────────────────────────────────────────
+        // â”€â”€ Handler principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private static void OnCheckForUpdate(UpdateInfoEventArgs args)
         {
@@ -156,17 +157,17 @@ namespace PatagoniaWings.Acars.Master.Helpers
             var downloadUrl = args?.DownloadURL ?? string.Empty;
             if (string.IsNullOrWhiteSpace(downloadUrl)) return;
 
-            WriteLog($"Nueva versión {available} detectada. Iniciando descarga silenciosa: {downloadUrl}");
+            WriteLog($"Nueva versiÃ³n {available} detectada. Iniciando descarga silenciosa: {downloadUrl}");
 
-            // Notificar status inicial → la barra del ACARS se hace visible
-            UpdateStatusChanged?.Invoke($"Descargando actualización v{available}...");
+            // Notificar status inicial â†’ la barra del ACARS se hace visible
+            UpdateStatusChanged?.Invoke($"Descargando actualizaciÃ³n v{available}...");
             DownloadProgressChanged?.Invoke(0);
 
             // Descargar e instalar en background
             Task.Run(async () => await DownloadAndInstallSilentAsync(downloadUrl, available));
         }
 
-        // ── Descarga + instalación silenciosa ────────────────────────────────────
+        // â”€â”€ Descarga + instalaciÃ³n silenciosa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private static async Task DownloadAndInstallSilentAsync(string downloadUrl, string version)
         {
@@ -189,21 +190,20 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     await client.DownloadFileTaskAsync(new Uri(downloadUrl), installerPath);
                 }
 
-                WriteLog("Descarga completada. Preparando instalación.");
+                WriteLog("Descarga completada. Preparando instalaciÃ³n.");
 
-                // Notificar que la descarga terminó
+                // Notificar que la descarga terminÃ³
                 DownloadProgressChanged?.Invoke(100);
-                UpdateStatusChanged?.Invoke($"Instalando v{version}...  El ACARS reabrirá automáticamente");
+                UpdateStatusChanged?.Invoke($"Instalando v{version}...  El ACARS reabrirÃ¡ automÃ¡ticamente");
 
                 // Esperar 2 s para que el usuario vea el mensaje final
                 await Task.Delay(2000);
 
-                // Escribir flag ANTES de cerrar — al reabrir el ACARS verá que acaba de actualizar
+                // Escribir flag ANTES de cerrar â€” al reabrir el ACARS verÃ¡ que acaba de actualizar
                 try { File.WriteAllText(JustUpdatedFlagPath, version); } catch { }
-
                 var splashScriptPath = Path.Combine(tempDir, "show_update_splash.ps1");
-                var appExePath = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())?.Location
-                                 ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "PatagoniaWings.Acars.Master.exe");
+                var appExePath = GetInstalledExePath();
+                WriteLog($"Relaunch target: {appExePath}");
                 File.WriteAllText(splashScriptPath, BuildUpdateSplashScript(installerPath, appExePath, version, SplashCloseFlagPath));
 
                 var psi = new ProcessStartInfo("powershell.exe")
@@ -215,23 +215,23 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 };
 
                 Process.Start(psi);
-                WriteLog("Script de instalación lanzado. Cerrando ACARS.");
+                WriteLog("Script de instalaciÃ³n lanzado. Cerrando ACARS.");
 
                 // Cerrar el ACARS en el hilo UI
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
-                    WriteLog("Application.Shutdown() — instalador tomará control en ~5s.");
+                    WriteLog("Application.Shutdown() â€” instalador tomarÃ¡ control en ~5s.");
                     Application.Current.Shutdown();
                 });
             }
             catch (Exception ex)
             {
-                WriteLog($"Error en descarga/instalación silenciosa: {ex.Message}");
-                UpdateStatusChanged?.Invoke($"Error en actualización: {ex.Message}");
+                WriteLog($"Error en descarga/instalaciÃ³n silenciosa: {ex.Message}");
+                UpdateStatusChanged?.Invoke($"Error en actualizaciÃ³n: {ex.Message}");
             }
         }
 
-        // ── Toast genérico (solo se usa para la notificación post-update) ────────
+        // â”€â”€ Toast genÃ©rico (solo se usa para la notificaciÃ³n post-update) â”€â”€â”€â”€â”€â”€â”€â”€
 
         private static void ShowToast(string message, string hexColor, int durationSeconds = 4)
         {
@@ -289,7 +289,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             }
         }
 
-        // ── Helpers ──────────────────────────────────────────────────────────────
+        // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private static bool IsVersionNewer(string available, string installed)
         {
@@ -348,6 +348,32 @@ namespace PatagoniaWings.Acars.Master.Helpers
             catch { return fallback; }
         }
 
+        private static string GetInstalledExePath()
+        {
+            const string exeName = "PatagoniaWings.Acars.Master.exe";
+
+            try
+            {
+                using var key = Registry.CurrentUser.OpenSubKey(@"Software\PatagoniaWings\ACARS");
+                var installPath = key?.GetValue("InstallPath") as string;
+                if (!string.IsNullOrWhiteSpace(installPath))
+                {
+                    var candidate = Path.Combine(installPath.Trim(), exeName);
+                    if (File.Exists(candidate))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"GetInstalledExePath registry error: {ex.Message}");
+            }
+
+            return (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())?.Location
+                   ?? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, exeName);
+        }
+
         private static void WriteLog(string message)
         {
             try
@@ -366,6 +392,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static string BuildUpdateSplashScript(string installerPath, string appExePath, string version, string splashCloseFlagPath)
         {
             string Escape(string value) => value.Replace("'", "''");
+            var appDirectory = Path.GetDirectoryName(appExePath) ?? AppDomain.CurrentDomain.BaseDirectory;
 
             return
                 "Add-Type -AssemblyName System.Windows.Forms\r\n" +
@@ -432,7 +459,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 "$watch.Add_Tick({ " +
                 "if (Test-Path '" + Escape(splashCloseFlagPath) + "') { try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }; $watch.Stop(); $form.Close(); return }; " +
                 "if ($script:installerStarted -and -not $script:installerDone) { try { $null = Get-Process -Id $script:installerPid -ErrorAction Stop } catch { $script:installerDone = $true } }; " +
-                "if ($script:installerDone -and -not $script:appLaunched -and (Test-Path '" + Escape(appExePath) + "')) { Start-Process '" + Escape(appExePath) + "'; $script:appLaunched = $true } " +
+                "if ($script:installerDone -and -not $script:appLaunched -and (Test-Path '" + Escape(appExePath) + "')) { Start-Sleep -Seconds 2; Start-Process -FilePath '" + Escape(appExePath) + "' -WorkingDirectory '" + Escape(appDirectory) + "'; $script:appLaunched = $true } " +
                 "})\r\n" +
                 "$close = New-Object System.Windows.Forms.Timer\r\n" +
                 "$close.Interval = 90000\r\n" +

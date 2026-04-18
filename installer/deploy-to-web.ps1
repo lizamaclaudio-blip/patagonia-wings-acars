@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # Patagonia Wings ACARS - Deploy installer to web public folder
 # Copies PatagoniaWingsACARSSetup.exe into the Next.js public/downloads folder
 # ============================================================================
@@ -15,7 +15,7 @@ $dest = Join-Path $webPublic "PatagoniaWingsACARSSetup.exe"
 $manifestDest = Join-Path $webPublic "acars-update.json"
 $xmlDest = Join-Path $webPublic "autoupdater.xml"
 $appConfigPath = Join-Path $PSScriptRoot "..\\PatagoniaWings.Acars.Master\\App.config"
-$supabaseBase = "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases"
+$supabaseBase = "https://patagoniaw.com/downloads"
 
 Write-Host ""
 Write-Host "Patagonia Wings - Deploy ACARS installer to web" -ForegroundColor Cyan
@@ -76,3 +76,4 @@ Write-Host "  /downloads/PatagoniaWingsACARSSetup.exe" -ForegroundColor Cyan
 Write-Host "  $supabaseBase/PatagoniaWingsACARSSetup.exe" -ForegroundColor Cyan
 Write-Host "  /downloads/acars-update.json" -ForegroundColor Cyan
 Write-Host "  /downloads/autoupdater.xml" -ForegroundColor Cyan
+

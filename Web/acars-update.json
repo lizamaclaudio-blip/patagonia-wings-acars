@@ -1,7 +1,7 @@
 ﻿{
   "version": "3.2.4",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.4.exe",
+  "downloadUrl": "https://patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe",
   "mandatory": false,
   "notes": "- Filtro real por rango y aeropuerto para Cadete\n- Itinerarios alineados a aeronaves realmente autorizadas\n- Reapertura estable del ACARS tras update\n- Confirmacion visual al volver a abrir",
   "releaseDate": "2026-04-18",
@@ -9,3 +9,4 @@
   "fileSize": "24.7 MB",
   "storageProvider": "supabase"
 }
+
