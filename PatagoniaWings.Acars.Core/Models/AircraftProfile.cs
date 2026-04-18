@@ -40,6 +40,12 @@ namespace PatagoniaWings.Acars.Core.Models
         public string TransponderCodeFormat { get; set; } = "decimal_or_bco16";
         public int TransponderCodeDebounceFrames { get; set; } = 1;
 
+        /// <summary>
+        /// false = el addon usa LVARs propios; seatbelt/transponder/AP no son confiables por SimConnect.
+        /// Cuando es false, FlightEvaluationService no penaliza esos sistemas.
+        /// </summary>
+        public bool CabinSystemsReliable { get; set; } = true;
+
         public bool SupportsFuelRead { get; set; } = true;
         public bool SupportsPayloadRead { get; set; } = false;
         public bool SupportsFlagsRead { get; set; } = true;

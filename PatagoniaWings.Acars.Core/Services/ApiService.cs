@@ -25,6 +25,9 @@ namespace PatagoniaWings.Acars.Core.Services
         private readonly AircraftDamageApiClient _damageApi;
         private PreparedDispatch? _activePreparedDispatch;
         private readonly string _authLogFile;
+
+        /// <summary>Despacho activo actual (null si no hay vuelo en curso).</summary>
+        public PreparedDispatch? ActiveDispatch => _activePreparedDispatch;
         private string _token = string.Empty;
 
         public ApiService(string baseUrl, string supabaseUrl = "", string supabaseAnonKey = "", bool useSupabaseDirect = false)
@@ -202,6 +205,42 @@ namespace PatagoniaWings.Acars.Core.Services
 
             var body = _json.Serialize(report);
             return await PostAsync<FlightReport>("/api/flights/report", body);
+        }
+
+        /// <summary>
+        /// Cierra una reserva activa sin completarla (abandon / crash / app close).
+        /// status debe ser "cancelled" o "interrupted". Fire-and-forget seguro.
+        /// </summary>
+        public async Task CloseReservationAsync(string reservationId, string status = "cancelled")
+        {
+            if (string.IsNullOrWhiteSpace(reservationId)) return;
+            try
+            {
+                var nowUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
+                using (var req = CreateSupabaseRequest(
+                           new HttpMethod("PATCH"),
+                           $"/rest/v1/flight_reservations?id=eq.{Uri.EscapeDataString(reservationId)}",
+                           true))
+                {
+                    req.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
+                    req.Content = new StringContent(
+                        _json.Serialize(new { status, updated_at = nowUtc }),
+                        Encoding.UTF8, "application/json");
+                    await _http.SendAsync(req).ConfigureAwait(false);
+                }
+                using (var req2 = CreateSupabaseRequest(
+                           new HttpMethod("PATCH"),
+                           $"/rest/v1/dispatch_packages?reservation_id=eq.{Uri.EscapeDataString(reservationId)}",
+                           true))
+                {
+                    req2.Headers.TryAddWithoutValidation("Prefer", "return=minimal");
+                    req2.Content = new StringContent(
+                        _json.Serialize(new { dispatch_status = status, updated_at = nowUtc }),
+                        Encoding.UTF8, "application/json");
+                    await _http.SendAsync(req2).ConfigureAwait(false);
+                }
+            }
+            catch { /* best-effort, no lanzar */ }
         }
 
         public async Task<ApiResult<bool>> StartFlightAsync(Flight flight, PreparedDispatch? preparedDispatch = null)

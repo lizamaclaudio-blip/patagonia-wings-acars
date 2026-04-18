@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.2.1.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.1.exe</url>
-  <changelog>v3.2.1: Matriz de reglaje final aplicada — tabla de aterrizaje oficial, sistemas de cabina confiables por perfil, transponder solo informativo, contrato unico Supabase/Web/ACARS.</changelog>
+  <version>3.2.2.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.2.exe</url>
+  <changelog>v3.2.2: CabinSystemsReliable por perfil (Fenix/FBW/Headwind/MadDog), cierre de reservas activas en crash/exit, fotos de aeronave con fallback por familia.</changelog>
   <mandatory>false</mandatory>
 </item>

@@ -1,11 +1,11 @@
 {
-  "version": "3.2.1",
+  "version": "3.2.2",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.1.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.2.exe",
   "mandatory": false,
-  "notes": "- Matriz de reglaje final Patagonia Wings aplicada al nucleo de evaluacion\n- Tabla de aterrizaje oficial: 0/-59 demasiado suave, -60/-180 perfecto, -181/-250 bueno, -251/-500 duro, -501/-700 mantenimiento, <-701 accidentado\n- Sistemas de cabina solo penalizan si el perfil del avion los lee de forma confiable (cabinSystemsReliable)\n- Transponder: informativo, no penalizacion dura (P3)\n- Reglas de emergencias / abortos / crash consolidadas\n- Contrato unico Supabase/Web/ACARS sin duplicidades",
+  "notes": "- B3: CabinSystemsReliable por perfil — Fenix/FBW/Headwind/MadDog no penalizan sistemas de cabina\n- B7: Reservas activas se cierran al cerrar la app o en caso de crash (status cancelled/interrupted)\n- Fotos: ImageAsset correcto por perfil con fallback a imagen de familia disponible\n- CloseReservationAsync: metodo nuevo en ApiService para cierre seguro sin submission",
   "releaseDate": "2026-04-18",
   "minVersion": "2.0.5",
-  "fileSize": "22.6 MB",
+  "fileSize": "22.7 MB",
   "storageProvider": "supabase"
 }

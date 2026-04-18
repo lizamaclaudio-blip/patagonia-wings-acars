@@ -172,13 +172,39 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     "PatagoniaWings", "Acars", "Aircraft");
                 var exeFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Aircraft");
 
-                foreach (var folder in new[] { localUserFolder, roamingUserFolder, exeFolder })
+                var folders = new[] { localUserFolder, roamingUserFolder, exeFolder };
+
+                // 1. Buscar por código ICAO detectado
+                foreach (var folder in folders)
                     foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".webp" })
                     {
                         var path = Path.Combine(folder, code + ext);
                         if (File.Exists(path))
                             return path;
                     }
+
+                // 2. Fallback: usar ImageAsset del perfil detectado
+                var profile = AircraftNormalizationService.GetProfile(_detectedProfileCode);
+                var asset = profile?.ImageAsset;
+                if (!string.IsNullOrWhiteSpace(asset))
+                {
+                    foreach (var folder in folders)
+                    {
+                        var path = Path.Combine(folder, asset);
+                        if (File.Exists(path))
+                            return path;
+                        // también probar el nombre sin prefijo de addon (ej. "a320_fenix.png" → "A320.png")
+                        var stem = System.IO.Path.GetFileNameWithoutExtension(asset).ToUpperInvariant();
+                        var ext  = System.IO.Path.GetExtension(asset).ToLowerInvariant();
+                        if (!string.IsNullOrEmpty(stem))
+                            foreach (var e2 in new[] { ext, ".png", ".jpg" })
+                            {
+                                var p2 = Path.Combine(folder, stem + e2);
+                                if (File.Exists(p2)) return p2;
+                            }
+                    }
+                }
+
                 return null;
             }
         }

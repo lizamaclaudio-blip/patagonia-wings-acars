@@ -52,6 +52,18 @@ namespace PatagoniaWings.Acars.Master
 
         protected override void OnExit(ExitEventArgs e)
         {
+            // Si hay despacho activo al cerrar, cerrar la reserva para no dejarla en in_flight
+            try
+            {
+                var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
+                if (!string.IsNullOrWhiteSpace(reservationId))
+                {
+                    AcarsContext.Api!.CloseReservationAsync(reservationId, "cancelled")
+                        .GetAwaiter().GetResult();
+                }
+            }
+            catch { /* best-effort */ }
+
             AcarsContext.Shutdown();
             base.OnExit(e);
         }

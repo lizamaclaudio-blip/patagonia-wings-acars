@@ -249,13 +249,15 @@ namespace PatagoniaWings.Acars.Core.Services
                 : 0;
 
             // ── SUR Air dual scoring ────────────────────────────────────────
+            var aircraftProfile = AircraftNormalizationService.ResolveProfile(_currentFlight.AircraftName);
             var evaluator = new FlightEvaluationService(
                 _telemetryLog,
                 _lastLandingVS,
                 _lastLandingG,
                 _currentFlight.AircraftIcao,
                 _currentFlight.AircraftName,
-                IsAircraftPressurized());
+                IsAircraftPressurized(),
+                cabinSystemsReliable: aircraftProfile.CabinSystemsReliable);
 
             var eval = evaluator.Evaluate();
 
