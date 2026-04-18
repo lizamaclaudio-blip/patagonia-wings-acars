@@ -1,4 +1,4 @@
--- Actualizar URL de descarga a GitHub Releases
+﻿-- Actualizar URL de descarga activa del ACARS 3.2.3
 UPDATE acars_releases
-SET download_url = 'https://github.com/lizamaclaudio-blip/patagonia-wings-acars/releases/latest/download/PatagoniaWings.Acars.Master.exe'
-WHERE version = '2.0.11';
+SET download_url = 'https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.3.exe'
+WHERE version = '3.2.3';

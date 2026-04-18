@@ -1,9 +1,9 @@
-{
-  "version": "3.2.2",
+﻿{
+  "version": "3.2.3",
   "webVersion": "2.0",
-  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.2.exe",
+  "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.3.exe",
   "mandatory": false,
-  "notes": "- B3: CabinSystemsReliable por perfil — Fenix/FBW/Headwind/MadDog no penalizan sistemas de cabina\n- B7: Reservas activas se cierran al cerrar la app o en caso de crash (status cancelled/interrupted)\n- Fotos: ImageAsset correcto por perfil con fallback a imagen de familia disponible\n- CloseReservationAsync: metodo nuevo en ApiService para cierre seguro sin submission",
+  "notes": "- Resultado final web, historial y apelaciones revisables\n- Cierre real de reservas completed/cancelled/interrupted/crashed/aborted\n- Redirect ACARS a https://patagoniaw.com tras submit OK\n- Score SUR unico visible en web",
   "releaseDate": "2026-04-18",
   "minVersion": "2.0.5",
   "fileSize": "22.7 MB",

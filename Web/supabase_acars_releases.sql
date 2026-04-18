@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- TABLA: acars_releases
 -- Gestiona las versiones del ACARS Patagonia Wings
 -- Ejecutar en Supabase SQL Editor
@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS acars_releases (
     created_at    timestamptz DEFAULT now()
 );
 
--- Índice para consulta rápida
+-- Ãndice para consulta rÃ¡pida
 CREATE INDEX IF NOT EXISTS idx_acars_releases_active ON acars_releases (is_active, release_date DESC);
 
--- Acceso público de lectura (sin auth) para que la app pueda verificar versiones
+-- Acceso pÃºblico de lectura (sin auth) para que la app pueda verificar versiones
 ALTER TABLE acars_releases ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "acars_releases_public_read"
@@ -26,35 +26,35 @@ CREATE POLICY "acars_releases_public_read"
     USING (true);
 
 -- ============================================================
--- INSERTAR VERSIÓN 2.0.11
+-- INSERTAR VERSIÃ“N 3.2.3
 -- ============================================================
 INSERT INTO acars_releases (version, download_url, notes, mandatory, is_active)
 VALUES (
-    '2.0.11',
-    'https://www.patagoniaw.com/downloads/PatagoniaWingsACARSSetup-2.0.11.exe',
-    'Novedades v2.0.11:
+    '3.2.3',
+    'https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.3.exe',
+    'Novedades v3.2.3:
 
-• Soporte completo Airbus A319 Headwind
-• Integración MobiFlight WASM Module (lectura de LVARs)
-• Lectura correcta de luces: Beacon, Strobe, Landing, Nav, Taxi
-• Lectura N1 de motores
-• Fallback automático FSUIPC → SimConnect
-• Detección automática del tipo de avión
-• Mejoras en UI de login
-• Correcciones en telemetría (squawk, cabin altitude)',
+â€¢ Soporte completo Airbus A319 Headwind
+â€¢ IntegraciÃ³n MobiFlight WASM Module (lectura de LVARs)
+â€¢ Lectura correcta de luces: Beacon, Strobe, Landing, Nav, Taxi
+â€¢ Lectura N1 de motores
+â€¢ Fallback automÃ¡tico FSUIPC â†’ SimConnect
+â€¢ DetecciÃ³n automÃ¡tica del tipo de aviÃ³n
+â€¢ Mejoras en UI de login
+â€¢ Correcciones en telemetrÃ­a (squawk, cabin altitude)',
     false,
     true
 );
 
 -- ============================================================
--- CÓMO PUBLICAR PRÓXIMAS VERSIONES
--- Solo ejecutar este INSERT con la nueva versión:
+-- CÃ“MO PUBLICAR PRÃ“XIMAS VERSIONES
+-- Solo ejecutar este INSERT con la nueva versiÃ³n:
 -- ============================================================
 /*
--- Desactivar versión anterior (opcional)
-UPDATE acars_releases SET is_active = false WHERE version = '2.0.11';
+-- Desactivar versiÃ³n anterior (opcional)
+UPDATE acars_releases SET is_active = false WHERE version = '3.2.3';
 
--- Activar nueva versión
+-- Activar nueva versiÃ³n
 INSERT INTO acars_releases (version, download_url, notes, mandatory, is_active)
 VALUES (
     '2.0.12',
@@ -64,3 +64,4 @@ VALUES (
     true
 );
 */
+

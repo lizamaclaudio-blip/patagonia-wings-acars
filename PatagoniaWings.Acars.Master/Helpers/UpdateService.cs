@@ -15,7 +15,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
     /// Actualización automática y silenciosa.
     ///
     /// Flujo completo:
-    ///  1. Detecta versión nueva leyendo autoupdater.xml desde GitHub.
+        ///  1. Detecta versión nueva leyendo autoupdater.xml desde producción.
     ///  2. Muestra un banner de progreso dentro de la ventana principal.
     ///  3. Descarga el instalador en background con progreso visible al usuario.
     ///  4. Escribe un archivo flag antes de cerrar para detectar "recién actualizado" al reabrir.
@@ -25,8 +25,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
     /// </summary>
     public static class UpdateService
     {
-        private const string AutoUpdaterXmlUrl =
-            "https://raw.githubusercontent.com/lizamaclaudio-blip/patagonia-wings-acars/main/Web/autoupdater.xml";
+        private static string AutoUpdaterXmlUrl =>
+            ReadSetting("AutoUpdaterXmlUrl", "https://patagoniaw.com/downloads/autoupdater.xml");
 
         private static readonly string JustUpdatedFlagPath =
             Path.Combine(Path.GetTempPath(), "PatagoniaWings_JustUpdated.txt");

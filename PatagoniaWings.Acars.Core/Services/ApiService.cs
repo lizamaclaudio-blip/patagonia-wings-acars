@@ -1063,6 +1063,8 @@ namespace PatagoniaWings.Acars.Core.Services
                     // route_text y remarks no son columnas de flight_reservations.
                     var scorePayload = new Dictionary<string, object>
                     {
+                        ["sur_score"]         = report.ProcedureScore,
+                        ["final_score"]       = report.ProcedureScore,
                         ["procedure_score"]   = report.ProcedureScore,
                         ["performance_score"] = report.PerformanceScore,
                         ["procedure_grade"]   = report.ProcedureGrade,
@@ -1153,6 +1155,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 var totalPenalty = report.LandingPenalty + report.TaxiPenalty + report.AirbornePenalty + report.ApproachPenalty + report.CabinPenalty;
                 var scoreReportPayload = new Dictionary<string, object>
                 {
+                    ["sur_score"]         = report.ProcedureScore,
+                    ["final_score"]       = report.ProcedureScore,
                     ["procedure_score"]   = report.ProcedureScore,
                     ["performance_score"] = report.PerformanceScore,
                     ["procedure_grade"]   = report.ProcedureGrade,

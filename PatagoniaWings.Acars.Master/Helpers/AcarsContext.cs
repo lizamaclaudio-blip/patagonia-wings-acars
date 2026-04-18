@@ -8,7 +8,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
     public static class AcarsContext
     {
         private const string DefaultApiBaseUrl = "https://patagonia-wings-acars.fly.dev";
-        private const string DefaultWebBaseUrl = "http://localhost:3001";
+        private const string DefaultWebBaseUrl = "https://patagoniaw.com";
 
         public static ApiService Api { get; private set; } = null!;
         public static AuthService Auth { get; private set; } = null!;

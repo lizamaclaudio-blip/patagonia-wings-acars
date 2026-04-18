@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.2.2.0</version>
-  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.2.exe</url>
-  <changelog>v3.2.2: CabinSystemsReliable por perfil (Fenix/FBW/Headwind/MadDog), cierre de reservas activas en crash/exit, fotos de aeronave con fallback por familia.</changelog>
+  <version>3.2.3.0</version>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup-3.2.3.exe</url>
+  <changelog>v3.2.3: cierre final de vuelo web, apelaciones revisables, redirect ACARS a produccion y score SUR unico visible.</changelog>
   <mandatory>false</mandatory>
 </item>
