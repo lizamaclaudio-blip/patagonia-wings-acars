@@ -112,7 +112,7 @@ if ($iscc) {
 } else {
     Write-Host ""
     Write-Host "Copiando binarios Release a la carpeta release..." -ForegroundColor Yellow
-    $binDir = Join-Path $root "PatagoniaWings.Acars.Master\bin\Release"
+    $binDir = Join-Path $root "PatagoniaWings.Acars.Master\bin\x64\Release"
     Copy-Item -Path "$binDir\*" -Destination $releaseDir -Recurse -Force
     Write-Host "Binarios copiados a: $releaseDir" -ForegroundColor Green
 }

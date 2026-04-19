@@ -1,79 +1,163 @@
-﻿# ============================================================================
-# Patagonia Wings ACARS - Deploy installer to web public folder
-# Copies PatagoniaWingsACARSSetup.exe into the Next.js public/downloads folder
-# ============================================================================
-
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$appVersion = "3.2.4"
-$releaseVersioned = Join-Path $PSScriptRoot "..\\release\\PatagoniaWingsACARSSetup-$appVersion.exe"
-$releaseGeneric = Join-Path $PSScriptRoot "..\\release\\PatagoniaWingsACARSSetup.exe"
-$installerSrc = if (Test-Path -LiteralPath $releaseVersioned) { $releaseVersioned } else { $releaseGeneric }
-$webPublic = "C:\\Users\\lizam\\Desktop\\PatagoniaWingsACARS\\PATAGONIA WINGS WEB 2.0\\patagonia-wings-site\\public\\downloads"
-$dest = Join-Path $webPublic "PatagoniaWingsACARSSetup.exe"
-$manifestDest = Join-Path $webPublic "acars-update.json"
-$xmlDest = Join-Path $webPublic "autoupdater.xml"
-$appConfigPath = Join-Path $PSScriptRoot "..\\PatagoniaWings.Acars.Master\\App.config"
-$supabaseBase = "https://patagoniaw.com/downloads"
+$root = Split-Path $PSScriptRoot -Parent
+$appConfigPath = Join-Path $root "PatagoniaWings.Acars.Master\App.config"
+$releaseDir = Join-Path $root "release"
+$officialWebRoot = "C:\Users\lizam\Desktop\PROYECTO PATAGONIA WINGS\PatagoniaWingsACARS\PATAGONIA WINGS WEB 2.0\patagonia-wings-site"
+$webPublic = Join-Path $officialWebRoot "public\downloads"
 
-Write-Host ""
-Write-Host "Patagonia Wings - Deploy ACARS installer to web" -ForegroundColor Cyan
-Write-Host ""
+if (-not (Test-Path -LiteralPath $appConfigPath)) {
+    throw "App.config no encontrado: $appConfigPath"
+}
+
+[xml]$appConfig = Get-Content -LiteralPath $appConfigPath
+$settings = @{}
+foreach ($node in $appConfig.configuration.appSettings.add) {
+    $settings[[string]$node.key] = [string]$node.value
+}
+
+$appVersion = $settings["AppVersion"]
+$supabaseUrl = $settings["SupabaseUrl"]
+$storagePublicBase = "$supabaseUrl/storage/v1/object/public/acars-releases"
+$webEnvPath = Join-Path $officialWebRoot ".env.local"
+$supabasePublishableKey = $null
+
+if (Test-Path -LiteralPath $webEnvPath) {
+    foreach ($line in Get-Content -LiteralPath $webEnvPath) {
+        if ($line -match "^NEXT_PUBLIC_SUPABASE_ANON_KEY=(.+)$") {
+            $supabasePublishableKey = $matches[1].Trim()
+            break
+        }
+    }
+}
+
+if ([string]::IsNullOrWhiteSpace($supabasePublishableKey)) {
+    $supabasePublishableKey = $settings["SupabaseAnonKey"]
+}
+
+$releaseVersioned = Join-Path $releaseDir "PatagoniaWingsACARSSetup-$appVersion.exe"
+$releaseGeneric = Join-Path $releaseDir "PatagoniaWingsACARSSetup.exe"
+$installerSrc = if (Test-Path -LiteralPath $releaseVersioned) { $releaseVersioned } else { $releaseGeneric }
 
 if (-not (Test-Path -LiteralPath $installerSrc)) {
-    Write-Host "Installer not found: $installerSrc" -ForegroundColor Red
-    Write-Host "Run build-release.ps1 first." -ForegroundColor Yellow
-    exit 1
+    throw "Installer no encontrado. Ejecuta build-release.ps1 antes. Ruta esperada: $releaseVersioned"
 }
 
 if (-not (Test-Path -LiteralPath $webPublic)) {
     New-Item -ItemType Directory -Path $webPublic -Force | Out-Null
-    Write-Host "Created folder: $webPublic" -ForegroundColor Green
 }
 
-if (Test-Path -LiteralPath $appConfigPath) {
-    try {
-        [xml]$appConfig = Get-Content -LiteralPath $appConfigPath
-        $versionNode = $appConfig.configuration.appSettings.add | Where-Object { $_.key -eq "AppVersion" } | Select-Object -First 1
-        if ($versionNode -and $versionNode.value) {
-            $appVersion = [string]$versionNode.value
-        }
-    } catch {
-    }
-}
+$genericInstallerName = "PatagoniaWingsACARSSetup.exe"
+$versionedInstallerName = "PatagoniaWingsACARSSetup-$appVersion.exe"
+$storageReleaseSuffix = "-r2"
+$storageInstallerName = "PatagoniaWingsACARSSetup-$appVersion$storageReleaseSuffix.exe"
+$storageManifestName = "acars-update-$appVersion$storageReleaseSuffix.json"
+$storageXmlName = "autoupdater-$appVersion$storageReleaseSuffix.xml"
+$genericInstallerPath = Join-Path $webPublic $genericInstallerName
+$versionedInstallerPath = Join-Path $webPublic $versionedInstallerName
+$manifestPath = Join-Path $webPublic "acars-update.json"
+$versionedManifestPath = Join-Path $webPublic "acars-update-$appVersion.json"
+$xmlPath = Join-Path $webPublic "autoupdater.xml"
+$versionedXmlPath = Join-Path $webPublic "autoupdater-$appVersion.xml"
 
-Copy-Item -LiteralPath $installerSrc -Destination $dest -Force
+Copy-Item -LiteralPath $installerSrc -Destination $genericInstallerPath -Force
+Copy-Item -LiteralPath $installerSrc -Destination $versionedInstallerPath -Force
 
-$sizeMB = [math]::Round((Get-Item -LiteralPath $dest).Length / 1MB, 1)
-Write-Host "Copied: $dest ($sizeMB MB)" -ForegroundColor Green
+$sizeMB = [math]::Round((Get-Item -LiteralPath $installerSrc).Length / 1MB, 1)
+$downloadUrl = "$storagePublicBase/$storageInstallerName"
 
-$manifest = [ordered]@{
+$manifestObject = [ordered]@{
     version = $appVersion
-    downloadUrl = "$supabaseBase/PatagoniaWingsACARSSetup.exe"
-    notes = "Nueva version disponible de Patagonia Wings ACARS."
+    webVersion = "2.0"
+    downloadUrl = $downloadUrl
     mandatory = $false
-    publishedAtUtc = [DateTime]::UtcNow.ToString("o")
+    notes = "- Cierre oficial ACARS server-authoritative`n- PIREP oculto + score oficial server-side`n- Estados completed/crashed/aborted/interrupted/manual_review persistidos"
+    releaseDate = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
+    minVersion = "2.0.5"
+    fileSize = "$sizeMB MB"
+    storageProvider = "supabase"
 }
 
-$manifest | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $manifestDest -Encoding UTF8
-Write-Host "Manifest updated: $manifestDest" -ForegroundColor Green
-
-$xml = @"
+$manifestJson = $manifestObject | ConvertTo-Json -Depth 4
+$xmlContent = @"
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
   <version>$appVersion.0</version>
-  <url>$supabaseBase/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>Patagonia Wings ACARS v$appVersion</changelog>
+  <url>$downloadUrl</url>
+  <changelog>v${appVersion}: cierre oficial ACARS, score server-side, PIREP oculto y autoupdate alineado.</changelog>
   <mandatory>false</mandatory>
 </item>
 "@
-$xml | Set-Content -LiteralPath $xmlDest -Encoding UTF8
-Write-Host "Manifest updated: $xmlDest" -ForegroundColor Green
-Write-Host ""
-Write-Host "Installer available at:" -ForegroundColor White
-Write-Host "  /downloads/PatagoniaWingsACARSSetup.exe" -ForegroundColor Cyan
-Write-Host "  $supabaseBase/PatagoniaWingsACARSSetup.exe" -ForegroundColor Cyan
-Write-Host "  /downloads/acars-update.json" -ForegroundColor Cyan
-Write-Host "  /downloads/autoupdater.xml" -ForegroundColor Cyan
 
+Set-Content -LiteralPath $manifestPath -Value $manifestJson -Encoding UTF8
+Set-Content -LiteralPath $versionedManifestPath -Value $manifestJson -Encoding UTF8
+Set-Content -LiteralPath $xmlPath -Value $xmlContent -Encoding UTF8
+Set-Content -LiteralPath $versionedXmlPath -Value $xmlContent -Encoding UTF8
+
+$uploadEntries = @(
+    @{ objectName = $storageInstallerName; sourcePath = $versionedInstallerPath }
+    @{ objectName = $storageManifestName; sourcePath = $manifestPath }
+    @{ objectName = $storageXmlName; sourcePath = $xmlPath }
+)
+
+$uploadScriptPath = Join-Path $env:TEMP "patagonia-acars-upload.js"
+$uploadScript = @'
+const fs = require("fs");
+const { createClient } = require(process.cwd() + "/node_modules/@supabase/supabase-js");
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+const entries = JSON.parse(process.env.UPLOAD_ENTRIES_JSON);
+
+(async () => {
+  for (const entry of entries) {
+    const payload = fs.readFileSync(entry.sourcePath);
+    const { error } = await supabase.storage
+      .from("acars-releases")
+      .upload(entry.objectName, payload, {
+        upsert: true,
+        contentType: "application/octet-stream",
+        cacheControl: "no-cache",
+      });
+
+    if (error) {
+      const { data } = supabase.storage.from("acars-releases").getPublicUrl(entry.objectName);
+      const response = await fetch(data.publicUrl, { method: "HEAD" });
+      if (!response.ok) {
+        throw error;
+      }
+    }
+  }
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
+'@
+
+Set-Content -LiteralPath $uploadScriptPath -Value $uploadScript -Encoding UTF8
+
+$uploadJson = $uploadEntries | ConvertTo-Json -Depth 5 -Compress
+Push-Location $officialWebRoot
+try {
+    $env:SUPABASE_URL = $supabaseUrl
+    $env:SUPABASE_KEY = $supabasePublishableKey
+    $env:UPLOAD_ENTRIES_JSON = $uploadJson
+    node $uploadScriptPath
+    if ($LASTEXITCODE -ne 0) {
+        throw "Fallo la subida a Supabase storage."
+    }
+}
+finally {
+    Remove-Item Env:SUPABASE_URL -ErrorAction SilentlyContinue
+    Remove-Item Env:SUPABASE_KEY -ErrorAction SilentlyContinue
+    Remove-Item Env:UPLOAD_ENTRIES_JSON -ErrorAction SilentlyContinue
+    Pop-Location
+    Remove-Item -LiteralPath $uploadScriptPath -ErrorAction SilentlyContinue
+}
+
+Write-Host ""
+Write-Host "Deploy ACARS completado." -ForegroundColor Green
+Write-Host "Version: $appVersion" -ForegroundColor Green
+Write-Host "Instalador: $downloadUrl" -ForegroundColor Cyan
+Write-Host "Manifest versionado: $storagePublicBase/$storageManifestName" -ForegroundColor Cyan
+Write-Host "AutoUpdater versionado: $storagePublicBase/$storageXmlName" -ForegroundColor Cyan

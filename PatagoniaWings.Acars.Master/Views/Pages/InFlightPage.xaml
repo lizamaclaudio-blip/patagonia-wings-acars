@@ -147,6 +147,7 @@
     </UserControl.Resources>
 
     <Grid Background="#EFF6FF">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <StackPanel x:Name="PageRoot" Background="#EFF6FF" RenderTransformOrigin="0.5,0">
         <StackPanel.LayoutTransform>
             <ScaleTransform ScaleX="0.96" ScaleY="0.96"/>
@@ -902,5 +903,6 @@
         </Border>
 
     </StackPanel>
+    </ScrollViewer>
 </Grid>
 </UserControl>
