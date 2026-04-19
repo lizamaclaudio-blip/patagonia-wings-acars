@@ -6,7 +6,7 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$appVersion = "3.2.5"
+$appVersion = "3.2.4"
 $releaseVersioned = Join-Path $PSScriptRoot "..\\release\\PatagoniaWingsACARSSetup-$appVersion.exe"
 $releaseGeneric = Join-Path $PSScriptRoot "..\\release\\PatagoniaWingsACARSSetup.exe"
 $installerSrc = if (Test-Path -LiteralPath $releaseVersioned) { $releaseVersioned } else { $releaseGeneric }
