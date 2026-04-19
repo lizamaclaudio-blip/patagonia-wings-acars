@@ -194,6 +194,10 @@ namespace PatagoniaWings.Acars.Master.Views
         private static void OnSimulatorDataReceived(PatagoniaWings.Acars.Core.Models.SimData data)
         {
             AcarsContext.FlightService.UpdateSimData(data);
+            _ = AcarsContext.Api.TrackFlightTelemetryAsync(
+                AcarsContext.FlightService.CurrentFlight,
+                AcarsContext.FlightService.CurrentFlightPhase,
+                data);
         }
 
         private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)

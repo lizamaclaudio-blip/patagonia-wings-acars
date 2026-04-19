@@ -136,6 +136,8 @@ namespace PatagoniaWings.Acars.Core.Services
             return _telemetryLog.ToArray();
         }
 
+        public FlightPhase CurrentFlightPhase => CurrentPhase;
+
         private void UpdatePhase(SimData data)
         {
             if (_currentFlight == null) return;

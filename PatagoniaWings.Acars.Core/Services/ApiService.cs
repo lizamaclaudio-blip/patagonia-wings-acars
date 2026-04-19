@@ -26,6 +26,8 @@ namespace PatagoniaWings.Acars.Core.Services
         private readonly AircraftDamageApiClient _damageApi;
         private PreparedDispatch? _activePreparedDispatch;
         private readonly string _authLogFile;
+        private DateTime _lastTelemetryPushUtc = DateTime.MinValue;
+        private bool _telemetryPushInFlight;
 
         /// <summary>Despacho activo actual (null si no hay vuelo en curso).</summary>
         public PreparedDispatch? ActiveDispatch => _activePreparedDispatch;
@@ -59,6 +61,10 @@ namespace PatagoniaWings.Acars.Core.Services
             => _useSupabaseDirect
                && !string.IsNullOrWhiteSpace(_supabaseUrl)
                && !string.IsNullOrWhiteSpace(_supabaseAnonKey);
+
+        private bool CanUseWebAcarsApi
+            => !string.IsNullOrWhiteSpace(_webBaseUrl)
+               && !string.IsNullOrWhiteSpace(_token);
 
         public string BuildFlightResultUrl(string reservationId)
         {
@@ -221,13 +227,30 @@ namespace PatagoniaWings.Acars.Core.Services
 
         /// <summary>
         /// Cierra una reserva activa sin completarla (abandon / crash / app close).
-        /// status debe ser "cancelled" o "interrupted". Fire-and-forget seguro.
+        /// status preferido: interrupted, aborted o crashed. Fire-and-forget seguro.
         /// </summary>
         public async Task CloseReservationAsync(string reservationId, string status = "cancelled")
         {
             if (string.IsNullOrWhiteSpace(reservationId)) return;
             try
             {
+                if (CanUseWebAcarsApi)
+                {
+                    var closeoutResponse = await PostWebApiAsync(
+                        "/api/acars/closeout",
+                        new
+                        {
+                            reservationId,
+                            closeoutStatus = status,
+                            telemetry = new { }
+                        }).ConfigureAwait(false);
+
+                    if (closeoutResponse.Success)
+                    {
+                        return;
+                    }
+                }
+
                 var nowUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
                 var closeoutPayload = new Dictionary<string, object>
                 {
@@ -802,6 +825,25 @@ namespace PatagoniaWings.Acars.Core.Services
 
                 var nowUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture);
 
+                if (CanUseWebAcarsApi)
+                {
+                    var webResponse = await PostWebApiAsync(
+                        "/api/acars/start",
+                        new
+                        {
+                            flight = SerializeFlight(flight),
+                            preparedDispatch = SerializePreparedDispatch(dispatch)
+                        });
+
+                    if (!webResponse.Success)
+                    {
+                        return ApiResult<bool>.Fail(webResponse.Error);
+                    }
+
+                    _activePreparedDispatch = dispatch;
+                    return ApiResult<bool>.Ok(true);
+                }
+
                 using (var request = CreateSupabaseRequest(
                            new HttpMethod("PATCH"),
                            $"/rest/v1/flight_reservations?id=eq.{Uri.EscapeDataString(dispatch.ReservationId)}",
@@ -966,6 +1008,57 @@ namespace PatagoniaWings.Acars.Core.Services
                 if (!string.IsNullOrWhiteSpace(validationError))
                 {
                     return ApiResult<FlightReport>.Fail(validationError);
+                }
+
+                if (CanUseWebAcarsApi)
+                {
+                    var webResponse = await PostWebApiAsync(
+                        "/api/acars/finalize",
+                        new
+                        {
+                            report = SerializeFlightReport(report),
+                            activeFlight = SerializeFlight(activeFlight),
+                            preparedDispatch = SerializePreparedDispatch(dispatch),
+                            telemetryLog = SerializeTelemetryLog(telemetryLog),
+                            lastSimData = SerializeSimData(lastSimData),
+                            damageEvents = SerializeDamageEvents(damageEvents)
+                        });
+
+                    if (!webResponse.Success || webResponse.Data == null)
+                    {
+                        return ApiResult<FlightReport>.Fail(
+                            string.IsNullOrWhiteSpace(webResponse.Error)
+                                ? "El backend web no pudo cerrar el vuelo oficialmente."
+                                : webResponse.Error);
+                    }
+
+                    var resultPayload = webResponse.Data;
+                    var officialScores = GetNestedDictionary(resultPayload, "officialScores");
+
+                    report.PilotQualifications = pilot.ActiveQualifications ?? string.Empty;
+                    report.PilotCertifications = pilot.ActiveCertifications ?? string.Empty;
+                    report.ReservationId = dispatch.ReservationId ?? string.Empty;
+                    report.ResultUrl = BuildAbsoluteWebUrl(ConvertToString(resultPayload, "resultUrl"));
+                    report.ResultStatus = ConvertToString(resultPayload, "resultStatus");
+                    report.ProcedureScore = ConvertToInt(officialScores, "procedure_score", report.ProcedureScore);
+                    report.PerformanceScore = ConvertToInt(officialScores, "final_score", report.PerformanceScore);
+                    report.MissionScore = ConvertToInt(officialScores, "mission_score", report.Score);
+                    report.Score = report.ProcedureScore;
+                    report.PointsEarned = report.ProcedureScore;
+                    report.Status = report.ResultStatus == "completed"
+                        ? FlightStatus.Approved
+                        : FlightStatus.Rejected;
+
+                    if (activeFlight != null)
+                    {
+                        var flightHours = Math.Max(0, report.Duration.TotalHours);
+                        var landingCycles = report.LandingVS != 0 ? 1 : 0;
+                        var damageList = damageEvents ?? Array.Empty<AircraftDamageEvent>();
+                        await _damageApi.SubmitDamageAsync(activeFlight, flightHours, landingCycles, damageList);
+                    }
+
+                    _activePreparedDispatch = null;
+                    return ApiResult<FlightReport>.Ok(report);
                 }
 
                 var closeoutResult = await TrySubmitHiddenPirepAsync(
@@ -2383,6 +2476,279 @@ namespace PatagoniaWings.Acars.Core.Services
                 return ApiResult<T>.Ok(data);
             }
             return ApiResult<T>.Fail($"Error {(int)response.StatusCode}: {raw}");
+        }
+
+        public async Task TrackFlightTelemetryAsync(
+            Flight? activeFlight,
+            FlightPhase phase,
+            SimData? telemetry)
+        {
+            if (!CanUseWebAcarsApi || telemetry == null || activeFlight == null)
+            {
+                return;
+            }
+
+            if (_telemetryPushInFlight)
+            {
+                return;
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            if ((nowUtc - _lastTelemetryPushUtc).TotalSeconds < 8)
+            {
+                return;
+            }
+
+            _telemetryPushInFlight = true;
+            _lastTelemetryPushUtc = nowUtc;
+            try
+            {
+                await PostWebApiAsync(
+                    "/api/acars/telemetry",
+                    new
+                    {
+                        reservationId = activeFlight.ReservationId,
+                        phase = phase.ToString(),
+                        telemetry = SerializeSimData(telemetry)
+                    }).ConfigureAwait(false);
+            }
+            catch
+            {
+                // best effort
+            }
+            finally
+            {
+                _telemetryPushInFlight = false;
+            }
+        }
+
+        private async Task<ApiResult<Dictionary<string, object>>> PostWebApiAsync(string path, object payload)
+        {
+            try
+            {
+                var endpoint = BuildAbsoluteWebUrl(path);
+                var content = new StringContent(_json.Serialize(payload), Encoding.UTF8, "application/json");
+                var response = await _http.PostAsync(endpoint, content).ConfigureAwait(false);
+                var raw = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return ApiResult<Dictionary<string, object>>.Fail(SimplifySupabaseError(raw));
+                }
+
+                var data = _json.DeserializeObject(raw) as Dictionary<string, object>;
+                return ApiResult<Dictionary<string, object>>.Ok(data ?? new Dictionary<string, object>());
+            }
+            catch (Exception ex)
+            {
+                return ApiResult<Dictionary<string, object>>.Fail(ex.Message);
+            }
+        }
+
+        private string BuildAbsoluteWebUrl(string pathOrAbsolute)
+        {
+            var value = (pathOrAbsolute ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return _webBaseUrl;
+            }
+
+            if (value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                value.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+            {
+                return value;
+            }
+
+            if (!value.StartsWith("/"))
+            {
+                value = "/" + value;
+            }
+
+            return _webBaseUrl + value;
+        }
+
+        private object SerializeFlight(Flight? flight)
+        {
+            if (flight == null)
+            {
+                return new { };
+            }
+
+            return new
+            {
+                reservationId = flight.ReservationId,
+                dispatchPackageId = flight.DispatchPackageId,
+                aircraftId = flight.AircraftId,
+                flightNumber = flight.FlightNumber,
+                departureIcao = flight.DepartureIcao,
+                arrivalIcao = flight.ArrivalIcao,
+                aircraftIcao = flight.AircraftIcao,
+                aircraftTypeCode = flight.AircraftTypeCode,
+                aircraftName = flight.AircraftName,
+                aircraftDisplayName = flight.AircraftDisplayName,
+                aircraftVariantCode = flight.AircraftVariantCode,
+                addonProvider = flight.AddonProvider,
+                route = flight.Route,
+                flightModeCode = flight.FlightModeCode,
+                routeCode = flight.RouteCode,
+                plannedAltitude = flight.PlannedAltitude,
+                plannedSpeed = flight.PlannedSpeed,
+                remarks = flight.Remarks,
+                startTime = flight.StartTime.ToString("o", CultureInfo.InvariantCulture)
+            };
+        }
+
+        private object SerializePreparedDispatch(PreparedDispatch? dispatch)
+        {
+            if (dispatch == null)
+            {
+                return new { };
+            }
+
+            return new
+            {
+                reservationId = dispatch.ReservationId,
+                dispatchId = dispatch.DispatchId,
+                dispatchToken = dispatch.DispatchToken,
+                routeCode = dispatch.RouteCode,
+                departureIcao = dispatch.DepartureIcao,
+                arrivalIcao = dispatch.ArrivalIcao,
+                alternateIcao = dispatch.AlternateIcao,
+                aircraftId = dispatch.AircraftId,
+                aircraftIcao = dispatch.AircraftIcao,
+                aircraftRegistration = dispatch.AircraftRegistration,
+                aircraftDisplayName = dispatch.AircraftDisplayName,
+                aircraftVariantCode = dispatch.AircraftVariantCode,
+                addonProvider = dispatch.AddonProvider,
+                routeText = dispatch.RouteText,
+                flightMode = dispatch.FlightMode,
+                reservationStatus = dispatch.ReservationStatus,
+                dispatchPackageStatus = dispatch.DispatchPackageStatus,
+                cruiseLevel = dispatch.CruiseLevel,
+                remarks = dispatch.Remarks,
+                scheduledDepartureUtc = dispatch.ScheduledDepartureUtc.HasValue
+                    ? dispatch.ScheduledDepartureUtc.Value.ToString("o", CultureInfo.InvariantCulture)
+                    : string.Empty,
+                passengerCount = dispatch.PassengerCount,
+                cargoKg = dispatch.CargoKg,
+                fuelPlannedKg = dispatch.FuelPlannedKg,
+                payloadKg = dispatch.PayloadKg,
+                zeroFuelWeightKg = dispatch.ZeroFuelWeightKg,
+                scheduledBlockMinutes = dispatch.ScheduledBlockMinutes,
+                expectedBlockP50Minutes = dispatch.ExpectedBlockP50Minutes,
+                expectedBlockP80Minutes = dispatch.ExpectedBlockP80Minutes
+            };
+        }
+
+        private object SerializeFlightReport(FlightReport report)
+        {
+            return new
+            {
+                reservationId = report.ReservationId,
+                flightNumber = report.FlightNumber,
+                departureIcao = report.DepartureIcao,
+                arrivalIcao = report.ArrivalIcao,
+                aircraftIcao = report.AircraftIcao,
+                departureTime = report.DepartureTime.ToString("o", CultureInfo.InvariantCulture),
+                arrivalTime = report.ArrivalTime.ToString("o", CultureInfo.InvariantCulture),
+                distance = report.Distance,
+                fuelUsed = report.FuelUsed,
+                landingVS = report.LandingVS,
+                landingG = report.LandingG,
+                remarks = report.Remarks,
+                maxAltitudeFeet = report.MaxAltitudeFeet,
+                maxSpeedKts = report.MaxSpeedKts,
+                approachQnhHpa = report.ApproachQnhHpa
+            };
+        }
+
+        private object SerializeTelemetryLog(IReadOnlyList<SimData>? telemetryLog)
+        {
+            return (telemetryLog ?? Array.Empty<SimData>()).Select(SerializeSimData).ToArray();
+        }
+
+        private object SerializeDamageEvents(IReadOnlyList<AircraftDamageEvent>? damageEvents)
+        {
+            return (damageEvents ?? Array.Empty<AircraftDamageEvent>())
+                .Select(evt => new
+                {
+                    aircraftId = evt.AircraftId,
+                    reservationId = evt.ReservationId,
+                    eventCode = evt.EventCode,
+                    phase = evt.Phase,
+                    severity = evt.Severity,
+                    details = evt.Details,
+                    capturedAtUtc = evt.CapturedAtUtc.ToString("o", CultureInfo.InvariantCulture)
+                })
+                .ToArray();
+        }
+
+        private object SerializeSimData(SimData? data)
+        {
+            if (data == null)
+            {
+                return new { };
+            }
+
+            return new
+            {
+                capturedAtUtc = data.CapturedAtUtc.ToString("o", CultureInfo.InvariantCulture),
+                aircraftTitle = data.AircraftTitle,
+                latitude = data.Latitude,
+                longitude = data.Longitude,
+                altitudeFeet = data.AltitudeFeet,
+                altitudeAGL = data.AltitudeAGL,
+                indicatedAirspeed = data.IndicatedAirspeed,
+                groundSpeed = data.GroundSpeed,
+                verticalSpeed = data.VerticalSpeed,
+                heading = data.Heading,
+                pitch = data.Pitch,
+                bank = data.Bank,
+                fuelTotalLbs = data.FuelTotalLbs,
+                fuelKg = data.FuelKg,
+                fuelFlowLbsHour = data.FuelFlowLbsHour,
+                engine1N1 = data.Engine1N1,
+                engine2N1 = data.Engine2N1,
+                landingVS = data.LandingVS,
+                landingG = data.LandingG,
+                onGround = data.OnGround,
+                strobeLightsOn = data.StrobeLightsOn,
+                beaconLightsOn = data.BeaconLightsOn,
+                landingLightsOn = data.LandingLightsOn,
+                taxiLightsOn = data.TaxiLightsOn,
+                navLightsOn = data.NavLightsOn,
+                parkingBrake = data.ParkingBrake,
+                autopilotActive = data.AutopilotActive,
+                pause = data.Pause,
+                seatBeltSign = data.SeatBeltSign,
+                noSmokingSign = data.NoSmokingSign,
+                gearDown = data.GearDown,
+                gearTransitioning = data.GearTransitioning,
+                flapsDeployed = data.FlapsDeployed,
+                flapsPercent = data.FlapsPercent,
+                spoilersArmed = data.SpoilersArmed,
+                reverserActive = data.ReverserActive,
+                transponderCharlieMode = data.TransponderCharlieMode,
+                apuRunning = data.ApuRunning,
+                bleedAirOn = data.BleedAirOn,
+                cabinAltitudeFeet = data.CabinAltitudeFeet,
+                pressureDiffPsi = data.PressureDiffPsi,
+                windSpeed = data.WindSpeed,
+                windDirection = data.WindDirection,
+                qnh = data.QNH,
+                isRaining = data.IsRaining,
+                simulatorType = data.SimulatorType.ToString(),
+                detectedProfileCode = data.DetectedProfileCode
+            };
+        }
+        private Dictionary<string, object> GetNestedDictionary(Dictionary<string, object> row, string key)
+        {
+            if (row == null || string.IsNullOrWhiteSpace(key) || !row.ContainsKey(key) || row[key] == null)
+                return new Dictionary<string, object>();
+
+            if (row[key] is Dictionary<string, object> direct)
+                return direct;
+
+            return TryDeserializeJsonObject(row[key]);
         }
     }
 

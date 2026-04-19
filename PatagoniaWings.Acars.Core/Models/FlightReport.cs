@@ -66,6 +66,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public int ProcedureScore { get; set; }
         /// <summary>Score de performance: 0-100 (empieza en base 60, sube o baja).</summary>
         public int PerformanceScore { get; set; }
+        public int MissionScore { get; set; }
         /// <summary>Calificación de procedimientos: ★★★ Excelente / ★★ Satisfactorio / ★ Marginal / INSATISFACTORIO.</summary>
         public string ProcedureGrade { get; set; } = string.Empty;
         /// <summary>Calificación de performance: ★★★ Excelente / ★★ Satisfactorio / ★ Marginal / INSATISFACTORIO.</summary>

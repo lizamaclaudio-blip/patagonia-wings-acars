@@ -66,7 +66,7 @@ namespace PatagoniaWings.Acars.Master
 
                 if (!string.IsNullOrWhiteSpace(reservationId) && AcarsContext.Api != null)
                 {
-                    AcarsContext.Api.CloseReservationAsync(reservationId!, "cancelled")
+                    AcarsContext.Api.CloseReservationAsync(reservationId!, "interrupted")
                         .GetAwaiter().GetResult();
                 }
             }
