@@ -160,7 +160,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             WriteLog($"Nueva versiÃ³n {available} detectada. Iniciando descarga silenciosa: {downloadUrl}");
 
             // Notificar status inicial â†’ la barra del ACARS se hace visible
-            UpdateStatusChanged?.Invoke($"Descargando actualizaciÃ³n v{available}...");
+            UpdateStatusChanged?.Invoke($"Descargando actualizaciÃ³n {installed} → {available}...");
             DownloadProgressChanged?.Invoke(0);
 
             // Descargar e instalar en background
@@ -194,7 +194,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 // Notificar que la descarga terminÃ³
                 DownloadProgressChanged?.Invoke(100);
-                UpdateStatusChanged?.Invoke($"Instalando v{version}...  El ACARS reabrirÃ¡ automÃ¡ticamente");
+                UpdateStatusChanged?.Invoke($"Instalando {CurrentVersion} → {version}...  El ACARS reabrirÃ¡ automÃ¡ticamente");
 
                 // Esperar 2 s para que el usuario vea el mensaje final
                 await Task.Delay(2000);
@@ -204,7 +204,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 var splashScriptPath = Path.Combine(tempDir, "show_update_splash.ps1");
                 var appExePath = GetInstalledExePath();
                 WriteLog($"Relaunch target: {appExePath}");
-                File.WriteAllText(splashScriptPath, BuildUpdateSplashScript(installerPath, appExePath, version, SplashCloseFlagPath));
+                File.WriteAllText(splashScriptPath, BuildUpdateSplashScript(installerPath, appExePath, CurrentVersion, version, SplashCloseFlagPath));
 
                 var psi = new ProcessStartInfo("powershell.exe")
                 {
@@ -389,7 +389,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             catch { }
         }
 
-        private static string BuildUpdateSplashScript(string installerPath, string appExePath, string version, string splashCloseFlagPath)
+        private static string BuildUpdateSplashScript(string installerPath, string appExePath, string currentVersion, string version, string splashCloseFlagPath)
         {
             string Escape(string value) => value.Replace("'", "''");
             var appDirectory = Path.GetDirectoryName(appExePath) ?? AppDomain.CurrentDomain.BaseDirectory;
@@ -418,13 +418,13 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 "$form.Height = 230\r\n" +
                 "$form.BackColor = [System.Drawing.Color]::FromArgb(10,22,35)\r\n" +
                 "$title = New-Object System.Windows.Forms.Label\r\n" +
-                "$title.Text = 'Actualizando ACARS a v" + Escape(version) + "...'\r\n" +
+                "$title.Text = 'Actualizando ACARS v" + Escape(currentVersion) + " → v" + Escape(version) + "'\r\n" +
                 "$title.ForeColor = [System.Drawing.Color]::FromArgb(147,197,253)\r\n" +
                 "$title.Font = New-Object System.Drawing.Font('Segoe UI',18,[System.Drawing.FontStyle]::Bold)\r\n" +
                 "$title.AutoSize = $true\r\n" +
                 "$title.Location = New-Object System.Drawing.Point(28,28)\r\n" +
                 "$subtitle = New-Object System.Windows.Forms.Label\r\n" +
-                "$subtitle.Text = 'El ACARS se cerro a proposito. Enseguida vuelve con la version nueva.'\r\n" +
+                "$subtitle.Text = 'Cerrando, instalando y relanzando la version real nueva.'\r\n" +
                 "$subtitle.ForeColor = [System.Drawing.Color]::FromArgb(191,219,254)\r\n" +
                 "$subtitle.Font = New-Object System.Drawing.Font('Segoe UI',10)\r\n" +
                 "$subtitle.AutoSize = $true\r\n" +
@@ -459,7 +459,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 "$watch.Add_Tick({ " +
                 "if (Test-Path '" + Escape(splashCloseFlagPath) + "') { try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }; $watch.Stop(); $form.Close(); return }; " +
                 "if ($script:installerStarted -and -not $script:installerDone) { try { $null = Get-Process -Id $script:installerPid -ErrorAction Stop } catch { $script:installerDone = $true } }; " +
-                "if ($script:installerDone -and -not $script:appLaunched -and (Test-Path '" + Escape(appExePath) + "')) { Start-Sleep -Seconds 2; Start-Process -FilePath '" + Escape(appExePath) + "' -WorkingDirectory '" + Escape(appDirectory) + "'; $script:appLaunched = $true } " +
+                "if ($script:installerDone -and -not $script:appLaunched -and (Test-Path '" + Escape(appExePath) + "')) { Start-Sleep -Seconds 2; Start-Process -FilePath '" + Escape(appExePath) + "' -WorkingDirectory '" + Escape(appDirectory) + "'; $script:appLaunched = $true; $watch.Stop(); $form.Close() } " +
                 "})\r\n" +
                 "$close = New-Object System.Windows.Forms.Timer\r\n" +
                 "$close.Interval = 90000\r\n" +

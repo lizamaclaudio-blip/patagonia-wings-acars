@@ -50,7 +50,7 @@ if (-not (Test-Path -LiteralPath $webPublic)) {
 
 $genericInstallerName = "PatagoniaWingsACARSSetup.exe"
 $versionedInstallerName = "PatagoniaWingsACARSSetup-$appVersion.exe"
-$storageReleaseSuffix = "-r2"
+$storageReleaseSuffix = "-r1"
 $storageInstallerName = "PatagoniaWingsACARSSetup-$appVersion$storageReleaseSuffix.exe"
 $storageManifestName = "acars-update-$appVersion$storageReleaseSuffix.json"
 $storageXmlName = "autoupdater-$appVersion$storageReleaseSuffix.xml"
@@ -72,7 +72,7 @@ $manifestObject = [ordered]@{
     webVersion = "2.0"
     downloadUrl = $downloadUrl
     mandatory = $false
-    notes = "- Cierre oficial ACARS server-authoritative`n- PIREP oculto + score oficial server-side`n- Estados completed/crashed/aborted/interrupted/manual_review persistidos"
+    notes = "- Cierre oficial ACARS end-to-end con live view y closeout oficial`n- PIREP oculto + score oficial server-side persistidos`n- Updater 3.2.7 con splash real y relanzado automático"
     releaseDate = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
     minVersion = "2.0.5"
     fileSize = "$sizeMB MB"
@@ -85,7 +85,7 @@ $xmlContent = @"
 <item>
   <version>$appVersion.0</version>
   <url>$downloadUrl</url>
-  <changelog>v${appVersion}: cierre oficial ACARS, score server-side, PIREP oculto y autoupdate alineado.</changelog>
+  <changelog>v${appVersion}: cierre oficial ACARS, live view, splash real y relanzado automático.</changelog>
   <mandatory>false</mandatory>
 </item>
 "@

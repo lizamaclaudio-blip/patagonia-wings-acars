@@ -72,6 +72,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _alertPause;
         private bool _above10000;
         private ImageSource? _aircraftImageSource;
+        private string _routeOrigin = "----";
+        private string _routeDestination = "----";
+        private string _officialPhaseCode = "PRE";
+        private string _routeStatusLabel = "Esperando inicio oficial";
+        private double _routeProgressPercent;
 
         // ── Pesos / comparación SimBrief vs Sim ──────────────────────────────────
         private double _fuelAtEngineStartKg = -1; // -1 = no capturado aún
@@ -478,6 +483,45 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool AlertNoStrobe { get => _alertNoStrobe; set => SetField(ref _alertNoStrobe, value); }
         public bool AlertPause { get => _alertPause; set => SetField(ref _alertPause, value); }
         public bool HasLiveTelemetry => AcarsContext.Runtime.IsSimulatorConnected && AcarsContext.Runtime.LastTelemetry != null;
+        public string RouteOrigin => _routeOrigin;
+        public string RouteDestination => _routeDestination;
+        public string RouteDisplay => $"{RouteOrigin} → {RouteDestination}";
+        public string OfficialPhaseCode
+        {
+            get => _officialPhaseCode;
+            private set
+            {
+                if (SetField(ref _officialPhaseCode, value))
+                {
+                    OnPropertyChanged(nameof(OfficialPhaseDisplay));
+                }
+            }
+        }
+        public string OfficialPhaseDisplay => $"{OfficialPhaseCode} · {PhaseLabel}";
+        public string RouteStatusLabel
+        {
+            get => _routeStatusLabel;
+            private set => SetField(ref _routeStatusLabel, value);
+        }
+        public double RouteProgressPercent
+        {
+            get => _routeProgressPercent;
+            private set
+            {
+                if (SetField(ref _routeProgressPercent, value))
+                {
+                    OnPropertyChanged(nameof(RouteProgressDisplay));
+                    OnPropertyChanged(nameof(RouteTrackWidth));
+                    OnPropertyChanged(nameof(RoutePlaneLeft));
+                }
+            }
+        }
+        public string RouteProgressDisplay => $"{Math.Round(RouteProgressPercent, 0):F0}%";
+        public double RouteTrackWidth => Math.Max(18, 320 * (RouteProgressPercent / 100.0));
+        public double RoutePlaneLeft => Math.Max(0, Math.Min(304, RouteTrackWidth - 16));
+        public string RouteDistanceDisplay => AcarsContext.FlightService.TotalDistanceNm > 0
+            ? $"{AcarsContext.FlightService.TotalDistanceNm:F1} nm recorridas"
+            : "Esperando recorrido";
 
         // ── Propiedades de pesos (Plan SimBrief vs Actual Sim) ───────────────────
 
@@ -625,6 +669,101 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             PirepPreview = sb.ToString().TrimEnd();
         }
 
+        private static string NormalizeIcao(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim().ToUpperInvariant();
+            return string.IsNullOrWhiteSpace(normalized) ? "----" : normalized;
+        }
+
+        private string GetOfficialPhaseCode(FlightPhase phase, SimData? data)
+        {
+            var sample = data ?? AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+            var maxEngineN1 = Math.Max(sample?.Engine1N1 ?? 0, sample?.Engine2N1 ?? 0);
+            var groundSpeed = sample?.GroundSpeed ?? 0;
+
+            return phase switch
+            {
+                FlightPhase.Disconnected => "PRE",
+                FlightPhase.PreFlight when maxEngineN1 >= 15 => "IGN",
+                FlightPhase.PreFlight => "PRE",
+                FlightPhase.Boarding when maxEngineN1 >= 15 => "IGN",
+                FlightPhase.Boarding => "PRE",
+                FlightPhase.PushbackTaxi when groundSpeed < 3 && maxEngineN1 >= 15 => "IGN",
+                FlightPhase.PushbackTaxi => "TAX",
+                FlightPhase.Takeoff => "TO",
+                FlightPhase.Climb => "ASC",
+                FlightPhase.Cruise => "CRU",
+                FlightPhase.Descent => "DES",
+                FlightPhase.Approach => "LDG",
+                FlightPhase.Landing => "LDG",
+                FlightPhase.Taxi => "TAG",
+                FlightPhase.Arrived => "PAR",
+                FlightPhase.Deboarding => "PAR",
+                _ => "PRE",
+            };
+        }
+
+        private double ComputeRouteProgressPercent()
+        {
+            var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+            var altitudeAgl = sample?.AltitudeAGL ?? 0;
+            var altitudeFeet = sample?.AltitudeFeet ?? 0;
+            var groundSpeed = sample?.GroundSpeed ?? 0;
+            var verticalSpeed = sample?.VerticalSpeed ?? 0;
+            var maxEngineN1 = Math.Max(sample?.Engine1N1 ?? 0, sample?.Engine2N1 ?? 0);
+            var plannedCruise = Math.Max(8000, AcarsContext.FlightService.CurrentFlight?.PlannedAltitude ?? 30000);
+
+            double progress = OfficialPhaseCode switch
+            {
+                "PRE" => maxEngineN1 > 5 ? 6 : 2,
+                "IGN" => 8 + Math.Min(8, maxEngineN1 / 3.0),
+                "TAX" => 16 + Math.Min(10, Math.Max(0, groundSpeed) / 3.0),
+                "TO" => 26 + Math.Min(8, Math.Max(0, altitudeAgl) / 250.0),
+                "ASC" => 34 + Math.Min(22, Math.Max(0, altitudeFeet) / plannedCruise * 22.0),
+                "CRU" => 60 + Math.Min(12, Math.Max(0, AcarsContext.FlightService.TotalDistanceNm) / 80.0),
+                "DES" => 76 + Math.Min(10, Math.Max(0, Math.Abs(verticalSpeed)) / 250.0),
+                "LDG" => 88 + Math.Min(8, Math.Max(0, 3000 - altitudeAgl) / 375.0),
+                "TAG" => 96 + Math.Min(3, Math.Max(0, 30 - groundSpeed) / 10.0),
+                "PAR" => 100,
+                _ => 4,
+            };
+
+            return Math.Max(0, Math.Min(100, progress));
+        }
+
+        private string BuildRouteStatusLabel()
+        {
+            return OfficialPhaseCode switch
+            {
+                "PRE" => "Cabina y despacho listos para salida",
+                "IGN" => "Secuencia de arranque observada",
+                "TAX" => "Rodaje y salida en curso",
+                "TO" => "Despegue oficial detectado",
+                "ASC" => "Ascenso estabilizado",
+                "CRU" => "Crucero y telemetría oficial activa",
+                "DES" => "Descenso y preparación de llegada",
+                "LDG" => "Aproximación y aterrizaje en evaluación",
+                "TAG" => "Taxi in y llegada al stand",
+                "PAR" => "Vuelo listo para cierre oficial",
+                _ => "Monitoreando vuelo",
+            };
+        }
+
+        private void RefreshRouteSnapshot(SimData? data = null)
+        {
+            var flight = AcarsContext.FlightService.CurrentFlight;
+            _routeOrigin = NormalizeIcao(flight?.DepartureIcao);
+            _routeDestination = NormalizeIcao(flight?.ArrivalIcao);
+            OfficialPhaseCode = GetOfficialPhaseCode(Phase, data);
+            RouteProgressPercent = ComputeRouteProgressPercent();
+            RouteStatusLabel = BuildRouteStatusLabel();
+
+            OnPropertyChanged(nameof(RouteOrigin));
+            OnPropertyChanged(nameof(RouteDestination));
+            OnPropertyChanged(nameof(RouteDisplay));
+            OnPropertyChanged(nameof(RouteDistanceDisplay));
+        }
+
         private void LogLightEvent(string name, bool prev, bool current, bool onGround)
         {
             if (prev == current) return;
@@ -716,6 +855,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             AcarsContext.FlightService.PhaseChanged += OnPhaseChanged;
             AcarsContext.Runtime.Changed += OnRuntimeChanged;
             ApplyRuntimeState();
+            RefreshRouteSnapshot();
         }
 
         public void StartElapsedTimer()
@@ -787,8 +927,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(WbActualFuelDisplay));
             OnPropertyChanged(nameof(WbActualZfwDisplay));
             OnPropertyChanged(nameof(WbFuelStatusLabel));
+            OnPropertyChanged(nameof(RouteDisplay));
+            OnPropertyChanged(nameof(OfficialPhaseDisplay));
+            OnPropertyChanged(nameof(RouteStatusLabel));
+            OnPropertyChanged(nameof(RouteProgressDisplay));
+            OnPropertyChanged(nameof(RouteTrackWidth));
+            OnPropertyChanged(nameof(RoutePlaneLeft));
+            OnPropertyChanged(nameof(RouteDistanceDisplay));
 
             UpdatePirepPreview();
+            RefreshRouteSnapshot();
 
             if (!AcarsContext.Runtime.IsSimulatorConnected)
             {
@@ -903,6 +1051,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 OnPropertyChanged(nameof(WbActualZfwDisplay));
                 OnPropertyChanged(nameof(WbFuelStatusLabel));
                 UpdatePirepPreview();
+                RefreshRouteSnapshot(data);
 
                 ApplyRuntimeState();
                 CheckAlerts(data);
@@ -959,6 +1108,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             ElapsedTime = "00:00:00";
             _eventLog.Clear();
             _prevBeaconOn = _prevStrobeOn = _prevLandingOn = _prevTaxiOn = _prevNavOn = _prevApOn = _prevSeatBelt = false;
+            RefreshRouteSnapshot();
         }
 
         private void CheckAlerts(SimData data)
@@ -1023,6 +1173,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (newPhase != FlightPhase.Disconnected && newPhase != FlightPhase.PreFlight)
                     _eventLog.Add($"▶ FASE: {GetPhaseLabel(newPhase)}");
                 UpdatePirepPreview();
+                RefreshRouteSnapshot();
                 CommandManager.InvalidateRequerySuggested();
                 switch (newPhase)
                 {
