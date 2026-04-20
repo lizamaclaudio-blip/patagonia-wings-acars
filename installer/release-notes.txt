@@ -1,0 +1,3 @@
+- Version 4.0.1 con feed de autoupdate genérico en Supabase
+- Ruta en vivo desktop mejorada con distancias dinámicas y barra visual renovada
+- Flujo de publicación y metadata alineados para futuras releases sin rediseñar el updater

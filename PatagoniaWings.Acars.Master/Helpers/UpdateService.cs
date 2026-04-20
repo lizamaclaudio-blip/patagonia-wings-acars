@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
 using AutoUpdaterDotNET;
+using Newtonsoft.Json.Linq;
 
 namespace PatagoniaWings.Acars.Master.Helpers
 {
@@ -23,9 +24,17 @@ namespace PatagoniaWings.Acars.Master.Helpers
     /// </summary>
     public static class UpdateService
     {
-        // Fuente unica de deteccion remota. Cada release futura debe actualizar este XML.
+        // Fuente unica de deteccion remota. Siempre apunta al feed generico y no a un archivo versionado.
         private static string AutoUpdaterXmlUrl =>
             ReadSetting("AutoUpdaterXmlUrl", "https://patagoniaw.com/downloads/autoupdater.xml");
+
+        // Feed JSON complementario para validar metadata y dejar trazabilidad del release publicado.
+        private static string UpdateManifestUrl =>
+            ReadSetting("UpdateManifestUrl", "https://patagoniaw.com/downloads/acars-update.json");
+
+        // Fallback final: si el XML viene sin URL, usamos el instalador generico del feed.
+        private static string InstallerDownloadUrl =>
+            ReadSetting("InstallerDownloadUrl", "https://patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe");
 
         private static readonly string JustUpdatedFlagPath =
             Path.Combine(Path.GetTempPath(), "PatagoniaWings_JustUpdated.txt");
@@ -97,8 +106,35 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         public static async Task<UpdateCheckResult> CheckForUpdatesAsync(bool force = false)
         {
-            await Task.CompletedTask;
-            return new UpdateCheckResult { CurrentVersion = CurrentVersion, Success = true };
+            try
+            {
+                using var client = new WebClient();
+                client.Headers[HttpRequestHeader.CacheControl] = "no-cache";
+                var raw = await client.DownloadStringTaskAsync(UpdateManifestUrl);
+                var json = JObject.Parse(raw);
+
+                var latestVersion = (json["version"]?.ToString() ?? string.Empty).Trim();
+                var downloadUrl = (json["downloadUrl"]?.ToString() ?? string.Empty).Trim();
+
+                return new UpdateCheckResult
+                {
+                    Success = true,
+                    CurrentVersion = CurrentVersion,
+                    LatestVersion = latestVersion,
+                    IsUpdateAvailable = IsVersionNewer(latestVersion, CurrentVersion),
+                    DownloadUrl = downloadUrl,
+                };
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"Manifest check error: {ex.Message}");
+                return new UpdateCheckResult
+                {
+                    Success = false,
+                    CurrentVersion = CurrentVersion,
+                    Error = ex.Message,
+                };
+            }
         }
 
         /// <summary>
@@ -133,6 +169,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             public bool IsUpdateAvailable { get; set; }
             public string CurrentVersion { get; set; } = string.Empty;
             public string LatestVersion { get; set; } = string.Empty;
+            public string DownloadUrl { get; set; } = string.Empty;
             public string Error { get; set; } = string.Empty;
         }
 
@@ -155,6 +192,11 @@ namespace PatagoniaWings.Acars.Master.Helpers
             if (!isNewer) return;
 
             var downloadUrl = args?.DownloadURL ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(downloadUrl))
+            {
+                // Si el XML remoto omite url, seguimos pudiendo aplicar el release desde el instalador generico.
+                downloadUrl = InstallerDownloadUrl;
+            }
             if (string.IsNullOrWhiteSpace(downloadUrl)) return;
             if (!IsSupportedInstallerUrl(downloadUrl))
             {

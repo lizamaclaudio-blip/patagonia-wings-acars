@@ -1,117 +1,45 @@
 # Instalador Patagonia Wings ACARS
 
-## Descripción
+## Descripcion
+
 Este instalador incluye:
-- Aplicación ACARS principal
-- MobiFlight WASM Module (para leer LVARs de aviones complejos)
+- Aplicacion ACARS principal
+- WASM de soporte para integracion con MSFS y lectura de variables de aviones complejos
 
-## Requisitos
-- Windows 10/11
-- Microsoft Flight Simulator 2020 (Steam o MS Store)
-- WiX Toolset 3.11 o superior (para compilar el instalador)
+## Build del release
 
-## Estructura del Instalador
+- `build-release.ps1` toma la version desde `PatagoniaWings.Acars.Master/App.config`
+- esa misma version se usa para:
+  - ensamblados
+  - instalador
+  - manifest JSON
+  - XML del updater
 
-```
-PatagoniaWings.ACARS.msi
-├── Aplicación ACARS
-│   ├── PatagoniaWings.Acars.Master.exe
-│   ├── AircraftProfiles.json
-│   └── Dependencias
-│
-└── WASM Module (MSFS Community Folder)
-    └── patagonia-acars-wasm/
-        ├── manifest.json
-        ├── module.config
-        └── patagonia-acars-wasm.wasm
-```
+## Publish del autoupdate
 
-## Cómo Compilar el Instalador
+- `deploy-to-web.ps1` publica dos carriles:
+  - `public/downloads` para consumo web/legacy
+  - objetos en Supabase Storage para el updater real
 
-### 1. Preparar Archivos
+## Feed oficial del updater
 
-Primero, publicar la aplicación:
-```bash
-cd ..\PatagoniaWings.Acars.Master
-dotnet publish -c Release -o ..\Installer\Publish
-```
+El cliente desktop debe consultar siempre los objetos genericos:
+- `autoupdater.xml`
+- `acars-update.json`
+- `PatagoniaWingsACARSSetup.exe`
 
-### 2. Copiar WASM Module
+Los archivos versionados quedan como historico del release y auditoria.
 
-Nota: El archivo `patagonia-acars-wasm.wasm` debe obtenerse de:
-- Compilar desde fuentes de MobiFlight (GPL v3)
-- O usar el módulo de MobiFlight directamente
+## Notas de release
 
-Copiar a:
-```
-Installer\WASM\patagonia-acars-wasm.wasm
-```
+- `release-notes.txt` define el changelog publicado en:
+  - `acars-update.json`
+  - `autoupdater.xml`
 
-### 3. Compilar con WiX
+## Secretos de publicacion
 
-```bash
-cd Installer
+- copiar `installer/.publish-secrets.example` a `installer/.publish-secrets.local`
+- agregar:
+  - `SUPABASE_SERVICE_ROLE_KEY=...`
 
-candle PatagoniaWings.ACARS.wxs -dPublishDir=Publish -dWasmDir=WASM
-
-light PatagoniaWings.ACARS.wixobj -ext WixUIExtension -ext WixUtilExtension -o PatagoniaWings.ACARS.msi
-```
-
-### 4. Instalar
-
-Ejecutar `PatagoniaWings.ACARS.msi`
-
-El instalador detectará automáticamente:
-- Ruta de instalación de MSFS (Steam o MS Store)
-- Community Folder
-- Instalará el WASM Module en la ubicación correcta
-
-## Funcionamiento
-
-### Detección de MSFS
-
-El instalador busca MSFS en:
-1. Steam (registry)
-2. Microsoft Store (Packages folder)
-3. Rutas comunes de fallback
-
-### Instalación del WASM Module
-
-1. Detecta Community Folder
-2. Crea subdirectorio `patagonia-acars-wasm/`
-3. Copia archivos manifest.json, module.config, .wasm
-4. Configura variables LVAR para aviones soportados
-
-### Uso
-
-Después de instalar:
-1. Iniciar MSFS (o reiniciar si ya estaba abierto)
-2. Cargar avión (A319 Headwind, Fenix A320, etc.)
-3. Iniciar ACARS
-4. Conectar al simulador
-5. ACARS leerá automáticamente las LVARs
-
-## Licencia
-
-### ACARS
-Propio - Patagonia Wings Virtual Airline
-
-### MobiFlight WASM Module
-GPL v3 - https://www.mobiflight.com/
-- Se redistribuye respetando la licencia GPL
-- Source code disponible en repositorio de MobiFlight
-- Créditos incluidos en el módulo
-
-## Notas
-
-- El WASM Module se instala silenciosamente
-- No requiere acción del usuario
-- Compatible con MobiFlight instalado por separado
-- Si el usuario ya tiene MobiFlight, ambos pueden coexistir
-
-## Publish de Releases
-
-- `deploy-to-web.ps1` publica `public/downloads` y los artefactos versionados de Supabase.
-- Para escritura automÃ¡tica en Supabase, copiar `installer/.publish-secrets.example` a `installer/.publish-secrets.local`.
-- Ese archivo debe contener `SUPABASE_SERVICE_ROLE_KEY=...`
-- `installer/.publish-secrets.local` estÃ¡ ignorado por Git para no exponer secretos.
+Ese archivo queda fuera de Git.

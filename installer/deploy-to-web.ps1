@@ -7,6 +7,7 @@ $releaseDir = Join-Path $root "release"
 $officialWebRoot = "C:\Users\lizam\Desktop\PROYECTO PATAGONIA WINGS\PatagoniaWingsACARS\PATAGONIA WINGS WEB 2.0\patagonia-wings-site"
 $webPublic = Join-Path $officialWebRoot "public\downloads"
 $publishSecretsPath = Join-Path $PSScriptRoot ".publish-secrets.local"
+$releaseNotesPath = Join-Path $PSScriptRoot "release-notes.txt"
 
 # Este script deja alineados los dos carriles del updater:
 # 1) los archivos public/downloads que consumen clientes legacy
@@ -83,6 +84,9 @@ if (-not (Test-Path -LiteralPath $webPublic)) {
 $genericInstallerName = "PatagoniaWingsACARSSetup.exe"
 $versionedInstallerName = "PatagoniaWingsACARSSetup-$appVersion.exe"
 $storageReleaseSuffix = "-r2"
+$storageGenericInstallerName = "PatagoniaWingsACARSSetup.exe"
+$storageGenericManifestName = "acars-update.json"
+$storageGenericXmlName = "autoupdater.xml"
 $storageInstallerName = "PatagoniaWingsACARSSetup-$appVersion$storageReleaseSuffix.exe"
 $storageManifestName = "acars-update-$appVersion$storageReleaseSuffix.json"
 $storageXmlName = "autoupdater-$appVersion$storageReleaseSuffix.xml"
@@ -98,13 +102,19 @@ Copy-Item -LiteralPath $installerSrc -Destination $versionedInstallerPath -Force
 
 $sizeMB = [math]::Round((Get-Item -LiteralPath $installerSrc).Length / 1MB, 1)
 $downloadUrl = "$storagePublicBase/$storageInstallerName"
+$genericDownloadUrl = "$storagePublicBase/$storageGenericInstallerName"
+$releaseNotes = if (Test-Path -LiteralPath $releaseNotesPath) {
+    (Get-Content -LiteralPath $releaseNotesPath -Raw).Trim()
+} else {
+    "- Version $appVersion con autoupdate por feed genérico Supabase`n- Ruta en vivo mejorada en desktop`n- Runtime y scripts de publicación alineados"
+}
 
 $manifestObject = [ordered]@{
     version = $appVersion
     webVersion = "2.0"
-    downloadUrl = $downloadUrl
+    downloadUrl = $genericDownloadUrl
     mandatory = $false
-    notes = "- Version 4.0.0 con sistema hibrido por perfil de aeronave`n- Maddog habilitado en pipeline LVAR/FSUIPC/MobiFlight sin romper C208 ni PMDG`n- Metadatos web y autoupdater alineados a la release real"
+    notes = $releaseNotes
     releaseDate = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
     minVersion = "2.0.5"
     fileSize = "$sizeMB MB"
@@ -116,8 +126,8 @@ $xmlContent = @"
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
   <version>$appVersion.0</version>
-  <url>$downloadUrl</url>
-  <changelog>v${appVersion}: perfiles hibridos por aeronave, release 4.0.0 y autoupdater alineado.</changelog>
+  <url>$genericDownloadUrl</url>
+  <changelog>$([System.Security.SecurityElement]::Escape($releaseNotes))</changelog>
   <mandatory>false</mandatory>
 </item>
 "@
@@ -128,6 +138,9 @@ Set-Content -LiteralPath $xmlPath -Value $xmlContent -Encoding UTF8
 Set-Content -LiteralPath $versionedXmlPath -Value $xmlContent -Encoding UTF8
 
 $uploadEntries = @(
+    @{ objectName = $storageGenericInstallerName; sourcePath = $genericInstallerPath; contentType = "application/octet-stream" }
+    @{ objectName = $storageGenericManifestName; sourcePath = $manifestPath; contentType = "application/json" }
+    @{ objectName = $storageGenericXmlName; sourcePath = $xmlPath; contentType = "application/xml" }
     @{ objectName = $storageInstallerName; sourcePath = $versionedInstallerPath; contentType = "application/octet-stream" }
     @{ objectName = $storageManifestName; sourcePath = $manifestPath; contentType = "application/json" }
     @{ objectName = $storageXmlName; sourcePath = $xmlPath; contentType = "application/xml" }
