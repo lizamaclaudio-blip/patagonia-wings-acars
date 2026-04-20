@@ -1,10 +1,10 @@
 ﻿{
-  "version": "3.2.4",
+  "version": "4.0.0",
   "webVersion": "2.0",
   "downloadUrl": "https://patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe",
   "mandatory": false,
-  "notes": "- Filtro real por rango y aeropuerto para Cadete\n- Itinerarios alineados a aeronaves realmente autorizadas\n- Reapertura estable del ACARS tras update\n- Confirmacion visual al volver a abrir",
-  "releaseDate": "2026-04-18",
+  "notes": "- Sistema hibrido por perfil de aeronave\n- Maddog preparado en pipeline LVAR/FSUIPC/MobiFlight\n- Web y autoupdater alineados a la release 4.0.0",
+  "releaseDate": "2026-04-19",
   "minVersion": "2.0.5",
   "fileSize": "24.7 MB",
   "storageProvider": "supabase"

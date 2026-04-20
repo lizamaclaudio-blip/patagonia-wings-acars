@@ -172,6 +172,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 TransponderDefaultState = 1,
                 TransponderCodeFormat = "decimal_or_bco16",
                 TransponderCodeDebounceFrames = 2,
+                PreferFsuipcAutopilot = true,
+                PreferFsuipcTransponder = true,
                 SupportsFuelRead = true,
                 SupportsPayloadRead = true,
                 SupportsFlagsRead = true,

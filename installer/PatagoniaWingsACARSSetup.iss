@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "3.2.7"
+  #define MyAppVersion   "4.0.0"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
@@ -74,7 +74,7 @@ Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\Velopack.dll"; DestDir: 
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\Newtonsoft.Json.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\NuGet.Versioning.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\PatagoniaWings.Acars.Master.exe.config"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\PatagoniaWings.Acars.SimConnect\AircraftProfiles.json"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\PatagoniaWings.Acars.Master\bin\x64\Release\AircraftProfiles\*"; DestDir: "{app}\AircraftProfiles"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\PatagoniaWings.Acars.Master\Assets\*"; DestDir: "{app}\Assets"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "Aircraft\*.exe"
 ; Carpeta de imágenes de aeronaves (el usuario guarda PNG/JPG aquí; nombre = código ICAO, ej. A320.png)
 Source: "..\PatagoniaWings.Acars.Master\Assets\Aircraft\.gitkeep"; DestDir: "{app}\Assets\Aircraft"; Flags: ignoreversion

@@ -28,6 +28,8 @@
     "NoSmokingSource":  "native",
     "TransponderStateSource":  "native",
     "TransponderCodeFormat":  "bco16",
+    "PreferFsuipcAutopilot":  true,
+    "PreferFsuipcTransponder":  true,
     "SupportsFuelRead":  true,
     "SupportsPayloadRead":  false,
     "SupportsFlagsRead":  true,

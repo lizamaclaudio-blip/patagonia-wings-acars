@@ -88,9 +88,15 @@ namespace PatagoniaWings.Acars.Core.Models
         public double QNH { get; set; }
         public bool IsRaining { get; set; }
 
+        // Motores extendidos (soporte 4 motores – 737/A320 usan 1-2, B744/A340 usan 1-4)
+        public double Engine3N1 { get; set; }
+        public double Engine4N1 { get; set; }
+
         // Sistemas adicionales (arquitectura SUR Air)
         public bool EngineOneRunning { get; set; }
         public bool EngineTwoRunning { get; set; }
+        public bool EngineThreeRunning { get; set; }
+        public bool EngineFourRunning { get; set; }
         public bool BatteryMasterOn { get; set; }
         public bool AvionicsMasterOn { get; set; }
         public bool DoorOpen { get; set; }

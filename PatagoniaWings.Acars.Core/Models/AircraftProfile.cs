@@ -22,6 +22,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool RequiresLvars { get; set; } = false;
         public string LvarProfile { get; set; } = string.Empty;
         public string N1Source { get; set; } = "turb_n1";
+
         public string DoorSource { get; set; } = "exit_open_0";
         public double DoorOpenThresholdPercent { get; set; } = 5.0;
 
@@ -40,9 +41,22 @@ namespace PatagoniaWings.Acars.Core.Models
         public string TransponderCodeFormat { get; set; } = "decimal_or_bco16";
         public int TransponderCodeDebounceFrames { get; set; } = 1;
 
+        public string ApuSource { get; set; } = "native";
+        public string BleedAirSource { get; set; } = "native";
+
+        public bool PreferFsuipcAutopilot { get; set; } = false;
+        public bool PreferFsuipcTransponder { get; set; } = false;
+
+        // Expresiones opcionales listas para MobiFlight / Calculator code
+        public string MobiFlightSeatbeltExpression { get; set; } = string.Empty;
+        public string MobiFlightNoSmokingExpression { get; set; } = string.Empty;
+        public string MobiFlightApuExpression { get; set; } = string.Empty;
+        public string MobiFlightAutopilotExpression { get; set; } = string.Empty;
+        public string MobiFlightBleedAirExpression { get; set; } = string.Empty;
+        public List<string> MobiFlightDoorExpressions { get; set; } = new List<string>();
+
         /// <summary>
-        /// false = el addon usa LVARs propios; seatbelt/transponder/AP no son confiables por SimConnect.
-        /// Cuando es false, FlightEvaluationService no penaliza esos sistemas.
+        /// false = el addon usa sistemas propios; no penalizar si la lectura nativa no es fiable.
         /// </summary>
         public bool CabinSystemsReliable { get; set; } = true;
 
@@ -57,5 +71,39 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool SupportsBatteryRead { get; set; } = false;
         public bool SupportsAvionicsRead { get; set; } = false;
         public bool SupportsEngineRunRead { get; set; } = false;
+
+        private static bool IsBridgeLike(string source)
+        {
+            if (string.IsNullOrWhiteSpace(source)) return false;
+            source = source.Trim().ToLowerInvariant();
+
+            // OJO:
+            // "bridge" describe una intención/configuración por perfil,
+            // pero NO implica que exista una lectura viva implementada.
+            // Solo tratamos como overlay real lo que venga por LVAR/MobiFlight.
+            return source == "lvar"
+                || source == "mobiflight";
+        }
+
+        private static bool IsExplicitlyUnsupported(string source)
+        {
+            if (string.IsNullOrWhiteSpace(source)) return false;
+            source = source.Trim().ToLowerInvariant();
+            return source == "none"
+                || source == "unsupported"
+                || source == "n/a"
+                || source == "na";
+        }
+
+        public bool UsesLvarSeatbelt => IsBridgeLike(SeatbeltSource) || !string.IsNullOrWhiteSpace(MobiFlightSeatbeltExpression);
+        public bool UsesLvarNoSmoking => IsBridgeLike(NoSmokingSource) || !string.IsNullOrWhiteSpace(MobiFlightNoSmokingExpression);
+        public bool UsesLvarDoor => IsBridgeLike(DoorSource) || (MobiFlightDoorExpressions != null && MobiFlightDoorExpressions.Count > 0);
+        public bool UsesLvarAutopilot => IsBridgeLike(AutopilotSource) || !string.IsNullOrWhiteSpace(MobiFlightAutopilotExpression);
+        public bool UsesLvarApu => IsBridgeLike(ApuSource) || !string.IsNullOrWhiteSpace(MobiFlightApuExpression);
+        public bool UsesLvarBleedAir => IsBridgeLike(BleedAirSource) || !string.IsNullOrWhiteSpace(MobiFlightBleedAirExpression);
+        public bool SupportsSeatbeltSystem => !IsExplicitlyUnsupported(SeatbeltSource) && (SupportsFlagsRead || UsesLvarSeatbelt);
+        public bool SupportsNoSmokingSystem => !IsExplicitlyUnsupported(NoSmokingSource) && (SupportsFlagsRead || UsesLvarNoSmoking);
+        public bool SupportsApuSystem => HasApu && !IsExplicitlyUnsupported(ApuSource) && (SupportsApuRead || UsesLvarApu);
+        public bool SupportsBleedAirSystem => IsPressurized && !IsExplicitlyUnsupported(BleedAirSource);
     }
 }

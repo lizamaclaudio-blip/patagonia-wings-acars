@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System.Runtime.InteropServices;
 
 namespace PatagoniaWings.Acars.SimConnect
@@ -81,6 +81,8 @@ namespace PatagoniaWings.Acars.SimConnect
 
         public double TransponderState;
         public double TransponderCode;
+        public double TransponderStateBackup;
+        public double TransponderCodeBackup;
 
         public double CabinAltitudeFeet;
         public double PressureDiffPsi;

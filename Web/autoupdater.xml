@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>3.2.4.0</version>
+  <version>4.0.0.0</version>
   <url>https://patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>v3.2.4: filtro real por rango y aeropuerto para Cadete, itinerarios alineados y updater con reapertura estable.</changelog>
+  <changelog>v4.0.0: perfiles hibridos por aeronave, metadata web alineada y autoupdater listo.</changelog>
   <mandatory>false</mandatory>
 </item>
 

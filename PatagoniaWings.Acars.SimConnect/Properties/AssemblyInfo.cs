@@ -4,5 +4,5 @@ using System.Reflection;
 [assembly: AssemblyCompany("Patagonia Wings Virtual Airline")]
 [assembly: AssemblyProduct("Patagonia Wings ACARS")]
 [assembly: AssemblyCopyright("Copyright © 2026 Patagonia Wings")]
-[assembly: AssemblyVersion("3.1.9.0")]
-[assembly: AssemblyFileVersion("3.1.9.0")]
+[assembly: AssemblyVersion("4.0.0.0")]
+[assembly: AssemblyFileVersion("4.0.0.0")]

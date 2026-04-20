@@ -23,13 +23,16 @@
     "N1Source":  "turb_n1",
     "DoorSource":  "exit_open_0",
     "DoorOpenThresholdPercent":  5.0,
-    "SeatbeltSource":  "native",
-    "NoSmokingSource":  "native",
+    "SeatbeltSource":  "none",
+    "NoSmokingSource":  "none",
+    "AutopilotSource":  "native",
     "TransponderStateSource":  "native",
+    "ApuSource":  "none",
+    "BleedAirSource":  "none",
     "TransponderCodeFormat":  "bco16",
     "SupportsFuelRead":  true,
     "SupportsPayloadRead":  false,
-    "SupportsFlagsRead":  true,
+    "SupportsFlagsRead":  false,
     "SupportsParkingBrakeRead":  true,
     "SupportsApuRead":  false,
     "SupportsLightsRead":  true,
@@ -37,5 +40,6 @@
     "SupportsDoorRead":  false,
     "SupportsBatteryRead":  false,
     "SupportsAvionicsRead":  false,
-    "SupportsEngineRunRead":  true
+    "SupportsEngineRunRead":  true,
+    "CabinSystemsReliable":  false
 }

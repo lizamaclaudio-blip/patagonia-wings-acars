@@ -333,9 +333,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
             {
                 var ver = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())
                               ?.GetName()?.Version;
-                return ver == null ? "3.1.4" : $"{ver.Major}.{ver.Minor}.{ver.Build}";
+                return ver == null ? "4.0.0" : $"{ver.Major}.{ver.Minor}.{ver.Build}";
             }
-            catch { return "3.1.4"; }
+            catch { return "4.0.0"; }
         }
 
         private static string ReadSetting(string key, string fallback)

@@ -551,7 +551,8 @@
                             </StackPanel>
 
                             <!-- SEAT BELT -->
-                            <StackPanel Grid.Column="5" HorizontalAlignment="Center">
+                            <StackPanel Grid.Column="5" HorizontalAlignment="Center"
+                                        Visibility="{Binding ShowSeatbeltSystem, Converter={StaticResource BoolToVis}}">
                                 <Ellipse Width="20" Height="20" HorizontalAlignment="Center" Margin="0,0,0,5">
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">
@@ -582,7 +583,8 @@
                             </StackPanel>
 
                             <!-- NO SMOKING -->
-                            <StackPanel Grid.Column="6" HorizontalAlignment="Center">
+                            <StackPanel Grid.Column="6" HorizontalAlignment="Center"
+                                        Visibility="{Binding ShowNoSmokingSystem, Converter={StaticResource BoolToVis}}">
                                 <Ellipse Width="20" Height="20" HorizontalAlignment="Center" Margin="0,0,0,5">
                                     <Ellipse.Style>
                                         <Style TargetType="Ellipse">

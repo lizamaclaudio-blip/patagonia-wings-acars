@@ -700,7 +700,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 // Query directo a flight_reservations usando columnas reales de Supabase.
                 // Priorizamos estados realmente activos del flujo web -> ACARS.
                 var cs = Uri.EscapeDataString(pilotCallsign.Trim().ToUpperInvariant());
-                var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{cs}&status=in.(reserved,dispatch_ready,dispatched,in_progress,in_flight)&order=updated_at.desc.nullslast,created_at.desc.nullslast&limit=5";
+                var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{cs}&status=in.(reserved,dispatched,in_progress)&order=updated_at.desc.nullslast,created_at.desc.nullslast&limit=5";
                 using (var req = CreateSupabaseRequest(HttpMethod.Get, directEp, true))
                 {
                     var resp = await _http.SendAsync(req);
@@ -715,8 +715,15 @@ namespace PatagoniaWings.Acars.Core.Services
                                 var row = item as Dictionary<string, object>;
                                 if (row == null) continue;
                                 var st = FirstNonEmpty(row, "status").Trim().ToLowerInvariant();
-                                // Prioridad: dispatched / in_flight primero, luego cualquier activa
-                                if (st == "dispatched" || st == "dispatch_ready" || st == "in_progress" || st == "in_flight")
+
+                                // Compatibilidad legacy solo de lectura:
+                                // dispatch_ready -> dispatched
+                                // in_flight      -> in_progress
+                                if (st == "dispatch_ready") st = "dispatched";
+                                if (st == "in_flight") st = "in_progress";
+
+                                // Prioridad: dispatched / in_progress primero, luego cualquier activa.
+                                if (st == "dispatched" || st == "in_progress")
                                 { selectedRow = row; break; }
                                 if (selectedRow == null) selectedRow = row;
                             }
@@ -854,7 +861,7 @@ namespace PatagoniaWings.Acars.Core.Services
                     // route_text y remarks no existen en flight_reservations; van en dispatch_packages.
                     var payload = _json.Serialize(new
                     {
-                        status = "in_flight",
+                        status = "in_progress",
                         updated_at = nowUtc
                     });
                     request.Content = new StringContent(payload, Encoding.UTF8, "application/json");

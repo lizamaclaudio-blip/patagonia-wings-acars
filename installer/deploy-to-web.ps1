@@ -50,7 +50,7 @@ if (-not (Test-Path -LiteralPath $webPublic)) {
 
 $genericInstallerName = "PatagoniaWingsACARSSetup.exe"
 $versionedInstallerName = "PatagoniaWingsACARSSetup-$appVersion.exe"
-$storageReleaseSuffix = "-r1"
+$storageReleaseSuffix = "-r2"
 $storageInstallerName = "PatagoniaWingsACARSSetup-$appVersion$storageReleaseSuffix.exe"
 $storageManifestName = "acars-update-$appVersion$storageReleaseSuffix.json"
 $storageXmlName = "autoupdater-$appVersion$storageReleaseSuffix.xml"
@@ -72,7 +72,7 @@ $manifestObject = [ordered]@{
     webVersion = "2.0"
     downloadUrl = $downloadUrl
     mandatory = $false
-    notes = "- Cierre oficial ACARS end-to-end con live view y closeout oficial`n- PIREP oculto + score oficial server-side persistidos`n- Updater 3.2.7 con splash real y relanzado automático"
+    notes = "- Version 4.0.0 con sistema hibrido por perfil de aeronave`n- Maddog habilitado en pipeline LVAR/FSUIPC/MobiFlight sin romper C208 ni PMDG`n- Metadatos web y autoupdater alineados a la release real"
     releaseDate = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
     minVersion = "2.0.5"
     fileSize = "$sizeMB MB"
@@ -85,7 +85,7 @@ $xmlContent = @"
 <item>
   <version>$appVersion.0</version>
   <url>$downloadUrl</url>
-  <changelog>v${appVersion}: cierre oficial ACARS, live view, splash real y relanzado automático.</changelog>
+  <changelog>v${appVersion}: perfiles hibridos por aeronave, release 4.0.0 y autoupdater alineado.</changelog>
   <mandatory>false</mandatory>
 </item>
 "@
@@ -96,9 +96,9 @@ Set-Content -LiteralPath $xmlPath -Value $xmlContent -Encoding UTF8
 Set-Content -LiteralPath $versionedXmlPath -Value $xmlContent -Encoding UTF8
 
 $uploadEntries = @(
-    @{ objectName = $storageInstallerName; sourcePath = $versionedInstallerPath }
-    @{ objectName = $storageManifestName; sourcePath = $manifestPath }
-    @{ objectName = $storageXmlName; sourcePath = $xmlPath }
+    @{ objectName = $storageInstallerName; sourcePath = $versionedInstallerPath; deleteFirst = $true }
+    @{ objectName = $storageManifestName; sourcePath = $manifestPath; deleteFirst = $true }
+    @{ objectName = $storageXmlName; sourcePath = $xmlPath; deleteFirst = $true }
 )
 
 $uploadScriptPath = Join-Path $env:TEMP "patagonia-acars-upload.js"
@@ -112,20 +112,23 @@ const entries = JSON.parse(process.env.UPLOAD_ENTRIES_JSON);
 (async () => {
   for (const entry of entries) {
     const payload = fs.readFileSync(entry.sourcePath);
+    if (entry.deleteFirst) {
+      const removeResult = await supabase.storage.from("acars-releases").remove([entry.objectName]);
+      if (removeResult.error && !String(removeResult.error.message || "").includes("not found")) {
+        throw removeResult.error;
+      }
+    }
+
     const { error } = await supabase.storage
       .from("acars-releases")
       .upload(entry.objectName, payload, {
-        upsert: true,
+        upsert: !entry.deleteFirst,
         contentType: "application/octet-stream",
         cacheControl: "no-cache",
       });
 
     if (error) {
-      const { data } = supabase.storage.from("acars-releases").getPublicUrl(entry.objectName);
-      const response = await fetch(data.publicUrl, { method: "HEAD" });
-      if (!response.ok) {
-        throw error;
-      }
+      throw error;
     }
   }
 })().catch((error) => {

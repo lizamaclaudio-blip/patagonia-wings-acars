@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PatagoniaWings.Acars.Core.Models;
@@ -52,6 +52,7 @@ namespace PatagoniaWings.Acars.Core.Services
         /// false = esos sistemas NO se usan como penalidad dura (Rule 14 matriz Patagonia Wings).
         /// </summary>
         private readonly bool _cabinSystemsReliable;
+        private readonly bool _isC208Family;
 
         public FlightEvaluationService(
             IReadOnlyList<SimData> telemetryLog,
@@ -73,6 +74,7 @@ namespace PatagoniaWings.Acars.Core.Services
             _departureElevationFt = departureElevationFt;
             _arrivalElevationFt = arrivalElevationFt;
             _cabinSystemsReliable = cabinSystemsReliable;
+            _isC208Family = LooksLikeC208Family(_aircraftIcao, _aircraftName);
         }
 
         // ── Punto de entrada ───────────────────────────────────────────────────
@@ -271,7 +273,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 Penalize(violations, ref score, "TO-06", "TO", "Transponder no en Modo C al despegar", -4);
 
             // TO-08: Señal de cinturones — solo si perfil confiable
-            if (_cabinSystemsReliable && rollSamples.Count(s => !s.SeatBeltSign) > rollSamples.Count / 3)
+            if (ShouldScoreSeatbeltSignals() && rollSamples.Count(s => !s.SeatBeltSign) > rollSamples.Count / 3)
                 Penalize(violations, ref score, "TO-08", "TO", "Señal de cinturones apagada al despegar", -4);
 
             // TO-10: Retracción del tren — detectar si el tren tardó más de 30 seg en subirse
@@ -352,7 +354,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 Penalize(violations, ref score, "CRU-06", "CRU", "Banco >45° en crucero", -5);
 
             // CRU-07: Señal de cinturones en turbulencia — solo si perfil confiable
-            if (_cabinSystemsReliable && cruSamples.Count(s => Math.Abs(s.Bank) > 20 && !s.SeatBeltSign) > 5)
+            if (ShouldScoreSeatbeltSignals() && cruSamples.Count(s => Math.Abs(s.Bank) > 20 && !s.SeatBeltSign) > 5)
                 Penalize(violations, ref score, "CRU-07", "CRU", "Sin señal de cinturones en maniobra/turbulencia", -3);
         }
 
@@ -414,7 +416,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 Penalize(violations, ref score, "APP-03", "LDG", "Luces LANDING apagadas en aproximación", -5);
 
             // APP-04: Señal de cinturones
-            if (appSamples.Count(s => !s.SeatBeltSign) > appSamples.Count / 2)
+            if (ShouldScoreSeatbeltSignals() && appSamples.Count(s => !s.SeatBeltSign) > appSamples.Count / 2)
                 Penalize(violations, ref score, "APP-04", "LDG", "Señal de cinturones apagada en aproximación", -4);
 
             // APP-05: Aproximación no estabilizada bajo 1000 ft (VS >1000 fpm a baja altitud)
@@ -442,7 +444,7 @@ namespace PatagoniaWings.Acars.Core.Services
                     Penalize(violations, ref score, "LDG-03", "LDG", "Luces STROBE apagadas al aterrizar", -4);
                 if (touchSamples.Count(s => !s.BeaconLightsOn) > touchSamples.Count / 2)
                     Penalize(violations, ref score, "LDG-04", "LDG", "Luces BEACON apagadas al aterrizar", -4);
-                if (touchSamples.Count(s => !s.SeatBeltSign) > touchSamples.Count / 2)
+                if (ShouldScoreSeatbeltSignals() && touchSamples.Count(s => !s.SeatBeltSign) > touchSamples.Count / 2)
                     Penalize(violations, ref score, "LDG-06", "LDG", "Señal de cinturones apagada al aterrizar", -4);
             }
 
@@ -535,8 +537,21 @@ namespace PatagoniaWings.Acars.Core.Services
                 Penalize(violations, ref score, "PAR-04", "PAR", "Luces BEACON encendidas con motores apagados", -3);
 
             // PAR-12: Señal de cinturones apagada en parking
-            if (lastSamples.Count > 0 && lastSamples.Count(s => s.SeatBeltSign) > lastSamples.Count / 2)
+            if (ShouldScoreSeatbeltSignals() && lastSamples.Count > 0 && lastSamples.Count(s => s.SeatBeltSign) > lastSamples.Count / 2)
                 Penalize(violations, ref score, "PAR-12", "PAR", "Señal de cinturones encendida en parking", -2);
+        }
+
+        private bool ShouldScoreSeatbeltSignals()
+        {
+            return _cabinSystemsReliable && !_isC208Family;
+        }
+
+        private static bool LooksLikeC208Family(string aircraftIcao, string aircraftName)
+        {
+            var combined = ((aircraftIcao ?? string.Empty) + " " + (aircraftName ?? string.Empty)).ToUpperInvariant();
+            return combined.Contains("C208")
+                || combined.Contains("CARAVAN")
+                || combined.Contains("GRAND CARAVAN");
         }
 
         // ══════════════════════════════════════════════════════════════════════

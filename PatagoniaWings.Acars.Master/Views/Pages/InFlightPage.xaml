@@ -431,7 +431,7 @@
                         </Border>
                     </Grid>
 
-                    <!-- Transponder (ON/OFF simple) -->
+                    <!-- Transponder (OFF / STBY / TEST / ON / ALT) -->
                     <Grid Margin="0,0,0,3" Visibility="{Binding ShowTransponderSystem, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Transponder" Style="{StaticResource SysLabel}"/>
@@ -441,21 +441,40 @@
                                     <Setter Property="Background" Value="#FEE2E2"/>
                                     <Setter Property="BorderBrush" Value="#FCA5A5"/>
                                     <Style.Triggers>
+                                        <DataTrigger Binding="{Binding LiveTransponderStandby}" Value="True">
+                                            <Setter Property="Background" Value="#FEF3C7"/>
+                                            <Setter Property="BorderBrush" Value="#FCD34D"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding LiveTransponderTest}" Value="True">
+                                            <Setter Property="Background" Value="#EDE9FE"/>
+                                            <Setter Property="BorderBrush" Value="#C4B5FD"/>
+                                        </DataTrigger>
                                         <DataTrigger Binding="{Binding LiveTransponderOn}" Value="True">
+                                            <Setter Property="Background" Value="#DBEAFE"/>
+                                            <Setter Property="BorderBrush" Value="#93C5FD"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding LiveTransponderModeC}" Value="True">
                                             <Setter Property="Background" Value="#D1FAE5"/>
                                             <Setter Property="BorderBrush" Value="#6EE7B7"/>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Border.Style>
-                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
+                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI" Text="{Binding TransponderModeDisplay}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="OFF"/>
                                         <Setter Property="Foreground" Value="#991B1B"/>
                                         <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LiveTransponderStandby}" Value="True">
+                                                <Setter Property="Foreground" Value="#92400E"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding LiveTransponderTest}" Value="True">
+                                                <Setter Property="Foreground" Value="#5B21B6"/>
+                                            </DataTrigger>
                                             <DataTrigger Binding="{Binding LiveTransponderOn}" Value="True">
-                                                <Setter Property="Text" Value="ON"/>
+                                                <Setter Property="Foreground" Value="#1D4ED8"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding LiveTransponderModeC}" Value="True">
                                                 <Setter Property="Foreground" Value="#065F46"/>
                                             </DataTrigger>
                                         </Style.Triggers>
@@ -605,34 +624,39 @@
                     <Grid Visibility="{Binding ShowDoorsSystem, Converter={StaticResource BoolVis}}">
                         <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
                         <TextBlock Grid.Column="0" Text="Doors" Style="{StaticResource SysLabel}"/>
-                        <Border Grid.Column="1">
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
-                                    <Setter Property="Background" Value="#D1FAE5"/>
-                                    <Setter Property="BorderBrush" Value="#6EE7B7"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding LiveDoorOpen}" Value="True">
-                                            <Setter Property="Background" Value="#FEE2E2"/>
-                                            <Setter Property="BorderBrush" Value="#FCA5A5"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
-                                <TextBlock.Style>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="Text" Value="CLOSED"/>
-                                        <Setter Property="Foreground" Value="#065F46"/>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Border Margin="0,0,6,0">
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource PillOff}">
+                                        <Setter Property="Background" Value="#D1FAE5"/>
+                                        <Setter Property="BorderBrush" Value="#6EE7B7"/>
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding LiveDoorOpen}" Value="True">
-                                                <Setter Property="Text" Value="OPEN"/>
-                                                <Setter Property="Foreground" Value="#991B1B"/>
+                                                <Setter Property="Background" Value="#FEE2E2"/>
+                                                <Setter Property="BorderBrush" Value="#FCA5A5"/>
                                             </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
-                                </TextBlock.Style>
-                            </TextBlock>
-                        </Border>
+                                </Border.Style>
+                                <TextBlock FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Text" Value="CLOSED"/>
+                                            <Setter Property="Foreground" Value="#065F46"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding LiveDoorOpen}" Value="True">
+                                                    <Setter Property="Text" Value="OPEN"/>
+                                                    <Setter Property="Foreground" Value="#991B1B"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                            <Border Background="#EFF6FF" BorderBrush="#BFDBFE" BorderThickness="1" CornerRadius="10" Padding="7,2">
+                                <TextBlock Text="{Binding DoorOpenPercentDisplay, FallbackValue=---}" FontSize="9" FontWeight="SemiBold" FontFamily="Segoe UI" Foreground="#1D4ED8"/>
+                            </Border>
+                        </StackPanel>
                     </Grid>
                 </StackPanel>
             </Border>

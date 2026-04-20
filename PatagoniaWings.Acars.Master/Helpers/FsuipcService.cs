@@ -36,21 +36,27 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private bool _hasReceivedData;
 
+        private int _lastTraceXpdrRaw = int.MinValue;
+        private int _lastTraceXpdrCode = int.MinValue;
+        private int _lastTraceAutopilotComposite = int.MinValue;
+        private int _lastTraceXpdrRawByte = int.MinValue;
+        private int _lastTraceXpdrRawWord = int.MinValue;
+
 
 
         // ── Posición / Actitud (float64 nativo FSUIPC7) ──────────────────────
 
-        private Offset<double>? _lat;
+        private Offset<long>? _lat;
 
-        private Offset<double>? _lon;
+        private Offset<long>? _lon;
 
-        private Offset<double>? _altM;       // metros MSL
+        private Offset<long>? _altM;       // unidades FSUIPC/FS
 
-        private Offset<double>? _hdg;
+        private Offset<int>? _hdg;
 
-        private Offset<double>? _pitch;
+        private Offset<int>? _pitch;
 
-        private Offset<double>? _bank;
+        private Offset<int>? _bank;
 
 
 
@@ -72,7 +78,13 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private Offset<int>?   _parkingBrake;
 
-        private Offset<short>? _autopilot;
+        private Offset<int>?   _autopilotMaster;
+        private Offset<int>?   _autopilotWingLeveler;
+        private Offset<int>?   _autopilotNavLock;
+        private Offset<int>?   _autopilotHeadingLock;
+        private Offset<int>?   _autopilotAltitudeLock;
+        private Offset<int>?   _autopilotGlideslopeHold;
+        private Offset<int>?   _autopilotApproachHold;
 
         private Offset<short>? _pause;
 
@@ -122,9 +134,11 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         // ── Aviónica ──────────────────────────────────────────────────────────
 
-        private Offset<short>? _xpdrCode;
+        private Offset<ushort>? _xpdrCode;
 
-        private Offset<short>? _xpdrMode;
+        private Offset<byte>?   _xpdrModeByte;
+
+        private Offset<short>?  _xpdrModeWord;
 
 
 
@@ -170,7 +184,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             FSUIPCConnection.Process();
 
-            Debug.WriteLine($"[FSUIPC] Primera lectura - LAT={_lat?.Value:F6} LON={_lon?.Value:F6} ALT={_altM?.Value:F2}");
+            Debug.WriteLine($"[FSUIPC] Primera lectura raw - LAT={_lat?.Value ?? 0} LON={_lon?.Value ?? 0} ALT={_altM?.Value ?? 0}");
 
             if (_lat?.Value == 0 && _lon?.Value == 0 && _altM?.Value == 0)
 
@@ -196,17 +210,17 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         {
 
-            _lat          = new Offset<double>(0x0560);  // Latitude (radians)
+            _lat          = new Offset<long>(0x0560);  // Latitude (FS units)
 
-            _lon          = new Offset<double>(0x0568);  // Longitude (radians)
+            _lon          = new Offset<long>(0x0568);  // Longitude (FS units)
 
-            _altM         = new Offset<double>(0x0570);  // Altitude (meters MSL)
+            _altM         = new Offset<long>(0x0570);  // Altitude (FS units)
 
-            _hdg          = new Offset<double>(0x0578);  // Heading (radians, 0-2PI)
+            _pitch        = new Offset<int>(0x0578);   // Pitch
 
-            _pitch        = new Offset<double>(0x0580);  // Pitch (radians)
+            _bank         = new Offset<int>(0x057C);   // Bank
 
-            _bank         = new Offset<double>(0x0588);  // Bank (radians)
+            _hdg          = new Offset<int>(0x0580);   // Heading true
 
 
 
@@ -224,7 +238,13 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             _parkingBrake = new Offset<int>(0x0BC8);
 
-            _autopilot    = new Offset<short>(0x07DC);  // AP Master (FSUIPC7/MSFS — 0x07D0 = Attitude Hold, 0x07DC = AP Master)
+            _autopilotMaster        = new Offset<int>(0x07BC);  // AUTOPILOT MASTER
+            _autopilotWingLeveler   = new Offset<int>(0x07C0);  // AUTOPILOT WING LEVELER
+            _autopilotNavLock       = new Offset<int>(0x07C4);  // AUTOPILOT NAV1 LOCK
+            _autopilotHeadingLock   = new Offset<int>(0x07C8);  // AUTOPILOT HEADING LOCK
+            _autopilotAltitudeLock  = new Offset<int>(0x07D0);  // AUTOPILOT ALTITUDE LOCK
+            _autopilotGlideslopeHold = new Offset<int>(0x07FC); // AUTOPILOT GLIDESLOPE HOLD
+            _autopilotApproachHold  = new Offset<int>(0x0800);  // AUTOPILOT APPROACH HOLD
 
             _pause        = new Offset<short>(0x0264);
 
@@ -266,9 +286,11 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
 
 
-            _xpdrCode     = new Offset<short>(0x0354);
+            _xpdrCode     = new Offset<ushort>(0x0354);
 
-            _xpdrMode     = new Offset<short>(0x0C3A);
+            _xpdrModeByte = new Offset<byte>(0x0B46);
+
+            _xpdrModeWord = new Offset<short>(0x0B46);
 
         }
 
@@ -292,7 +314,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                     // Log valores raw para debug
 
-                    Debug.WriteLine($"[FSUIPC POLL] LAT={_lat?.Value:F4} LON={_lon?.Value:F4} ALT={_altM?.Value:F0} IAS={_ias?.Value}");
+                    Debug.WriteLine($"[FSUIPC POLL] LATraw={_lat?.Value ?? 0} LONraw={_lon?.Value ?? 0} ALTraw={_altM?.Value ?? 0} IAS={_ias?.Value}");
 
                     
 
@@ -372,7 +394,15 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             short lights  = _lights?.Value  ?? 0;
 
-            double altFt  = (_altM?.Value ?? 0) * 3.28084;
+            long latRaw   = _lat?.Value ?? 0L;
+            long lonRaw   = _lon?.Value ?? 0L;
+            long altRaw   = _altM?.Value ?? 0L;
+            int pitchRaw  = _pitch?.Value ?? 0;
+            int bankRaw   = _bank?.Value ?? 0;
+            int hdgRaw    = _hdg?.Value ?? 0;
+
+            double altM   = altRaw / (65536.0 * 65536.0);
+            double altFt  = altM * 3.28084;
 
             double gndFt  = (_groundAltFt?.Value ?? 0) / 65536.0;
 
@@ -404,7 +434,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             // DEBUG: Mostrar valores raw de posición y fuel
 
-            Debug.WriteLine($"[FSUIPC POS RAW] LAT={_lat?.Value:F6} LON={_lon?.Value:F6} ALT={_altM?.Value:F2}");
+            Debug.WriteLine($"[FSUIPC POS RAW] LAT={latRaw} LON={lonRaw} ALT={altRaw}");
 
             Debug.WriteLine($"[FSUIPC FUEL RAW] 0x0B74={fuelStandard:F2} 0x0B78={fuelLbsDirect:F2} 0x126C={fuelCapacity:F2}");
 
@@ -458,23 +488,76 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
 
 
-            // Convertir radianes a grados
+            // Convertir unidades FSUIPC/FS a grados reales
 
-            double latDeg = (_lat?.Value ?? 0) * 180.0 / Math.PI;
+            double latDeg = latRaw * (90.0 / (10001750.0 * 65536.0 * 65536.0));
 
-            double lonDeg = (_lon?.Value ?? 0) * 180.0 / Math.PI;
+            double lonDeg = lonRaw * (360.0 / (65536.0 * 65536.0 * 65536.0 * 65536.0));
 
-            double hdgDeg = (_hdg?.Value ?? 0) * 180.0 / Math.PI;
+            double hdgDeg = hdgRaw * (360.0 / (65536.0 * 65536.0));
 
-            double pitchDeg = (_pitch?.Value ?? 0) * 180.0 / Math.PI;
+            double pitchDeg = pitchRaw * (360.0 / (65536.0 * 65536.0));
 
-            double bankDeg = (_bank?.Value ?? 0) * 180.0 / Math.PI;
+            double bankDeg = bankRaw * (360.0 / (65536.0 * 65536.0));
 
             if (hdgDeg < 0) hdgDeg += 360;
 
             if (hdgDeg >= 360) hdgDeg -= 360;
 
             
+
+            int apMaster = _autopilotMaster?.Value ?? 0;
+            int apWing = _autopilotWingLeveler?.Value ?? 0;
+            int apNav = _autopilotNavLock?.Value ?? 0;
+            int apHdg = _autopilotHeadingLock?.Value ?? 0;
+            int apAlt = _autopilotAltitudeLock?.Value ?? 0;
+            int apGs = _autopilotGlideslopeHold?.Value ?? 0;
+            int apApp = _autopilotApproachHold?.Value ?? 0;
+
+            bool autopilotOn =
+                apMaster != 0 ||
+                apWing != 0 ||
+                apNav != 0 ||
+                apHdg != 0 ||
+                apAlt != 0 ||
+                apGs != 0 ||
+                apApp != 0;
+
+            int autopilotComposite = autopilotOn ? 1 : 0;
+
+            int xpdrModeRawByte = _xpdrModeByte?.Value ?? 0;
+            int xpdrModeRawWord = _xpdrModeWord?.Value ?? 0;
+            int xpdrModeRaw = ChooseXpdrModeRaw(xpdrModeRawByte, xpdrModeRawWord);
+            int xpdrStateRaw = NormalizeXpdrState(xpdrModeRaw);
+            int xpdrCode = DecodeBcd16(_xpdrCode?.Value ?? 0);
+
+            if (autopilotComposite != _lastTraceAutopilotComposite
+                || xpdrStateRaw != _lastTraceXpdrRaw
+                || xpdrCode != _lastTraceXpdrCode
+                || xpdrModeRawByte != _lastTraceXpdrRawByte
+                || xpdrModeRawWord != _lastTraceXpdrRawWord)
+            {
+                _lastTraceAutopilotComposite = autopilotComposite;
+                _lastTraceXpdrRaw = xpdrStateRaw;
+                _lastTraceXpdrCode = xpdrCode;
+                _lastTraceXpdrRawByte = xpdrModeRawByte;
+                _lastTraceXpdrRawWord = xpdrModeRawWord;
+
+                Debug.WriteLine("[FSUIPC AVIONICS] AP master=" + apMaster
+                    + " wing=" + apWing
+                    + " nav=" + apNav
+                    + " hdg=" + apHdg
+                    + " alt=" + apAlt
+                    + " gs=" + apGs
+                    + " app=" + apApp
+                    + " final=" + (autopilotOn ? "ON" : "OFF")
+                    + " | XPDR byte=" + xpdrModeRawByte
+                    + " word=" + xpdrModeRawWord
+                    + " chosen=" + xpdrModeRaw
+                    + " norm=" + xpdrStateRaw
+                    + " squawk=" + xpdrCode
+                    + " final=" + (xpdrStateRaw >= 3 ? "ON" : "OFF"));
+            }
 
             return new SimData
 
@@ -506,7 +589,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 ParkingBrake      = (_parkingBrake?.Value ?? 0) != 0,
 
-                AutopilotActive   = (_autopilot?.Value   ?? 0) != 0,
+                AutopilotActive   = autopilotOn,
 
                 Pause             = (_pause?.Value       ?? 0) != 0,
 
@@ -552,9 +635,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 NoSmokingSign      = (_noSmoking?.Value ?? 0) != 0,
 
-                TransponderCode    = DecodeBcd16(_xpdrCode?.Value ?? 0),
-
-                TransponderCharlieMode = (_xpdrMode?.Value ?? 0) >= 3,
+                TransponderCode    = xpdrCode,
+                TransponderStateRaw = xpdrStateRaw,
+                TransponderCharlieMode = xpdrStateRaw >= 3,
 
                 SimulatorType      = SimulatorType.MSFS2020,
 
@@ -584,13 +667,27 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
 
 
+        private static int NormalizeXpdrState(int rawState)
+        {
+            if (rawState < 0) return 0;
+            if (rawState > 5) return 0;
+            return rawState;
+        }
+
         /// <summary>
         /// Decodifica código de squawk desde formato BCD16 (usado por FSUIPC offset 0x0354).
         /// En BCD16, cada nibble de 4 bits representa un dígito octal: 7700 → 0x7700 = 30464 → 7700.
         /// </summary>
-        private static int DecodeBcd16(short bcdValue)
+        private static int ChooseXpdrModeRaw(int rawByte, int rawWord)
         {
-            var val = (int)(ushort)bcdValue; // tratar como unsigned
+            if (rawByte >= 0 && rawByte <= 5) return rawByte;
+            if (rawWord >= 0 && rawWord <= 5) return rawWord;
+            return 0;
+        }
+
+        private static int DecodeBcd16(ushort bcdValue)
+        {
+            var val = (int)bcdValue; // tratar como unsigned
             int d3 = (val >> 12) & 0xF;
             int d2 = (val >> 8)  & 0xF;
             int d1 = (val >> 4)  & 0xF;
@@ -615,4 +712,3 @@ namespace PatagoniaWings.Acars.Master.Helpers
     }
 
 }
-
