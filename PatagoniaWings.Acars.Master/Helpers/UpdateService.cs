@@ -13,19 +13,17 @@ using AutoUpdaterDotNET;
 namespace PatagoniaWings.Acars.Master.Helpers
 {
     /// <summary>
-    /// ActualizaciÃ³n automÃ¡tica y silenciosa.
-    ///
-    /// Flujo completo:
-        ///  1. Detecta versiÃ³n nueva leyendo autoupdater.xml desde producciÃ³n.
-    ///  2. Muestra un banner de progreso dentro de la ventana principal.
-    ///  3. Descarga el instalador en background con progreso visible al usuario.
-    ///  4. Escribe un archivo flag antes de cerrar para detectar "reciÃ©n actualizado" al reabrir.
-    ///  5. Lanza un CMD diferido (+5 s) que ejecuta el instalador con /VERYSILENT.
-    ///  6. Inno Setup [Run] con Check:WizardSilent reabre el ACARS automÃ¡ticamente.
-    ///  7. Al iniciar, si existe el flag, muestra "âœ“ Actualizado a vX.X.X" y borra el flag.
+    /// Flujo de autoupdate interno.
+    /// 1. Lee autoupdater.xml publicado.
+    /// 2. Compara version remota vs local.
+    /// 3. Descarga el instalador nuevo.
+    /// 4. Valida que el archivo descargado sea utilizable.
+    /// 5. Cierra la app, instala en modo silencioso y relanza.
+    /// 6. Al volver, muestra toast de post-update.
     /// </summary>
     public static class UpdateService
     {
+        // Fuente unica de deteccion remota. Cada release futura debe actualizar este XML.
         private static string AutoUpdaterXmlUrl =>
             ReadSetting("AutoUpdaterXmlUrl", "https://patagoniaw.com/downloads/autoupdater.xml");
 
@@ -35,9 +33,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static readonly string SplashCloseFlagPath =
             Path.Combine(Path.GetTempPath(), "PatagoniaWings_UpdateSplashClose.txt");
 
-        // Cooldown: no volver a verificar si ya se verificÃ³ hace menos de 10 minutos
+        // Evita dobles chequeos cuando la ventana se recrea o el usuario vuelve al login.
         private static DateTime _lastCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(10);
+        private const long MinimumInstallerSizeBytes = 1024 * 1024;
 
         // â”€â”€ Eventos para la barra de progreso dentro del ACARS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         /// <summary>Progreso de descarga 0-100. Se dispara en el thread de background.</summary>
@@ -81,6 +80,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             WriteLog($"Checking updates. Installed={CurrentVersion}");
             try
             {
+                // AutoUpdater.NET hace la lectura del XML remoto y dispara OnCheckForUpdate.
                 AutoUpdater.Start(AutoUpdaterXmlUrl);
             }
             catch (Exception ex)
@@ -156,14 +156,19 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             var downloadUrl = args?.DownloadURL ?? string.Empty;
             if (string.IsNullOrWhiteSpace(downloadUrl)) return;
+            if (!IsSupportedInstallerUrl(downloadUrl))
+            {
+                WriteLog($"Download URL rechazada: {downloadUrl}");
+                return;
+            }
 
             WriteLog($"Nueva versiÃ³n {available} detectada. Iniciando descarga silenciosa: {downloadUrl}");
 
-            // Notificar status inicial â†’ la barra del ACARS se hace visible
+            // La UI se entera desde aqui que ya hay update real y visible para el usuario.
             UpdateStatusChanged?.Invoke($"Descargando actualizaciÃ³n {installed} → {available}...");
             DownloadProgressChanged?.Invoke(0);
 
-            // Descargar e instalar en background
+            // La descarga y aplicacion corren fuera del hilo UI para no congelar el ACARS.
             Task.Run(async () => await DownloadAndInstallSilentAsync(downloadUrl, available));
         }
 
@@ -190,6 +195,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     await client.DownloadFileTaskAsync(new Uri(downloadUrl), installerPath);
                 }
 
+                // Validacion local: antes de cerrar la app confirmamos que el instalador existe,
+                // pesa lo esperado y mantiene cabecera PE valida.
+                ValidateDownloadedInstaller(installerPath, version);
                 WriteLog("Descarga completada. Preparando instalaciÃ³n.");
 
                 // Notificar que la descarga terminÃ³
@@ -199,7 +207,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 // Esperar 2 s para que el usuario vea el mensaje final
                 await Task.Delay(2000);
 
-                // Escribir flag ANTES de cerrar â€” al reabrir el ACARS verÃ¡ que acaba de actualizar
+                // El flag permite distinguir un inicio normal de un relanzado post-update.
                 try { File.WriteAllText(JustUpdatedFlagPath, version); } catch { }
                 var splashScriptPath = Path.Combine(tempDir, "show_update_splash.ps1");
                 var appExePath = GetInstalledExePath();
@@ -217,7 +225,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 Process.Start(psi);
                 WriteLog("Script de instalaciÃ³n lanzado. Cerrando ACARS.");
 
-                // Cerrar el ACARS en el hilo UI
+                // Cerramos recien cuando el instalador y el script ya estan listos.
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
                     WriteLog("Application.Shutdown() â€” instalador tomarÃ¡ control en ~5s.");
@@ -314,6 +322,30 @@ namespace PatagoniaWings.Acars.Master.Helpers
             }
         }
 
+        private static bool IsSupportedInstallerUrl(string downloadUrl)
+        {
+            if (!Uri.TryCreate(downloadUrl, UriKind.Absolute, out var uri))
+                return false;
+
+            return uri.Scheme == Uri.UriSchemeHttps &&
+                   uri.AbsolutePath.EndsWith(".exe", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void ValidateDownloadedInstaller(string installerPath, string version)
+        {
+            var info = new FileInfo(installerPath);
+            if (!info.Exists)
+                throw new InvalidOperationException($"No existe el instalador descargado para v{version}.");
+
+            if (info.Length < MinimumInstallerSizeBytes)
+                throw new InvalidOperationException($"El instalador descargado para v{version} es demasiado pequeño.");
+
+            using var stream = File.OpenRead(installerPath);
+            var header = new byte[2];
+            if (stream.Read(header, 0, header.Length) != header.Length || header[0] != 'M' || header[1] != 'Z')
+                throw new InvalidOperationException($"El instalador descargado para v{version} no es un ejecutable válido.");
+        }
+
         private static string NormalizeVersion(string value)
         {
             var raw    = string.IsNullOrWhiteSpace(value) ? "0" : value.Trim();
@@ -394,6 +426,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
             string Escape(string value) => value.Replace("'", "''");
             var appDirectory = Path.GetDirectoryName(appExePath) ?? AppDomain.CurrentDomain.BaseDirectory;
 
+            // Este script hace la ultima milla:
+            // instala en silencio, espera a que termine y relanza la app nueva sin pedir accion manual.
             return
                 "Add-Type -AssemblyName System.Windows.Forms\r\n" +
                 "Add-Type -AssemblyName System.Drawing\r\n" +

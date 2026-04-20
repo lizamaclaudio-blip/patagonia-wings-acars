@@ -36,6 +36,8 @@ namespace PatagoniaWings.Acars.Master.Views
         {
             LoadRememberedCredentials();
 
+            // El login es el primer punto estable del cliente:
+            // aqui disparamos la deteccion del update una sola vez por ventana.
             if (!_updateCheckStarted)
             {
                 _updateCheckStarted = true;

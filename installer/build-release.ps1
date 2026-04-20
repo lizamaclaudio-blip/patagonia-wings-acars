@@ -11,6 +11,9 @@ $releaseDir = Join-Path $root "release"
 $installerScript = Join-Path $PSScriptRoot "PatagoniaWingsACARSSetup.iss"
 $appConfigPath = Join-Path $root "PatagoniaWings.Acars.Master\\App.config"
 
+# La version del release sale de App.config.
+# Si cambia AppVersion, build-release y deploy-to-web publican la misma version.
+
 $innoSetupPaths = @(
     "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
     "C:\Program Files\Inno Setup 6\ISCC.exe",

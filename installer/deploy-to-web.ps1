@@ -7,6 +7,10 @@ $releaseDir = Join-Path $root "release"
 $officialWebRoot = "C:\Users\lizam\Desktop\PROYECTO PATAGONIA WINGS\PatagoniaWingsACARS\PATAGONIA WINGS WEB 2.0\patagonia-wings-site"
 $webPublic = Join-Path $officialWebRoot "public\downloads"
 
+# Este script deja alineados los dos carriles del updater:
+# 1) los archivos public/downloads que consumen clientes legacy
+# 2) los objetos versionados en Supabase que consume App.config
+
 if (-not (Test-Path -LiteralPath $appConfigPath)) {
     throw "App.config no encontrado: $appConfigPath"
 }
@@ -22,18 +26,27 @@ $supabaseUrl = $settings["SupabaseUrl"]
 $storagePublicBase = "$supabaseUrl/storage/v1/object/public/acars-releases"
 $webEnvPath = Join-Path $officialWebRoot ".env.local"
 $supabasePublishableKey = $null
+$supabaseStorageWriteKey = $env:SUPABASE_SERVICE_ROLE_KEY
 
 if (Test-Path -LiteralPath $webEnvPath) {
     foreach ($line in Get-Content -LiteralPath $webEnvPath) {
         if ($line -match "^NEXT_PUBLIC_SUPABASE_ANON_KEY=(.+)$") {
             $supabasePublishableKey = $matches[1].Trim()
-            break
+            continue
+        }
+
+        if ($line -match "^SUPABASE_SERVICE_ROLE_KEY=(.+)$") {
+            $supabaseStorageWriteKey = $matches[1].Trim()
         }
     }
 }
 
 if ([string]::IsNullOrWhiteSpace($supabasePublishableKey)) {
     $supabasePublishableKey = $settings["SupabaseAnonKey"]
+}
+
+if ([string]::IsNullOrWhiteSpace($supabaseStorageWriteKey)) {
+    throw "Falta SUPABASE_SERVICE_ROLE_KEY para escribir releases en Supabase storage. Los archivos public/downloads si quedan listos, pero la subida versionada requiere esa clave."
 }
 
 $releaseVersioned = Join-Path $releaseDir "PatagoniaWingsACARSSetup-$appVersion.exe"
@@ -96,9 +109,9 @@ Set-Content -LiteralPath $xmlPath -Value $xmlContent -Encoding UTF8
 Set-Content -LiteralPath $versionedXmlPath -Value $xmlContent -Encoding UTF8
 
 $uploadEntries = @(
-    @{ objectName = $storageInstallerName; sourcePath = $versionedInstallerPath; deleteFirst = $true }
-    @{ objectName = $storageManifestName; sourcePath = $manifestPath; deleteFirst = $true }
-    @{ objectName = $storageXmlName; sourcePath = $xmlPath; deleteFirst = $true }
+    @{ objectName = $storageInstallerName; sourcePath = $versionedInstallerPath; contentType = "application/octet-stream" }
+    @{ objectName = $storageManifestName; sourcePath = $manifestPath; contentType = "application/json" }
+    @{ objectName = $storageXmlName; sourcePath = $xmlPath; contentType = "application/xml" }
 )
 
 $uploadScriptPath = Join-Path $env:TEMP "patagonia-acars-upload.js"
@@ -112,18 +125,12 @@ const entries = JSON.parse(process.env.UPLOAD_ENTRIES_JSON);
 (async () => {
   for (const entry of entries) {
     const payload = fs.readFileSync(entry.sourcePath);
-    if (entry.deleteFirst) {
-      const removeResult = await supabase.storage.from("acars-releases").remove([entry.objectName]);
-      if (removeResult.error && !String(removeResult.error.message || "").includes("not found")) {
-        throw removeResult.error;
-      }
-    }
-
     const { error } = await supabase.storage
       .from("acars-releases")
       .upload(entry.objectName, payload, {
-        upsert: !entry.deleteFirst,
-        contentType: "application/octet-stream",
+        // Upsert=true hace el publish idempotente: misma version, mismo nombre, sin 409.
+        upsert: true,
+        contentType: entry.contentType,
         cacheControl: "no-cache",
       });
 
@@ -143,7 +150,7 @@ $uploadJson = $uploadEntries | ConvertTo-Json -Depth 5 -Compress
 Push-Location $officialWebRoot
 try {
     $env:SUPABASE_URL = $supabaseUrl
-    $env:SUPABASE_KEY = $supabasePublishableKey
+    $env:SUPABASE_KEY = $supabaseStorageWriteKey
     $env:UPLOAD_ENTRIES_JSON = $uploadJson
     node $uploadScriptPath
     if ($LASTEXITCODE -ne 0) {
