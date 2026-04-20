@@ -108,3 +108,10 @@ GPL v3 - https://www.mobiflight.com/
 - No requiere acción del usuario
 - Compatible con MobiFlight instalado por separado
 - Si el usuario ya tiene MobiFlight, ambos pueden coexistir
+
+## Publish de Releases
+
+- `deploy-to-web.ps1` publica `public/downloads` y los artefactos versionados de Supabase.
+- Para escritura automÃ¡tica en Supabase, copiar `installer/.publish-secrets.example` a `installer/.publish-secrets.local`.
+- Ese archivo debe contener `SUPABASE_SERVICE_ROLE_KEY=...`
+- `installer/.publish-secrets.local` estÃ¡ ignorado por Git para no exponer secretos.

@@ -25,6 +25,7 @@ artifacts/
 *.pdb
 *.cache
 *.log
+installer/.publish-secrets.local
 
 AppPackages/
 BundleArtifacts/

@@ -6,6 +6,7 @@ $appConfigPath = Join-Path $root "PatagoniaWings.Acars.Master\App.config"
 $releaseDir = Join-Path $root "release"
 $officialWebRoot = "C:\Users\lizam\Desktop\PROYECTO PATAGONIA WINGS\PatagoniaWingsACARS\PATAGONIA WINGS WEB 2.0\patagonia-wings-site"
 $webPublic = Join-Path $officialWebRoot "public\downloads"
+$publishSecretsPath = Join-Path $PSScriptRoot ".publish-secrets.local"
 
 # Este script deja alineados los dos carriles del updater:
 # 1) los archivos public/downloads que consumen clientes legacy
@@ -28,21 +29,39 @@ $webEnvPath = Join-Path $officialWebRoot ".env.local"
 $supabasePublishableKey = $null
 $supabaseStorageWriteKey = $env:SUPABASE_SERVICE_ROLE_KEY
 
-if (Test-Path -LiteralPath $webEnvPath) {
-    foreach ($line in Get-Content -LiteralPath $webEnvPath) {
-        if ($line -match "^NEXT_PUBLIC_SUPABASE_ANON_KEY=(.+)$") {
-            $supabasePublishableKey = $matches[1].Trim()
-            continue
-        }
+function Read-KeyFromEnvFile {
+    param(
+        [string]$Path,
+        [string]$Key
+    )
 
-        if ($line -match "^SUPABASE_SERVICE_ROLE_KEY=(.+)$") {
-            $supabaseStorageWriteKey = $matches[1].Trim()
+    if (-not (Test-Path -LiteralPath $Path)) {
+        return $null
+    }
+
+    foreach ($line in Get-Content -LiteralPath $Path) {
+        if ($line -match "^\Q$Key\E=(.+)$") {
+            return $matches[1].Trim()
         }
     }
+
+    return $null
+}
+
+if (Test-Path -LiteralPath $webEnvPath) {
+    $supabasePublishableKey = Read-KeyFromEnvFile -Path $webEnvPath -Key "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+}
+
+if ([string]::IsNullOrWhiteSpace($supabaseStorageWriteKey)) {
+    $supabaseStorageWriteKey = Read-KeyFromEnvFile -Path $webEnvPath -Key "SUPABASE_SERVICE_ROLE_KEY"
 }
 
 if ([string]::IsNullOrWhiteSpace($supabasePublishableKey)) {
     $supabasePublishableKey = $settings["SupabaseAnonKey"]
+}
+
+if ([string]::IsNullOrWhiteSpace($supabaseStorageWriteKey)) {
+    $supabaseStorageWriteKey = Read-KeyFromEnvFile -Path $publishSecretsPath -Key "SUPABASE_SERVICE_ROLE_KEY"
 }
 
 if ([string]::IsNullOrWhiteSpace($supabaseStorageWriteKey)) {
