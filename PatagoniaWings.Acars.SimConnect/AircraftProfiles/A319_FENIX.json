@@ -23,12 +23,12 @@
     "N1Source":  "turb_n1",
     "DoorSource":  "exit_open_0",
     "DoorOpenThresholdPercent":  5.0,
-    "SeatbeltSource":  "native",
-    "NoSmokingSource":  "native",
+    "SeatbeltSource":  "mobiflight",
+    "NoSmokingSource":  "mobiflight",
     "AutopilotSource":  "fsuipc",
     "TransponderStateSource":  "fsuipc",
-    "ApuSource":  "native",
-    "BleedAirSource":  "native",
+    "ApuSource":  "mobiflight",
+    "BleedAirSource":  "mobiflight",
     "TransponderCodeFormat":  "bco16",
     "PreferFsuipcAutopilot":  true,
     "PreferFsuipcTransponder":  true,
@@ -43,5 +43,9 @@
     "SupportsBatteryRead":  true,
     "SupportsAvionicsRead":  true,
     "SupportsEngineRunRead":  true,
-    "CabinSystemsReliable":  false
+    "CabinSystemsReliable":  false,
+    "MobiFlightSeatbeltExpression": "(L:S_OH_SIGNS, Number) 0 > if{ 100 } els{ 0 }",
+    "MobiFlightNoSmokingExpression": "(L:S_OH_SIGNS_SMOKING, Number) 0 > if{ 100 } els{ 0 }",
+    "MobiFlightApuExpression": "(L:S_OH_ELEC_APU_MASTER, Number) 0 > (L:S_OH_ELEC_APU_START, Number) 0 > or if{ 100 } els{ 0 }",
+    "MobiFlightBleedAirExpression": "(L:S_OH_PNEUMATIC_APU_BLEED, Number) 0 > if{ 100 } els{ 0 }"
 }

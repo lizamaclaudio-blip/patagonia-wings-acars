@@ -1313,6 +1313,13 @@ namespace PatagoniaWings.Acars.SimConnect
                 try
                 {
                     EnsureDefaultChannels();
+                    var preferDefaultChannel = ShouldPreferDefaultLvarChannel(profile);
+
+                    if (preferDefaultChannel)
+                    {
+                        ConfigureDefaultLvars(profile.Code ?? string.Empty, lvars);
+                        return;
+                    }
 
                     if (!_clientRegistered)
                     {
@@ -1352,6 +1359,12 @@ namespace PatagoniaWings.Acars.SimConnect
                 {
                     Debug.WriteLine($"[MobiFlight] Error registrando/pidiendo LVARs: {ex.Message}");
                 }
+            }
+
+            private static bool ShouldPreferDefaultLvarChannel(AircraftProfile profile)
+            {
+                if (profile == null) return false;
+                return string.Equals(profile.LvarProfile, "MADDOG_HYBRID", StringComparison.OrdinalIgnoreCase);
             }
 
             private void EnsureDefaultChannels()

@@ -19,17 +19,17 @@
                     "B737 MAX"
                 ],
     "LightMode":  "individual",
-    "RequiresLvars":  false,
-    "LvarProfile":  "",
+    "RequiresLvars":  true,
+    "LvarProfile":  "IFLY_737MAX8",
     "N1Source":  "turb_n1",
     "DoorSource":  "exit_open_0",
     "DoorOpenThresholdPercent":  5.0,
     "SeatbeltSource":  "native",
-    "NoSmokingSource":  "native",
+    "NoSmokingSource":  "mobiflight",
     "AutopilotSource":  "fsuipc",
     "TransponderStateSource":  "fsuipc",
-    "ApuSource":  "native",
-    "BleedAirSource":  "native",
+    "ApuSource":  "mobiflight",
+    "BleedAirSource":  "mobiflight",
     "TransponderCodeFormat":  "bco16",
     "PreferFsuipcAutopilot":  true,
     "PreferFsuipcTransponder":  true,
@@ -43,5 +43,8 @@
     "SupportsDoorRead":  false,
     "SupportsBatteryRead":  false,
     "SupportsAvionicsRead":  false,
-    "SupportsEngineRunRead":  true
+    "SupportsEngineRunRead":  true,
+    "MobiFlightNoSmokingExpression": "(L:VC_No_Smoking_SW_VAL, number) 0 > if{ 100 } els{ 0 }",
+    "MobiFlightApuExpression": "(L:VC_APU_SW_VAL, number) 0 > if{ 100 } els{ 0 }",
+    "MobiFlightBleedAirExpression": "(L:VC_APU_Bleed_Air_SW_VAL, number) 0 > (L:VC_Engine_1_Bleed_Air_SW_VAL, number) 0 > or (L:VC_Engine_2_Bleed_Air_SW_VAL, number) 0 > or if{ 100 } els{ 0 }"
 }

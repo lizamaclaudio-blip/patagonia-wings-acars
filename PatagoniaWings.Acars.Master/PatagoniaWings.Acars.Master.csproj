@@ -87,9 +87,6 @@
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xaml" />
-    <Reference Include="Velopack, Version=0.0.0.0, Culture=neutral, PublicKeyToken=5a523ff9c49fd93d, processorArchitecture=MSIL">
-      <HintPath>..\packages\Velopack.0.0.1298\lib\net462\Velopack.dll</HintPath>
-    </Reference>
     <Reference Include="WindowsBase" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="fsuipcClient">

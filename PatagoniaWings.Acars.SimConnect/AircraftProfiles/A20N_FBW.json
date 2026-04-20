@@ -24,11 +24,11 @@
     "DoorSource":  "exit_open_0",
     "DoorOpenThresholdPercent":  5.0,
     "SeatbeltSource":  "native",
-    "NoSmokingSource":  "native",
+    "NoSmokingSource":  "mobiflight",
     "AutopilotSource":  "fsuipc",
     "TransponderStateSource":  "fsuipc",
-    "ApuSource":  "native",
-    "BleedAirSource":  "native",
+    "ApuSource":  "mobiflight",
+    "BleedAirSource":  "mobiflight",
     "TransponderCodeFormat":  "bco16",
     "PreferFsuipcAutopilot":  true,
     "PreferFsuipcTransponder":  true,
@@ -43,5 +43,8 @@
     "SupportsBatteryRead":  false,
     "SupportsAvionicsRead":  false,
     "SupportsEngineRunRead":  true,
-    "CabinSystemsReliable":  false
+    "CabinSystemsReliable":  false,
+    "MobiFlightNoSmokingExpression": "(L:XMLVAR_SWITCH_OVHD_INTLT_NOSMOKING_POSITION, Number) 0 > if{ 100 } els{ 0 }",
+    "MobiFlightApuExpression": "(L:A32NX_OVHD_APU_MASTER_SW_PB_IS_ON, Bool) (L:A32NX_OVHD_APU_START_PB_IS_AVAILABLE, Bool) or if{ 100 } els{ 0 }",
+    "MobiFlightBleedAirExpression": "(L:A32NX_OVHD_PNEU_APU_BLEED_PB_IS_ON, Bool) if{ 100 } els{ 0 }"
 }

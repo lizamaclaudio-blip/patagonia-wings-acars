@@ -239,7 +239,7 @@
                                HorizontalAlignment="Center"
                                FontSize="10"
                                Foreground="#8091A8"
-                               Text="Patagonia Wings Virtual Airline · ACARS 3.0.8 · Web 2.0"/>
+                               Text="{Binding FooterVersion}"/>
                 </StackPanel>
             </Grid>
         </Border>

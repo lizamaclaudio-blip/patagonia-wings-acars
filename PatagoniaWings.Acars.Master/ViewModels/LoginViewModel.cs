@@ -26,7 +26,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         /// Siempre refleja la versión instalada actual sin necesidad de recompilar.
         /// Ejemplo: "v3.1.2  ·  SimConnect + FSUIPC7"
         /// </summary>
-        public string VersionBadge => $"v{UpdateService.CurrentVersion}  ·  SimConnect + FSUIPC7";
+        public string VersionBadge => $"v{UpdateService.CurrentVersion} | SimConnect + FSUIPC7 + Supabase";
+        public string FooterVersion => $"Patagonia Wings Virtual Airline | ACARS {UpdateService.CurrentVersion} | Web 2.0";
 
         public ICommand LoginCommand { get; }
         public Action? OnLoginSuccess { get; set; }
