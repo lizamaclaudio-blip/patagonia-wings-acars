@@ -80,6 +80,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _officialPhaseCode = "PRE";
         private string _routeStatusLabel = "Esperando inicio oficial";
         private double _routeProgressPercent;
+        private const double RouteCanvasWidth = 320;
+        private const double RoutePlaneVisualWidth = 42;
 
         // ── Pesos / comparación SimBrief vs Sim ──────────────────────────────────
         private double _fuelAtEngineStartKg = -1; // -1 = no capturado aún
@@ -529,15 +531,38 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(RouteProgressDisplay));
                     OnPropertyChanged(nameof(RouteTrackWidth));
                     OnPropertyChanged(nameof(RoutePlaneLeft));
+                    OnPropertyChanged(nameof(RouteDistanceFromOriginDisplay));
+                    OnPropertyChanged(nameof(RouteDistanceToDestinationDisplay));
+                    OnPropertyChanged(nameof(RouteDistanceDisplay));
                 }
             }
         }
-        public string RouteProgressDisplay => $"{Math.Round(RouteProgressPercent, 0):F0}%";
-        public double RouteTrackWidth => Math.Max(18, 320 * (RouteProgressPercent / 100.0));
-        public double RoutePlaneLeft => Math.Max(0, Math.Min(304, RouteTrackWidth - 16));
-        public string RouteDistanceDisplay => AcarsContext.FlightService.TotalDistanceNm > 0
-            ? $"{AcarsContext.FlightService.TotalDistanceNm:F1} nm recorridas"
-            : "Esperando recorrido";
+        public string RouteProgressDisplay
+        {
+            get
+            {
+                if (OfficialPhaseCode == "PRE" && AcarsContext.FlightService.TotalDistanceNm <= 0)
+                    return "LISTO";
+
+                return $"{Math.Round(RouteProgressPercent, 0):F0}%";
+            }
+        }
+        public double RouteTrackWidth => Math.Max(26, RouteCanvasWidth * (RouteProgressPercent / 100.0));
+        public double RoutePlaneLeft => Math.Max(0, Math.Min(RouteCanvasWidth - RoutePlaneVisualWidth, RouteTrackWidth - (RoutePlaneVisualWidth * 0.6)));
+        public string RouteDistanceFromOriginDisplay => $"{ComputeDistanceFromOriginNm():F0} NM";
+        public string RouteDistanceToDestinationDisplay => $"{ComputeDistanceToDestinationNm():F0} NM";
+        public string RouteDistanceDisplay
+        {
+            get
+            {
+                var flown = ComputeDistanceFromOriginNm();
+                var remaining = ComputeDistanceToDestinationNm();
+                if (flown <= 0.1 && remaining <= 0.1)
+                    return "Esperando recorrido";
+
+                return $"{flown:F1} nm recorridas · {remaining:F0} nm restantes";
+            }
+        }
 
         // ── Propiedades de pesos (Plan SimBrief vs Actual Sim) ───────────────────
 
@@ -731,20 +756,68 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             double progress = OfficialPhaseCode switch
             {
-                "PRE" => maxEngineN1 > 5 ? 6 : 2,
-                "IGN" => 8 + Math.Min(8, maxEngineN1 / 3.0),
-                "TAX" => 16 + Math.Min(10, Math.Max(0, groundSpeed) / 3.0),
-                "TO" => 26 + Math.Min(8, Math.Max(0, altitudeAgl) / 250.0),
-                "ASC" => 34 + Math.Min(22, Math.Max(0, altitudeFeet) / plannedCruise * 22.0),
-                "CRU" => 60 + Math.Min(12, Math.Max(0, AcarsContext.FlightService.TotalDistanceNm) / 80.0),
-                "DES" => 76 + Math.Min(10, Math.Max(0, Math.Abs(verticalSpeed)) / 250.0),
-                "LDG" => 88 + Math.Min(8, Math.Max(0, 3000 - altitudeAgl) / 375.0),
-                "TAG" => 96 + Math.Min(3, Math.Max(0, 30 - groundSpeed) / 10.0),
+                "PRE" => maxEngineN1 > 5 ? 12 : 8,
+                "IGN" => 15 + Math.Min(7, maxEngineN1 / 4.0),
+                "TAX" => 22 + Math.Min(10, Math.Max(0, groundSpeed) / 3.0),
+                "TO" => 34 + Math.Min(8, Math.Max(0, altitudeAgl) / 250.0),
+                "ASC" => 42 + Math.Min(18, Math.Max(0, altitudeFeet) / plannedCruise * 18.0),
+                "CRU" => 62 + Math.Min(14, Math.Max(0, AcarsContext.FlightService.TotalDistanceNm) / 70.0),
+                "DES" => 80 + Math.Min(8, Math.Max(0, Math.Abs(verticalSpeed)) / 300.0),
+                "LDG" => 90 + Math.Min(6, Math.Max(0, 3000 - altitudeAgl) / 500.0),
+                "TAG" => 97 + Math.Min(2, Math.Max(0, 30 - groundSpeed) / 12.0),
                 "PAR" => 100,
-                _ => 4,
+                _ => 8,
             };
 
             return Math.Max(0, Math.Min(100, progress));
+        }
+
+        private double ComputeEstimatedRouteDistanceNm()
+        {
+            var flown = Math.Max(0, AcarsContext.FlightService.TotalDistanceNm);
+            var dispatch = AcarsContext.Runtime.CurrentDispatch;
+            var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+            var plannedSpeed = Math.Max(0, AcarsContext.FlightService.CurrentFlight?.PlannedSpeed ?? 0);
+            var referenceSpeed = plannedSpeed > 0
+                ? plannedSpeed
+                : Math.Max(220, sample?.GroundSpeed ?? 0);
+
+            var plannedMinutes = Math.Max(
+                dispatch?.ExpectedBlockP50Minutes ?? 0,
+                dispatch?.ScheduledBlockMinutes ?? 0);
+
+            var timeEstimate = plannedMinutes > 0
+                ? referenceSpeed * Math.Max(0.35, plannedMinutes / 60.0)
+                : 0;
+
+            var baseline = OfficialPhaseCode switch
+            {
+                "PRE" => 90,
+                "IGN" => 100,
+                "TAX" => 120,
+                "TO" => 140,
+                "ASC" => Math.Max(180, flown + 90),
+                "CRU" => Math.Max(260, flown + 120),
+                "DES" => Math.Max(220, flown + 70),
+                "LDG" => Math.Max(140, flown + 25),
+                "TAG" => Math.Max(110, flown + 10),
+                "PAR" => Math.Max(1, flown),
+                _ => 110,
+            };
+
+            return Math.Max(flown, Math.Max(timeEstimate, baseline));
+        }
+
+        private double ComputeDistanceFromOriginNm()
+        {
+            return Math.Max(0, AcarsContext.FlightService.TotalDistanceNm);
+        }
+
+        private double ComputeDistanceToDestinationNm()
+        {
+            var flown = ComputeDistanceFromOriginNm();
+            var estimated = ComputeEstimatedRouteDistanceNm();
+            return Math.Max(0, estimated - flown);
         }
 
         private string BuildRouteStatusLabel()
@@ -778,6 +851,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(RouteDestination));
             OnPropertyChanged(nameof(RouteDisplay));
             OnPropertyChanged(nameof(RouteDistanceDisplay));
+            OnPropertyChanged(nameof(RouteDistanceFromOriginDisplay));
+            OnPropertyChanged(nameof(RouteDistanceToDestinationDisplay));
         }
 
         private void LogLightEvent(string name, bool prev, bool current, bool onGround)

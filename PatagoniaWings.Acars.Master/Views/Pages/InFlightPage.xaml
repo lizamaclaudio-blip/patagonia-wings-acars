@@ -277,19 +277,43 @@
                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                         <TextBlock Text="{Binding RouteOrigin}" FontSize="20" FontWeight="Bold" Foreground="#0284C7" HorizontalAlignment="Center"/>
                         <TextBlock Text="Origen" Style="{StaticResource MetricLabel}"/>
+                        <TextBlock Text="{Binding RouteDistanceFromOriginDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#0F766E" HorizontalAlignment="Center"/>
                     </StackPanel>
-                    <Grid Grid.Column="1" Height="50" Margin="16,0">
-                        <Border Height="10" CornerRadius="999" Background="#DBEAFE" VerticalAlignment="Center"/>
-                        <Border Height="10" Width="{Binding RouteTrackWidth}" CornerRadius="999" Background="#0EA5E9" HorizontalAlignment="Left" VerticalAlignment="Center"/>
-                        <Canvas Width="320" Height="50" HorizontalAlignment="Center">
-                            <Border Canvas.Left="{Binding RoutePlaneLeft}" Canvas.Top="4" Background="#082F49" CornerRadius="14" Padding="8,4">
+                    <Grid Grid.Column="1" Height="66" Margin="16,0">
+                        <Border Height="18" CornerRadius="999" Background="#DBEAFE" VerticalAlignment="Center"/>
+                        <Border Height="18" Width="{Binding RouteTrackWidth}" CornerRadius="999" HorizontalAlignment="Left" VerticalAlignment="Center">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,0.5">
+                                    <GradientStop Color="#0EA5E9" Offset="0"/>
+                                    <GradientStop Color="#22D3EE" Offset="0.55"/>
+                                    <GradientStop Color="#34D399" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+                        <Grid VerticalAlignment="Center" Height="18">
+                            <Ellipse Width="8" Height="8" Fill="#93C5FD" HorizontalAlignment="Left" Margin="22,0,0,0"/>
+                            <Ellipse Width="8" Height="8" Fill="#7DD3FC" HorizontalAlignment="Center"/>
+                            <Ellipse Width="8" Height="8" Fill="#6EE7B7" HorizontalAlignment="Right" Margin="0,0,22,0"/>
+                        </Grid>
+                        <Canvas Width="320" Height="66" HorizontalAlignment="Center">
+                            <Border Canvas.Left="{Binding RoutePlaneLeft}" Canvas.Top="6" Background="#082F49" BorderBrush="#38BDF8" BorderThickness="1" CornerRadius="16" Padding="8,5">
+                                <Grid Width="46" Height="22">
                                 <TextBlock Text="✈" FontSize="16" Foreground="White"/>
+                                <Viewbox Width="46" Height="22" Stretch="Uniform">
+                                    <Canvas Width="64" Height="24">
+                                        <Path Fill="#E0F2FE" Data="M4,12 C4,8 8,6 15,6 H34 L51,1 H57 L46,9 H58 C60,9 61,10 61,12 C61,14 60,15 58,15 H46 L57,23 H51 L34,18 H15 C8,18 4,16 4,12 Z"/>
+                                        <Path Fill="#7DD3FC" Data="M18,11 L26,6 H34 L28,11 Z"/>
+                                        <Path Fill="#38BDF8" Data="M18,13 L28,13 L34,18 H26 Z"/>
+                                    </Canvas>
+                                </Viewbox>
+                                </Grid>
                             </Border>
                         </Canvas>
                     </Grid>
                     <StackPanel Grid.Column="2" VerticalAlignment="Center">
                         <TextBlock Text="{Binding RouteDestination}" FontSize="20" FontWeight="Bold" Foreground="#0284C7" HorizontalAlignment="Center"/>
                         <TextBlock Text="Destino" Style="{StaticResource MetricLabel}"/>
+                        <TextBlock Text="{Binding RouteDistanceToDestinationDisplay}" FontSize="11" FontWeight="SemiBold" Foreground="#0F766E" HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
 
