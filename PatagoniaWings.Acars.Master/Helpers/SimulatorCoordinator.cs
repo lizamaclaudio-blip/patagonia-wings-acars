@@ -247,7 +247,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     + " XPDR(FSUIPC)=" + profile.PreferFsuipcTransponder);
             }
 
-            bool isMaddog = IsMaddogProfile(profile.Code);
+            bool isMaddog = IsMaddogProfile(profile.Code ?? string.Empty);
 
             if (profile.PreferFsuipcAutopilot || isMaddog)
             {

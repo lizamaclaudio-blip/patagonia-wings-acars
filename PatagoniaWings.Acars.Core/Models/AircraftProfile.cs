@@ -14,6 +14,9 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool HasApu { get; set; } = false;
         public string ImageAsset { get; set; } = "default_aircraft.png";
         public bool Supported { get; set; } = true;
+        public string PrimaryTelemetrySource { get; set; } = string.Empty;
+        public List<string> TelemetrySourcePriority { get; set; } = new List<string>();
+        public string CapabilityAuditState { get; set; } = "PARCIAL";
 
         public List<string> ExactTitles { get; set; } = new List<string>();
         public List<string> Matches { get; set; } = new List<string>();
@@ -43,6 +46,10 @@ namespace PatagoniaWings.Acars.Core.Models
 
         public string ApuSource { get; set; } = "native";
         public string BleedAirSource { get; set; } = "native";
+        public string FuelPumpSource { get; set; } = string.Empty;
+        public string ContinuousIgnitionSource { get; set; } = string.Empty;
+        public string FireTestSource { get; set; } = string.Empty;
+        public string InertialSeparatorSource { get; set; } = string.Empty;
 
         public bool PreferFsuipcAutopilot { get; set; } = false;
         public bool PreferFsuipcTransponder { get; set; } = false;
@@ -53,6 +60,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public string MobiFlightApuExpression { get; set; } = string.Empty;
         public string MobiFlightAutopilotExpression { get; set; } = string.Empty;
         public string MobiFlightBleedAirExpression { get; set; } = string.Empty;
+        public string MobiFlightInertialSeparatorExpression { get; set; } = string.Empty;
         public List<string> MobiFlightDoorExpressions { get; set; } = new List<string>();
 
         /// <summary>
@@ -71,6 +79,16 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool SupportsBatteryRead { get; set; } = false;
         public bool SupportsAvionicsRead { get; set; } = false;
         public bool SupportsEngineRunRead { get; set; } = false;
+        public bool SupportsZfwReadback { get; set; } = false;
+        public bool SupportsQnhReadback { get; set; } = false;
+        public bool SupportsTransponderModeReadback { get; set; } = true;
+        public bool SupportsSquawkReadback { get; set; } = true;
+        public bool SupportsPushbackInference { get; set; } = true;
+        public bool SupportsFuelPumpReadback { get; set; } = false;
+        public bool SupportsContinuousIgnitionReadback { get; set; } = false;
+        public bool SupportsFireTestReadback { get; set; } = false;
+        public bool HasInertialSeparator { get; set; } = false;
+        public bool SupportsInertialSeparatorReadback { get; set; } = false;
 
         private static bool IsBridgeLike(string source)
         {
@@ -101,9 +119,14 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool UsesLvarAutopilot => IsBridgeLike(AutopilotSource) || !string.IsNullOrWhiteSpace(MobiFlightAutopilotExpression);
         public bool UsesLvarApu => IsBridgeLike(ApuSource) || !string.IsNullOrWhiteSpace(MobiFlightApuExpression);
         public bool UsesLvarBleedAir => IsBridgeLike(BleedAirSource) || !string.IsNullOrWhiteSpace(MobiFlightBleedAirExpression);
+        public bool UsesLvarInertialSeparator => IsBridgeLike(InertialSeparatorSource) || !string.IsNullOrWhiteSpace(MobiFlightInertialSeparatorExpression);
+        public bool SupportsDoorSystem => !IsExplicitlyUnsupported(DoorSource) && (SupportsDoorRead || UsesLvarDoor);
         public bool SupportsSeatbeltSystem => !IsExplicitlyUnsupported(SeatbeltSource) && (SupportsFlagsRead || UsesLvarSeatbelt);
         public bool SupportsNoSmokingSystem => !IsExplicitlyUnsupported(NoSmokingSource) && (SupportsFlagsRead || UsesLvarNoSmoking);
         public bool SupportsApuSystem => HasApu && !IsExplicitlyUnsupported(ApuSource) && (SupportsApuRead || UsesLvarApu);
         public bool SupportsBleedAirSystem => IsPressurized && !IsExplicitlyUnsupported(BleedAirSource);
+        public bool SupportsTransponderModeSystem => SupportsTransponderModeReadback && !IsExplicitlyUnsupported(TransponderStateSource);
+        public bool SupportsSquawkSystem => SupportsSquawkReadback && !IsExplicitlyUnsupported(TransponderStateSource);
+        public bool SupportsInertialSeparatorSystem => HasInertialSeparator && !IsExplicitlyUnsupported(InertialSeparatorSource) && (SupportsInertialSeparatorReadback || UsesLvarInertialSeparator);
     }
 }

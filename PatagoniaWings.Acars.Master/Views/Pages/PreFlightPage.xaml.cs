@@ -84,11 +84,23 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
                 return windowVm.PreFlightVM;
             }
 
+            var shellVm = hostWindow != null ? hostWindow.DataContext as AcarsShellViewModel : null;
+            if (shellVm != null)
+            {
+                return shellVm.MainVM.PreFlightVM;
+            }
+
             var parentElement = Parent as FrameworkElement;
             var parentVm = parentElement != null ? parentElement.DataContext as MainViewModel : null;
             if (parentVm != null)
             {
                 return parentVm.PreFlightVM;
+            }
+
+            var parentShellVm = parentElement != null ? parentElement.DataContext as AcarsShellViewModel : null;
+            if (parentShellVm != null)
+            {
+                return parentShellVm.MainVM.PreFlightVM;
             }
 
             return null;

@@ -20,6 +20,8 @@ namespace PatagoniaWings.Acars.Master.Views
 
         public LoginWindow()
         {
+            // Legacy compatibility window: se conserva para fallback/manual QA.
+            // El startup normal ya entra por App.xaml.cs -> MainWindow shell unico.
             InitializeComponent();
 
             _vm = DataContext as LoginViewModel ?? new LoginViewModel();

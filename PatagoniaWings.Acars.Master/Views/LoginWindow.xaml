@@ -6,242 +6,208 @@
         xmlns:vm="clr-namespace:PatagoniaWings.Acars.Master.ViewModels"
         mc:Ignorable="d"
         Title="Patagonia Wings ACARS"
-        Width="700"
-        Height="440"
-        MinWidth="640"
-        MinHeight="400"
+        Width="860" Height="540" MinWidth="740" MinHeight="480"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
-        Background="#EAF3FF">
+        Background="Transparent"
+        WindowStyle="None"
+        AllowsTransparency="True">
+
+
+    <Window.Resources>
+        <Storyboard x:Key="OrbitStoryboard">
+            <DoubleAnimation Storyboard.TargetName="OrbitRingA"
+                             Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                             From="0" To="360" Duration="0:0:10" RepeatBehavior="Forever"/>
+            <DoubleAnimation Storyboard.TargetName="OrbitRingB"
+                             Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                             From="360" To="0" Duration="0:0:14" RepeatBehavior="Forever"/>
+            <DoubleAnimation Storyboard.TargetName="OrbitRingC"
+                             Storyboard.TargetProperty="(UIElement.RenderTransform).(RotateTransform.Angle)"
+                             From="0" To="360" Duration="0:0:18" RepeatBehavior="Forever"/>
+        </Storyboard>
+    </Window.Resources>
 
     <Window.DataContext>
         <vm:LoginViewModel />
     </Window.DataContext>
 
-    <Window.Resources>
-        <SolidColorBrush x:Key="CardBackground" Color="#F7FBFF"/>
-        <SolidColorBrush x:Key="CardBorder" Color="#B7D6FF"/>
-        <SolidColorBrush x:Key="AccentBlue" Color="#1389D0"/>
-        <SolidColorBrush x:Key="AccentGreen" Color="#16B989"/>
-        <SolidColorBrush x:Key="TextDark" Color="#16233A"/>
-        <SolidColorBrush x:Key="TextMuted" Color="#6D7F99"/>
+    <Border CornerRadius="14"
+            BorderBrush="#27405F"
+            BorderThickness="1"
+            Background="{StaticResource WindowBackgroundBrush}">
+        <Grid>
+            <Grid.Background>
+                <ImageBrush ImageSource="pack://application:,,,/Assets/patagonia-bg.jpg"
+                            Stretch="UniformToFill"
+                            Opacity="0.28"/>
+            </Grid.Background>
 
-        <LinearGradientBrush x:Key="HeroOverlay" StartPoint="0,0" EndPoint="1,0">
-            <GradientStop Color="#F1243554" Offset="0"/>
-            <GradientStop Color="#E61D3550" Offset="0.55"/>
-            <GradientStop Color="#FF0B1727" Offset="1"/>
-        </LinearGradientBrush>
+            <Border Background="#98020A14"/>
 
-        <Style x:Key="InputTextBoxStyle" TargetType="TextBox">
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="10,0,10,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="HorizontalContentAlignment" Value="Left"/>
-            <Setter Property="Foreground" Value="#1C2B45"/>
-            <Setter Property="Background" Value="#F4F9FF"/>
-            <Setter Property="BorderBrush" Value="#9DC8F8"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="TextWrapping" Value="NoWrap"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-        </Style>
+            <Grid Margin="24">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1.2*"/>
+                    <ColumnDefinition Width="0.8*"/>
+                </Grid.ColumnDefinitions>
 
-        <Style x:Key="InputPasswordBoxStyle" TargetType="PasswordBox">
-            <Setter Property="Height" Value="32"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="10,0,10,0"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
-            <Setter Property="Foreground" Value="#1C2B45"/>
-            <Setter Property="Background" Value="#F4F9FF"/>
-            <Setter Property="BorderBrush" Value="#9DC8F8"/>
-            <Setter Property="BorderThickness" Value="1.5"/>
-            <Setter Property="SnapsToDevicePixels" Value="True"/>
-        </Style>
+                <!-- Branding principal -->
+                <Grid Grid.Column="0">
+                    <StackPanel VerticalAlignment="Center"
+                                HorizontalAlignment="Center"
+                                MaxWidth="440">
+                        <Grid Width="250" Height="250" Margin="0,0,0,18">
+                            <Ellipse x:Name="OrbitRingA"
+                                     Width="250"
+                                     Height="250"
+                                     Stroke="#553BCBFF"
+                                     StrokeThickness="2"
+                                     StrokeDashArray="2 10"
+                                     RenderTransformOrigin="0.5,0.5"
+                                     IsHitTestVisible="False">
+                                <Ellipse.RenderTransform>
+                                    <RotateTransform Angle="0"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
 
-        <Style x:Key="PrimaryButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="38"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border CornerRadius="8">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#1784D4" Offset="0"/>
-                                    <GradientStop Color="#18B98A" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <ContentPresenter HorizontalAlignment="Center"
-                                              VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Opacity" Value="0.90"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Opacity" Value="0.75"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+                            <Ellipse x:Name="OrbitRingB"
+                                     Width="214"
+                                     Height="214"
+                                     Stroke="#7749E3A8"
+                                     StrokeThickness="2"
+                                     StrokeDashArray="14 8"
+                                     RenderTransformOrigin="0.5,0.5"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     IsHitTestVisible="False">
+                                <Ellipse.RenderTransform>
+                                    <RotateTransform Angle="0"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
 
-        <Style x:Key="GhostButtonStyle" TargetType="Button">
-            <Setter Property="Height" Value="28"/>
-            <Setter Property="Width" Value="28"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Foreground" Value="#157DD2"/>
-            <Setter Property="Background" Value="#F4F9FF"/>
-            <Setter Property="BorderBrush" Value="#A9CDF5"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Cursor" Value="Hand"/>
-        </Style>
-    </Window.Resources>
+                            <Ellipse x:Name="OrbitRingC"
+                                     Width="174"
+                                     Height="174"
+                                     Stroke="#665B74FF"
+                                     StrokeThickness="1.5"
+                                     StrokeDashArray="1 7"
+                                     RenderTransformOrigin="0.5,0.5"
+                                     HorizontalAlignment="Center"
+                                     VerticalAlignment="Center"
+                                     IsHitTestVisible="False">
+                                <Ellipse.RenderTransform>
+                                    <RotateTransform Angle="0"/>
+                                </Ellipse.RenderTransform>
+                            </Ellipse>
 
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1.28*" />
-            <ColumnDefinition Width="0.92*" />
-        </Grid.ColumnDefinitions>
+                            <Border Width="190"
+                                    Height="190"
+                                    Background="#14000000"
+                                    BorderBrush="#244F7D"
+                                    BorderThickness="1"
+                                    CornerRadius="95"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                                <Grid>
+                                    <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
+                                           Width="190"
+                                           Height="190"
+                                           Stretch="Uniform"/>
+                                </Grid>
+                            </Border>
 
-        <!-- ═══ HERO / BANNER ════════════════════════════════════════════════ -->
-        <Grid Grid.Column="0" ClipToBounds="True">
-            <Image Stretch="UniformToFill" Source="/PatagoniaWings.Acars.Master;component/Assets/login-hero.jpg" />
-            <Border Background="{StaticResource HeroOverlay}" />
+                            <Grid.Triggers>
+                                <EventTrigger RoutedEvent="FrameworkElement.Loaded">
+                                    <BeginStoryboard Storyboard="{StaticResource OrbitStoryboard}"/>
+                                </EventTrigger>
+                            </Grid.Triggers>
+                        </Grid>
 
-            <StackPanel Margin="28,22,28,18" VerticalAlignment="Stretch">
-                <!-- Logo + nombre -->
-                <DockPanel LastChildFill="False">
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                        <Image Width="16" Height="16" Stretch="Uniform"
-                               Source="/PatagoniaWings.Acars.Master;component/Assets/pwg-logo-small.png" />
-                        <TextBlock Margin="8,0,0,0" VerticalAlignment="Center"
-                                   Foreground="White" FontSize="14" FontWeight="SemiBold"
-                                   Text="PATAGONIA WINGS"/>
+                        <TextBlock Text="PATAGONIA WINGS"
+                                   FontSize="34"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"/>
+
+                        <TextBlock Text="ACARS COMMUNICATION"
+                                   Margin="0,10,0,0"
+                                   FontSize="22"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource AccentLightBlueBrush}"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"/>
+
+                        <TextBlock Text="FLIGHT"
+                                   Margin="0,8,0,0"
+                                   FontSize="28"
+                                   FontWeight="Bold"
+                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"/>
                     </StackPanel>
-                </DockPanel>
+                </Grid>
 
-                <!-- Línea decorativa -->
-                <Border Width="52" Height="3" Background="#28C8C8"
-                        CornerRadius="1.5" Margin="0,52,0,14" HorizontalAlignment="Left"/>
+                <!-- Login mínimo -->
+                <Grid Grid.Column="1"
+                      Margin="20,10,0,10">
+                    <Border Style="{StaticResource CardBlue}"
+                            Padding="22"
+                            VerticalAlignment="Center"
+                            MaxWidth="320">
+                        <StackPanel>
+                            <TextBlock Text="Acceso"
+                                       FontSize="22"
+                                       FontWeight="Bold"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       Margin="0,0,0,16"/>
 
-                <!-- Título ACARS -->
-                <TextBlock Text="ACARS" Foreground="White"
-                           FontSize="42" FontWeight="Black" Margin="0,0,0,6"/>
+                            <TextBox x:Name="EmailBox"
+                                     Style="{StaticResource DarkTextBox}"
+                                     Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                                     TextChanged="EmailBox_TextChanged"
+                                     Height="42"
+                                     Margin="0,0,0,12"/>
 
-                <TextBlock Text="Aircraft Communications&#x0a;Addressing and Reporting System"
-                           Foreground="#D8E6F7" FontSize="12" LineHeight="18"/>
+                            <PasswordBox x:Name="PwdBox"
+                                         Style="{StaticResource DarkPasswordBox}"
+                                         PasswordChanged="PwdBox_PasswordChanged"
+                                         Height="42"
+                                         Margin="0,0,0,12"/>
 
-                <!-- Badge versión -->
-                <Border Margin="0,14,0,12" Width="210" HorizontalAlignment="Left"
-                        Padding="10,7" BorderBrush="#2ED3D0" BorderThickness="1"
-                        Background="#30111E2E" CornerRadius="8">
-                    <TextBlock Text="{Binding VersionBadge}"
-                               Foreground="#BFEFFF" FontSize="11" FontWeight="SemiBold"/>
-                </Border>
+                            <CheckBox x:Name="ChkRemember"
+                                      Content="Recordar correo y contraseña"
+                                      Style="{StaticResource DarkCheckBox}"
+                                      Margin="0,0,0,14"/>
 
-                <!-- Features -->
-                <StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <Ellipse Width="6" Height="6" Fill="#21C795" VerticalAlignment="Center"/>
-                        <TextBlock Margin="10,0,0,0" Foreground="#D8E6F7" FontSize="11"
-                                   Text="Integración MSFS 2020 / 2024"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                        <Ellipse Width="6" Height="6" Fill="#21C795" VerticalAlignment="Center"/>
-                        <TextBlock Margin="10,0,0,0" Foreground="#D8E6F7" FontSize="11"
-                                   Text="Telemetría en tiempo real"/>
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal">
-                        <Ellipse Width="6" Height="6" Fill="#3BA8FF" VerticalAlignment="Center"/>
-                        <TextBlock Margin="10,0,0,0" Foreground="#D8E6F7" FontSize="11"
-                                   Text="PIREPs automáticos vía Supabase"/>
-                    </StackPanel>
-                </StackPanel>
-            </StackPanel>
-        </Grid>
+                            <TextBlock x:Name="TxtLoginStatus"
+                                       Foreground="#FF8A8A"
+                                       FontSize="12"
+                                       Margin="0,0,0,10"
+                                       TextWrapping="Wrap"/>
 
-        <!-- ═══ PANEL LOGIN ══════════════════════════════════════════════════ -->
-        <Border Grid.Column="1"
-                Background="{StaticResource CardBackground}"
-                BorderBrush="{StaticResource CardBorder}"
-                BorderThickness="1"
-                CornerRadius="14,0,0,14"
-                Padding="28,18,28,22">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+                            <Button x:Name="BtnLogin"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Height="44"
+                                    Click="BtnLogin_Click"
+                                    Content="Ingresar al ACARS"/>
 
-                <!-- Botón cerrar -->
-                <DockPanel Grid.Row="0" LastChildFill="False">
-                    <Button DockPanel.Dock="Right"
-                            Style="{StaticResource GhostButtonStyle}"
-                            Click="BtnClose_Click"
-                            Content="×"
-                            FontSize="16"/>
-                </DockPanel>
+                            <Button Margin="0,8,0,0"
+                                    Height="34"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="BtnClose_Click"
+                                    Content="Cerrar"/>
 
-                <!-- Formulario (sin scroll) -->
-                <StackPanel Grid.Row="1" Margin="0,10,0,0">
-                    <TextBlock Text="Iniciar Sesión"
-                               FontSize="26" FontWeight="Bold"
-                               Foreground="{StaticResource TextDark}"/>
-                    <TextBlock Text="Ingresa con tu correo de Patagonia Wings"
-                               Margin="0,6,0,0" FontSize="12"
-                               Foreground="{StaticResource TextMuted}"/>
-
-                    <Border Margin="0,12,0,12" Height="1" Background="#D6E7FA"/>
-
-                    <TextBlock Text="EMAIL" FontSize="10" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextMuted}"/>
-                    <TextBox x:Name="EmailBox"
-                             Margin="0,6,0,10"
-                             Style="{StaticResource InputTextBoxStyle}"
-                             Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
-                             TextChanged="EmailBox_TextChanged"
-                             TextOptions.TextFormattingMode="Display"
-                             TextOptions.TextRenderingMode="ClearType"
-                             SpellCheck.IsEnabled="False"/>
-
-                    <TextBlock Text="CONTRASEÑA" FontSize="10" FontWeight="SemiBold"
-                               Foreground="{StaticResource TextMuted}"/>
-                    <PasswordBox x:Name="PwdBox"
-                                 Margin="0,6,0,8"
-                                 Style="{StaticResource InputPasswordBoxStyle}"
-                                 PasswordChanged="PwdBox_PasswordChanged"/>
-
-                    <CheckBox x:Name="ChkRemember"
-                              Margin="0,2,0,14"
-                              VerticalAlignment="Center"
-                              FontSize="12"
-                              Foreground="{StaticResource TextDark}"
-                              Content="Recordar sesión"/>
-
-                    <Button x:Name="BtnLogin"
-                            Content="✈  INGRESAR AL SISTEMA"
-                            Style="{StaticResource PrimaryButtonStyle}"
-                            Click="BtnLogin_Click"/>
-
-                    <TextBlock x:Name="TxtLoginStatus"
-                               Margin="0,10,0,0"
-                               TextWrapping="Wrap"
-                               Foreground="#B42318"
-                               FontSize="11"/>
-
-                    <TextBlock Margin="0,16,0,0"
-                               HorizontalAlignment="Center"
-                               FontSize="10"
-                               Foreground="#8091A8"
-                               Text="{Binding FooterVersion}"/>
-                </StackPanel>
+                            <TextBlock Text="{Binding FooterVersion}"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       FontSize="10"
+                                       HorizontalAlignment="Center"
+                                       TextAlignment="Center"
+                                       Margin="0,14,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </Grid>
-        </Border>
-    </Grid>
+        </Grid>
+    </Border>
 </Window>

@@ -60,10 +60,20 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
                 return windowMain.PostFlightVM;
             }
 
+            if (hostWindow != null && hostWindow.DataContext is AcarsShellViewModel shellVm)
+            {
+                return shellVm.MainVM.PostFlightVM;
+            }
+
             var parentElement = Parent as FrameworkElement;
             if (parentElement != null && parentElement.DataContext is MainViewModel parentMain)
             {
                 return parentMain.PostFlightVM;
+            }
+
+            if (parentElement != null && parentElement.DataContext is AcarsShellViewModel parentShellVm)
+            {
+                return parentShellVm.MainVM.PostFlightVM;
             }
 
             return null;

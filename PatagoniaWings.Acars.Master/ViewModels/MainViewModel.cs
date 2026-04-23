@@ -9,7 +9,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 {
     public class MainViewModel : ViewModelBase
     {
-        private string _currentPageName = "Dashboard";
+        private string _currentPageName = "PreFlight";
         private bool _flightLocked;
         private Pilot? _pilot;
         private bool _simConnected;
@@ -109,6 +109,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             DashboardVM.LoadAsync();
             ProfileVM.LoadAsync();
+            CommunityVM.LoadOnlinePilots();
             await PreFlightVM.LoadPreparedDispatchAsync();
 
             try
@@ -120,6 +121,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     AcarsContext.Runtime.SetCurrentPilot(AcarsContext.Auth.CurrentPilot);
                     DashboardVM.LoadAsync();
                     ProfileVM.LoadAsync();
+                    CommunityVM.LoadOnlinePilots();
                     await PreFlightVM.LoadPreparedDispatchAsync();
                 }
             }

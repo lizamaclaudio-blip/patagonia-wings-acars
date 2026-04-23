@@ -393,6 +393,9 @@ namespace PatagoniaWings.Acars.SimConnect
             double zeroFuelWeightKg = totalWeightKg > 0
                 ? Math.Max(0, totalWeightKg - fuelKg)
                 : 0;
+            double payloadKg = zeroFuelWeightKg > 0
+                ? Math.Max(0, zeroFuelWeightKg - emptyWeightKg)
+                : 0;
 
             // ── Perfil de aeronave normalizado ────────────────────────────────
             var profileCode = profile?.Code ?? AircraftNormalizationService.ResolveCode(r.Title ?? string.Empty);
@@ -446,6 +449,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 TotalWeightLbs     = totalWeightLbs,
                 TotalWeightKg      = totalWeightKg,
                 ZeroFuelWeightKg   = zeroFuelWeightKg,
+                PayloadKg          = payloadKg,
                 EmptyWeightLbs     = emptyWeightLbs,
                 EmptyWeightKg      = emptyWeightKg,
 
@@ -1853,6 +1857,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 AddIfPresent(specs, profile.MobiFlightApuExpression, "ApuPct");
                 AddIfPresent(specs, profile.MobiFlightAutopilotExpression, "AutopilotRaw");
                 AddIfPresent(specs, profile.MobiFlightBleedAirExpression, "BleedAirRaw");
+                AddIfPresent(specs, profile.MobiFlightInertialSeparatorExpression, "InertialSeparatorRaw");
                 if (profile.MobiFlightDoorExpressions != null)
                 {
                     for (int i = 0; i < profile.MobiFlightDoorExpressions.Count && i < 8; i++)
@@ -1927,6 +1932,9 @@ namespace PatagoniaWings.Acars.SimConnect
 
                 if (_lvarCache.TryGetValue("BleedAirRaw", out var genericBleedRaw))
                     baseData.BleedAirOn = genericBleedRaw > 0.5;
+
+                if (_lvarCache.TryGetValue("InertialSeparatorRaw", out var inertialSeparatorRaw))
+                    baseData.InertialSeparatorOn = inertialSeparatorRaw > 0.5;
 
                 double maxDoorPct = 0;
                 for (int i = 0; i < 8; i++)

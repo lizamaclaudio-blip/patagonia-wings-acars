@@ -263,7 +263,7 @@ namespace PatagoniaWings.Acars.Core.Services
 
             var eval = evaluator.Evaluate();
 
-            return new FlightReport
+            var report = new FlightReport
             {
                 FlightNumber = _currentFlight.FlightNumber,
                 PilotCallSign = pilotCallSign,
@@ -272,24 +272,24 @@ namespace PatagoniaWings.Acars.Core.Services
                 AircraftIcao = _currentFlight.AircraftIcao,
                 DepartureTime = _blockOutTime,
                 ArrivalTime = arrivalTime,
+                BlockOutTimeUtc = _blockOutTime,
+                TakeoffTimeUtc = _takeoffTime,
+                TouchdownTimeUtc = _touchdownTime,
                 Distance = Math.Round(_totalDistanceNm, 1),
                 FuelUsed = Math.Round(fuelUsed, 0),
                 LandingVS = _lastLandingVS,
                 LandingG = Math.Round(_lastLandingG, 2),
+                PatagoniaScore = eval.PatagoniaScore,
+                PatagoniaGrade = eval.PatagoniaGrade,
 
-                // Legacy (Supabase)
-                Score = eval.ProcedureScore,
-                Grade = eval.ProcedureGrade,
-                ProceduralSummary = eval.Summary,
-                PointsEarned = eval.ProcedureScore,
-
-                // SUR Air dual scores
+                // Canonical closeout contract
                 ProcedureScore   = eval.ProcedureScore,
                 PerformanceScore = eval.PerformanceScore,
                 ProcedureGrade   = eval.ProcedureGrade,
                 PerformanceGrade = eval.PerformanceGrade,
                 Violations       = eval.Violations,
                 Bonuses          = eval.Bonuses,
+                Evaluation       = eval.PatagoniaEvaluation,
 
                 Simulator = _currentFlight.Simulator,
                 Remarks = _currentFlight.Remarks ?? string.Empty,
@@ -305,6 +305,10 @@ namespace PatagoniaWings.Acars.Core.Services
                 ApproachPenalty = eval.ApproachPenalty,
                 CabinPenalty    = eval.CabinPenalty
             };
+
+            report.ProceduralSummary = eval.Summary;
+            report.ApplyLegacyScoreProjection();
+            return report;
         }
 
         private double ComputeApproachQnh()

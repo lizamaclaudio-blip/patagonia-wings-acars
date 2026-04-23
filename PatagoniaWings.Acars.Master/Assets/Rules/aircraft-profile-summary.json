@@ -1,0 +1,1381 @@
+﻿[
+    {
+        "code":  "A20N_FBW",
+        "display_name":  "Airbus A320neo (FlyByWire)",
+        "family":  "A320_FAMILY",
+        "addon_provider":  "FlyByWire",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  16,
+        "partial_count":  6,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Seatbelts",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "A319_FENIX",
+        "display_name":  "Airbus A319 (Fenix)",
+        "family":  "A320_FAMILY",
+        "addon_provider":  "Fenix",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  18,
+        "partial_count":  7,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  3,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Operable Doors",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "A320_FENIX",
+        "display_name":  "Airbus A320 (Fenix)",
+        "family":  "A320_FAMILY",
+        "addon_provider":  "Fenix",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  18,
+        "partial_count":  7,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  3,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Operable Doors",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "A321_FENIX",
+        "display_name":  "Airbus A321 (Fenix)",
+        "family":  "A320_FAMILY",
+        "addon_provider":  "Fenix",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  18,
+        "partial_count":  7,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  3,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Operable Doors",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "A339_HEADWIND",
+        "display_name":  "Airbus A330-900neo (Headwind)",
+        "family":  "A330_FAMILY",
+        "addon_provider":  "Headwind",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  16,
+        "partial_count":  6,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Seatbelts",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "ATR72_MSFS",
+        "display_name":  "ATR 72-600",
+        "family":  "ATR_FAMILY",
+        "addon_provider":  "Asobo",
+        "primary_telemetry_source":  "SimVar",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  21,
+        "partial_count":  0,
+        "not_applicable_count":  2,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Autopilot",
+                                  "Bleed / Packs",
+                                  "Seatbelts",
+                                  "No Smoking",
+                                  "Transponder Mode",
+                                  "Squawk",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+
+                            ],
+        "not_applicable_systems":  [
+                                       "APU",
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B350_BLACKSQUARE",
+        "display_name":  "Beechcraft King Air 350 (Black Square)",
+        "family":  "B350_FAMILY",
+        "addon_provider":  "BlackSquare",
+        "primary_telemetry_source":  "SimVar",
+        "capability_audit_state":  "LIMITADO",
+        "supported_count":  18,
+        "partial_count":  0,
+        "not_applicable_count":  3,
+        "excluded_by_profile_count":  8,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Autopilot",
+                                  "Transponder Mode",
+                                  "Squawk",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+
+                            ],
+        "not_applicable_systems":  [
+                                       "APU",
+                                       "Bleed / Packs",
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Seatbelts",
+                                            "No Smoking",
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B350_MSFS",
+        "display_name":  "Beechcraft King Air 350",
+        "family":  "B350_FAMILY",
+        "addon_provider":  "Asobo",
+        "primary_telemetry_source":  "SimVar",
+        "capability_audit_state":  "LIMITADO",
+        "supported_count":  18,
+        "partial_count":  0,
+        "not_applicable_count":  3,
+        "excluded_by_profile_count":  8,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Autopilot",
+                                  "Transponder Mode",
+                                  "Squawk",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+
+                            ],
+        "not_applicable_systems":  [
+                                       "APU",
+                                       "Bleed / Packs",
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Seatbelts",
+                                            "No Smoking",
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B38M_IFLY",
+        "display_name":  "Boeing 737 MAX 8 (iFly)",
+        "family":  "B737_FAMILY",
+        "addon_provider":  "iFly",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  16,
+        "partial_count":  6,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Seatbelts",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B736_PMDG",
+        "display_name":  "Boeing 737-600 (PMDG)",
+        "family":  "B737_FAMILY",
+        "addon_provider":  "PMDG",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  17,
+        "partial_count":  8,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  3,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk",
+                                "Operable Doors"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B737_PMDG",
+        "display_name":  "Boeing 737-700 (PMDG)",
+        "family":  "B737_FAMILY",
+        "addon_provider":  "PMDG",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  17,
+        "partial_count":  8,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  3,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk",
+                                "Operable Doors"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B738_PMDG",
+        "display_name":  "Boeing 737-800 (PMDG)",
+        "family":  "B737_FAMILY",
+        "addon_provider":  "PMDG",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  17,
+        "partial_count":  8,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  3,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk",
+                                "Operable Doors"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B739_PMDG",
+        "display_name":  "Boeing 737-900 (PMDG)",
+        "family":  "B737_FAMILY",
+        "addon_provider":  "PMDG",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  17,
+        "partial_count":  8,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  3,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk",
+                                "Operable Doors"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B772_PMDG",
+        "display_name":  "Boeing 777-200ER (PMDG)",
+        "family":  "B777_FAMILY",
+        "addon_provider":  "PMDG",
+        "primary_telemetry_source":  "SimVar + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  21,
+        "partial_count":  3,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  4,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "APU",
+                                  "Bleed / Packs",
+                                  "Seatbelts",
+                                  "No Smoking",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Operable Doors",
+                                  "Battery Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B77W_PMDG",
+        "display_name":  "Boeing 777-300ER (PMDG)",
+        "family":  "B777_FAMILY",
+        "addon_provider":  "PMDG",
+        "primary_telemetry_source":  "SimVar + FSUIPC",
+        "capability_audit_state":  "OK",
+        "supported_count":  21,
+        "partial_count":  3,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  4,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "APU",
+                                  "Bleed / Packs",
+                                  "Seatbelts",
+                                  "No Smoking",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Operable Doors",
+                                  "Battery Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B789_HORIZONS",
+        "display_name":  "Boeing 787-9 (Horizons)",
+        "family":  "B787_FAMILY",
+        "addon_provider":  "Horizons",
+        "primary_telemetry_source":  "SimVar + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  21,
+        "partial_count":  1,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "APU",
+                                  "Bleed / Packs",
+                                  "Seatbelts",
+                                  "No Smoking",
+                                  "Transponder Mode",
+                                  "Squawk",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+                                "Autopilot"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "B78X_MSFS",
+        "display_name":  "Boeing 787-10",
+        "family":  "B787_FAMILY",
+        "addon_provider":  "Asobo",
+        "primary_telemetry_source":  "SimVar",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  22,
+        "partial_count":  0,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Autopilot",
+                                  "APU",
+                                  "Bleed / Packs",
+                                  "Seatbelts",
+                                  "No Smoking",
+                                  "Transponder Mode",
+                                  "Squawk",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "BE58_BLACKSQUARE",
+        "display_name":  "Beechcraft Baron 58 (Black Square)",
+        "family":  "BE58_FAMILY",
+        "addon_provider":  "BlackSquare",
+        "primary_telemetry_source":  "SimVar",
+        "capability_audit_state":  "LIMITADO",
+        "supported_count":  18,
+        "partial_count":  0,
+        "not_applicable_count":  5,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Autopilot",
+                                  "Transponder Mode",
+                                  "Squawk",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+
+                            ],
+        "not_applicable_systems":  [
+                                       "APU",
+                                       "Bleed / Packs",
+                                       "Seatbelts",
+                                       "No Smoking",
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "BE58_MSFS",
+        "display_name":  "Beechcraft Baron 58",
+        "family":  "BE58_FAMILY",
+        "addon_provider":  "Asobo",
+        "primary_telemetry_source":  "SimVar",
+        "capability_audit_state":  "LIMITADO",
+        "supported_count":  18,
+        "partial_count":  0,
+        "not_applicable_count":  5,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Autopilot",
+                                  "Transponder Mode",
+                                  "Squawk",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+
+                            ],
+        "not_applicable_systems":  [
+                                       "APU",
+                                       "Bleed / Packs",
+                                       "Seatbelts",
+                                       "No Smoking",
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "C208_BLACKSQUARE",
+        "display_name":  "Cessna 208B Grand Caravan (Black Square)",
+        "family":  "C208_FAMILY",
+        "addon_provider":  "BlackSquare",
+        "primary_telemetry_source":  "SimVar + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  16,
+        "partial_count":  4,
+        "not_applicable_count":  2,
+        "excluded_by_profile_count":  7,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "Transponder Mode",
+                                "Squawk",
+                                "Inertial Separator"
+                            ],
+        "not_applicable_systems":  [
+                                       "APU",
+                                       "Bleed / Packs"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Seatbelts",
+                                            "No Smoking",
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "C208_MSFS",
+        "display_name":  "Cessna 208B Grand Caravan EX",
+        "family":  "C208_FAMILY",
+        "addon_provider":  "Asobo",
+        "primary_telemetry_source":  "SimVar + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  17,
+        "partial_count":  4,
+        "not_applicable_count":  2,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "Transponder Mode",
+                                "Squawk",
+                                "Inertial Separator"
+                            ],
+        "not_applicable_systems":  [
+                                       "APU",
+                                       "Bleed / Packs"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Seatbelts",
+                                            "No Smoking",
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "E175_FLIGHTSIM",
+        "display_name":  "Embraer 175 (FlightSim)",
+        "family":  "EJET_FAMILY",
+        "addon_provider":  "FlightSim",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  15,
+        "partial_count":  7,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "E190_FLIGHTSIM",
+        "display_name":  "Embraer 190 (FlightSim)",
+        "family":  "EJET_FAMILY",
+        "addon_provider":  "FlightSim",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  15,
+        "partial_count":  7,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "E195_FLIGHTSIM",
+        "display_name":  "Embraer 195 (FlightSim)",
+        "family":  "EJET_FAMILY",
+        "addon_provider":  "FlightSim",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  15,
+        "partial_count":  7,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  6,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "APU",
+                                "Bleed / Packs",
+                                "Seatbelts",
+                                "No Smoking",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "MD82_MADDOG",
+        "display_name":  "MD-82 (Leonardo MadDog)",
+        "family":  "MADDOG_FAMILY",
+        "addon_provider":  "Leonardo",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  17,
+        "partial_count":  3,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  8,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "APU",
+                                            "Bleed / Packs",
+                                            "Seatbelts",
+                                            "No Smoking",
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "MD83_MADDOG",
+        "display_name":  "MD-83 (Leonardo MadDog)",
+        "family":  "MADDOG_FAMILY",
+        "addon_provider":  "Leonardo",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  17,
+        "partial_count":  3,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  8,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "APU",
+                                            "Bleed / Packs",
+                                            "Seatbelts",
+                                            "No Smoking",
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "MD88_MADDOG",
+        "display_name":  "MD-88 (Leonardo MadDog)",
+        "family":  "MADDOG_FAMILY",
+        "addon_provider":  "Leonardo",
+        "primary_telemetry_source":  "SimVar + MobiFlight WASM + FSUIPC",
+        "capability_audit_state":  "PARCIAL",
+        "supported_count":  17,
+        "partial_count":  3,
+        "not_applicable_count":  1,
+        "excluded_by_profile_count":  8,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight",
+                                  "Battery Master",
+                                  "Avionics Master"
+                              ],
+        "partial_systems":  [
+                                "Autopilot",
+                                "Transponder Mode",
+                                "Squawk"
+                            ],
+        "not_applicable_systems":  [
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "APU",
+                                            "Bleed / Packs",
+                                            "Seatbelts",
+                                            "No Smoking",
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    },
+    {
+        "code":  "MSFS_NATIVE",
+        "display_name":  "MSFS Native",
+        "family":  "GENERIC",
+        "addon_provider":  "Asobo",
+        "primary_telemetry_source":  "SimVar",
+        "capability_audit_state":  "LIMITADO",
+        "supported_count":  18,
+        "partial_count":  0,
+        "not_applicable_count":  3,
+        "excluded_by_profile_count":  8,
+        "supported_systems":  [
+                                  "NAV",
+                                  "BEACON",
+                                  "TAXI",
+                                  "LANDING",
+                                  "STROBE",
+                                  "Parking Brake",
+                                  "Weight On Wheels",
+                                  "Pushback Inference",
+                                  "Gear",
+                                  "Flaps",
+                                  "Engine Running",
+                                  "Autopilot",
+                                  "Transponder Mode",
+                                  "Squawk",
+                                  "Altimeter / QNH",
+                                  "Fuel Total",
+                                  "Payload",
+                                  "Zero Fuel Weight"
+                              ],
+        "partial_systems":  [
+
+                            ],
+        "not_applicable_systems":  [
+                                       "APU",
+                                       "Bleed / Packs",
+                                       "Inertial Separator"
+                                   ],
+        "excluded_by_profile_systems":  [
+                                            "Seatbelts",
+                                            "No Smoking",
+                                            "Fuel Pumps",
+                                            "Operable Doors",
+                                            "Battery Master",
+                                            "Avionics Master",
+                                            "Continuous Ignition",
+                                            "Fire Test"
+                                        ]
+    }
+]

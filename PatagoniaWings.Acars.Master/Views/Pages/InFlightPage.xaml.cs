@@ -16,20 +16,25 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
 
         private void OnPageLoaded(object sender, RoutedEventArgs e)
         {
-            BindViewModel();
+            BindViewModel(GetPageRoot());
         }
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            BindViewModel();
+            BindViewModel(GetPageRoot());
         }
 
         private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
         {
-            BindViewModel();
+            BindViewModel(GetPageRoot());
         }
 
-        private void BindViewModel()
+        private FrameworkElement GetPageRoot()
+        {
+            return PageRoot;
+        }
+
+        private void BindViewModel(FrameworkElement pageRoot)
         {
             var vm = ResolveViewModel();
             if (vm == null)
@@ -39,7 +44,7 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
 
             if (PageRoot != null && !ReferenceEquals(PageRoot.DataContext, vm))
             {
-                PageRoot.DataContext = vm;
+                pageRoot.DataContext = vm;
             }
         }
 
@@ -68,6 +73,11 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
                     return windowMain.InFlightVM;
                 }
 
+                if (hostWindow.DataContext is AcarsShellViewModel shellVm)
+                {
+                    return shellVm.MainVM.InFlightVM;
+                }
+
                 if (hostWindow is MainWindow mw && mw.DataContext is MainViewModel mainWindowVm)
                 {
                     return mainWindowVm.InFlightVM;
@@ -78,6 +88,11 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             if (parentElement != null && parentElement.DataContext is MainViewModel parentMain)
             {
                 return parentMain.InFlightVM;
+            }
+
+            if (parentElement != null && parentElement.DataContext is AcarsShellViewModel parentShellVm)
+            {
+                return parentShellVm.MainVM.InFlightVM;
             }
 
             return null;

@@ -14,9 +14,9 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
 
         private void OnLoaded(object sender, RoutedEventArgs e)
         {
-            if (DataContext is DashboardViewModel vm)
+            if (DataContext is AcarsShellViewModel shellVm)
             {
-                vm.LoadAsync();
+                shellVm.LoadPilotLoungeData("dashboard_page_loaded");
             }
         }
     }

@@ -1,0 +1,113 @@
+<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.SupportPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <UserControl.DataContext>
+        <Binding Path="DataContext.SupportVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
+    </UserControl.DataContext>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Background="Transparent">
+        <StackPanel x:Name="PageRoot">
+            <TextBlock Text="SOPORTE DE APLICACION"
+                       Style="{StaticResource PageTitle}"
+                       Margin="0,0,0,8"/>
+
+            <UniformGrid Columns="2" Margin="0,0,0,8">
+                <Border Style="{StaticResource Card}" Margin="0,0,4,0" Padding="8">
+                    <StackPanel>
+                        <TextBlock Text="ACARS" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding AcarsVersion}"
+                                   Foreground="{StaticResource AccentBlueBrush}"
+                                   FontSize="16"
+                                   FontWeight="Bold"/>
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource Card}" Margin="4,0,0,0" Padding="8">
+                    <StackPanel>
+                        <TextBlock Text="FSUIPC" Style="{StaticResource FieldLabel}"/>
+                        <TextBlock Text="{Binding FsuipcVersion}"
+                                   Foreground="{StaticResource AccentLightBlueBrush}"
+                                   FontSize="12"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="OPCIONES" Style="{StaticResource SectionLabel}"/>
+                    <CheckBox Content="Siempre visible"
+                              IsChecked="{Binding AlwaysVisible}"
+                              Style="{StaticResource DarkCheckBox}"
+                              Margin="0,0,0,6"/>
+                    <CheckBox Content="Usar KG"
+                              IsChecked="{Binding UseKg}"
+                              Style="{StaticResource DarkCheckBox}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="IP DEL SIMULADOR" Style="{StaticResource SectionLabel}"/>
+                    <TextBox Style="{StaticResource DarkTextBox}"
+                             Text="{Binding SimulatorIp, UpdateSourceTrigger=PropertyChanged}"
+                             Height="34"/>
+                    <TextBlock Text="Admite IP local o remota."
+                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="8.5"
+                               Margin="0,7,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="FUNCIONES" Style="{StaticResource SectionLabel}"/>
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Cerrar sesion"
+                            Command="{Binding LogoutCommand}"
+                            Height="34"
+                            Margin="0,0,0,6"/>
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Reenviar ultimo PIREP"
+                            Command="{Binding RetryLastPirepCommand}"
+                            Height="34"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="CARPETAS" Style="{StaticResource SectionLabel}"/>
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Abrir carpeta Debug"
+                            Command="{Binding OpenDebugFolderCommand}"
+                            Height="34"
+                            Margin="0,0,0,6"/>
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Abrir carpeta Data"
+                            Command="{Binding OpenDataFolderCommand}"
+                            Height="34"
+                            Margin="0,0,0,6"/>
+                    <Button Style="{StaticResource SecondaryButton}"
+                            Content="Abrir carpeta App"
+                            Command="{Binding OpenAppFolderCommand}"
+                            Height="34"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       FontSize="9.2"
+                       Margin="0,0,0,8"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding StatusMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
+
+            <Button Style="{StaticResource PrimaryButton}"
+                    Content="VOLVER"
+                    Command="{Binding BackCommand}"
+                    Height="38"/>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

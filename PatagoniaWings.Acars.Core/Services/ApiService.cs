@@ -24,6 +24,8 @@ namespace PatagoniaWings.Acars.Core.Services
         private readonly bool _useSupabaseDirect;
         private readonly PirepXmlBuilder _pirepXmlBuilder;
         private readonly AircraftDamageApiClient _damageApi;
+        private readonly PatagoniaPendingCloseoutStore _pendingCloseoutStore;
+        private readonly System.Threading.SemaphoreSlim _pendingCloseoutRetryLock = new System.Threading.SemaphoreSlim(1, 1);
         private PreparedDispatch? _activePreparedDispatch;
         private readonly string _authLogFile;
         private DateTime _lastTelemetryPushUtc = DateTime.MinValue;
@@ -55,6 +57,7 @@ namespace PatagoniaWings.Acars.Core.Services
 
             _pirepXmlBuilder = new PirepXmlBuilder();
             _damageApi = new AircraftDamageApiClient(_supabaseUrl, _supabaseAnonKey, _useSupabaseDirect);
+            _pendingCloseoutStore = new PatagoniaPendingCloseoutStore();
         }
 
         private bool CanUseSupabaseDirect
@@ -90,6 +93,83 @@ namespace PatagoniaWings.Acars.Core.Services
             }
 
             _damageApi.SetAuthToken(_token);
+        }
+
+        /// <summary>
+        /// Reintenta PIREPs consolidados que quedaron pendientes por fallo de red o backend.
+        /// Se llama al restaurar sesion o al volver a autenticar.
+        /// </summary>
+        public int GetPendingCloseoutCount()
+            => _pendingCloseoutStore.Count();
+
+        public bool HasPendingCloseout(string reservationId)
+            => _pendingCloseoutStore.ExistsForReservation(reservationId);
+
+        /// <summary>
+        /// Reintento silencioso y serializado de closeouts ya consolidados localmente.
+        /// Startup y login solo disparan este reproceso; no recrean el PIREP.
+        /// </summary>
+        public async Task TryProcessPendingCloseoutsAsync(string trigger = "manual")
+        {
+            trigger = string.IsNullOrWhiteSpace(trigger) ? "manual" : trigger.Trim();
+
+            if (string.IsNullOrWhiteSpace(_token))
+            {
+                WriteAuthLog("Pending closeout retry skipped [" + trigger + "] => no auth token.");
+                return;
+            }
+
+            await _pendingCloseoutRetryLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                var pending = _pendingCloseoutStore.LoadAll();
+                WriteAuthLog("Pending closeout retry start [" + trigger + "] => found=" + pending.Count);
+
+                if (pending.Count == 0)
+                {
+                    return;
+                }
+
+                var successCount = 0;
+                var failedCount = 0;
+
+                foreach (var envelope in pending)
+                {
+                    try
+                    {
+                        WriteAuthLog("Pending closeout retry item [" + trigger + "] => reservation=" + envelope.ReservationId + " id=" + envelope.Id + " retry=" + envelope.RetryCount);
+                        envelope.LastAttemptUtc = DateTime.UtcNow;
+                        envelope.LastError = "retry_started";
+                        _pendingCloseoutStore.Save(envelope);
+
+                        var submitResult = await SubmitPreparedCloseoutAsync(envelope).ConfigureAwait(false);
+                        if (submitResult.Success)
+                        {
+                            successCount++;
+                            _pendingCloseoutStore.Delete(envelope.Id);
+                            WriteAuthLog("Pending closeout retry OK [" + trigger + "] => reservation=" + envelope.ReservationId + " id=" + envelope.Id);
+                        }
+                        else
+                        {
+                            failedCount++;
+                            _pendingCloseoutStore.MarkAttempt(envelope, submitResult.Error ?? "closeout_retry_failed");
+                            WriteAuthLog("Pending closeout retry FAIL [" + trigger + "] => reservation=" + envelope.ReservationId + " id=" + envelope.Id + " error=" + (submitResult.Error ?? "closeout_retry_failed"));
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        failedCount++;
+                        _pendingCloseoutStore.MarkAttempt(envelope, ex.Message);
+                        WriteAuthLog("Pending closeout retry EXCEPTION [" + trigger + "] => reservation=" + envelope.ReservationId + " id=" + envelope.Id + " error=" + ex.Message);
+                    }
+                }
+
+                WriteAuthLog("Pending closeout retry end [" + trigger + "] => success=" + successCount + " failed=" + failedCount + " remaining=" + _pendingCloseoutStore.Count());
+            }
+            finally
+            {
+                _pendingCloseoutRetryLock.Release();
+            }
         }
 
         // ── AUTH ──────────────────────────────────────────────────────────────
@@ -643,7 +723,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 var offset = Math.Max(0, page - 1) * 20;
                 var pilot = GetCurrentPilotFromMemory();
                 var endpoint =
-                    "/rest/v1/flight_reservations?select=reservation_code,route_code,origin_ident,destination_ident,aircraft_type_code,status,created_at,completed_at,actual_block_minutes,procedure_score,mission_score,legado_credits"
+                    "/rest/v1/flight_reservations?select=id,reservation_code,flight_number,route_code,origin_ident,destination_ident,aircraft_type_code,status,created_at,completed_at,actual_block_minutes,procedure_score,performance_score,mission_score,procedure_grade,performance_grade,grade,legado_credits,score_payload"
                     + $"&order=created_at.desc&limit=20&offset={offset}";
 
                 if (pilot != null && !string.IsNullOrWhiteSpace(pilot.CallSign))
@@ -1017,58 +1097,7 @@ namespace PatagoniaWings.Acars.Core.Services
                     return ApiResult<FlightReport>.Fail(validationError);
                 }
 
-                if (CanUseWebAcarsApi)
-                {
-                    var webResponse = await PostWebApiAsync(
-                        "/api/acars/finalize",
-                        new
-                        {
-                            report = SerializeFlightReport(report),
-                            activeFlight = SerializeFlight(activeFlight),
-                            preparedDispatch = SerializePreparedDispatch(dispatch),
-                            telemetryLog = SerializeTelemetryLog(telemetryLog),
-                            lastSimData = SerializeSimData(lastSimData),
-                            damageEvents = SerializeDamageEvents(damageEvents)
-                        });
-
-                    if (!webResponse.Success || webResponse.Data == null)
-                    {
-                        return ApiResult<FlightReport>.Fail(
-                            string.IsNullOrWhiteSpace(webResponse.Error)
-                                ? "El backend web no pudo cerrar el vuelo oficialmente."
-                                : webResponse.Error);
-                    }
-
-                    var resultPayload = webResponse.Data;
-                    var officialScores = GetNestedDictionary(resultPayload, "officialScores");
-
-                    report.PilotQualifications = pilot.ActiveQualifications ?? string.Empty;
-                    report.PilotCertifications = pilot.ActiveCertifications ?? string.Empty;
-                    report.ReservationId = dispatch.ReservationId ?? string.Empty;
-                    report.ResultUrl = BuildAbsoluteWebUrl(ConvertToString(resultPayload, "resultUrl"));
-                    report.ResultStatus = ConvertToString(resultPayload, "resultStatus");
-                    report.ProcedureScore = ConvertToInt(officialScores, "procedure_score", report.ProcedureScore);
-                    report.PerformanceScore = ConvertToInt(officialScores, "final_score", report.PerformanceScore);
-                    report.MissionScore = ConvertToInt(officialScores, "mission_score", report.Score);
-                    report.Score = report.ProcedureScore;
-                    report.PointsEarned = report.ProcedureScore;
-                    report.Status = report.ResultStatus == "completed"
-                        ? FlightStatus.Approved
-                        : FlightStatus.Rejected;
-
-                    if (activeFlight != null)
-                    {
-                        var flightHours = Math.Max(0, report.Duration.TotalHours);
-                        var landingCycles = report.LandingVS != 0 ? 1 : 0;
-                        var damageList = damageEvents ?? Array.Empty<AircraftDamageEvent>();
-                        await _damageApi.SubmitDamageAsync(activeFlight, flightHours, landingCycles, damageList);
-                    }
-
-                    _activePreparedDispatch = null;
-                    return ApiResult<FlightReport>.Ok(report);
-                }
-
-                var closeoutResult = await TrySubmitHiddenPirepAsync(
+                var envelope = PrepareCloseoutEnvelope(
                     pilot,
                     dispatch,
                     report,
@@ -1077,15 +1106,23 @@ namespace PatagoniaWings.Acars.Core.Services
                     lastSimData,
                     damageEvents);
 
+                _pendingCloseoutStore.Save(envelope);
+
+                var closeoutResult = await SubmitPreparedCloseoutAsync(envelope).ConfigureAwait(false);
                 if (!closeoutResult.Success || closeoutResult.Data == null)
                 {
-                    return closeoutResult;
+                    _pendingCloseoutStore.MarkAttempt(envelope, closeoutResult.Error ?? "closeout_failed");
+                    _activePreparedDispatch = null;
+                    return BuildQueuedCloseoutResult(
+                        envelope,
+                        closeoutResult.Error,
+                        "No se pudo enviar el PIREP al backend. El cierre quedo guardado localmente y se reintentara automaticamente.");
                 }
 
                 if (activeFlight != null)
                 {
-                    var flightHours = Math.Max(0, report.Duration.TotalHours);
-                    var landingCycles = report.LandingVS != 0 ? 1 : 0;
+                    var flightHours = Math.Max(0, closeoutResult.Data.Duration.TotalHours);
+                    var landingCycles = closeoutResult.Data.LandingVS != 0 ? 1 : 0;
                     var damageList = damageEvents ?? Array.Empty<AircraftDamageEvent>();
                     var damageSync = await _damageApi.SubmitDamageAsync(activeFlight, flightHours, landingCycles, damageList);
 
@@ -1093,12 +1130,13 @@ namespace PatagoniaWings.Acars.Core.Services
                     {
                         WriteAuthLog("Damage sync warning => " + damageSync.Error);
                         var warning = "Damage sync warning: " + (damageSync.Error ?? "unknown");
-                        report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
+                        closeoutResult.Data.Remarks = string.IsNullOrWhiteSpace(closeoutResult.Data.Remarks)
                             ? warning
-                            : report.Remarks + " | " + warning;
+                            : closeoutResult.Data.Remarks + " | " + warning;
                     }
                 }
 
+                _pendingCloseoutStore.Delete(envelope.Id);
                 _activePreparedDispatch = null;
                 return closeoutResult;
             }
@@ -1108,7 +1146,7 @@ namespace PatagoniaWings.Acars.Core.Services
             }
         }
 
-        private async Task<ApiResult<FlightReport>> TrySubmitHiddenPirepAsync(
+        private PatagoniaPendingCloseoutEnvelope PrepareCloseoutEnvelope(
             Pilot pilot,
             PreparedDispatch dispatch,
             FlightReport report,
@@ -1116,6 +1154,261 @@ namespace PatagoniaWings.Acars.Core.Services
             IReadOnlyList<SimData>? telemetryLog,
             SimData? lastSimData,
             IReadOnlyList<AircraftDamageEvent>? damageEvents)
+        {
+            var telemetry = (telemetryLog ?? Array.Empty<SimData>()).ToList();
+            var lastSample = lastSimData ?? (telemetry.Count > 0 ? telemetry[telemetry.Count - 1] : new SimData());
+            var canonicalEvaluation = BuildCanonicalEvaluation(
+                pilot,
+                dispatch,
+                report,
+                activeFlight,
+                telemetry,
+                lastSample);
+
+            ApplyCanonicalEvaluationToReport(report, pilot, dispatch, canonicalEvaluation);
+
+            var pirep = _pirepXmlBuilder.Build(
+                dispatch,
+                pilot,
+                report,
+                activeFlight,
+                telemetry);
+
+            var payload = BuildCloseoutPayload(
+                pilot,
+                dispatch,
+                report,
+                pirep);
+
+            return new PatagoniaPendingCloseoutEnvelope
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                CreatedAtUtc = DateTime.UtcNow,
+                ReservationId = dispatch.ReservationId ?? string.Empty,
+                Pilot = pilot,
+                Dispatch = dispatch,
+                Report = report,
+                ActiveFlight = activeFlight ?? new Flight(),
+                TelemetryLog = telemetry,
+                LastSimData = lastSample ?? new SimData(),
+                DamageEvents = (damageEvents ?? Array.Empty<AircraftDamageEvent>()).ToList(),
+                Payload = payload
+            };
+        }
+
+        private PatagoniaEvaluationReport BuildCanonicalEvaluation(
+            Pilot pilot,
+            PreparedDispatch dispatch,
+            FlightReport report,
+            Flight? activeFlight,
+            IReadOnlyList<SimData> telemetryLog,
+            SimData? lastSimData)
+        {
+            var evaluationInput = new PatagoniaEvaluationInput
+            {
+                Flight = activeFlight ?? new Flight
+                {
+                    ReservationId = dispatch.ReservationId,
+                    DispatchPackageId = dispatch.DispatchId,
+                    AircraftId = dispatch.AircraftId,
+                    FlightNumber = report.FlightNumber,
+                    DepartureIcao = report.DepartureIcao,
+                    ArrivalIcao = report.ArrivalIcao,
+                    AircraftIcao = report.AircraftIcao,
+                    AircraftTypeCode = dispatch.AircraftIcao,
+                    AircraftName = dispatch.AircraftDisplayName,
+                    AircraftDisplayName = dispatch.AircraftDisplayName,
+                    AircraftVariantCode = dispatch.AircraftVariantCode,
+                    AddonProvider = dispatch.AddonProvider,
+                    Route = dispatch.RouteText,
+                    FlightModeCode = dispatch.FlightMode,
+                    RouteCode = dispatch.RouteCode,
+                    BlockFuel = dispatch.FuelPlannedKg,
+                    ZeroFuelWeight = dispatch.ZeroFuelWeightKg,
+                    Remarks = report.Remarks,
+                    StartTime = report.DepartureTime
+                },
+                Dispatch = dispatch,
+                Report = report,
+                TelemetryLog = telemetryLog ?? Array.Empty<SimData>(),
+                CurrentTelemetry = lastSimData ?? new SimData(),
+                PilotQualifications = pilot.ActiveQualifications ?? string.Empty,
+                PilotCertifications = pilot.ActiveCertifications ?? string.Empty
+            };
+
+            return new PatagoniaEvaluationService().Evaluate(evaluationInput);
+        }
+
+        private void ApplyCanonicalEvaluationToReport(
+            FlightReport report,
+            Pilot pilot,
+            PreparedDispatch dispatch,
+            PatagoniaEvaluationReport evaluation)
+        {
+            // El contrato canonico vive en Evaluation/PatagoniaScore.
+            // Lo legacy solo se rellena al final como proyeccion descendente.
+            report.PilotQualifications = pilot.ActiveQualifications ?? string.Empty;
+            report.PilotCertifications = pilot.ActiveCertifications ?? string.Empty;
+            report.ReservationId = dispatch.ReservationId ?? string.Empty;
+            report.Evaluation = evaluation ?? new PatagoniaEvaluationReport();
+            report.PatagoniaScore = report.Evaluation.PatagoniaScore;
+            report.PatagoniaGrade = report.Evaluation.PatagoniaGrade;
+            report.ProcedureScore = report.Evaluation.ProcedureScore;
+            report.PerformanceScore = report.Evaluation.PerformanceScore;
+            report.ProcedureGrade = report.Evaluation.ProcedureGrade;
+            report.PerformanceGrade = report.Evaluation.PerformanceGrade;
+            report.ProceduralSummary = report.Evaluation.Summary;
+            report.Violations = (report.Evaluation.Penalties ?? new List<PatagoniaTriggeredRuleResult>())
+                .Concat(report.Evaluation.GateFailures ?? new List<PatagoniaTriggeredRuleResult>())
+                .Select(MapLegacyScoreEvent)
+                .ToList();
+            report.Bonuses = (report.Evaluation.Bonuses ?? new List<PatagoniaTriggeredRuleResult>())
+                .Select(MapLegacyScoreEvent)
+                .ToList();
+            report.ApplyLegacyScoreProjection();
+        }
+
+        private PatagoniaFlightCloseoutPayload BuildCloseoutPayload(
+            Pilot pilot,
+            PreparedDispatch dispatch,
+            FlightReport report,
+            PirepXmlBuilder.BuildResult pirep)
+        {
+            return new PatagoniaFlightCloseoutPayload
+            {
+                GeneratedAtUtc = DateTime.UtcNow,
+                ReservationId = dispatch.ReservationId ?? string.Empty,
+                ResultUrl = BuildFlightResultUrl(dispatch.ReservationId ?? string.Empty),
+                Header = new PatagoniaFlightCloseoutHeader
+                {
+                    PilotCallsign = pilot.CallSign ?? string.Empty,
+                    FlightNumber = report.FlightNumber ?? string.Empty,
+                    OriginIcao = report.DepartureIcao ?? string.Empty,
+                    DestinationIcao = report.ArrivalIcao ?? string.Empty,
+                    AircraftIcao = report.AircraftIcao ?? string.Empty,
+                    AircraftRegistration = dispatch.AircraftRegistration ?? string.Empty,
+                    FlightMode = dispatch.FlightMode ?? string.Empty,
+                    DurationMinutes = Math.Max(0d, report.Duration.TotalMinutes),
+                    RouteCode = dispatch.RouteCode ?? string.Empty
+                },
+                Scores = new PatagoniaFlightCloseoutScores
+                {
+                    PatagoniaScore = report.PatagoniaScore,
+                    ProcedureScore = report.ProcedureScore,
+                    PerformanceScore = report.PerformanceScore,
+                    FlightValid = report.Evaluation == null || report.Evaluation.FlightValid
+                },
+                Evaluation = report.Evaluation ?? new PatagoniaEvaluationReport(),
+                PirepFileName = pirep == null ? string.Empty : pirep.FileName,
+                PirepChecksumSha256 = pirep == null ? string.Empty : pirep.ChecksumSha256,
+                PirepXmlContent = pirep == null ? string.Empty : pirep.XmlContent
+            };
+        }
+
+        private async Task<ApiResult<FlightReport>> SubmitPreparedCloseoutAsync(PatagoniaPendingCloseoutEnvelope envelope)
+        {
+            if (envelope == null)
+            {
+                return ApiResult<FlightReport>.Fail("No closeout envelope to submit.");
+            }
+
+            if (CanUseWebAcarsApi)
+            {
+                var webResponse = await PostWebApiAsync(
+                    "/api/acars/finalize",
+                    new
+                    {
+                        report = SerializeFlightReport(envelope.Report),
+                        activeFlight = SerializeFlight(envelope.ActiveFlight),
+                        preparedDispatch = SerializePreparedDispatch(envelope.Dispatch),
+                        telemetryLog = SerializeTelemetryLog(envelope.TelemetryLog),
+                        lastSimData = SerializeSimData(envelope.LastSimData),
+                        damageEvents = SerializeDamageEvents(envelope.DamageEvents),
+                        closeoutPayload = SerializeCloseoutPayload(envelope.Payload)
+                    }).ConfigureAwait(false);
+
+                if (!webResponse.Success || webResponse.Data == null)
+                {
+                    return ApiResult<FlightReport>.Fail(
+                        string.IsNullOrWhiteSpace(webResponse.Error)
+                            ? "El backend web no pudo cerrar el vuelo oficialmente."
+                            : webResponse.Error);
+                }
+
+                var resultPayload = webResponse.Data;
+                var officialScores = GetNestedDictionary(resultPayload, "officialScores");
+                envelope.Report.ResultUrl = BuildAbsoluteWebUrl(ConvertToString(resultPayload, "resultUrl"));
+                envelope.Report.ResultStatus = ConvertToString(resultPayload, "resultStatus");
+                envelope.Report.ProcedureScore = ConvertToInt(officialScores, "procedure_score", envelope.Report.ProcedureScore);
+                envelope.Report.PerformanceScore = ConvertToInt(officialScores, "performance_score", envelope.Report.PerformanceScore);
+                envelope.Report.PatagoniaScore = ConvertToInt(officialScores, "final_score", envelope.Report.PatagoniaScore > 0 ? envelope.Report.PatagoniaScore : envelope.Report.Score);
+                envelope.Report.MissionScore = ConvertToInt(officialScores, "mission_score", envelope.Report.PatagoniaScore);
+                envelope.Report.Score = envelope.Report.PatagoniaScore;
+                envelope.Report.PointsEarned = envelope.Report.PatagoniaScore;
+                envelope.Report.Status = envelope.Report.ResultStatus == "completed"
+                    ? FlightStatus.Approved
+                    : FlightStatus.Rejected;
+                return ApiResult<FlightReport>.Ok(envelope.Report);
+            }
+
+            return await TrySubmitHiddenPirepAsync(
+                envelope.Pilot,
+                envelope.Dispatch,
+                envelope.Report,
+                envelope.ActiveFlight,
+                envelope.TelemetryLog,
+                envelope.LastSimData,
+                envelope.DamageEvents,
+                envelope.Payload).ConfigureAwait(false);
+        }
+
+        private ApiResult<FlightReport> BuildQueuedCloseoutResult(
+            PatagoniaPendingCloseoutEnvelope envelope,
+            string? remoteError,
+            string userMessage)
+        {
+            if (envelope == null)
+            {
+                return ApiResult<FlightReport>.Fail(remoteError ?? "closeout_queue_failed");
+            }
+
+            envelope.Report.ResultStatus = "queued_retry";
+            envelope.Report.ResultUrl = string.IsNullOrWhiteSpace(envelope.Payload?.ResultUrl)
+                ? BuildFlightResultUrl(envelope.Dispatch?.ReservationId ?? string.Empty)
+                : envelope.Payload.ResultUrl;
+            envelope.Report.Status = FlightStatus.Pending;
+
+            var detail = string.IsNullOrWhiteSpace(remoteError)
+                ? userMessage
+                : userMessage + " Error remoto: " + remoteError;
+
+            envelope.Report.Remarks = string.IsNullOrWhiteSpace(envelope.Report.Remarks)
+                ? detail
+                : envelope.Report.Remarks + " | " + detail;
+
+            return ApiResult<FlightReport>.Ok(envelope.Report);
+        }
+
+        private static ScoreEvent MapLegacyScoreEvent(PatagoniaTriggeredRuleResult item)
+        {
+            return new ScoreEvent
+            {
+                Code = item.RuleId,
+                Phase = item.Phase,
+                Description = string.IsNullOrWhiteSpace(item.Description) ? item.Message : item.Description,
+                Points = item.ScoreDelta
+            };
+        }
+
+        private async Task<ApiResult<FlightReport>> TrySubmitHiddenPirepAsync(
+            Pilot pilot,
+            PreparedDispatch dispatch,
+            FlightReport report,
+            Flight? activeFlight,
+            IReadOnlyList<SimData>? telemetryLog,
+            SimData? lastSimData,
+            IReadOnlyList<AircraftDamageEvent>? damageEvents,
+            PatagoniaFlightCloseoutPayload? closeoutPayload)
         {
             try
             {
@@ -1163,10 +1456,12 @@ namespace PatagoniaWings.Acars.Core.Services
                     // route_text y remarks no son columnas de flight_reservations.
                     var scorePayload = new Dictionary<string, object>
                     {
-                        ["sur_score"]         = report.ProcedureScore,
-                        ["final_score"]       = report.ProcedureScore,
+                        ["sur_score"]         = report.PatagoniaScore,
+                        ["final_score"]       = report.PatagoniaScore,
                         ["procedure_score"]   = report.ProcedureScore,
                         ["performance_score"] = report.PerformanceScore,
+                        ["patagonia_score"]   = report.PatagoniaScore,
+                        ["patagonia_grade"]   = report.PatagoniaGrade,
                         ["procedure_grade"]   = report.ProcedureGrade,
                         ["performance_grade"] = report.PerformanceGrade,
                         ["grade"]             = report.Grade,       // legacy
@@ -1184,6 +1479,8 @@ namespace PatagoniaWings.Acars.Core.Services
                         ["cabin_penalty"]     = report.CabinPenalty,
                         ["damage_summary"]    = damageSummary,
                         ["summary"]           = report.ProceduralSummary,
+                        ["evaluation"]        = SerializePatagoniaEvaluation(report.Evaluation),
+                        ["closeout_payload"]  = SerializeCloseoutPayload(closeoutPayload),
                         ["source"]            = "acars_client_v3"
                     };
                     reservationRequest.Content = new StringContent(
@@ -1194,9 +1491,10 @@ namespace PatagoniaWings.Acars.Core.Services
                             actual_block_minutes = actualBlockMinutes,
                             procedure_score     = report.ProcedureScore,
                             performance_score   = report.PerformanceScore,
+                            final_score         = report.PatagoniaScore,
                             procedure_grade     = report.ProcedureGrade,
                             performance_grade   = report.PerformanceGrade,
-                            mission_score       = report.ProcedureScore,   // legacy alias
+                            mission_score       = report.PatagoniaScore,   // legacy alias
                             scoring_status      = "scored",
                             scoring_applied_at  = nowUtcIso,
                             score_payload       = scorePayload,
@@ -1255,10 +1553,12 @@ namespace PatagoniaWings.Acars.Core.Services
                 var totalPenalty = report.LandingPenalty + report.TaxiPenalty + report.AirbornePenalty + report.ApproachPenalty + report.CabinPenalty;
                 var scoreReportPayload = new Dictionary<string, object>
                 {
-                    ["sur_score"]         = report.ProcedureScore,
-                    ["final_score"]       = report.ProcedureScore,
+                    ["sur_score"]         = report.PatagoniaScore,
+                    ["final_score"]       = report.PatagoniaScore,
                     ["procedure_score"]   = report.ProcedureScore,
                     ["performance_score"] = report.PerformanceScore,
+                    ["patagonia_score"]   = report.PatagoniaScore,
+                    ["patagonia_grade"]   = report.PatagoniaGrade,
                     ["procedure_grade"]   = report.ProcedureGrade,
                     ["performance_grade"] = report.PerformanceGrade,
                     ["violations_count"]  = report.Violations?.Count ?? 0,
@@ -1269,7 +1569,9 @@ namespace PatagoniaWings.Acars.Core.Services
                     ["max_speed_kts"]     = report.MaxSpeedKts,
                     ["approach_qnh_hpa"]  = report.ApproachQnhHpa,
                     ["procedural_summary"] = report.ProceduralSummary,
-                    ["simulator"]         = report.Simulator.ToString()
+                    ["simulator"]         = report.Simulator.ToString(),
+                    ["evaluation"]        = SerializePatagoniaEvaluation(report.Evaluation),
+                    ["closeout_payload"]  = SerializeCloseoutPayload(closeoutPayload)
                 };
                 using (var scoreRequest = CreateSupabaseRequest(HttpMethod.Post, "/rest/v1/pw_flight_score_reports", true))
                 {
@@ -1293,11 +1595,12 @@ namespace PatagoniaWings.Acars.Core.Services
                                 ["penalty_points"]       = totalPenalty,
                                 ["procedure_score"]      = report.ProcedureScore,
                                 ["performance_score"]    = report.PerformanceScore,
+                                ["final_score"]          = report.PatagoniaScore,
                                 ["procedure_grade"]      = NullIfEmpty(report.ProcedureGrade),
                                 ["performance_grade"]    = NullIfEmpty(report.PerformanceGrade),
-                                ["mission_score"]        = report.ProcedureScore,   // legacy alias
-                                ["legado_credits"]       = report.ProcedureScore,
-                                ["valid_for_progression"] = report.ProcedureScore >= 60,
+                                ["mission_score"]        = report.PatagoniaScore,   // legacy alias
+                                ["legado_credits"]       = report.PatagoniaScore,
+                                ["valid_for_progression"] = report.PatagoniaScore >= 60,
                                 ["score_payload"]        = scoreReportPayload,
                                 ["notes"]                = report.ProceduralSummary,
                                 ["scored_at"]            = nowUtcIso
@@ -1334,7 +1637,9 @@ namespace PatagoniaWings.Acars.Core.Services
                                     ["aircraft_registration"] = NullIfEmpty(dispatch.AircraftRegistration) ?? string.Empty,
                                     ["aircraft_model"] = ResolveAcarsAircraftIcao(dispatch.AircraftIcao),
                                     ["created_on_utc"] = nowUtcIso,
-                                    ["result_status"] = "completed"
+                                    ["result_status"] = "completed",
+                                    ["pirep_file_name"] = closeoutPayload == null ? string.Empty : closeoutPayload.PirepFileName,
+                                    ["pirep_checksum"] = closeoutPayload == null ? string.Empty : closeoutPayload.PirepChecksumSha256
                                 }
                             }),
                             Encoding.UTF8,
@@ -1352,7 +1657,9 @@ namespace PatagoniaWings.Acars.Core.Services
                 report.PilotQualifications = pilot.ActiveQualifications ?? string.Empty;
                 report.PilotCertifications = pilot.ActiveCertifications ?? string.Empty;
                 report.ReservationId = dispatch.ReservationId ?? string.Empty;
-                report.ResultUrl = BuildFlightResultUrl(dispatch.ReservationId ?? string.Empty);
+                report.ResultUrl = closeoutPayload == null || string.IsNullOrWhiteSpace(closeoutPayload.ResultUrl)
+                    ? BuildFlightResultUrl(dispatch.ReservationId ?? string.Empty)
+                    : closeoutPayload.ResultUrl;
                 report.ResultStatus = "completed";
                 report.Status = FlightStatus.Approved;
                 return ApiResult<FlightReport>.Ok(report);
@@ -1825,14 +2132,30 @@ namespace PatagoniaWings.Acars.Core.Services
             var createdAt = ConvertToDateTime(row, "created_at") ?? DateTime.UtcNow;
             var completedAt = ConvertToDateTime(row, "completed_at") ?? createdAt;
             var durationMinutes = ConvertToInt(row, "actual_block_minutes", 0);
-            var score = ConvertToInt(row, "procedure_score", 0);
-            if (score <= 0) score = ConvertToInt(row, "mission_score", 0);
+            var scorePayload = row.ContainsKey("score_payload") ? row["score_payload"] as Dictionary<string, object> : null;
+            var officialPirep = scorePayload != null && scorePayload.ContainsKey("official_pirep")
+                ? scorePayload["official_pirep"] as Dictionary<string, object>
+                : null;
+
+            var patagoniaScore = scorePayload == null ? 0 : ConvertToInt(scorePayload, "final_score", 0);
+            if (patagoniaScore <= 0 && officialPirep != null) patagoniaScore = ConvertToInt(officialPirep, "final_score", 0);
+            if (patagoniaScore <= 0) patagoniaScore = ConvertToInt(row, "performance_score", 0);
+            if (patagoniaScore <= 0) patagoniaScore = ConvertToInt(row, "mission_score", 0);
+            if (patagoniaScore <= 0) patagoniaScore = ConvertToInt(row, "procedure_score", 0);
+
+            var procedureScore = ConvertToInt(row, "procedure_score", 0);
+            var performanceScore = ConvertToInt(row, "performance_score", 0);
+            var patagoniaGrade = FirstNonEmpty(row, "grade");
+            if (string.IsNullOrWhiteSpace(patagoniaGrade))
+            {
+                patagoniaGrade = ScoreToGrade(patagoniaScore);
+            }
 
             var reservationId = FirstNonEmpty(row, "id", "reservation_id");
 
             return new FlightReport
             {
-                FlightNumber = FirstNonEmpty(row, "reservation_code", "route_code"),
+                FlightNumber = FirstNonEmpty(row, "flight_number", "reservation_code", "route_code"),
                 ReservationId = reservationId,
                 ResultUrl = BuildFlightResultUrl(reservationId),
                 DepartureIcao = FirstNonEmpty(row, "origin_ident"),
@@ -1840,8 +2163,15 @@ namespace PatagoniaWings.Acars.Core.Services
                 AircraftIcao = FirstNonEmpty(row, "aircraft_type_code"),
                 DepartureTime = createdAt,
                 ArrivalTime = completedAt > createdAt ? completedAt : createdAt.AddMinutes(durationMinutes <= 0 ? 1 : durationMinutes),
-                Score = score,
-                Grade = ScoreToGrade(score),
+                Score = patagoniaScore,
+                Grade = patagoniaGrade,
+                PatagoniaScore = patagoniaScore,
+                PatagoniaGrade = patagoniaGrade,
+                MissionScore = ConvertToInt(row, "mission_score", patagoniaScore),
+                ProcedureScore = procedureScore,
+                PerformanceScore = performanceScore,
+                ProcedureGrade = FirstNonEmpty(row, "procedure_grade"),
+                PerformanceGrade = FirstNonEmpty(row, "performance_grade"),
                 PointsEarned = ConvertToInt(row, "legado_credits", 0),
                 ResultStatus = FirstNonEmpty(row, "status"),
                 Status = ParseFlightStatus(FirstNonEmpty(row, "status"))
@@ -2664,7 +2994,230 @@ namespace PatagoniaWings.Acars.Core.Services
                 remarks = report.Remarks,
                 maxAltitudeFeet = report.MaxAltitudeFeet,
                 maxSpeedKts = report.MaxSpeedKts,
-                approachQnhHpa = report.ApproachQnhHpa
+                approachQnhHpa = report.ApproachQnhHpa,
+                patagoniaScore = report.PatagoniaScore,
+                patagoniaGrade = report.PatagoniaGrade,
+                procedureScore = report.ProcedureScore,
+                performanceScore = report.PerformanceScore,
+                evaluation = SerializePatagoniaEvaluation(report.Evaluation)
+            };
+        }
+
+        private object SerializePatagoniaEvaluation(PatagoniaEvaluationReport evaluation)
+        {
+            if (evaluation == null)
+            {
+                return new { };
+            }
+
+            return new
+            {
+                contractVersion = evaluation.ContractVersion,
+                rulesetVersion = evaluation.RulesetVersion,
+                visibleScoreName = evaluation.VisibleScoreName,
+                rulesFilePath = evaluation.RulesFilePath,
+                patagoniaScore = evaluation.PatagoniaScore,
+                procedureScore = evaluation.ProcedureScore,
+                performanceScore = evaluation.PerformanceScore,
+                patagoniaGrade = evaluation.PatagoniaGrade,
+                procedureGrade = evaluation.ProcedureGrade,
+                performanceGrade = evaluation.PerformanceGrade,
+                flightValid = evaluation.FlightValid,
+                summary = evaluation.Summary,
+                invalidReasons = evaluation.InvalidReasons ?? new List<string>(),
+                incidents = (evaluation.Incidents ?? new List<PatagoniaIncidentRecord>()).Select(item => new
+                {
+                    code = item.Code,
+                    phase = item.Phase,
+                    severity = item.Severity,
+                    message = item.Message,
+                    source = item.Source,
+                    scoreDelta = item.ScoreDelta,
+                    timestampUtc = item.TimestampUtc == default(DateTime) ? string.Empty : item.TimestampUtc.ToString("o", CultureInfo.InvariantCulture)
+                }).ToArray(),
+                ruleAuditLog = (evaluation.RuleAuditLog ?? new List<PatagoniaRuleAuditEntry>()).Select(item => new
+                {
+                    ruleId = item.RuleId,
+                    phase = item.Phase,
+                    timestampUtc = item.TimestampUtc == default(DateTime) ? string.Empty : item.TimestampUtc.ToString("o", CultureInfo.InvariantCulture),
+                    evaluationState = item.EvaluationState,
+                    observedValue = item.ObservedValue,
+                    expectedValue = item.ExpectedValue,
+                    appliedTolerance = item.AppliedTolerance,
+                    result = item.Result,
+                    scoreDelta = item.ScoreDelta,
+                    reason = item.Reason,
+                    source = item.Source,
+                    context = item.Context,
+                    category = item.Category,
+                    ruleType = item.RuleType,
+                    severity = item.Severity,
+                    scoreTarget = item.ScoreTarget,
+                    triggered = item.Triggered,
+                    flightInvalidated = item.FlightInvalidated,
+                    incidentCode = item.IncidentCode
+                }).ToArray(),
+                triggeredRules = (evaluation.TriggeredRules ?? new List<PatagoniaTriggeredRuleResult>()).Select(rule => new
+                {
+                    ruleId = rule.RuleId,
+                    name = rule.Name,
+                    description = rule.Description,
+                    phase = rule.Phase,
+                    category = rule.Category,
+                    ruleType = rule.RuleType,
+                    severity = rule.Severity,
+                    scoreTarget = rule.ScoreTarget,
+                    scoreDelta = rule.ScoreDelta,
+                    message = rule.Message
+                }).ToArray(),
+                phaseResults = (evaluation.PhaseResults ?? new List<PatagoniaPhaseResult>()).Select(phase => new
+                {
+                    phase = phase.Phase,
+                    scoreDelta = phase.ScoreDelta,
+                    bonusCount = phase.BonusCount,
+                    penaltyCount = phase.PenaltyCount,
+                    gateFailureCount = phase.GateFailureCount,
+                    triggeredRuleIds = phase.TriggeredRuleIds ?? new List<string>()
+                }).ToArray(),
+                bonuses = (evaluation.Bonuses ?? new List<PatagoniaTriggeredRuleResult>()).Select(rule => new
+                {
+                    ruleId = rule.RuleId,
+                    phase = rule.Phase,
+                    scoreDelta = rule.ScoreDelta,
+                    message = rule.Message
+                }).ToArray(),
+                penalties = (evaluation.Penalties ?? new List<PatagoniaTriggeredRuleResult>()).Select(rule => new
+                {
+                    ruleId = rule.RuleId,
+                    phase = rule.Phase,
+                    scoreDelta = rule.ScoreDelta,
+                    message = rule.Message
+                }).ToArray(),
+                gateFailures = (evaluation.GateFailures ?? new List<PatagoniaTriggeredRuleResult>()).Select(rule => new
+                {
+                    ruleId = rule.RuleId,
+                    phase = rule.Phase,
+                    scoreDelta = rule.ScoreDelta,
+                    message = rule.Message
+                }).ToArray(),
+                telemetrySummary = new
+                {
+                    samplesCount = evaluation.TelemetrySummary.SamplesCount,
+                    airborneSamplesCount = evaluation.TelemetrySummary.AirborneSamplesCount,
+                    onGroundSamplesCount = evaluation.TelemetrySummary.OnGroundSamplesCount,
+                    distanceNm = evaluation.TelemetrySummary.DistanceNm,
+                    fuelUsedKg = evaluation.TelemetrySummary.FuelUsedKg,
+                    maxAltitudeFt = evaluation.TelemetrySummary.MaxAltitudeFt,
+                    maxSpeedKts = evaluation.TelemetrySummary.MaxSpeedKts,
+                    maxBankDeg = evaluation.TelemetrySummary.MaxBankDeg,
+                    maxPitchDeg = evaluation.TelemetrySummary.MaxPitchDeg,
+                    landingVsFpm = evaluation.TelemetrySummary.LandingVsFpm,
+                    landingG = evaluation.TelemetrySummary.LandingG,
+                    firstSampleUtc = evaluation.TelemetrySummary.FirstSampleUtc == default(DateTime) ? string.Empty : evaluation.TelemetrySummary.FirstSampleUtc.ToString("o", CultureInfo.InvariantCulture),
+                    lastSampleUtc = evaluation.TelemetrySummary.LastSampleUtc == default(DateTime) ? string.Empty : evaluation.TelemetrySummary.LastSampleUtc.ToString("o", CultureInfo.InvariantCulture),
+                    lastLatitude = evaluation.TelemetrySummary.LastLatitude,
+                    lastLongitude = evaluation.TelemetrySummary.LastLongitude
+                },
+                eventLog = (evaluation.EventLog ?? new List<PatagoniaEventLogEntry>()).Select(entry => new
+                {
+                    timestampUtc = entry.TimestampUtc == default(DateTime) ? string.Empty : entry.TimestampUtc.ToString("o", CultureInfo.InvariantCulture),
+                    phase = entry.Phase,
+                    source = entry.Source,
+                    severity = entry.Severity,
+                    message = entry.Message
+                }).ToArray(),
+                certificationsChecks = (evaluation.CertificationsChecks ?? new List<PatagoniaCertificationCheckResult>()).Select(check => new
+                {
+                    ruleId = check.RuleId,
+                    required = check.Required ?? new List<string>(),
+                    provided = check.Provided ?? new List<string>(),
+                    passed = check.Passed,
+                    status = check.Status
+                }).ToArray(),
+                aircraftValidation = new
+                {
+                    aircraftIcao = evaluation.AircraftValidation.AircraftIcao,
+                    aircraftTypeCode = evaluation.AircraftValidation.AircraftTypeCode,
+                    aircraftDisplayName = evaluation.AircraftValidation.AircraftDisplayName,
+                    detectedProfileCode = evaluation.AircraftValidation.DetectedProfileCode,
+                    hasApplicableRules = evaluation.AircraftValidation.HasApplicableRules,
+                    aircraftMatchesDispatch = evaluation.AircraftValidation.AircraftMatchesDispatch,
+                    issues = evaluation.AircraftValidation.Issues ?? new List<string>(),
+                    matchedRules = evaluation.AircraftValidation.MatchedRules ?? new List<string>()
+                },
+                dispatchValidation = new
+                {
+                    dispatchPresent = evaluation.DispatchValidation.DispatchPresent,
+                    flightNumberPresent = evaluation.DispatchValidation.FlightNumberPresent,
+                    originPresent = evaluation.DispatchValidation.OriginPresent,
+                    destinationPresent = evaluation.DispatchValidation.DestinationPresent,
+                    routePresent = evaluation.DispatchValidation.RoutePresent,
+                    passed = evaluation.DispatchValidation.Passed,
+                    issues = evaluation.DispatchValidation.Issues ?? new List<string>()
+                },
+                weightsValidation = new
+                {
+                    evaluated = evaluation.WeightsValidation.Evaluated,
+                    passed = evaluation.WeightsValidation.Passed,
+                    plannedFuelKg = evaluation.WeightsValidation.PlannedFuelKg,
+                    actualFuelStartKg = evaluation.WeightsValidation.ActualFuelStartKg,
+                    actualFuelEndKg = evaluation.WeightsValidation.ActualFuelEndKg,
+                    plannedPayloadKg = evaluation.WeightsValidation.PlannedPayloadKg,
+                    plannedZeroFuelWeightKg = evaluation.WeightsValidation.PlannedZeroFuelWeightKg,
+                    actualZeroFuelWeightKg = evaluation.WeightsValidation.ActualZeroFuelWeightKg,
+                    issues = evaluation.WeightsValidation.Issues ?? new List<string>()
+                },
+                weatherValidation = new
+                {
+                    evaluated = evaluation.WeatherValidation.Evaluated,
+                    passed = evaluation.WeatherValidation.Passed,
+                    departureRaining = evaluation.WeatherValidation.DepartureRaining,
+                    arrivalRaining = evaluation.WeatherValidation.ArrivalRaining,
+                    departureWindSpeed = evaluation.WeatherValidation.DepartureWindSpeed,
+                    arrivalWindSpeed = evaluation.WeatherValidation.ArrivalWindSpeed,
+                    departureWindDirection = evaluation.WeatherValidation.DepartureWindDirection,
+                    arrivalWindDirection = evaluation.WeatherValidation.ArrivalWindDirection,
+                    issues = evaluation.WeatherValidation.Issues ?? new List<string>()
+                }
+            };
+        }
+
+        private object SerializeCloseoutPayload(PatagoniaFlightCloseoutPayload? payload)
+        {
+            if (payload == null)
+            {
+                return new { };
+            }
+
+            return new
+            {
+                contractVersion = payload.ContractVersion,
+                generatedAtUtc = payload.GeneratedAtUtc == default(DateTime) ? string.Empty : payload.GeneratedAtUtc.ToString("o", CultureInfo.InvariantCulture),
+                reservationId = payload.ReservationId,
+                resultUrl = payload.ResultUrl,
+                header = new
+                {
+                    pilotCallsign = payload.Header.PilotCallsign,
+                    flightNumber = payload.Header.FlightNumber,
+                    originIcao = payload.Header.OriginIcao,
+                    destinationIcao = payload.Header.DestinationIcao,
+                    aircraftIcao = payload.Header.AircraftIcao,
+                    aircraftRegistration = payload.Header.AircraftRegistration,
+                    flightMode = payload.Header.FlightMode,
+                    durationMinutes = payload.Header.DurationMinutes,
+                    routeCode = payload.Header.RouteCode
+                },
+                scores = new
+                {
+                    patagoniaScore = payload.Scores.PatagoniaScore,
+                    procedureScore = payload.Scores.ProcedureScore,
+                    performanceScore = payload.Scores.PerformanceScore,
+                    flightValid = payload.Scores.FlightValid
+                },
+                evaluation = SerializePatagoniaEvaluation(payload.Evaluation),
+                pirepFileName = payload.PirepFileName,
+                pirepChecksumSha256 = payload.PirepChecksumSha256,
+                pirepXmlContent = payload.PirepXmlContent
             };
         }
 

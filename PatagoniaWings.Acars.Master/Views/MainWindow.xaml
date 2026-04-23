@@ -4,367 +4,212 @@
         xmlns:pages="clr-namespace:PatagoniaWings.Acars.Master.Views.Pages"
         xmlns:vm="clr-namespace:PatagoniaWings.Acars.Master.ViewModels"
         Title="Patagonia Wings ACARS"
-        Width="920" Height="580"
-        MinWidth="820" MinHeight="520"
+        Width="300"
+        Height="730"
+        MinWidth="292"
+        MinHeight="720"
+        MaxWidth="306"
+        MaxHeight="736"
+        ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent">
 
-    <Border CornerRadius="10" ClipToBounds="True">
-        <Grid Background="{StaticResource BackgroundDarkBrush}">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="36"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="168"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+    <Grid Background="Transparent">
+        <Border Margin="8"
+                CornerRadius="22"
+                BorderBrush="#243141"
+                BorderThickness="1"
+                Background="{StaticResource WindowBackgroundBrush}"
+                Effect="{StaticResource PanelShadow}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="68"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="26"/>
+                </Grid.RowDefinitions>
 
-            <!-- ═══ TITLEBAR ════════════════════════════════════════════════ -->
-            <Border Grid.Row="0" Grid.ColumnSpan="2"
-                    Background="{StaticResource BackgroundMidBrush}"
-                    BorderBrush="{StaticResource BorderBrush}"
-                    BorderThickness="0,0,0,1"
-                    MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="168"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Logo -->
-                    <StackPanel Grid.Column="0" Orientation="Horizontal"
-                                VerticalAlignment="Center" Margin="10,0">
-                        <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
-                               Height="18" Width="18" Margin="0,0,6,0" VerticalAlignment="Center"/>
-                        <TextBlock Text="PATAGONIA WINGS" FontSize="10" FontWeight="Bold"
-                                   Foreground="{StaticResource AccentLightBlueBrush}" VerticalAlignment="Center"
-                                   FontFamily="Segoe UI"/>
-                    </StackPanel>
-
-                    <!-- Info central -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal"
-                                HorizontalAlignment="Center" VerticalAlignment="Center">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,16,0"
-                                    MouseLeftButtonDown="SimStatus_Click" Cursor="Hand"
-                                    ToolTip="Click para reconectar con MSFS">
-                            <Ellipse Width="7" Height="7" Margin="0,0,5,0" VerticalAlignment="Center">
-                                <Ellipse.Fill>
-                                    <SolidColorBrush Color="{Binding SimStatusColor}"/>
-                                </Ellipse.Fill>
-                            </Ellipse>
-                            <TextBlock Text="{Binding SimStatusText}" Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="10" FontFamily="Segoe UI" VerticalAlignment="Center"/>
-                        </StackPanel>
-                        <TextBlock Text="|" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <TextBlock Text="{Binding UtcTime}" Foreground="{StaticResource TextSecondaryBrush}"
-                                   FontSize="11" FontFamily="Consolas" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <TextBlock Text="|" Foreground="#CBD5E1" VerticalAlignment="Center" Margin="0,0,16,0"/>
-                        <TextBlock Text="{Binding PilotDisplay}" Foreground="{StaticResource TextPrimaryBrush}"
-                                   FontSize="10" FontFamily="Segoe UI" VerticalAlignment="Center"/>
-                    </StackPanel>
-
-                    <!-- Controles ventana -->
-                    <StackPanel Grid.Column="2" Orientation="Horizontal"
-                                VerticalAlignment="Center" Margin="0,0,4,0">
-                        <Button Content="—" Width="30" Height="28" Background="Transparent"
-                                BorderThickness="0" Foreground="{StaticResource TextSecondaryBrush}" Cursor="Hand"
-                                FontSize="12" Click="BtnMinimize_Click"/>
-                        <Button Content="⬜" Width="30" Height="28" Background="Transparent"
-                                BorderThickness="0" Foreground="{StaticResource TextSecondaryBrush}" Cursor="Hand"
-                                FontSize="10" Click="BtnMaximize_Click"/>
-                        <Button Content="✕" Width="30" Height="28" Background="Transparent"
-                                BorderThickness="0" Cursor="Hand" FontSize="11" Click="BtnClose_Click">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Setter Property="Background"  Value="Transparent"/>
-                                    <Setter Property="BorderThickness" Value="0"/>
-                                    <Setter Property="Foreground"  Value="{StaticResource TextSecondaryBrush}"/>
-                                    <Setter Property="Cursor"      Value="Hand"/>
-                                    <Style.Triggers>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter Property="Background" Value="#CC2222"/>
-                                            <Setter Property="Foreground" Value="White"/>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </StackPanel>
+                <Grid Grid.RowSpan="3" IsHitTestVisible="False">
+                    <Ellipse Width="210" Height="210" Fill="#162D4864" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="-90,-70,0,0"/>
+                    <Ellipse Width="150" Height="150" Fill="#0D0F1825" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-60,-48"/>
                 </Grid>
-            </Border>
 
-            <!-- ═══ SIDEBAR ═════════════════════════════════════════════════ -->
-            <Border Grid.Row="1" Grid.Column="0"
-                    Background="{StaticResource BackgroundMidBrush}"
-                    BorderBrush="{StaticResource BorderBrush}"
-                    BorderThickness="0,0,1,0">
-                <DockPanel>
+                <Border Grid.Row="0"
+                        Background="#0A121A"
+                        BorderBrush="#1C2A39"
+                        BorderThickness="0,0,0,1"
+                        CornerRadius="22,22,0,0"
+                        MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
+                    <Grid Margin="11,9,9,9">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
 
-                    <!-- Menú de navegación -->
-                    <StackPanel DockPanel.Dock="Top" Margin="6,10">
-
-                        <!-- DASHBOARD -->
-                        <Button Command="{Binding NavDashboardCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="Dashboard">
-                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
-                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
-                                            <Setter Property="Background">
-                                                <Setter.Value>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
-                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⊞" FontSize="12" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <!-- DESPACHO -->
-                        <Button Command="{Binding NavPreFlightCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="PreFlight">
-                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
-                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
-                                            <Setter Property="Background">
-                                                <Setter.Value>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
-                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="✈" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Despacho" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <!-- EN VUELO -->
-                        <Button Command="{Binding NavInFlightCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="InFlight">
-                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
-                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
-                                            <Setter Property="Background">
-                                                <Setter.Value>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
-                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="✈" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Vuelo en Vivo" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <!-- COMUNIDAD -->
-                        <Button Command="{Binding NavCommunityCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="Community">
-                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
-                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
-                                            <Setter Property="Background">
-                                                <Setter.Value>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
-                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="👥" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Comunidad" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                        <!-- MI PERFIL -->
-                        <Button Command="{Binding NavProfileCommand}">
-                            <Button.Style>
-                                <Style TargetType="Button" BasedOn="{StaticResource SidebarButton}">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding CurrentPageName}" Value="Profile">
-                                            <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
-                                            <Setter Property="Template" Value="{StaticResource SidebarActiveControlTemplate}"/>
-                                            <Setter Property="Background">
-                                                <Setter.Value>
-                                                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                                        <GradientStop Color="#DBEAFE" Offset="0"/>
-                                                        <GradientStop Color="#EFF6FF" Offset="1"/>
-                                                    </LinearGradientBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="👤" FontSize="11" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Mi Perfil" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-
-                    </StackPanel>
-
-                    <!-- Info piloto + logout al fondo -->
-                    <StackPanel DockPanel.Dock="Bottom" Margin="8,0,8,10">
-                        <!-- Fase actual mini -->
-                        <Border Background="#F0F9FF" CornerRadius="5" Padding="8,5" Margin="0,0,0,8"
-                                BorderBrush="{StaticResource BorderBrush}" BorderThickness="1">
-                            <StackPanel Orientation="Horizontal">
-                                <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,6,0">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Setter Property="Fill" Value="#CBD5E1"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Cruise">
-                                                    <Setter Property="Fill" Value="#3FB950"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Climb">
-                                                    <Setter Property="Fill" Value="#2D9CDB"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Descent">
-                                                    <Setter Property="Fill" Value="#FFCC00"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Approach">
-                                                    <Setter Property="Fill" Value="#FF8844"/>
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding FlightPhase}" Value="Arrived">
-                                                    <Setter Property="Fill" Value="#3FB950"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
-                                <TextBlock Text="{Binding FlightPhase, Converter={StaticResource PhaseToStringConverter}}"
-                                           Foreground="{StaticResource TextSecondaryBrush}" FontSize="10" FontFamily="Segoe UI"/>
-                            </StackPanel>
+                        <Border Width="32"
+                                Height="32"
+                                CornerRadius="16"
+                                BorderBrush="#335173"
+                                BorderThickness="1"
+                                Background="#0E1824"
+                                VerticalAlignment="Center">
+                            <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
+                                   Width="18"
+                                   Height="18"
+                                   Stretch="Uniform"/>
                         </Border>
 
-                        <Separator Background="{StaticResource BorderBrush}" Margin="0,0,0,6"/>
-                        <Button Style="{StaticResource SidebarButton}"
-                                Command="{Binding LogoutCommand}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⏏" FontSize="11" Foreground="#FF4444" Margin="0,0,8,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Cerrar Sesión" Foreground="#FF4444" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <TextBlock x:Name="TxtSidebarVersion" Foreground="#94A3B8"
-                                   FontSize="9" HorizontalAlignment="Center" Margin="0,6,0,0"
-                                   FontFamily="Consolas"/>
-                    </StackPanel>
-                </DockPanel>
-            </Border>
+                        <StackPanel Grid.Column="1" Margin="10,0,6,0" VerticalAlignment="Center">
+                            <TextBlock Text="PATAGONIA WINGS"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontSize="9.5"
+                                       FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding HeaderTitle}"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontSize="9.5"
+                                       FontWeight="Bold"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
 
-            <!-- ═══ BARRA DE ACTUALIZACIÓN (oculta salvo durante descarga) ═════ -->
-            <!-- Abarca toda la fila 1 columna 1 (área de contenido), anclada al fondo -->
-            <Border x:Name="UpdateBanner"
-                    Grid.Row="1" Grid.Column="1"
-                    VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
-                    Background="#E5000D1C"
-                    BorderBrush="#1D4ED8" BorderThickness="0,1,0,0"
-                    Padding="16,8" Panel.ZIndex="200"
-                    Visibility="Collapsed">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <DockPanel Grid.Row="0" LastChildFill="True">
-                        <TextBlock x:Name="TxtUpdatePercent"
-                                   DockPanel.Dock="Right"
-                                   Foreground="#60A5FA" FontSize="11"
-                                   FontFamily="Consolas" VerticalAlignment="Center"
-                                   Margin="8,0,0,0" Text="0 %"/>
-                        <TextBlock x:Name="TxtUpdateStatus"
-                                   Foreground="#93C5FD" FontSize="11"
-                                   FontFamily="Segoe UI" FontWeight="SemiBold"
+                        <Border Grid.Column="2"
+                                Background="#111B28"
+                                BorderBrush="#2A3E57"
+                                BorderThickness="1"
+                                CornerRadius="10"
+                                Padding="7,3"
+                                VerticalAlignment="Center"
+                                Margin="0,0,8,0">
+                            <TextBlock Text="{Binding StepBadge}"
+                                       Foreground="{StaticResource AccentBlueBrush}"
+                                       FontSize="8.5"
+                                       FontWeight="Bold"/>
+                        </Border>
+
+                        <Button Grid.Column="3"
+                                Width="22"
+                                Height="22"
+                                Margin="0,0,6,0"
+                                Background="#111A25"
+                                BorderBrush="#243141"
+                                BorderThickness="1"
+                                Foreground="{StaticResource TextSecondaryBrush}"
+                                FontSize="9"
+                                Click="BtnMinimize_Click"
+                                Content="-"/>
+
+                        <Button Grid.Column="4"
+                                Width="22"
+                                Height="22"
+                                Background="#231417"
+                                BorderBrush="#5A3137"
+                                BorderThickness="1"
+                                Foreground="#FFD3D3"
+                                FontSize="8.5"
+                                Click="BtnClose_Click"
+                                Content="X"/>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1"
+                        Padding="10,10,10,8"
+                        Background="#93081119">
+                    <ContentControl x:Name="ShellContentHost">
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding CurrentStep}" Value="{x:Static vm:AcarsShellStep.Login}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <pages:LoginPage/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding CurrentStep}" Value="{x:Static vm:AcarsShellStep.PilotLounge}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <pages:DashboardPage/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding CurrentStep}" Value="{x:Static vm:AcarsShellStep.NoDispatch}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <pages:NoDispatchPage/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding CurrentStep}" Value="{x:Static vm:AcarsShellStep.Dispatch}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <pages:PreFlightPage/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding CurrentStep}" Value="{x:Static vm:AcarsShellStep.LiveFlight}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <pages:InFlightPage/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding CurrentStep}" Value="{x:Static vm:AcarsShellStep.CloseFlight}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <pages:PostFlightPage/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding CurrentStep}" Value="{x:Static vm:AcarsShellStep.Support}">
+                                        <Setter Property="Content">
+                                            <Setter.Value>
+                                                <pages:SupportPage/>
+                                            </Setter.Value>
+                                        </Setter>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+                </Border>
+
+                <Border Grid.Row="2"
+                        Background="#0A121A"
+                        BorderBrush="#1C2A39"
+                        BorderThickness="0,1,0,0"
+                        CornerRadius="0,0,22,22">
+                    <Grid Margin="10,0,10,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Ellipse Width="8"
+                                 Height="8"
+                                 Fill="#59D98B"
+                                 VerticalAlignment="Center"
+                                 Margin="0,0,6,0"/>
+
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding FooterStatus}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   FontSize="8.5"
                                    VerticalAlignment="Center"
-                                   Text="Descargando actualización..."/>
-                    </DockPanel>
-                    <ProgressBar x:Name="UpdateProgress"
-                                 Grid.Row="1"
-                                 Margin="0,6,0,0" Height="4"
-                                 Minimum="0" Maximum="100" Value="0"
-                                 Background="#1E3A5F" Foreground="#3B82F6"
-                                 BorderThickness="0"/>
-                </Grid>
-            </Border>
+                                   TextTrimming="CharacterEllipsis"/>
 
-            <!-- ═══ CONTENT AREA ═════════════════════════════════════════════ -->
-            <ContentControl x:Name="PageHost" Grid.Row="1" Grid.Column="1"
-                            Margin="14,12"
-                            Background="{StaticResource BackgroundDarkBrush}">
-                <ContentControl.Style>
-                    <Style TargetType="ContentControl">
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding CurrentPageName}" Value="Dashboard">
-                                <Setter Property="Content">
-                                    <Setter.Value><pages:DashboardPage/></Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CurrentPageName}" Value="PreFlight">
-                                <Setter Property="Content">
-                                    <Setter.Value><pages:PreFlightPage/></Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CurrentPageName}" Value="InFlight">
-                                <Setter Property="Content">
-                                    <Setter.Value><pages:InFlightPage/></Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CurrentPageName}" Value="PostFlight">
-                                <Setter Property="Content">
-                                    <Setter.Value><pages:PostFlightPage/></Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CurrentPageName}" Value="Profile">
-                                <Setter Property="Content">
-                                    <Setter.Value><pages:ProfilePage/></Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                            <DataTrigger Binding="{Binding CurrentPageName}" Value="Community">
-                                <Setter Property="Content">
-                                    <Setter.Value><pages:CommunityPage/></Setter.Value>
-                                </Setter>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </ContentControl.Style>
-            </ContentControl>
-        </Grid>
-    </Border>
+                        <TextBlock Grid.Column="2"
+                                   Text="ACARS 6.0"
+                                   Foreground="{StaticResource AccentBlueBrush}"
+                                   FontSize="8.5"
+                                   FontWeight="SemiBold"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
 </Window>

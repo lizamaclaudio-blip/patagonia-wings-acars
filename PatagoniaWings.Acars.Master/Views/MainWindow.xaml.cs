@@ -11,7 +11,7 @@ namespace PatagoniaWings.Acars.Master.Views
 {
     public partial class MainWindow : Window
     {
-        private readonly MainViewModel _vm;
+        private readonly AcarsShellViewModel _shellVm;
         private SimulatorCoordinator? _coordinator;
         private Timer? _reconnectTimer;
         private bool _isConnecting;
@@ -24,23 +24,10 @@ namespace PatagoniaWings.Acars.Master.Views
         {
             InitializeComponent();
 
-            _vm = new MainViewModel();
-            _vm.OnLogout = () =>
-            {
-                var login = new LoginWindow();
-                login.Show();
-                Close();
-            };
-
-            DataContext = _vm;
-            _vm.LoadPilot();
-
-            // Versión dinámica en el sidebar (refleja lo que está instalado realmente)
-            TxtSidebarVersion.Text = $"ACARS v{UpdateService.CurrentVersion}";
-
-            // Suscribirse a los eventos de progreso de actualización
-            UpdateService.DownloadProgressChanged += OnUpdateProgressChanged;
-            UpdateService.UpdateStatusChanged     += OnUpdateStatusChanged;
+            _shellVm = new AcarsShellViewModel();
+            _shellVm.SupportVM.AlwaysVisibleChanged += OnAlwaysVisibleChanged;
+            DataContext = _shellVm;
+            Topmost = _shellVm.SupportVM.AlwaysVisible;
 
             Loaded += OnWindowLoaded;
             Closed += OnWindowClosed;
@@ -48,9 +35,7 @@ namespace PatagoniaWings.Acars.Master.Views
 
         private async void OnWindowLoaded(object sender, RoutedEventArgs e)
         {
-            // 3 s de espera: da tiempo a MSFS para limpiar la sesión SimConnect anterior
-            // (cierro ACARS → abro ACARS de nuevo → sin colgar el simulador)
-            await System.Threading.Tasks.Task.Delay(3000);
+            await System.Threading.Tasks.Task.Delay(1500);
             TryConnectQuiet();
 
             _reconnectTimer = new Timer(_ =>
@@ -64,36 +49,20 @@ namespace PatagoniaWings.Acars.Master.Views
                 });
             }, null, TimeSpan.FromSeconds(20), TimeSpan.FromSeconds(20));
 
-            // Si el ACARS acaba de actualizarse, mostrar notificación de éxito
             UpdateService.CheckAndShowPostUpdateNotification();
         }
 
-        // ── Update progress (eventos del UpdateService) ──────────────────────────
-
-        private void OnUpdateProgressChanged(int percent)
+        private void OnAlwaysVisibleChanged(bool value)
         {
-            Dispatcher.Invoke(() =>
-            {
-                UpdateBanner.Visibility   = Visibility.Visible;
-                UpdateProgress.Value      = percent;
-                TxtUpdatePercent.Text     = $"{percent} %";
-            });
+            Dispatcher.Invoke(() => Topmost = value);
         }
-
-        private void OnUpdateStatusChanged(string message)
-        {
-            Dispatcher.Invoke(() =>
-            {
-                UpdateBanner.Visibility = Visibility.Visible;
-                TxtUpdateStatus.Text    = message;
-            });
-        }
-
-        // ── SimConnect ───────────────────────────────────────────────────────────
 
         private void TryConnectQuiet()
         {
-            if (_isConnecting) return;
+            if (_isConnecting)
+            {
+                return;
+            }
 
             _isConnecting = true;
             try
@@ -122,23 +91,24 @@ namespace PatagoniaWings.Acars.Master.Views
 
                 _coordinator.Disconnected += () => Dispatcher.Invoke(() =>
                 {
-                    AcarsContext.Runtime.SetSimulatorDisconnected(_coordinator?.ActiveBackend ?? "");
+                    AcarsContext.Runtime.SetSimulatorDisconnected(_coordinator?.ActiveBackend ?? string.Empty);
                 });
 
                 _coordinator.Crashed += () => Dispatcher.Invoke(() =>
                 {
                     AcarsContext.FlightService.MarkCrash();
-                    // Persistir cierre real por crash y evitar reservas vivas.
                     var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
                     if (!string.IsNullOrWhiteSpace(reservationId))
+                    {
                         _ = AcarsContext.Api!.CloseReservationAsync(reservationId!, "crashed");
+                    }
                 });
 
                 _coordinator.DataReceived += data =>
                 {
                     Dispatcher.Invoke(() =>
                     {
-                        AcarsContext.Runtime.SetTelemetry(data, _coordinator?.ActiveBackend ?? "");
+                        AcarsContext.Runtime.SetTelemetry(data, _coordinator?.ActiveBackend ?? string.Empty);
                     });
 
                     OnSimulatorDataReceived(data);
@@ -149,7 +119,7 @@ namespace PatagoniaWings.Acars.Master.Views
             }
             catch (Exception ex)
             {
-                AcarsContext.Runtime.SetSimulatorDisconnected("");
+                AcarsContext.Runtime.SetSimulatorDisconnected(string.Empty);
                 if (!silent)
                 {
                     MessageBox.Show(
@@ -165,30 +135,15 @@ namespace PatagoniaWings.Acars.Master.Views
 
         public void ConnectSim(bool silent = false) => ConnectSimulator(silent);
 
-        // ── Ventana cerrada ──────────────────────────────────────────────────────
-
         private void OnWindowClosed(object? sender, EventArgs e)
         {
-            // Desuscribir eventos de actualización para evitar callbacks tardíos
-            UpdateService.DownloadProgressChanged -= OnUpdateProgressChanged;
-            UpdateService.UpdateStatusChanged     -= OnUpdateStatusChanged;
+            _shellVm.SupportVM.AlwaysVisibleChanged -= OnAlwaysVisibleChanged;
 
-            // Detener el timer primero para evitar que dispare mientras cerramos
             _reconnectTimer?.Dispose();
             _reconnectTimer = null;
 
-            // Disponer coordinator (desconecta SimConnect limpiamente antes de que
-            // el handle de ventana sea destruido por Windows)
             _coordinator?.Dispose();
             _coordinator = null;
-        }
-
-        // ── Handlers de UI ──────────────────────────────────────────────────────
-
-        private void SimStatus_Click(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            if (AcarsContext.Runtime.IsSimulatorConnected) return;
-            ConnectSimulator(false);
         }
 
         private static void OnSimulatorDataReceived(PatagoniaWings.Acars.Core.Models.SimData data)
@@ -202,22 +157,17 @@ namespace PatagoniaWings.Acars.Master.Views
 
         private void TitleBar_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (e.ClickCount == 2) ToggleMaximize();
-            else DragMove();
+            DragMove();
         }
 
-        private void BtnMinimize_Click(object sender, RoutedEventArgs e) =>
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
             WindowState = WindowState.Minimized;
+        }
 
-        private void BtnMaximize_Click(object sender, RoutedEventArgs e) =>
-            ToggleMaximize();
-
-        private void BtnClose_Click(object sender, RoutedEventArgs e) =>
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
             Close();
-
-        private void ToggleMaximize() =>
-            WindowState = WindowState == WindowState.Maximized
-                ? WindowState.Normal
-                : WindowState.Maximized;
+        }
     }
 }

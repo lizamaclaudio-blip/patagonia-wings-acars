@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using PatagoniaWings.Acars.Core.Models;
 using PatagoniaWings.Acars.Master.Helpers;
 
@@ -48,7 +49,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (result.Success && result.Data != null)
                 {
                     RecentFlights.Clear();
-                    foreach (var f in result.Data)
+                    foreach (var f in result.Data.Take(3))
                     {
                         RecentFlights.Add(f);
                     }

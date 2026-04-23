@@ -22,10 +22,11 @@
     "RequiresLvars":  false,
     "LvarProfile":  "",
     "N1Source":  "turb_n1",
-    "DoorSource":  "exit_open_0",
+    "DoorSource":  "none",
     "DoorOpenThresholdPercent":  5.0,
-    "SeatbeltSource":  "native",
-    "NoSmokingSource":  "native",
+    "SeatbeltSource":  "none",
+    "NoSmokingSource":  "none",
+    "InertialSeparatorSource":  "mobiflight",
     "TransponderStateSource":  "native",
     "TransponderCodeFormat":  "bco16",
     "PreferFsuipcAutopilot":  true,
@@ -40,5 +41,8 @@
     "SupportsDoorRead":  false,
     "SupportsBatteryRead":  true,
     "SupportsAvionicsRead":  false,
-    "SupportsEngineRunRead":  true
+    "SupportsEngineRunRead":  true,
+    "HasInertialSeparator":  true,
+    "SupportsInertialSeparatorReadback":  true,
+    "MobiFlightInertialSeparatorExpression":  "(L:XMLVAR_InterSep, Bool)"
 }

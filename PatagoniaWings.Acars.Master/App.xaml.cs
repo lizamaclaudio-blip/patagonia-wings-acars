@@ -1,18 +1,59 @@
-﻿using System;
+using System;
+using System.Threading.Tasks;
 using System.Windows;
 using PatagoniaWings.Acars.Master.Helpers;
+using PatagoniaWings.Acars.Master.Views;
 
 namespace PatagoniaWings.Acars.Master
 {
     public partial class App : Application
     {
-        protected override void OnStartup(StartupEventArgs e)
+        protected override async void OnStartup(StartupEventArgs e)
         {
-            UpdateService.NotifyStartupComplete();
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
             LoadGlobalStyles();
             base.OnStartup(e);
             AcarsContext.Initialize();
+
+            if (await RunStartupUpdateFlowAsync().ConfigureAwait(true))
+            {
+                return;
+            }
+
+            ShowMainShell();
+        }
+
+        private async Task<bool> RunStartupUpdateFlowAsync()
+        {
+            try
+            {
+                var check = await UpdateService.CheckForUpdatesAsync(true).ConfigureAwait(true);
+                if (!check.Success || !check.IsUpdateAvailable)
+                {
+                    return false;
+                }
+
+                var updateWindow = new UpdateWindow(check);
+                updateWindow.ShowDialog();
+                return UpdateService.IsInstallerTakingControl;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private void ShowMainShell()
+        {
+            var mainWindow = new MainWindow();
+            MainWindow = mainWindow;
+            ShutdownMode = ShutdownMode.OnMainWindowClose;
+            mainWindow.Show();
+
+            // Senal para el relanzado post-update: la UI principal ya quedo operativa.
+            UpdateService.NotifyStartupComplete();
+            AcarsContext.ScheduleStartupBackgroundWork();
         }
 
         private void LoadGlobalStyles()
@@ -60,7 +101,8 @@ namespace PatagoniaWings.Acars.Master
                     ? AcarsContext.Api.ActiveDispatch.ReservationId
                     : null;
 
-                if (!string.IsNullOrWhiteSpace(reservationId) && AcarsContext.Api != null)
+                // Si ya existe closeout pendiente, no degradamos la reserva a interrupted al salir.
+                if (!string.IsNullOrWhiteSpace(reservationId) && AcarsContext.Api != null && !AcarsContext.Api.HasPendingCloseout(reservationId!))
                 {
                     AcarsContext.Api.CloseReservationAsync(reservationId!, "interrupted")
                         .GetAwaiter().GetResult();

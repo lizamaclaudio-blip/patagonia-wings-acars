@@ -46,13 +46,20 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static DateTime _lastCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(10);
         private const long MinimumInstallerSizeBytes = 1024 * 1024;
+        private static bool _updateInProgress;
 
-        // â”€â”€ Eventos para la barra de progreso dentro del ACARS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // Eventos para la UI del updater compacto.
         /// <summary>Progreso de descarga 0-100. Se dispara en el thread de background.</summary>
         public static event Action<int>? DownloadProgressChanged;
 
         /// <summary>Mensaje de estado textual durante la actualizaciÃ³n.</summary>
         public static event Action<string>? UpdateStatusChanged;
+
+        /// <summary>Error terminal del flujo de update. Permite volver al shell sin perder trazabilidad.</summary>
+        public static event Action<string>? UpdateFailed;
+
+        /// <summary>Se pone en true justo antes de ceder control al instalador silencioso.</summary>
+        public static bool IsInstallerTakingControl { get; private set; }
 
         // â”€â”€ VersiÃ³n instalada â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         public static string CurrentVersion => ReadSetting("AppVersion", GetAssemblyVersion());
@@ -102,6 +109,44 @@ namespace PatagoniaWings.Acars.Master.Helpers
         {
             CheckAndStartUpdate(owner);
             await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Entrada unica para el updater visual nuevo.
+        /// La deteccion ocurre antes; esta llamada solo dispara la descarga/aplicacion inmediata.
+        /// </summary>
+        public static void StartImmediateUpdate(string downloadUrl, string version)
+        {
+            if (_updateInProgress)
+            {
+                WriteLog("StartImmediateUpdate ignored: update already in progress.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(downloadUrl))
+            {
+                var message = "No se encontro URL valida para la actualizacion.";
+                WriteLog(message);
+                UpdateStatusChanged?.Invoke(message);
+                UpdateFailed?.Invoke(message);
+                return;
+            }
+
+            if (!IsSupportedInstallerUrl(downloadUrl))
+            {
+                var message = "La URL del instalador no es valida o segura.";
+                WriteLog(message + " => " + downloadUrl);
+                UpdateStatusChanged?.Invoke(message);
+                UpdateFailed?.Invoke(message);
+                return;
+            }
+
+            _updateInProgress = true;
+            IsInstallerTakingControl = false;
+            WriteLog("Immediate update start => target=" + version + " url=" + downloadUrl);
+            UpdateStatusChanged?.Invoke("Descargando actualizacion " + CurrentVersion + " -> " + version + "...");
+            DownloadProgressChanged?.Invoke(0);
+            Task.Run(async () => await DownloadAndInstallSilentAsync(downloadUrl, version));
         }
 
         public static async Task<UpdateCheckResult> CheckForUpdatesAsync(bool force = false)
@@ -204,14 +249,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 return;
             }
 
-            WriteLog($"Nueva versiÃ³n {available} detectada. Iniciando descarga silenciosa: {downloadUrl}");
-
-            // La UI se entera desde aqui que ya hay update real y visible para el usuario.
-            UpdateStatusChanged?.Invoke($"Descargando actualizaciÃ³n {installed} → {available}...");
-            DownloadProgressChanged?.Invoke(0);
-
-            // La descarga y aplicacion corren fuera del hilo UI para no congelar el ACARS.
-            Task.Run(async () => await DownloadAndInstallSilentAsync(downloadUrl, available));
+            WriteLog($"Nueva versiÃ³n {available} detectada. Derivando a StartImmediateUpdate: {downloadUrl}");
+            StartImmediateUpdate(downloadUrl, available);
         }
 
         // â”€â”€ Descarga + instalaciÃ³n silenciosa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -244,10 +283,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 // Notificar que la descarga terminÃ³
                 DownloadProgressChanged?.Invoke(100);
-                UpdateStatusChanged?.Invoke($"Instalando {CurrentVersion} → {version}...  El ACARS reabrirÃ¡ automÃ¡ticamente");
-
-                // Esperar 2 s para que el usuario vea el mensaje final
-                await Task.Delay(2000);
+                UpdateStatusChanged?.Invoke($"Instalando {CurrentVersion} -> {version}... El ACARS se relanzara automaticamente.");
 
                 // El flag permite distinguir un inicio normal de un relanzado post-update.
                 try { File.WriteAllText(JustUpdatedFlagPath, version); } catch { }
@@ -270,14 +306,17 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 // Cerramos recien cuando el instalador y el script ya estan listos.
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
+                    IsInstallerTakingControl = true;
                     WriteLog("Application.Shutdown() â€” instalador tomarÃ¡ control en ~5s.");
                     Application.Current.Shutdown();
                 });
             }
             catch (Exception ex)
             {
+                _updateInProgress = false;
                 WriteLog($"Error en descarga/instalaciÃ³n silenciosa: {ex.Message}");
                 UpdateStatusChanged?.Invoke($"Error en actualizaciÃ³n: {ex.Message}");
+                UpdateFailed?.Invoke(ex.Message);
             }
         }
 
@@ -391,14 +430,26 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static string NormalizeVersion(string value)
         {
             var raw    = string.IsNullOrWhiteSpace(value) ? "0" : value.Trim();
+            var suffix = raw.IndexOfAny(new[] { '-', '+', ' ' });
+            if (suffix >= 0) raw = raw.Substring(0, suffix);
             var source = raw.Split('.');
             var norm   = new string[4];
 
             for (var i = 0; i < norm.Length; i++)
                 norm[i] = (i < source.Length && !string.IsNullOrWhiteSpace(source[i]))
-                    ? source[i].Trim() : "0";
+                    ? LeadingDigitsOrZero(source[i]) : "0";
 
             return string.Join(".", norm);
+        }
+
+        private static string LeadingDigitsOrZero(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return "0";
+
+            var raw = value.Trim();
+            var end = 0;
+            while (end < raw.Length && char.IsDigit(raw[end])) end++;
+            return end == 0 ? "0" : raw.Substring(0, end);
         }
 
         private static string GetAssemblyVersion()
@@ -432,7 +483,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 var installPath = key?.GetValue("InstallPath") as string;
                 if (!string.IsNullOrWhiteSpace(installPath))
                 {
-                    var candidate = Path.Combine(installPath.Trim(), exeName);
+                    var resolvedInstallPath = installPath!.Trim();
+                    var candidate = Path.Combine(resolvedInstallPath, exeName);
                     if (File.Exists(candidate))
                     {
                         return candidate;
@@ -468,19 +520,11 @@ namespace PatagoniaWings.Acars.Master.Helpers
             string Escape(string value) => value.Replace("'", "''");
             var appDirectory = Path.GetDirectoryName(appExePath) ?? AppDomain.CurrentDomain.BaseDirectory;
 
-            // Este script hace la ultima milla:
-            // instala en silencio, espera a que termine y relanza la app nueva sin pedir accion manual.
+            // Ultima milla: instala en silencio y relanza sin countdown ni espera artificial.
             return
                 "Add-Type -AssemblyName System.Windows.Forms\r\n" +
                 "Add-Type -AssemblyName System.Drawing\r\n" +
                 "[System.Windows.Forms.Application]::EnableVisualStyles()\r\n" +
-                "$phrases = @(\r\n" +
-                "  'Despachando al equipo de mantenimiento digital...',\r\n" +
-                "  'Ajustando remaches invisibles del ACARS...',\r\n" +
-                "  'Cargando cafe para el copiloto virtual...',\r\n" +
-                "  'Enviando un mecanico a revisar el datalink...',\r\n" +
-                "  'Puliendo la cabina para la nueva version...'\r\n" +
-                ")\r\n" +
                 "$script:installerStarted = $false\r\n" +
                 "$script:installerDone = $false\r\n" +
                 "$script:appLaunched = $false\r\n" +
@@ -490,57 +534,45 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 "$form.StartPosition = 'CenterScreen'\r\n" +
                 "$form.FormBorderStyle = 'None'\r\n" +
                 "$form.TopMost = $true\r\n" +
-                "$form.Width = 560\r\n" +
-                "$form.Height = 230\r\n" +
-                "$form.BackColor = [System.Drawing.Color]::FromArgb(10,22,35)\r\n" +
+                "$form.Width = 540\r\n" +
+                "$form.Height = 310\r\n" +
+                "$form.BackColor = [System.Drawing.Color]::FromArgb(9,17,28)\r\n" +
                 "$title = New-Object System.Windows.Forms.Label\r\n" +
-                "$title.Text = 'Actualizando ACARS v" + Escape(currentVersion) + " → v" + Escape(version) + "'\r\n" +
+                "$title.Text = 'Actualizando Patagonia Wings ACARS'\r\n" +
                 "$title.ForeColor = [System.Drawing.Color]::FromArgb(147,197,253)\r\n" +
                 "$title.Font = New-Object System.Drawing.Font('Segoe UI',18,[System.Drawing.FontStyle]::Bold)\r\n" +
                 "$title.AutoSize = $true\r\n" +
-                "$title.Location = New-Object System.Drawing.Point(28,28)\r\n" +
+                "$title.Location = New-Object System.Drawing.Point(24,24)\r\n" +
                 "$subtitle = New-Object System.Windows.Forms.Label\r\n" +
-                "$subtitle.Text = 'Cerrando, instalando y relanzando la version real nueva.'\r\n" +
+                "$subtitle.Text = 'Version " + Escape(currentVersion) + " -> " + Escape(version) + " | origen: patagoniaw.com'\r\n" +
                 "$subtitle.ForeColor = [System.Drawing.Color]::FromArgb(191,219,254)\r\n" +
                 "$subtitle.Font = New-Object System.Drawing.Font('Segoe UI',10)\r\n" +
                 "$subtitle.AutoSize = $true\r\n" +
-                "$subtitle.Location = New-Object System.Drawing.Point(30,74)\r\n" +
-                "$fun = New-Object System.Windows.Forms.Label\r\n" +
-                "$fun.Text = $phrases[0]\r\n" +
-                "$fun.ForeColor = [System.Drawing.Color]::FromArgb(110,231,183)\r\n" +
-                "$fun.Font = New-Object System.Drawing.Font('Segoe UI',11,[System.Drawing.FontStyle]::Italic)\r\n" +
-                "$fun.AutoSize = $true\r\n" +
-                "$fun.Location = New-Object System.Drawing.Point(30,118)\r\n" +
+                "$subtitle.Location = New-Object System.Drawing.Point(26,66)\r\n" +
+                "$status = New-Object System.Windows.Forms.Label\r\n" +
+                "$status.Text = 'Instalando y preparando relanzamiento automatico...'\r\n" +
+                "$status.ForeColor = [System.Drawing.Color]::FromArgb(110,231,183)\r\n" +
+                "$status.Font = New-Object System.Drawing.Font('Segoe UI',11,[System.Drawing.FontStyle]::Regular)\r\n" +
+                "$status.AutoSize = $true\r\n" +
+                "$status.Location = New-Object System.Drawing.Point(26,118)\r\n" +
                 "$bar = New-Object System.Windows.Forms.ProgressBar\r\n" +
                 "$bar.Style = 'Marquee'\r\n" +
                 "$bar.MarqueeAnimationSpeed = 35\r\n" +
-                "$bar.Width = 500\r\n" +
-                "$bar.Height = 18\r\n" +
-                "$bar.Location = New-Object System.Drawing.Point(30,160)\r\n" +
-                "$form.Controls.AddRange(@($title,$subtitle,$fun,$bar))\r\n" +
-                "$script:tick = 0\r\n" +
-                "$rotate = New-Object System.Windows.Forms.Timer\r\n" +
-                "$rotate.Interval = 1600\r\n" +
-                "$rotate.Add_Tick({ $script:tick++; $fun.Text = $phrases[$script:tick % $phrases.Count] })\r\n" +
-                "$start = New-Object System.Windows.Forms.Timer\r\n" +
-                "$start.Interval = 1800\r\n" +
-                "$start.Add_Tick({ " +
-                "$start.Stop(); " +
-                "$p = Start-Process '" + Escape(installerPath) + "' -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' -PassThru; " +
-                "$script:installerPid = $p.Id; " +
-                "$script:installerStarted = $true; " +
-                "})\r\n" +
+                "$bar.Width = 490\r\n" +
+                "$bar.Height = 20\r\n" +
+                "$bar.Location = New-Object System.Drawing.Point(24,160)\r\n" +
+                "$form.Controls.AddRange(@($title,$subtitle,$status,$bar))\r\n" +
                 "$watch = New-Object System.Windows.Forms.Timer\r\n" +
                 "$watch.Interval = 1000\r\n" +
                 "$watch.Add_Tick({ " +
                 "if (Test-Path '" + Escape(splashCloseFlagPath) + "') { try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }; $watch.Stop(); $form.Close(); return }; " +
                 "if ($script:installerStarted -and -not $script:installerDone) { try { $null = Get-Process -Id $script:installerPid -ErrorAction Stop } catch { $script:installerDone = $true } }; " +
-                "if ($script:installerDone -and -not $script:appLaunched -and (Test-Path '" + Escape(appExePath) + "')) { Start-Sleep -Seconds 2; Start-Process -FilePath '" + Escape(appExePath) + "' -WorkingDirectory '" + Escape(appDirectory) + "'; $script:appLaunched = $true; $watch.Stop(); $form.Close() } " +
+                "if ($script:installerDone -and -not $script:appLaunched -and (Test-Path '" + Escape(appExePath) + "')) { Start-Process -FilePath '" + Escape(appExePath) + "' -WorkingDirectory '" + Escape(appDirectory) + "'; $script:appLaunched = $true; $watch.Stop(); $form.Close() } " +
                 "})\r\n" +
                 "$close = New-Object System.Windows.Forms.Timer\r\n" +
                 "$close.Interval = 90000\r\n" +
                 "$close.Add_Tick({ $close.Stop(); $watch.Stop(); $form.Close() })\r\n" +
-                "$form.Add_Shown({ try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }; $rotate.Start(); $start.Start(); $watch.Start(); $close.Start() })\r\n" +
+                "$form.Add_Shown({ try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }; $p = Start-Process '" + Escape(installerPath) + "' -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' -PassThru; $script:installerPid = $p.Id; $script:installerStarted = $true; $watch.Start(); $close.Start() })\r\n" +
                 "[void]$form.ShowDialog()\r\n";
         }
     }

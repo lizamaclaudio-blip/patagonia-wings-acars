@@ -45,6 +45,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public double TotalWeightLbs { get; set; }
         public double TotalWeightKg { get; set; }
         public double ZeroFuelWeightKg { get; set; }
+        public double PayloadKg { get; set; }
 
         // Aterrizaje
         public double LandingVS { get; set; }
@@ -100,6 +101,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool BatteryMasterOn { get; set; }
         public bool AvionicsMasterOn { get; set; }
         public bool DoorOpen { get; set; }
+        public bool InertialSeparatorOn { get; set; }
         public double EmptyWeightLbs { get; set; }
         public double EmptyWeightKg { get; set; }
 

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
+using PatagoniaWings.Acars.Core.Services;
 using PatagoniaWings.Acars.Master.Helpers;
 
 namespace PatagoniaWings.Acars.Master.ViewModels
@@ -32,6 +33,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _isLoadingDispatch;
         private string _statusMessage = string.Empty;
         private bool _flightStarted;
+        private readonly PatagoniaStartFlightGateService _startFlightGateService = new PatagoniaStartFlightGateService();
+        private PatagoniaStartFlightGateResult? _startGateResult;
+        private bool _lastDispatchResolvedFromWeb;
+        private bool _lastDispatchUsedLocalFallback;
 
         public ObservableCollection<SimulatorType> SimulatorOptions { get; } = new ObservableCollection<SimulatorType>
         {
@@ -72,6 +77,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(FuelDisplayLine));
                     OnPropertyChanged(nameof(PayloadDisplayLine));
                     OnPropertyChanged(nameof(BlockDisplayLine));
+                    OnPropertyChanged(nameof(HasUsablePreparedDispatch));
+                    OnPropertyChanged(nameof(HasUsableWebDispatch));
                     OnPropertyChanged(nameof(StartButtonTitle));
                     OnPropertyChanged(nameof(StartButtonSubtitle));
                     OnPropertyChanged(nameof(CanStartFlight));
@@ -169,6 +176,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         public bool HasPreparedDispatch { get { return PreparedDispatch != null; } }
         public bool HasStatusMessage { get { return !string.IsNullOrWhiteSpace(StatusMessage); } }
+        public bool LastDispatchResolvedFromWeb { get { return _lastDispatchResolvedFromWeb; } }
+        public bool LastDispatchUsedLocalFallback { get { return _lastDispatchUsedLocalFallback; } }
+        public bool HasUsablePreparedDispatch { get { return IsDispatchUsableForShell(PreparedDispatch); } }
+        public bool HasUsableWebDispatch { get { return LastDispatchResolvedFromWeb && HasUsablePreparedDispatch; } }
         public bool HasFlightCoreData
         {
             get
@@ -182,7 +193,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         }
 
         public bool IsDispatchReady { get { return PreparedDispatch != null && PreparedDispatch.IsDispatchReady; } }
-        public bool CanStartFlight { get { return PreparedDispatch != null && PreparedDispatch.IsDispatchReady && !IsLoadingDispatch && !FlightStarted; } }
+        public bool StartGateAllowsStart { get { return _startGateResult != null && _startGateResult.CanStart; } }
+        public string StartGateSummary { get { return _startGateResult == null ? "Gate previo pendiente." : _startGateResult.Summary; } }
+        public bool CanStartFlight { get { return PreparedDispatch != null && PreparedDispatch.IsDispatchReady && !IsLoadingDispatch && !FlightStarted && StartGateAllowsStart; } }
 
         public string DispatchStatusLabel
         {
@@ -401,6 +414,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return "INICIAR VUELO ACARS";
                 }
 
+                if (PreparedDispatch != null && PreparedDispatch.IsDispatchReady)
+                {
+                    return "GATE PREVIO PENDIENTE";
+                }
+
                 return "DESPACHO PENDIENTE";
             }
         }
@@ -429,6 +447,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return "La reserva existe, pero el dispatch aún no está liberado para ACARS.";
                 }
 
+                if (!StartGateAllowsStart)
+                {
+                    return StartGateSummary;
+                }
+
                 return "Sim seleccionado: " + SelectedSim + " · el inicio validará la reserva web antes de entrar en vuelo.";
             }
         }
@@ -447,6 +470,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return;
             }
 
+            SetDispatchResolutionState(false, false);
             if (IsLoadingDispatch)
             {
                 return;
@@ -505,6 +529,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 {
                     if (AcarsContext.Runtime.CurrentReadyFlight != null)
                     {
+                        SetDispatchResolutionState(false, true);
                         ReadyFlight = AcarsContext.Runtime.CurrentReadyFlight;
                         ApplyDispatchSnapshot(AcarsContext.Runtime.CurrentReadyFlight.ToPreparedDispatch());
                         StatusMessage = "Usando el último despacho almacenado localmente.";
@@ -512,6 +537,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                         return;
                     }
 
+                    SetDispatchResolutionState(false, false);
                     ClearLoadedFlight(false);
                     if (string.IsNullOrWhiteSpace(StatusMessage))
                     {
@@ -520,7 +546,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return;
                 }
 
+                SetDispatchResolutionState(true, false);
                 ApplyDispatchSnapshot(dispatch);
+                if (!HasUsablePreparedDispatch)
+                {
+                    ReadyFlight = null;
+                    StatusMessage = "La reserva existe en Patagonia Wings Web, pero el despacho todavia no trae datos operativos suficientes para ACARS.";
+                    StatusMessage = "La reserva existe en Patagonia Wings Web, pero el despacho todavÃ­a no trae datos operativos suficientes para ACARS.";
+                    return;
+                }
+
                 ReadyFlight = BuildReadyFlight(dispatch, pilot.CallSign);
                 if (ReadyFlight != null)
                 {
@@ -539,12 +574,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 Debug.WriteLine("[PreFlight] LoadPreparedDispatchAsync => " + ex);
                 if (AcarsContext.Runtime.CurrentReadyFlight != null)
                 {
+                    SetDispatchResolutionState(false, true);
                     ReadyFlight = AcarsContext.Runtime.CurrentReadyFlight;
                     ApplyDispatchSnapshot(AcarsContext.Runtime.CurrentReadyFlight.ToPreparedDispatch());
                     StatusMessage = "Se mantuvo el último despacho local. Error remoto: " + ex.Message;
                 }
                 else
                 {
+                    SetDispatchResolutionState(false, false);
                     ClearLoadedFlight(false);
                     StatusMessage = "No se pudo sincronizar el despacho web: " + ex.Message;
                 }
@@ -576,10 +613,45 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
 
             ApplyPilotPreferences();
+            RefreshStartGateStatus(false);
             OnPropertyChanged(nameof(DepartureWeatherSummary));
             OnPropertyChanged(nameof(ArrivalWeatherSummary));
             OnPropertyChanged(nameof(OperationalMinimaSummary));
             OnPropertyChanged(nameof(OperationalQualificationsSummary));
+        }
+
+        private void SetDispatchResolutionState(bool resolvedFromWeb, bool usedLocalFallback)
+        {
+            if (_lastDispatchResolvedFromWeb != resolvedFromWeb)
+            {
+                _lastDispatchResolvedFromWeb = resolvedFromWeb;
+                OnPropertyChanged(nameof(LastDispatchResolvedFromWeb));
+                OnPropertyChanged(nameof(HasUsableWebDispatch));
+            }
+
+            if (_lastDispatchUsedLocalFallback != usedLocalFallback)
+            {
+                _lastDispatchUsedLocalFallback = usedLocalFallback;
+                OnPropertyChanged(nameof(LastDispatchUsedLocalFallback));
+            }
+        }
+
+        private bool IsDispatchUsableForShell(PreparedDispatch? dispatch)
+        {
+            if (dispatch == null)
+            {
+                return false;
+            }
+
+            var hasFlightIdentity = !string.IsNullOrWhiteSpace(FirstNonEmpty(dispatch.FlightDesignator, dispatch.FlightNumber, dispatch.RouteCode));
+            var hasOrigin = Safe(dispatch.DepartureIcao).Length >= 4;
+            var hasDestination = Safe(dispatch.ArrivalIcao).Length >= 4;
+
+            return !string.IsNullOrWhiteSpace(Safe(dispatch.ReservationId))
+                && hasFlightIdentity
+                && hasOrigin
+                && hasDestination
+                && dispatch.HasAssignedAircraft;
         }
 
         private AcarsReadyFlight? BuildReadyFlight(PreparedDispatch? dispatch, string pilotCallsign)
@@ -645,6 +717,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             if (!PreparedDispatch.IsDispatchReady)
             {
                 StatusMessage = "La reserva todavía no está en estado despachable. Complétala primero en la web.";
+                return;
+            }
+
+            RefreshStartGateStatus(false);
+            if (!StartGateAllowsStart)
+            {
+                StatusMessage = StartGateSummary;
                 return;
             }
 
@@ -749,6 +828,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             ReadyFlight = null;
             PreparedDispatch = null;
             FlightStarted = false;
+            _startGateResult = null;
             FlightNumber = string.Empty;
             DepartureIcao = string.Empty;
             ArrivalIcao = string.Empty;
@@ -756,6 +836,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             Route = string.Empty;
             Remarks = string.Empty;
             ResetWeatherContext();
+            OnPropertyChanged(nameof(StartGateAllowsStart));
+            OnPropertyChanged(nameof(StartGateSummary));
+            OnPropertyChanged(nameof(CanStartFlight));
 
             if (clearRuntime)
             {
@@ -780,6 +863,86 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
             }
             ApplyPilotPreferences();
+            RefreshStartGateStatus(false);
+        }
+
+        private void RefreshStartGateStatus(bool updateStatusMessage)
+        {
+            if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady)
+            {
+                _startGateResult = new PatagoniaStartFlightGateResult
+                {
+                    CanStart = false,
+                    Summary = "El dispatch aún no está listo para evaluar el gate de inicio."
+                };
+            }
+            else if (AcarsContext.Runtime.LastTelemetry == null || !AcarsContext.Runtime.IsTelemetryFresh())
+            {
+                _startGateResult = new PatagoniaStartFlightGateResult
+                {
+                    CanStart = false,
+                    Summary = "Esperando telemetría viva para validar cold and dark y parking brake."
+                };
+            }
+            else
+            {
+                var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+                var gateInput = new PatagoniaEvaluationInput
+                {
+                    Flight = new Flight
+                    {
+                        ReservationId = PreparedDispatch.ReservationId,
+                        DispatchPackageId = PreparedDispatch.DispatchId,
+                        AircraftId = PreparedDispatch.AircraftId,
+                        FlightNumber = Safe(FlightNumber).ToUpperInvariant(),
+                        DepartureIcao = Safe(DepartureIcao).ToUpperInvariant(),
+                        ArrivalIcao = Safe(ArrivalIcao).ToUpperInvariant(),
+                        AircraftIcao = Safe(AircraftIcao).ToUpperInvariant(),
+                        AircraftTypeCode = PreparedDispatch.AircraftIcao,
+                        AircraftName = PreparedDispatch.AircraftDisplayName,
+                        AircraftDisplayName = PreparedDispatch.AircraftDisplayName,
+                        AircraftVariantCode = PreparedDispatch.AircraftVariantCode,
+                        AddonProvider = PreparedDispatch.AddonProvider,
+                        Route = Safe(Route),
+                        FlightModeCode = PreparedDispatch.FlightMode,
+                        RouteCode = PreparedDispatch.RouteCode,
+                        PlannedAltitude = PlannedAlt,
+                        PlannedSpeed = PlannedSpeed,
+                        Simulator = SelectedSim,
+                        Remarks = Safe(Remarks),
+                        StartTime = DateTime.UtcNow
+                    },
+                    Dispatch = PreparedDispatch,
+                    Report = new FlightReport
+                    {
+                        ReservationId = PreparedDispatch.ReservationId,
+                        FlightNumber = Safe(FlightNumber).ToUpperInvariant(),
+                        DepartureIcao = Safe(DepartureIcao).ToUpperInvariant(),
+                        ArrivalIcao = Safe(ArrivalIcao).ToUpperInvariant(),
+                        AircraftIcao = Safe(AircraftIcao).ToUpperInvariant(),
+                        DepartureTime = DateTime.UtcNow,
+                        ArrivalTime = DateTime.UtcNow
+                    },
+                    CurrentTelemetry = AcarsContext.Runtime.LastTelemetry,
+                    TelemetryLog = new[] { AcarsContext.Runtime.LastTelemetry },
+                    PilotQualifications = pilot == null ? string.Empty : pilot.ActiveQualifications,
+                    PilotCertifications = pilot == null ? string.Empty : pilot.ActiveCertifications
+                };
+
+                _startGateResult = _startFlightGateService.Evaluate(gateInput);
+                Debug.WriteLine("[PreFlight] Start gate => canStart=" + _startGateResult.CanStart + " summary=" + _startGateResult.Summary);
+            }
+
+            OnPropertyChanged(nameof(StartGateAllowsStart));
+            OnPropertyChanged(nameof(StartGateSummary));
+            OnPropertyChanged(nameof(CanStartFlight));
+            OnPropertyChanged(nameof(StartButtonTitle));
+            OnPropertyChanged(nameof(StartButtonSubtitle));
+
+            if (updateStatusMessage && !FlightStarted)
+            {
+                StatusMessage = StartGateSummary;
+            }
         }
 
         private void ApplyPilotPreferences()

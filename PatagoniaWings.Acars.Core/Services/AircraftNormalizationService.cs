@@ -29,6 +29,9 @@ namespace PatagoniaWings.Acars.Core.Services
             HasApu = false,
             ImageAsset = "default_aircraft.png",
             Supported = true,
+            PrimaryTelemetrySource = "SimVar",
+            TelemetrySourcePriority = new List<string> { "SimVar" },
+            CapabilityAuditState = "LIMITADO",
             ExactTitles = new List<string>(),
             Matches = new List<string> { "*" },
             LightMode = "individual",
@@ -48,7 +51,7 @@ namespace PatagoniaWings.Acars.Core.Services
             TransponderCodeFormat = "decimal_or_bco16",
             TransponderCodeDebounceFrames = 2,
             SupportsFuelRead = true,
-            SupportsPayloadRead = false,
+            SupportsPayloadRead = true,
             SupportsFlagsRead = true,
             SupportsParkingBrakeRead = true,
             SupportsApuRead = false,
@@ -57,7 +60,17 @@ namespace PatagoniaWings.Acars.Core.Services
             SupportsDoorRead = false,
             SupportsBatteryRead = false,
             SupportsAvionicsRead = false,
-            SupportsEngineRunRead = false
+            SupportsEngineRunRead = false,
+            SupportsZfwReadback = true,
+            SupportsQnhReadback = true,
+            SupportsTransponderModeReadback = true,
+            SupportsSquawkReadback = true,
+            SupportsPushbackInference = true,
+            SupportsFuelPumpReadback = false,
+            SupportsContinuousIgnitionReadback = false,
+            SupportsFireTestReadback = false,
+            HasInertialSeparator = false,
+            SupportsInertialSeparatorReadback = false
         };
 
         public static string ResolveCode(string aircraftTitle, string? baseDirectory = null)
@@ -154,6 +167,9 @@ namespace PatagoniaWings.Acars.Core.Services
                 HasApu = true,
                 ImageAsset = code.StartsWith("A321") ? "A321.png" : code.StartsWith("A320") ? "A320.png" : "A319.png",
                 Supported = true,
+                PrimaryTelemetrySource = "SimVar + FSUIPC",
+                TelemetrySourcePriority = new List<string> { "SimVar", "FSUIPC" },
+                CapabilityAuditState = "PARCIAL",
                 ExactTitles = new List<string>(),
                 Matches = new List<string> { "A319", "A320", "A321", "CFM", "IAE", "LATAM" },
                 LightMode = "individual",
@@ -184,8 +200,19 @@ namespace PatagoniaWings.Acars.Core.Services
                 SupportsDoorRead = true,
                 SupportsBatteryRead = true,
                 SupportsAvionicsRead = true,
-                SupportsEngineRunRead = true
+                SupportsEngineRunRead = true,
+                SupportsZfwReadback = true,
+                SupportsQnhReadback = true,
+                SupportsTransponderModeReadback = true,
+                SupportsSquawkReadback = true,
+                SupportsPushbackInference = true,
+                SupportsFuelPumpReadback = false,
+                SupportsContinuousIgnitionReadback = false,
+                SupportsFireTestReadback = false,
+                HasInertialSeparator = false,
+                SupportsInertialSeparatorReadback = false
             };
+            ApplyDerivedDefaults(profile);
             return true;
         }
 
@@ -209,27 +236,58 @@ namespace PatagoniaWings.Acars.Core.Services
 
         private static string ResolveProfilesRoot(string? baseDirectory)
         {
-            if (!string.IsNullOrWhiteSpace(baseDirectory))
-            {
-                var candidate = Path.Combine(baseDirectory, "AircraftProfiles");
-                if (Directory.Exists(candidate)) return candidate;
-            }
-
             var appBase = AppDomain.CurrentDomain.BaseDirectory ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(appBase))
-            {
-                var candidate = Path.Combine(appBase, "AircraftProfiles");
-                if (Directory.Exists(candidate)) return candidate;
-            }
-
             var exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(exeDir))
+            var currentDirectory = Environment.CurrentDirectory ?? string.Empty;
+            var candidates = new List<string>();
+
+            AddProfilesCandidates(candidates, baseDirectory);
+            AddProfilesCandidates(candidates, appBase);
+            AddProfilesCandidates(candidates, exeDir);
+            AddProfilesCandidates(candidates, currentDirectory);
+
+            foreach (var candidate in candidates.Where(path => !string.IsNullOrWhiteSpace(path)).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                var candidate = Path.Combine(exeDir, "AircraftProfiles");
-                if (Directory.Exists(candidate)) return candidate;
+                if (Directory.Exists(candidate))
+                {
+                    return candidate;
+                }
             }
 
             return Path.Combine(appBase, "AircraftProfiles");
+        }
+
+        private static void AddProfilesCandidates(List<string> candidates, string? root)
+        {
+            foreach (var ancestor in EnumerateAncestors(root))
+            {
+                candidates.Add(Path.Combine(ancestor, "AircraftProfiles"));
+                candidates.Add(Path.Combine(ancestor, "PatagoniaWings.Acars.SimConnect", "AircraftProfiles"));
+            }
+        }
+
+        private static IEnumerable<string> EnumerateAncestors(string? startPath)
+        {
+            if (string.IsNullOrWhiteSpace(startPath))
+            {
+                yield break;
+            }
+
+            DirectoryInfo current;
+            try
+            {
+                current = new DirectoryInfo(startPath);
+            }
+            catch
+            {
+                yield break;
+            }
+
+            while (current != null)
+            {
+                yield return current.FullName;
+                current = current.Parent;
+            }
         }
 
         private static long GetProfilesStamp(string root)
@@ -272,6 +330,7 @@ namespace PatagoniaWings.Acars.Core.Services
 
                     profile.ExactTitles = profile.ExactTitles ?? new List<string>();
                     profile.Matches = profile.Matches ?? new List<string>();
+                    ApplyDerivedDefaults(profile);
                     registry[profile.Code] = profile;
                 }
                 catch (Exception ex)
@@ -285,6 +344,35 @@ namespace PatagoniaWings.Acars.Core.Services
 
             Debug.WriteLine("[AircraftProfile] Catálogo cargado: " + registry.Count + " perfiles desde " + root);
             return registry;
+        }
+
+        private static void ApplyDerivedDefaults(AircraftProfile profile)
+        {
+            if (profile == null)
+            {
+                return;
+            }
+
+            if (profile.SupportsFuelRead)
+            {
+                profile.SupportsQnhReadback = true;
+                profile.SupportsZfwReadback = true;
+                profile.SupportsPayloadRead = true;
+            }
+
+            if (string.Equals(profile.FamilyGroup, "C208_FAMILY", StringComparison.OrdinalIgnoreCase))
+            {
+                profile.HasInertialSeparator = true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(profile.MobiFlightInertialSeparatorExpression))
+            {
+                profile.SupportsInertialSeparatorReadback = true;
+                if (string.IsNullOrWhiteSpace(profile.InertialSeparatorSource))
+                {
+                    profile.InertialSeparatorSource = "mobiflight";
+                }
+            }
         }
     }
 }

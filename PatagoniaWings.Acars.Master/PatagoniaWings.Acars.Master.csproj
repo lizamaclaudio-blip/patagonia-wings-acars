@@ -119,13 +119,10 @@
     <None Include="Assets\Presets\SUR Checkride C3.WPR" />
     <None Include="Assets\Presets\SUR Checkride CX.WPR" />
     <None Include="packages.config" />
+    <None Include="PatagoniaWings.Acars.Master.exe.config" />
     <None Include="Presets\PW Checkride A0.WPR" />
     <None Include="Presets\PW Checkride C1.WPR" />
     <Page Include="Resources\Styles\AppStyles.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Views\LiveFlightWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -134,6 +131,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\MainWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\UpdateWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -149,6 +150,14 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+    <Page Include="Views\Pages\LoginPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Pages\NoDispatchPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="Views\Pages\PostFlightPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -158,6 +167,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="Views\Pages\ProfilePage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Views\Pages\SupportPage.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -172,9 +185,13 @@
     <Compile Include="Helpers\PhaseToStringConverter.cs" />
     <Compile Include="Helpers\RelayCommand.cs" />
     <Compile Include="Helpers\AsyncRelayCommand.cs" />
+    <Compile Include="Helpers\SavedLoginStore.cs" />
     <Compile Include="Helpers\SimulatorCoordinator.cs" />
     <Compile Include="Helpers\SoundPlayer.cs" />
+    <Compile Include="Helpers\UiPreferencesStore.cs" />
     <Compile Include="Helpers\UpdateService.cs" />
+    <Compile Include="Preview\AcarsPreviewData.cs" />
+    <Compile Include="ViewModels\AcarsShellViewModel.cs" />
     <Compile Include="ViewModels\CommunityViewModel.cs" />
     <Compile Include="ViewModels\DashboardViewModel.cs" />
     <Compile Include="ViewModels\InFlightViewModel.cs" />
@@ -183,15 +200,16 @@
     <Compile Include="ViewModels\PostFlightViewModel.cs" />
     <Compile Include="ViewModels\PreFlightViewModel.cs" />
     <Compile Include="ViewModels\ProfileViewModel.cs" />
+    <Compile Include="ViewModels\SupportViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />
-    <Compile Include="Views\LiveFlightWindow.xaml.cs">
-      <DependentUpon>LiveFlightWindow.xaml</DependentUpon>
-    </Compile>
     <Compile Include="Views\LoginWindow.xaml.cs">
       <DependentUpon>LoginWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\UpdateWindow.xaml.cs">
+      <DependentUpon>UpdateWindow.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\Pages\CommunityPage.xaml.cs">
       <DependentUpon>CommunityPage.xaml</DependentUpon>
@@ -202,6 +220,12 @@
     <Compile Include="Views\Pages\InFlightPage.xaml.cs">
       <DependentUpon>InFlightPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Views\Pages\LoginPage.xaml.cs">
+      <DependentUpon>LoginPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Pages\NoDispatchPage.xaml.cs">
+      <DependentUpon>NoDispatchPage.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Views\Pages\PostFlightPage.xaml.cs">
       <DependentUpon>PostFlightPage.xaml</DependentUpon>
     </Compile>
@@ -210,6 +234,9 @@
     </Compile>
     <Compile Include="Views\Pages\ProfilePage.xaml.cs">
       <DependentUpon>ProfilePage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Views\Pages\SupportPage.xaml.cs">
+      <DependentUpon>SupportPage.xaml</DependentUpon>
     </Compile>
     <Resource Include="Assets\patagonia-logo.ico" />
     <None Include="App.config" />
@@ -230,6 +257,9 @@
     <Resource Include="Assets\SurKit\tracker.png" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="fsuipcClient.dll" />
+    <Content Include="Microsoft.FlightSimulator.SimConnect.dll" />
+    <Content Include="SimConnect.dll" />
     <Resource Include="Assets\hero-banner.png" />
     <Resource Include="Assets\icon-dispatch.png" />
     <Resource Include="Assets\patagonia-logo.png" />
@@ -237,6 +267,9 @@
     <Content Include="Assets\Sounds\Beep.wav" />
     <Content Include="Assets\Sounds\DingACARS.wav" />
     <Content Include="Assets\Sounds\Radio.wav" />
+    <Content Include="Assets\Rules\patagonia-rules.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.8.1">

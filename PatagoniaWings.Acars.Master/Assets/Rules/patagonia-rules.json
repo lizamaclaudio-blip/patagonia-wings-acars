@@ -1,0 +1,359 @@
+{
+  "schemaVersion": "2.0.0",
+  "programCode": "PATAGONIA_WINGS",
+  "visibleScoreName": "Patagonia Score",
+  "scoring": {
+    "procedureBase": 100,
+    "performanceBase": 0,
+    "patagoniaBase": 100,
+    "minScore": -1000,
+    "maxScore": 9999,
+    "patagoniaProcedureWeight": 1.0,
+    "patagoniaPerformanceWeight": 1.0
+  },
+  "outputContract": {
+    "contractVersion": "patagonia-eval.v2",
+    "webSections": [
+      "header",
+      "patagonia_score",
+      "procedures",
+      "performance",
+      "phase_results",
+      "fuel_and_weights",
+      "chronological_log",
+      "map",
+      "remarks"
+    ]
+  },
+  "globalTolerances": {
+    "shortTimeSeconds": 5,
+    "mediumTimeSeconds": 10,
+    "sustainedEventSeconds": 30,
+    "triggerAltitudeFeet": 500,
+    "triggerSpeedKnots": 15,
+    "triggerVerticalSpeedFpm": 500
+  },
+  "flightPhases": ["PRE", "IGN", "TAX", "TO", "ASC", "CRU", "DES", "LDG", "TAG", "PAR"],
+  "categories": ["dispatch", "aircraft", "telemetry", "procedure", "performance", "cabin", "safety", "fuel", "weather", "weights"],
+  "rules": [
+    {
+      "metadata": {
+        "id": "START_AIRCRAFT_MATCH",
+        "phase": "PRE",
+        "category": "dispatch",
+        "name": "Aeronave correcta para la reserva",
+        "description": "El inicio solo se habilita si el airframe coincide con el despacho oficial.",
+        "enabled": true,
+        "severity": "critical",
+        "dataSource": "dispatch",
+        "logMessage": "Gate start: aircraft match",
+        "uiMessage": "La aeronave no coincide con el despacho oficial.",
+        "scopes": ["preflight_gate", "final_evaluation"],
+        "tags": ["start_gate", "dispatch_validation"]
+      },
+      "evaluation": {
+        "outcomeMode": "success_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["dispatch.aircraft_matches"],
+        "dispatchDependency": { "required": true, "mode": "present", "description": "Dispatch oficial cargado" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": {} },
+        "condition": { "metric": "dispatch.aircraft_matches", "operator": "is_true", "expectedValue": true }
+      },
+      "effect": {
+        "ruleType": "gate",
+        "scoreTarget": "procedure",
+        "scoreDelta": { "value": -25, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": true,
+        "incidentCode": "dispatch_aircraft_mismatch"
+      }
+    },
+    {
+      "metadata": {
+        "id": "START_AIRPORT_MATCH",
+        "phase": "PRE",
+        "category": "dispatch",
+        "name": "Aeropuerto correcto para iniciar",
+        "description": "El vuelo solo puede iniciar si la reserva reporta el aeropuerto operacional correcto.",
+        "enabled": true,
+        "severity": "high",
+        "dataSource": "dispatch",
+        "logMessage": "Gate start: airport match",
+        "uiMessage": "La aeronave no está en el aeropuerto operativo de la reserva.",
+        "scopes": ["preflight_gate", "final_evaluation"],
+        "tags": ["start_gate"]
+      },
+      "evaluation": {
+        "outcomeMode": "success_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["dispatch.current_airport_matches_departure"],
+        "dispatchDependency": { "required": true, "mode": "present", "description": "Dispatch oficial cargado" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": {} },
+        "condition": { "metric": "dispatch.current_airport_matches_departure", "operator": "is_true", "expectedValue": true }
+      },
+      "effect": {
+        "ruleType": "gate",
+        "scoreTarget": "procedure",
+        "scoreDelta": { "value": -10, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": false,
+        "incidentCode": ""
+      }
+    },
+    {
+      "metadata": {
+        "id": "START_COLD_AND_DARK",
+        "phase": "PRE",
+        "category": "aircraft",
+        "name": "Cold and dark antes de iniciar",
+        "description": "El inicio exige motores, APU, bleed y luces exteriores apagadas.",
+        "enabled": true,
+        "severity": "high",
+        "dataSource": "telemetry",
+        "logMessage": "Gate start: cold and dark",
+        "uiMessage": "El avión no está cold and dark para iniciar el vuelo.",
+        "scopes": ["preflight_gate"],
+        "tags": ["start_gate"]
+      },
+      "evaluation": {
+        "outcomeMode": "success_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["preflight.cold_and_dark"],
+        "dispatchDependency": { "required": false, "mode": "", "description": "" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": {} },
+        "condition": { "metric": "preflight.cold_and_dark", "operator": "is_true", "expectedValue": true }
+      },
+      "effect": {
+        "ruleType": "gate",
+        "scoreTarget": "procedure",
+        "scoreDelta": { "value": -10, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": false,
+        "incidentCode": ""
+      }
+    },
+    {
+      "metadata": {
+        "id": "START_PARKING_BRAKE_ON",
+        "phase": "PRE",
+        "category": "safety",
+        "name": "Parking brake puesto",
+        "description": "El vuelo solo puede iniciar con parking brake activado.",
+        "enabled": true,
+        "severity": "high",
+        "dataSource": "telemetry",
+        "logMessage": "Gate start: parking brake",
+        "uiMessage": "Activa el parking brake antes de iniciar el vuelo.",
+        "scopes": ["preflight_gate"],
+        "tags": ["start_gate"]
+      },
+      "evaluation": {
+        "outcomeMode": "success_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["preflight.parking_brake_on"],
+        "dispatchDependency": { "required": false, "mode": "", "description": "" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": {} },
+        "condition": { "metric": "preflight.parking_brake_on", "operator": "is_true", "expectedValue": true }
+      },
+      "effect": {
+        "ruleType": "gate",
+        "scoreTarget": "procedure",
+        "scoreDelta": { "value": -10, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": false,
+        "incidentCode": ""
+      }
+    },
+    {
+      "metadata": {
+        "id": "FINAL_DISPATCH_CORE_PRESENT",
+        "phase": "PAR",
+        "category": "dispatch",
+        "name": "Despacho mínimo disponible",
+        "description": "El cierre exige reserva, número de vuelo, origen y destino válidos.",
+        "enabled": true,
+        "severity": "critical",
+        "dataSource": "dispatch",
+        "logMessage": "Dispatch core validation",
+        "uiMessage": "Faltan datos mínimos de despacho para cerrar el vuelo.",
+        "scopes": ["final_evaluation"],
+        "tags": ["dispatch_validation"]
+      },
+      "evaluation": {
+        "outcomeMode": "success_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["dispatch.present", "dispatch.flight_number_set", "dispatch.origin_set", "dispatch.destination_set"],
+        "dispatchDependency": { "required": true, "mode": "present", "description": "Dispatch oficial cargado" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": {} },
+        "condition": {
+          "all": [
+            { "metric": "dispatch.present", "operator": "is_true", "expectedValue": true },
+            { "metric": "dispatch.flight_number_set", "operator": "is_true", "expectedValue": true },
+            { "metric": "dispatch.origin_set", "operator": "is_true", "expectedValue": true },
+            { "metric": "dispatch.destination_set", "operator": "is_true", "expectedValue": true }
+          ]
+        }
+      },
+      "effect": {
+        "ruleType": "gate",
+        "scoreTarget": "procedure",
+        "scoreDelta": { "value": -30, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": true,
+        "incidentCode": "dispatch_missing"
+      }
+    },
+    {
+      "metadata": {
+        "id": "FINAL_TELEMETRY_MINIMUM",
+        "phase": "PAR",
+        "category": "telemetry",
+        "name": "Telemetría mínima disponible",
+        "description": "Confirma que el cierre trae suficientes muestras para evaluación.",
+        "enabled": true,
+        "severity": "critical",
+        "dataSource": "telemetry",
+        "logMessage": "Minimum telemetry validation",
+        "uiMessage": "No hay telemetría suficiente para evaluar el vuelo.",
+        "scopes": ["final_evaluation"],
+        "tags": ["telemetry_validation"]
+      },
+      "evaluation": {
+        "outcomeMode": "success_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["telemetry.samples.count"],
+        "dispatchDependency": { "required": false, "mode": "", "description": "" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": { "min_samples": 10 } },
+        "condition": { "metric": "telemetry.samples.count", "operator": "gte", "expectedValue": 10 }
+      },
+      "effect": {
+        "ruleType": "gate",
+        "scoreTarget": "procedure",
+        "scoreDelta": { "value": -30, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": true,
+        "incidentCode": "telemetry_missing"
+      }
+    },
+    {
+      "metadata": {
+        "id": "FINAL_FLIGHT_STRUCTURE_COMPLETE",
+        "phase": "PAR",
+        "category": "procedure",
+        "name": "Cierre estructurado del vuelo",
+        "description": "Entrega bonus base cuando hay despacho, duración y telemetría consistente.",
+        "enabled": true,
+        "severity": "low",
+        "dataSource": "inferred",
+        "logMessage": "Flight structure complete",
+        "uiMessage": "Vuelo consolidado correctamente.",
+        "scopes": ["final_evaluation"],
+        "tags": ["bootstrap_bonus"]
+      },
+      "evaluation": {
+        "outcomeMode": "success_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["flight.duration_minutes", "dispatch.flight_number_set", "telemetry.samples.count"],
+        "dispatchDependency": { "required": true, "mode": "present", "description": "Dispatch oficial cargado" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": {} },
+        "condition": {
+          "all": [
+            { "metric": "flight.duration_minutes", "operator": "gt", "expectedValue": 0 },
+            { "metric": "dispatch.flight_number_set", "operator": "is_true", "expectedValue": true },
+            { "metric": "telemetry.samples.count", "operator": "gte", "expectedValue": 10 }
+          ]
+        }
+      },
+      "effect": {
+        "ruleType": "bonus",
+        "scoreTarget": "patagonia",
+        "scoreDelta": { "value": 5, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": false,
+        "incidentCode": ""
+      }
+    },
+    {
+      "metadata": {
+        "id": "LDG_TOUCHDOWN_RECORDED",
+        "phase": "LDG",
+        "category": "performance",
+        "name": "Touchdown registrado",
+        "description": "Marca que el cierre incluye touchdown medido.",
+        "enabled": true,
+        "severity": "info",
+        "dataSource": "telemetry",
+        "logMessage": "Touchdown recorded",
+        "uiMessage": "Touchdown registrado.",
+        "scopes": ["final_evaluation"],
+        "tags": ["landing"]
+      },
+      "evaluation": {
+        "outcomeMode": "inform_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["telemetry.touchdown.detected"],
+        "dispatchDependency": { "required": false, "mode": "", "description": "" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": {} },
+        "condition": { "metric": "telemetry.touchdown.detected", "operator": "is_true", "expectedValue": true }
+      },
+      "effect": {
+        "ruleType": "info",
+        "scoreTarget": "performance",
+        "scoreDelta": { "value": 0, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": false,
+        "incidentCode": ""
+      }
+    },
+    {
+      "metadata": {
+        "id": "LDG_TOUCHDOWN_HARD",
+        "phase": "LDG",
+        "category": "performance",
+        "name": "Touchdown duro bootstrap",
+        "description": "Penaliza aterrizajes con razón vertical mayor a 700 fpm.",
+        "enabled": true,
+        "severity": "high",
+        "dataSource": "telemetry",
+        "logMessage": "Hard touchdown detected",
+        "uiMessage": "Aterrizaje duro detectado.",
+        "scopes": ["final_evaluation"],
+        "tags": ["landing_penalty"]
+      },
+      "evaluation": {
+        "outcomeMode": "violation_on_match",
+        "flightTypes": [],
+        "applicableAircraft": [],
+        "requiredCertifications": [],
+        "requiredTelemetry": ["telemetry.touchdown_vs_fpm"],
+        "dispatchDependency": { "required": false, "mode": "", "description": "" },
+        "weatherDependency": { "required": false, "mode": "", "description": "" },
+        "tolerances": { "timeProfile": "", "values": { "touchdown_fpm": 700 } },
+        "condition": { "metric": "telemetry.touchdown_vs_fpm", "operator": "lte", "expectedValue": -700 }
+      },
+      "effect": {
+        "ruleType": "penalty",
+        "scoreTarget": "performance",
+        "scoreDelta": { "value": -10, "procedure": 0, "performance": 0, "patagonia": 0 },
+        "invalidatesFlight": false,
+        "incidentCode": "hard_landing"
+      }
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 using System;
 using System.Configuration;
 using System.IO;
+using System.Threading.Tasks;
 using PatagoniaWings.Acars.Core.Services;
 
 namespace PatagoniaWings.Acars.Master.Helpers
@@ -15,6 +16,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public static FlightService FlightService { get; private set; } = null!;
         public static AcarsSoundPlayer Sound { get; private set; } = null!;
         public static AcarsRuntimeState Runtime { get; private set; } = null!;
+        private static bool _startupRetryScheduled;
 
         public static void Initialize()
         {
@@ -47,7 +49,51 @@ namespace PatagoniaWings.Acars.Master.Helpers
             {
                 Api.SetAuthToken(Auth.CurrentPilot.Token);
                 Runtime.SetCurrentPilot(Auth.CurrentPilot);
-                WriteBootLog("Session restored from disk.");
+                WriteBootLog("Session restored from disk. Pending closeout retry will be scheduled by startup bootstrap.");
+            }
+        }
+
+        public static void ScheduleStartupBackgroundWork()
+        {
+            if (_startupRetryScheduled)
+            {
+                return;
+            }
+
+            _startupRetryScheduled = true;
+            _ = RunStartupBackgroundWorkAsync();
+        }
+
+        public static void TriggerPendingCloseoutRetry(string reason, int delayMs = 0)
+        {
+            _ = RunPendingCloseoutRetryAsync(reason, delayMs);
+        }
+
+        private static async Task RunStartupBackgroundWorkAsync()
+        {
+            await RunPendingCloseoutRetryAsync("startup_bootstrap", 2500);
+        }
+
+        private static async Task RunPendingCloseoutRetryAsync(string reason, int delayMs)
+        {
+            try
+            {
+                if (Api == null)
+                {
+                    return;
+                }
+
+                if (delayMs > 0)
+                {
+                    await Task.Delay(delayMs).ConfigureAwait(false);
+                }
+
+                WriteBootLog("Pending closeout retry requested => reason=" + reason + " pending=" + Api.GetPendingCloseoutCount());
+                await Api.TryProcessPendingCloseoutsAsync(reason).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                WriteBootLog("Pending closeout retry exception => reason=" + reason + " error=" + ex.Message);
             }
         }
 

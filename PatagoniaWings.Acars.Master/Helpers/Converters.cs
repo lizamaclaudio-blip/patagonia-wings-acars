@@ -6,34 +6,78 @@ using System.Windows.Media;
 
 namespace PatagoniaWings.Acars.Master.Helpers
 {
-    /// <summary>Convierte string vacío a Collapsed.</summary>
     public class StringToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-            => string.IsNullOrEmpty(value as string) ? Visibility.Collapsed : Visibility.Visible;
+            => string.IsNullOrWhiteSpace(value as string) ? Visibility.Collapsed : Visibility.Visible;
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 
-    /// <summary>Convierte bool negado a Visibility.</summary>
+    public class StringFallbackConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            var input = value as string;
+            if (!string.IsNullOrWhiteSpace(input)
+                && input != "----"
+                && input != "—"
+                && input != "---")
+            {
+                return input!;
+            }
+
+            return parameter as string ?? string.Empty;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
     public class BoolInverseConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-            => value is bool b ? !b : value;
+            => value is bool b ? !b : value ?? false;
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 
-    /// <summary>Convierte count==0 a Visible (para mensajes de "vacío").</summary>
+    public class InverseBooleanToVisibilityConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+            => value is bool b && b ? Visibility.Collapsed : Visibility.Visible;
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
     public class ZeroToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
             => value is int i && i == 0 ? Visibility.Visible : Visibility.Collapsed;
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 
-    /// <summary>Convierte la nota de vuelo a color.</summary>
+    public class ScoreToDisplayConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            if (value is int score && score > 0)
+            {
+                return score.ToString("0", culture) + " pts";
+            }
+
+            return "-- pts";
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+            => throw new NotImplementedException();
+    }
+
     public class GradeToColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -47,11 +91,11 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 _ => new SolidColorBrush(Color.FromRgb(204, 68, 68))
             };
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 
-    /// <summary>Convierte velocidad vertical a color (verde arriba, rojo descenso fuerte).</summary>
     public class VSToColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -62,13 +106,14 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 if (vs < -1500) return new SolidColorBrush(Color.FromRgb(255, 68, 68));
                 return new SolidColorBrush(Color.FromRgb(139, 148, 158));
             }
+
             return new SolidColorBrush(Color.FromRgb(139, 148, 158));
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 
-    /// <summary>Convierte bool a color según parámetro "colorTrue|colorFalse".</summary>
     public class BoolToColorConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
@@ -77,34 +122,37 @@ namespace PatagoniaWings.Acars.Master.Helpers
             var colorStr = (value is bool b && b) ? parts[0] : (parts.Length > 1 ? parts[1] : "#8B949E");
             return new SolidColorBrush((Color)ColorConverter.ConvertFromString(colorStr));
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 
-    /// <summary>Para tabs: muestra/oculta según el índice seleccionado.</summary>
     public class TabToVisibilityConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             if (int.TryParse(value?.ToString(), out int selected) &&
                 int.TryParse(parameter?.ToString(), out int target))
+            {
                 return selected == target ? Visibility.Visible : Visibility.Collapsed;
+            }
+
             return Visibility.Collapsed;
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }
 
-    /// <summary>Convierte bool a Brush (usado para resaltar valores importantes).</summary>
     public class BoolToBrushConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            var brush = value is bool b && b 
-                ? new SolidColorBrush(Color.FromRgb(242, 201, 76))  // Amarillo/Warn
-                : new SolidColorBrush(Color.FromRgb(240, 246, 252)); // Texto normal
-            return brush;
+            return value is bool b && b
+                ? new SolidColorBrush(Color.FromRgb(242, 201, 76))
+                : new SolidColorBrush(Color.FromRgb(240, 246, 252));
         }
+
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
             => throw new NotImplementedException();
     }

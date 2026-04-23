@@ -103,6 +103,8 @@ namespace PatagoniaWings.Acars.Core.Services
                     ),
                     new XElement("Scoring",
                         Element("Authority", "acars_client_v3"),
+                        Element("PatagoniaScore", report.PatagoniaScore.ToString(CultureInfo.InvariantCulture)),
+                        Element("PatagoniaGrade", report.PatagoniaGrade),
                         Element("ProcedureScore", report.ProcedureScore.ToString(CultureInfo.InvariantCulture)),
                         Element("ProcedureGrade", report.ProcedureGrade),
                         Element("PerformanceScore", report.PerformanceScore.ToString(CultureInfo.InvariantCulture)),
@@ -124,6 +126,72 @@ namespace PatagoniaWings.Acars.Core.Services
                                     new XAttribute("phase", b.Phase),
                                     new XAttribute("pts", b.Points),
                                     b.Description))
+                        ),
+                        new XElement("EvaluationContract",
+                            Element("ContractVersion", report.Evaluation == null ? string.Empty : report.Evaluation.ContractVersion),
+                            Element("RulesetVersion", report.Evaluation == null ? string.Empty : report.Evaluation.RulesetVersion),
+                            Element("RulesFilePath", report.Evaluation == null ? string.Empty : report.Evaluation.RulesFilePath),
+                            Element("FlightValid", report.Evaluation == null ? string.Empty : (report.Evaluation.FlightValid ? "true" : "false")),
+                            new XElement("InvalidReasons",
+                                (report.Evaluation == null ? new List<string>() : report.Evaluation.InvalidReasons)
+                                    .Select(item => new XElement("Reason", item))
+                            ),
+                            new XElement("Incidents",
+                                (report.Evaluation == null ? new List<PatagoniaIncidentRecord>() : report.Evaluation.Incidents)
+                                    .Select(item => new XElement("Incident",
+                                        new XAttribute("code", item.Code),
+                                        new XAttribute("phase", item.Phase),
+                                        new XAttribute("severity", item.Severity),
+                                        new XAttribute("source", item.Source),
+                                        new XAttribute("scoreDelta", item.ScoreDelta),
+                                        new XAttribute("timestampUtc", item.TimestampUtc == default(DateTime) ? string.Empty : FormatUtc(item.TimestampUtc)),
+                                        item.Message))
+                            ),
+                            new XElement("GateFailures",
+                                new XAttribute("count", report.Evaluation == null || report.Evaluation.GateFailures == null ? 0 : report.Evaluation.GateFailures.Count),
+                                (report.Evaluation == null ? new List<PatagoniaTriggeredRuleResult>() : report.Evaluation.GateFailures)
+                                    .Select(item => new XElement("Item",
+                                        new XAttribute("id", item.RuleId),
+                                        new XAttribute("phase", item.Phase),
+                                        new XAttribute("target", item.ScoreTarget),
+                                        new XAttribute("delta", item.ScoreDelta),
+                                        item.Message))
+                            ),
+                            new XElement("PhaseResults",
+                                (report.Evaluation == null ? new List<PatagoniaPhaseResult>() : report.Evaluation.PhaseResults)
+                                    .Select(item => new XElement("Phase",
+                                        new XAttribute("code", item.Phase),
+                                        new XAttribute("delta", item.ScoreDelta),
+                                        new XAttribute("bonuses", item.BonusCount),
+                                        new XAttribute("penalties", item.PenaltyCount),
+                                        new XAttribute("gateFailures", item.GateFailureCount),
+                                        new XElement("TriggeredRules",
+                                            item.TriggeredRuleIds.Select(ruleId => new XElement("RuleId", ruleId))))))
+                            ,
+                            new XElement("TelemetrySummary",
+                                Element("SamplesCount", report.Evaluation == null ? string.Empty : report.Evaluation.TelemetrySummary.SamplesCount.ToString(CultureInfo.InvariantCulture)),
+                                Element("AirborneSamplesCount", report.Evaluation == null ? string.Empty : report.Evaluation.TelemetrySummary.AirborneSamplesCount.ToString(CultureInfo.InvariantCulture)),
+                                Element("OnGroundSamplesCount", report.Evaluation == null ? string.Empty : report.Evaluation.TelemetrySummary.OnGroundSamplesCount.ToString(CultureInfo.InvariantCulture)),
+                                Element("DistanceNm", report.Evaluation == null ? string.Empty : FormatDouble(report.Evaluation.TelemetrySummary.DistanceNm)),
+                                Element("FuelUsedKg", report.Evaluation == null ? string.Empty : FormatDouble(report.Evaluation.TelemetrySummary.FuelUsedKg)),
+                                Element("MaxAltitudeFt", report.Evaluation == null ? string.Empty : FormatDouble(report.Evaluation.TelemetrySummary.MaxAltitudeFt)),
+                                Element("MaxSpeedKts", report.Evaluation == null ? string.Empty : FormatDouble(report.Evaluation.TelemetrySummary.MaxSpeedKts))
+                            ),
+                            new XElement("RuleAuditLog",
+                                (report.Evaluation == null ? new List<PatagoniaRuleAuditEntry>() : report.Evaluation.RuleAuditLog)
+                                    .Select(item => new XElement("Rule",
+                                        new XAttribute("id", item.RuleId),
+                                        new XAttribute("phase", item.Phase),
+                                        new XAttribute("result", item.Result),
+                                        new XAttribute("scoreDelta", item.ScoreDelta),
+                                        new XAttribute("source", item.Source),
+                                        new XAttribute("timestampUtc", item.TimestampUtc == default(DateTime) ? string.Empty : FormatUtc(item.TimestampUtc)),
+                                        Element("ObservedValue", item.ObservedValue),
+                                        Element("ExpectedValue", item.ExpectedValue),
+                                        Element("AppliedTolerance", item.AppliedTolerance),
+                                        Element("Reason", item.Reason),
+                                        Element("Context", item.Context)))
+                            )
                         )
                     ),
                     new XElement("TelemetryLog",

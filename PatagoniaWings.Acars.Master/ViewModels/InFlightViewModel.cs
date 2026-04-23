@@ -81,7 +81,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _routeStatusLabel = "Esperando inicio oficial";
         private double _routeProgressPercent;
         private const double RouteCanvasWidth = 320;
-        private const double RoutePlaneVisualWidth = 42;
+        private const double RoutePlaneVisualWidth = 20;
 
         // ── Pesos / comparación SimBrief vs Sim ──────────────────────────────────
         private double _fuelAtEngineStartKg = -1; // -1 = no capturado aún
@@ -541,14 +541,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             get
             {
-                if (OfficialPhaseCode == "PRE" && AcarsContext.FlightService.TotalDistanceNm <= 0)
-                    return "LISTO";
-
                 return $"{Math.Round(RouteProgressPercent, 0):F0}%";
             }
         }
-        public double RouteTrackWidth => Math.Max(26, RouteCanvasWidth * (RouteProgressPercent / 100.0));
-        public double RoutePlaneLeft => Math.Max(0, Math.Min(RouteCanvasWidth - RoutePlaneVisualWidth, RouteTrackWidth - (RoutePlaneVisualWidth * 0.6)));
+        public double RouteTrackWidth => Math.Max(0, RouteCanvasWidth * (RouteProgressPercent / 100.0));
+        public double RoutePlaneLeft => Math.Max(0, Math.Min(RouteCanvasWidth - RoutePlaneVisualWidth, RouteTrackWidth - (RoutePlaneVisualWidth / 2.0)));
         public string RouteDistanceFromOriginDisplay => $"{ComputeDistanceFromOriginNm():F0} NM";
         public string RouteDistanceToDestinationDisplay => $"{ComputeDistanceToDestinationNm():F0} NM";
         public string RouteDistanceDisplay
@@ -578,6 +575,27 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         // Actual del simulador (combustible actual en pantalla)
         public double WbActualFuelKg => HasLiveTelemetry ? FuelKg : 0;
+
+        /// <summary>
+        /// Payload actual estimado del simulador.
+        /// Si no existe OEW directo en telemetría, se estima usando el plan activo:
+        /// OEW ≈ ZFW planificada - Payload planificado.
+        /// Payload actual ≈ ZFW actual - OEW estimado.
+        /// </summary>
+        public double WbActualPayloadKg
+        {
+            get
+            {
+                if (!HasLiveTelemetry || ActualZeroFuelWeightKg <= 0)
+                    return 0;
+
+                var estimatedOew = Math.Max(0, WbPlanZfwKg - WbPlanPayloadKg);
+                if (estimatedOew <= 0)
+                    return 0;
+
+                return Math.Max(0, ActualZeroFuelWeightKg - estimatedOew);
+            }
+        }
 
         /// <summary>Combustible capturado en el primer arranque de motores (N1 > 15%).</summary>
         public double WbFuelAtEngineStartKg => _fuelAtEngineStartKg > 0 ? _fuelAtEngineStartKg : WbActualFuelKg;
@@ -626,12 +644,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string WbPlanFuelDisplay    => WbPlanFuelKg    > 0 ? $"{WbPlanFuelKg:F0} kg"    : "—";
         public string WbPlanPayloadDisplay => WbPlanPayloadKg > 0 ? $"{WbPlanPayloadKg:F0} kg"  : "—";
         public string WbPlanZfwDisplay     => WbPlanZfwKg     > 0 ? $"{WbPlanZfwKg:F0} kg"     : "—";
-        public string WbActualFuelDisplay  => HasLiveTelemetry    ? $"{WbActualFuelKg:F0} kg"   : "—";
-        public string WbStartFuelDisplay   => _fuelAtEngineStartKg > 0 ? $"{_fuelAtEngineStartKg:F0} kg" : "—";
+        public string WbActualFuelDisplay    => HasLiveTelemetry && WbActualFuelKg > 0    ? $"{WbActualFuelKg:F0} kg"    : "—";
+        public string WbActualPayloadDisplay => HasLiveTelemetry && WbActualPayloadKg > 0 ? $"{WbActualPayloadKg:F0} kg" : "—";
+        public string WbStartFuelDisplay     => _fuelAtEngineStartKg > 0 ? $"{_fuelAtEngineStartKg:F0} kg" : "—";
 
         // ── Log de PIREP en tiempo real ──────────────────────────────────────────
 
-        public string WbActualZfwDisplay   => HasLiveTelemetry && ActualZeroFuelWeightKg > 0 ? $"{ActualZeroFuelWeightKg:F0} kg" : "â€”";
+        public string WbActualZfwDisplay   => HasLiveTelemetry && ActualZeroFuelWeightKg > 0 ? $"{ActualZeroFuelWeightKg:F0} kg" : "—";
 
         public string PirepPreview
         {
@@ -746,30 +765,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private double ComputeRouteProgressPercent()
         {
-            var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
-            var altitudeAgl = sample?.AltitudeAGL ?? 0;
-            var altitudeFeet = sample?.AltitudeFeet ?? 0;
-            var groundSpeed = sample?.GroundSpeed ?? 0;
-            var verticalSpeed = sample?.VerticalSpeed ?? 0;
-            var maxEngineN1 = Math.Max(sample?.Engine1N1 ?? 0, sample?.Engine2N1 ?? 0);
-            var plannedCruise = Math.Max(8000, AcarsContext.FlightService.CurrentFlight?.PlannedAltitude ?? 30000);
-
-            double progress = OfficialPhaseCode switch
+            var total = ComputeRouteTotalDistanceNm();
+            if (total <= 0.1)
             {
-                "PRE" => maxEngineN1 > 5 ? 12 : 8,
-                "IGN" => 15 + Math.Min(7, maxEngineN1 / 4.0),
-                "TAX" => 22 + Math.Min(10, Math.Max(0, groundSpeed) / 3.0),
-                "TO" => 34 + Math.Min(8, Math.Max(0, altitudeAgl) / 250.0),
-                "ASC" => 42 + Math.Min(18, Math.Max(0, altitudeFeet) / plannedCruise * 18.0),
-                "CRU" => 62 + Math.Min(14, Math.Max(0, AcarsContext.FlightService.TotalDistanceNm) / 70.0),
-                "DES" => 80 + Math.Min(8, Math.Max(0, Math.Abs(verticalSpeed)) / 300.0),
-                "LDG" => 90 + Math.Min(6, Math.Max(0, 3000 - altitudeAgl) / 500.0),
-                "TAG" => 97 + Math.Min(2, Math.Max(0, 30 - groundSpeed) / 12.0),
-                "PAR" => 100,
-                _ => 8,
-            };
+                return OfficialPhaseCode == "PAR" ? 100 : 0;
+            }
 
-            return Math.Max(0, Math.Min(100, progress));
+            var flown = ComputeDistanceFromOriginNm();
+            var normalized = Clamp01(flown / total);
+            return normalized * 100.0;
         }
 
         private double ComputeEstimatedRouteDistanceNm()
@@ -790,34 +794,166 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 ? referenceSpeed * Math.Max(0.35, plannedMinutes / 60.0)
                 : 0;
 
-            var baseline = OfficialPhaseCode switch
-            {
-                "PRE" => 90,
-                "IGN" => 100,
-                "TAX" => 120,
-                "TO" => 140,
-                "ASC" => Math.Max(180, flown + 90),
-                "CRU" => Math.Max(260, flown + 120),
-                "DES" => Math.Max(220, flown + 70),
-                "LDG" => Math.Max(140, flown + 25),
-                "TAG" => Math.Max(110, flown + 10),
-                "PAR" => Math.Max(1, flown),
-                _ => 110,
-            };
+            return Math.Max(flown, timeEstimate);
+        }
 
-            return Math.Max(flown, Math.Max(timeEstimate, baseline));
+        private double ComputeRouteTotalDistanceNm()
+        {
+            if (TryGetRouteCoordinates(out var depLat, out var depLon, out var arrLat, out var arrLon))
+            {
+                return CalculateDistanceNm(depLat, depLon, arrLat, arrLon);
+            }
+
+            return ComputeEstimatedRouteDistanceNm();
         }
 
         private double ComputeDistanceFromOriginNm()
         {
+            if (TryGetRouteCoordinates(out var depLat, out var depLon, out _, out _)
+                && TryGetAircraftCoordinates(out var aircraftLat, out var aircraftLon))
+            {
+                return CalculateDistanceNm(depLat, depLon, aircraftLat, aircraftLon);
+            }
+
             return Math.Max(0, AcarsContext.FlightService.TotalDistanceNm);
         }
 
         private double ComputeDistanceToDestinationNm()
         {
+            if (TryGetRouteCoordinates(out _, out _, out var arrLat, out var arrLon)
+                && TryGetAircraftCoordinates(out var aircraftLat, out var aircraftLon))
+            {
+                return CalculateDistanceNm(aircraftLat, aircraftLon, arrLat, arrLon);
+            }
+
             var flown = ComputeDistanceFromOriginNm();
-            var estimated = ComputeEstimatedRouteDistanceNm();
-            return Math.Max(0, estimated - flown);
+            var total = ComputeRouteTotalDistanceNm();
+            return Math.Max(0, total - flown);
+        }
+
+        private bool TryGetAircraftCoordinates(out double latitude, out double longitude)
+        {
+            var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+            latitude = sample?.Latitude ?? Lat;
+            longitude = sample?.Longitude ?? Lon;
+            return IsValidCoordinate(latitude, longitude);
+        }
+
+        private bool TryGetRouteCoordinates(out double depLat, out double depLon, out double arrLat, out double arrLon)
+        {
+            depLat = depLon = arrLat = arrLon = 0;
+
+            var depOk = TryResolveAirportCoordinate(new[] { "Departure", "Origin" }, out depLat, out depLon);
+            var arrOk = TryResolveAirportCoordinate(new[] { "Arrival", "Destination" }, out arrLat, out arrLon);
+            return depOk && arrOk;
+        }
+
+        private bool TryResolveAirportCoordinate(string[] prefixes, out double latitude, out double longitude)
+        {
+            foreach (var source in new object?[] { AcarsContext.Runtime.CurrentDispatch, AcarsContext.FlightService.CurrentFlight })
+            {
+                if (source == null)
+                {
+                    continue;
+                }
+
+                foreach (var prefix in prefixes)
+                {
+                    if (TryReadCoordinatePair(source, prefix, out latitude, out longitude))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            latitude = longitude = 0;
+            return false;
+        }
+
+        private static bool TryReadCoordinatePair(object source, string prefix, out double latitude, out double longitude)
+        {
+            latitude = longitude = 0;
+
+            if ((TryReadDouble(source, prefix + "Latitude", out latitude) || TryReadDouble(source, prefix + "Lat", out latitude))
+                && (TryReadDouble(source, prefix + "Longitude", out longitude) || TryReadDouble(source, prefix + "Lon", out longitude))
+                && IsValidCoordinate(latitude, longitude))
+            {
+                return true;
+            }
+
+            var nestedProperty =
+                source.GetType().GetProperty(prefix + "Airport")
+                ?? source.GetType().GetProperty(prefix);
+
+            var nested = nestedProperty?.GetValue(source);
+            if (nested == null)
+            {
+                return false;
+            }
+
+            if ((TryReadDouble(nested, "Latitude", out latitude) || TryReadDouble(nested, "Lat", out latitude))
+                && (TryReadDouble(nested, "Longitude", out longitude) || TryReadDouble(nested, "Lon", out longitude))
+                && IsValidCoordinate(latitude, longitude))
+            {
+                return true;
+            }
+
+            latitude = longitude = 0;
+            return false;
+        }
+
+        private static bool TryReadDouble(object source, string propertyName, out double value)
+        {
+            value = 0;
+            var property = source.GetType().GetProperty(propertyName);
+            if (property == null)
+            {
+                return false;
+            }
+
+            var raw = property.GetValue(source);
+            if (raw == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                value = Convert.ToDouble(raw, System.Globalization.CultureInfo.InvariantCulture);
+                return true;
+            }
+            catch
+            {
+                value = 0;
+                return false;
+            }
+        }
+
+        private static bool IsValidCoordinate(double latitude, double longitude)
+        {
+            return latitude >= -90 && latitude <= 90
+                && longitude >= -180 && longitude <= 180
+                && (Math.Abs(latitude) > 0.0001 || Math.Abs(longitude) > 0.0001);
+        }
+
+        private static double CalculateDistanceNm(double lat1, double lon1, double lat2, double lon2)
+        {
+            const double earthRadiusNm = 3440.065;
+            var dLat = DegToRad(lat2 - lat1);
+            var dLon = DegToRad(lon2 - lon1);
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2)
+                  + Math.Cos(DegToRad(lat1)) * Math.Cos(DegToRad(lat2))
+                  * Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+            return earthRadiusNm * 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        }
+
+        private static double DegToRad(double degrees) => degrees * Math.PI / 180.0;
+
+        private static double Clamp01(double value)
+        {
+            if (value < 0) return 0;
+            if (value > 1) return 1;
+            return value;
         }
 
         private string BuildRouteStatusLabel()
@@ -1167,7 +1303,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                 // ── Notificar pesos actuales y log PIREP ────────────────────────
                 OnPropertyChanged(nameof(WbActualFuelKg));
+                OnPropertyChanged(nameof(WbActualPayloadKg));
                 OnPropertyChanged(nameof(WbActualFuelDisplay));
+                OnPropertyChanged(nameof(WbActualPayloadDisplay));
                 OnPropertyChanged(nameof(WbActualZfwDisplay));
                 OnPropertyChanged(nameof(WbFuelStatusLabel));
                 UpdatePirepPreview();

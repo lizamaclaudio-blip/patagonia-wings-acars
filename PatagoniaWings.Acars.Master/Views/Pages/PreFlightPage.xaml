@@ -1,326 +1,199 @@
 <UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.PreFlightPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:preview="clr-namespace:PatagoniaWings.Acars.Master.Preview"
              Background="Transparent">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolVis"/>
-
-        <Style x:Key="CardBorder" TargetType="Border">
-            <Setter Property="Background" Value="#FFFFFFFF"/>
-            <Setter Property="BorderBrush" Value="#D9EAF8"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="10,8"/>
-            <Setter Property="Margin" Value="0,0,0,5"/>
-        </Style>
-
-        <Style x:Key="LabelText" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="9"/>
-            <Setter Property="Foreground" Value="#64748B"/>
-            <Setter Property="Margin" Value="0,0,0,2"/>
-        </Style>
-
-        <Style x:Key="ValueText" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe UI Semibold"/>
-            <Setter Property="FontSize" Value="12"/>
-            <Setter Property="Foreground" Value="#0F172A"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-        </Style>
-
-        <Style x:Key="SectionTitle" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Segoe UI Semibold"/>
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="Foreground" Value="#0284C7"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,0,0,7"/>
-        </Style>
-
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="#F8FBFF"/>
-            <Setter Property="Foreground" Value="#0284C7"/>
-            <Setter Property="BorderBrush" Value="#BFDBFE"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontFamily" Value="Segoe UI Semibold"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}"
-                                BorderBrush="{TemplateBinding BorderBrush}"
-                                BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Opacity" Value="0.9"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style x:Key="PrimaryButton" TargetType="Button">
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,10"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="FontFamily" Value="Segoe UI Semibold"/>
-            <Setter Property="Background">
-                <Setter.Value>
-                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Color="#0284C7" Offset="0"/>
-                        <GradientStop Color="#0EA5E9" Offset="1"/>
-                    </LinearGradientBrush>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.45"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Opacity" Value="0.92"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </UserControl.Resources>
 
-    <Grid x:Name="PageRoot" Background="#EFF6FF">
-        <StackPanel Margin="0,0,0,0">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  Background="Transparent">
+        <StackPanel x:Name="PageRoot"
+                    DataContext="{Binding DataContext.MainVM.PreFlightVM, RelativeSource={RelativeSource AncestorType=Window}}">
+            <TextBlock Text="OFICINA DE DESPACHO"
+                       Style="{StaticResource PageTitle}"
+                       Margin="0,0,0,8"/>
 
-            <!-- Header -->
-            <Grid Margin="0,0,0,5">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
+            <Border Style="{StaticResource CardBlue}" Margin="0,0,0,8">
+                <StackPanel>
+                    <Grid Margin="0,0,0,7">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0">
-                    <TextBlock Text="PREFLIGHT"
-                               FontFamily="Segoe UI Semibold" FontSize="16"
-                               Foreground="#0284C7"/>
-                    <TextBlock Text="Despacho oficial · METAR de apoyo · Inicio operacional ACARS"
-                               Margin="0,2,0,0" FontSize="10" Foreground="#64748B"/>
+                        <StackPanel>
+                            <TextBlock Text="ORIGEN" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding DepartureIcao, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchOrigin}}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontFamily="Consolas"
+                                       FontSize="20"
+                                       FontWeight="Bold"/>
+                        </StackPanel>
+
+                        <TextBlock Grid.Column="1"
+                                   Text="&#x2708;"
+                                   Foreground="{StaticResource AccentBlueBrush}"
+                                   FontSize="18"
+                                   Margin="8,11,8,0"/>
+
+                        <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                            <TextBlock Text="DESTINO"
+                                       Style="{StaticResource FieldLabel}"
+                                       HorizontalAlignment="Right"/>
+                            <TextBlock Text="{Binding ArrivalIcao, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchDestination}}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontFamily="Consolas"
+                                       FontSize="20"
+                                       FontWeight="Bold"
+                                       HorizontalAlignment="Right"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="{Binding RouteDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchRoute}}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="9.2"
+                               TextWrapping="Wrap"/>
+
+                    <Grid Margin="0,9,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="8"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Style="{StaticResource InsetCardTight}">
+                            <StackPanel>
+                                <TextBlock Text="SALIDA" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding PreparedDispatch.ScheduledDepartureUtc, StringFormat={}{0:HH:mm}, TargetNullValue={x:Static preview:AcarsPreviewData.DispatchStd}}"
+                                           Foreground="{StaticResource AccentLightBlueBrush}"
+                                           FontFamily="Consolas"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2"
+                                Style="{StaticResource InsetCardTight}">
+                            <StackPanel>
+                                <TextBlock Text="BLOCK" Style="{StaticResource FieldLabel}"/>
+                                <TextBlock Text="{Binding BlockDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchBlock}}"
+                                           Foreground="{StaticResource AccentLightBlueBrush}"
+                                           FontFamily="Consolas"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </StackPanel>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Sincronizando..."
-                               Margin="0,0,8,0" VerticalAlignment="Center"
-                               Foreground="#0284C7" FontSize="10"
-                               Visibility="{Binding IsLoadingDispatch, Converter={StaticResource BoolVis}}"/>
-                    <Button Content="Recargar despacho"
-                            Style="{StaticResource SecondaryButton}"
-                            Command="{Binding LoadDispatchCommand}"/>
-                </StackPanel>
-            </Grid>
-
-            <!-- Status bar -->
-            <Border Padding="12,8" Margin="0,0,0,8">
-                <Border.Style>
-                    <Style TargetType="Border" BasedOn="{StaticResource CardBorder}">
-                        <Setter Property="Background" Value="#FEF3C7"/>
-                        <Setter Property="BorderBrush" Value="#FCD34D"/>
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsDispatchReady}" Value="True">
-                                <Setter Property="Background" Value="#D1FAE5"/>
-                                <Setter Property="BorderBrush" Value="#6EE7B7"/>
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="Auto"/>
-                    </Grid.ColumnDefinitions>
-
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="{Binding DispatchStatusLabel}"
-                                   FontFamily="Segoe UI Semibold" FontSize="11"
-                                   Foreground="#0F172A"/>
-                        <TextBlock Text="{Binding StatusMessage}"
-                                   Margin="0,2,0,0" TextWrapping="Wrap"
-                                   FontSize="10" Foreground="#334155"/>
-                        <TextBlock Text="{Binding DispatchStateLine}"
-                                   Margin="0,3,0,0" FontSize="10" Foreground="#475569"/>
-                        <TextBlock Text="{Binding DispatchSourceLine}"
-                                   Margin="0,1,0,0" FontSize="10" Foreground="#475569"/>
-                    </StackPanel>
-
-                    <Border Grid.Column="1" Margin="10,0,0,0" CornerRadius="7" Padding="10,4"
-                            VerticalAlignment="Center">
-                        <Border.Style>
-                            <Style TargetType="Border">
-                                <Setter Property="Background" Value="#F59E0B"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsDispatchReady}" Value="True">
-                                        <Setter Property="Background" Value="#10B981"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </Border.Style>
-                        <TextBlock Text="{Binding DispatchStatusLabel}"
-                                   Foreground="White" FontFamily="Segoe UI Semibold" FontSize="9"/>
-                    </Border>
-                </Grid>
             </Border>
 
-            <!-- Grid de cards -->
+            <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="INFORMACION DEL DESPACHO" Style="{StaticResource SectionLabel}"/>
+                    <UniformGrid Columns="2">
+                        <StackPanel Margin="0,0,4,8">
+                            <TextBlock Text="VUELO" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding FlightNumber, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchFlightNumber}}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontFamily="Consolas"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel Margin="4,0,0,8">
+                            <TextBlock Text="AERONAVE" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding AircraftDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchAircraft}}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,4,8">
+                            <TextBlock Text="COMBUSTIBLE" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding FuelDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchFuel}}"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontSize="10.5"
+                                       FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel Margin="4,0,0,8">
+                            <TextBlock Text="PAYLOAD / PAX" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding PayloadDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchPayload}}"
+                                       Foreground="{StaticResource AccentLightBlueBrush}"
+                                       FontSize="10"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <StackPanel Margin="0,0,4,0">
+                            <TextBlock Text="ALTERNO" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding PreparedDispatch.AlternateIcao, TargetNullValue={x:Static preview:AcarsPreviewData.DispatchAlternate}}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontFamily="Consolas"
+                                       FontSize="11"/>
+                        </StackPanel>
+                        <StackPanel Margin="4,0,0,0">
+                            <TextBlock Text="NIVEL" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding PreparedDispatch.CruiseLevel, TargetNullValue={x:Static preview:AcarsPreviewData.DispatchCruiseLevel}}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontFamily="Consolas"
+                                       FontSize="11"/>
+                        </StackPanel>
+                    </UniformGrid>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="TELEMETRIA PREVIA" Style="{StaticResource SectionLabel}"/>
+                    <TextBlock Text="{Binding DispatchStatusLabel, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchStatus}}"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               FontSize="12"
+                               FontWeight="SemiBold"/>
+                    <TextBlock Text="{Binding DispatchStateLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchState}}"
+                               Foreground="{StaticResource TextSecondaryBrush}"
+                               FontSize="9.5"
+                               Margin="0,5,0,0"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding StartGateSummary, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchGate}}"
+                               Foreground="{StaticResource AccentLightBlueBrush}"
+                               FontSize="9.5"
+                               Margin="0,6,0,0"
+                               TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding DispatchSourceLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchSource}}"
+                               Foreground="{StaticResource TextMutedBrush}"
+                               FontSize="8.5"
+                               Margin="0,6,0,0"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <TextBlock Text="{Binding StatusMessage}"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       FontSize="9.5"
+                       Margin="0,0,0,8"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding HasStatusMessage, Converter={StaticResource BoolVis}}"/>
+
             <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <!-- Vuelo / Origen / Destino -->
-                <Border Grid.Row="0" Grid.ColumnSpan="2" Style="{StaticResource CardBorder}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="1.2*"/>
-                            <ColumnDefinition Width="14"/>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="60"/>
-                            <ColumnDefinition Width="1*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Style="{StaticResource LabelText}" Text="VUELO"/>
-                            <TextBlock Style="{StaticResource ValueText}" Text="{Binding FlightNumber, FallbackValue=—}"/>
-                        </StackPanel>
-                        <Border Grid.Column="1" Width="1" Background="#DBEAFE" HorizontalAlignment="Center"/>
-                        <StackPanel Grid.Column="2">
-                            <TextBlock Style="{StaticResource LabelText}" Text="ORIGEN"/>
-                            <TextBlock Style="{StaticResource ValueText}" Text="{Binding DepartureIcao, FallbackValue=—}"/>
-                        </StackPanel>
-                        <TextBlock Grid.Column="3" Text="✈" FontSize="16"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center"
-                                   Foreground="#93C5FD"/>
-                        <StackPanel Grid.Column="4">
-                            <TextBlock Style="{StaticResource LabelText}" Text="DESTINO"/>
-                            <TextBlock Style="{StaticResource ValueText}" Text="{Binding ArrivalIcao, FallbackValue=—}"/>
-                        </StackPanel>
-                    </Grid>
-                </Border>
-
-                <!-- Aeronave y operación -->
-                <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,6,8">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="AERONAVE Y OPERACIÓN"/>
-                        <TextBlock Style="{StaticResource LabelText}" Text="AERONAVE"/>
-                        <TextBlock Style="{StaticResource ValueText}" Text="{Binding AircraftDisplayLine}"/>
-                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="MODO"/>
-                        <TextBlock Style="{StaticResource ValueText}" Text="{Binding FlightModeLine}"/>
-                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="ALTERNADO"/>
-                        <TextBlock Style="{StaticResource ValueText}" Text="{Binding PreparedDispatch.AlternateIcao, FallbackValue=No informado}"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Plan y carga -->
-                <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource CardBorder}" Margin="6,0,0,8">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="PLAN Y CARGA"/>
-                        <TextBlock Style="{StaticResource LabelText}" Text="RUTA"/>
-                        <TextBlock Style="{StaticResource ValueText}" Text="{Binding RouteDisplayLine}"/>
-                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="COMBUSTIBLE"/>
-                        <TextBlock Style="{StaticResource ValueText}" Text="{Binding FuelDisplayLine}"/>
-                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="PESO / PAX"/>
-                        <TextBlock Style="{StaticResource ValueText}" Text="{Binding PayloadDisplayLine}"/>
-                        <TextBlock Margin="0,5,0,0" Style="{StaticResource LabelText}" Text="BLOCK"/>
-                        <TextBlock Style="{StaticResource ValueText}" Text="{Binding BlockDisplayLine}"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- METAR Origen -->
-                <Border Grid.Row="2" Grid.Column="0" Style="{StaticResource CardBorder}" Margin="0,0,6,8">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="METAR ORIGEN"/>
-                        <TextBlock Text="{Binding DepMetar, FallbackValue=Sin METAR}"
-                                   FontFamily="Consolas" FontSize="9" TextWrapping="Wrap"
-                                   MaxHeight="28" ClipToBounds="True" Foreground="#475569"/>
-                        <TextBlock Margin="0,5,0,0" Text="{Binding DepartureWeatherSummary}"
-                                   FontSize="10" Foreground="#334155" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- METAR Destino -->
-                <Border Grid.Row="2" Grid.Column="1" Style="{StaticResource CardBorder}" Margin="6,0,0,8">
-                    <StackPanel>
-                        <TextBlock Style="{StaticResource SectionTitle}" Text="METAR DESTINO"/>
-                        <TextBlock Text="{Binding ArrMetar, FallbackValue=Sin METAR}"
-                                   FontFamily="Consolas" FontSize="9" TextWrapping="Wrap"
-                                   MaxHeight="28" ClipToBounds="True" Foreground="#475569"/>
-                        <TextBlock Margin="0,5,0,0" Text="{Binding ArrivalWeatherSummary}"
-                                   FontSize="10" Foreground="#334155" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Border>
-
-                <!-- Validación + Start -->
-                <Border Grid.Row="3" Grid.ColumnSpan="2" Style="{StaticResource CardBorder}">
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*"/>
-                            <ColumnDefinition Width="1*"/>
-                            <ColumnDefinition Width="1.2*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <StackPanel Grid.Column="0" Margin="0,0,14,0">
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="VALIDACIÓN OPERACIONAL"/>
-                            <TextBlock Text="{Binding OperationalMinimaSummary}"
-                                       FontSize="10" Foreground="#0F172A" TextWrapping="Wrap"/>
-                            <TextBlock Margin="0,5,0,0" Text="{Binding OperationalQualificationsSummary}"
-                                       FontSize="10" Foreground="#475569" TextWrapping="Wrap"/>
-                        </StackPanel>
-
-                        <StackPanel Grid.Column="1" Margin="0,0,14,0">
-                            <TextBlock Style="{StaticResource SectionTitle}" Text="SIMULADOR"/>
-                            <ComboBox ItemsSource="{Binding SimulatorOptions}"
-                                      SelectedItem="{Binding SelectedSim}"
-                                      Height="28" MinWidth="140" FontSize="11"/>
-                            <Button Content="Actualizar METAR"
-                                    Margin="0,8,0,0"
-                                    Style="{StaticResource SecondaryButton}"
-                                    Command="{Binding FetchMetarCommand}"/>
-                        </StackPanel>
-
-                        <Button Grid.Column="2"
-                                Style="{StaticResource PrimaryButton}"
-                                Command="{Binding StartFlightCommand}"
-                                IsEnabled="{Binding CanStartFlight}">
-                            <StackPanel>
-                                <TextBlock Text="{Binding StartButtonTitle}"
-                                           Foreground="White" FontFamily="Segoe UI Semibold"
-                                           FontSize="13" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding StartButtonSubtitle}"
-                                           Margin="0,3,0,0" Foreground="#E0F2FE"
-                                           FontFamily="Segoe UI" FontSize="10"
-                                           TextAlignment="Center" TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
-                </Border>
+                <Button Grid.Column="0"
+                        Style="{StaticResource SecondaryButton}"
+                        Command="{Binding DataContext.GoPilotLoungeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Content="VOLVER"
+                        Height="38"
+                        Margin="0,0,5,0"/>
+                <Button Grid.Column="1"
+                        Style="{StaticResource PrimaryButton}"
+                        Command="{Binding StartFlightCommand}"
+                        Content="{Binding StartButtonTitle}"
+                        Height="40"
+                        Margin="5,0,0,0"
+                        IsEnabled="{Binding CanStartFlight}"/>
             </Grid>
         </StackPanel>
-    </Grid>
+    </ScrollViewer>
 </UserControl>
