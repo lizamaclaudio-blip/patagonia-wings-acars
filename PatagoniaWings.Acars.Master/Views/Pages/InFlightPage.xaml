@@ -1,4 +1,4 @@
-<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
+﻿<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:preview="clr-namespace:PatagoniaWings.Acars.Master.Preview"
@@ -279,7 +279,7 @@
                     <TextBlock Text="ACARS LOG" Style="{StaticResource SectionLabel}"/>
                     <Border Style="{StaticResource InsetCard}" Padding="6">
                         <Grid>
-                            <TextBox Text="{Binding PirepPreview}"
+                            <TextBox Text="{Binding PirepPreview, Mode=OneWay}"
                                      Background="Transparent"
                                      Foreground="{StaticResource TextSecondaryBrush}"
                                      BorderThickness="0"

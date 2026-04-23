@@ -2,6 +2,11 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:helpers="clr-namespace:PatagoniaWings.Acars.Master.Helpers">
 
+    <ResourceDictionary.MergedDictionaries>
+        <!-- Converters de runtime conectados desde la carpeta dedicada creada para el sistema visual. -->
+        <ResourceDictionary Source="Converters.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
+
     <Color x:Key="BackgroundDarkColor">#060A10</Color>
     <Color x:Key="BackgroundMidColor">#0A111A</Color>
     <Color x:Key="BackgroundCardColor">#0E1622</Color>
@@ -281,17 +286,9 @@
         <Setter Property="Margin" Value="0,0,0,4"/>
     </Style>
 
-    <helpers:StringToVisibilityConverter x:Key="StringToVisibilityConverter"/>
-    <helpers:StringFallbackConverter x:Key="StringFallbackConverter"/>
     <helpers:BoolInverseConverter x:Key="BoolInverseConverter"/>
-    <helpers:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter"/>
-    <helpers:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter"/>
-    <helpers:ScoreToDisplayConverter x:Key="ScoreToDisplayConverter"/>
     <helpers:GradeToColorConverter x:Key="GradeToColorConverter"/>
     <helpers:VSToColorConverter x:Key="VSToColorConverter"/>
-    <helpers:BoolToColorConverter x:Key="BoolToColorConverter"/>
-    <helpers:TabToVisibilityConverter x:Key="TabToVisibilityConverter"/>
     <helpers:PhaseToStringConverter x:Key="PhaseToStringConverter"/>
     <helpers:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
-    <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
 </ResourceDictionary>

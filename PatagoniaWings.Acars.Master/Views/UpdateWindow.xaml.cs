@@ -14,9 +14,16 @@ namespace PatagoniaWings.Acars.Master.Views
             _checkResult = checkResult;
             InitializeComponent();
 
-            VersionLine.Text = string.Format("Version instalada: {0}  ->  nueva version: {1}", checkResult.CurrentVersion, checkResult.LatestVersion);
-            SourceLine.Text = "Origen: " + (TryGetHost(checkResult.DownloadUrl) ?? "patagoniaw.com");
-            StatusText.Text = "Preparando descarga inmediata...";
+            VersionLine.Text = string.Format(
+                "Version instalada: {0} ({1})  ->  nueva version: {2} ({3})",
+                checkResult.CurrentVersion,
+                string.IsNullOrWhiteSpace(checkResult.CurrentRevision) ? "rev local" : checkResult.CurrentRevision,
+                checkResult.LatestVersion,
+                string.IsNullOrWhiteSpace(checkResult.LatestRevision) ? "rev remota" : checkResult.LatestRevision);
+            SourceLine.Text = "Origen: " + (TryGetHost(checkResult.ManifestUrl) ?? TryGetHost(checkResult.DownloadUrl) ?? "patagoniaw.com");
+            StatusText.Text = checkResult.SupportsDifferential
+                ? "Preparando actualizacion diferencial..."
+                : "Preparando descarga inmediata...";
 
             Loaded += OnLoaded;
             Closed += OnClosed;
@@ -27,6 +34,7 @@ namespace PatagoniaWings.Acars.Master.Views
             UpdateService.DownloadProgressChanged += OnDownloadProgressChanged;
             UpdateService.UpdateStatusChanged += OnUpdateStatusChanged;
             UpdateService.UpdateFailed += OnUpdateFailed;
+            UpdateService.UpdateCompleted += OnUpdateCompleted;
 
             if (_started)
             {
@@ -34,7 +42,7 @@ namespace PatagoniaWings.Acars.Master.Views
             }
 
             _started = true;
-            UpdateService.StartImmediateUpdate(_checkResult.DownloadUrl, _checkResult.LatestVersion);
+            UpdateService.StartImmediateUpdate(_checkResult);
         }
 
         private void OnClosed(object? sender, EventArgs e)
@@ -42,6 +50,7 @@ namespace PatagoniaWings.Acars.Master.Views
             UpdateService.DownloadProgressChanged -= OnDownloadProgressChanged;
             UpdateService.UpdateStatusChanged -= OnUpdateStatusChanged;
             UpdateService.UpdateFailed -= OnUpdateFailed;
+            UpdateService.UpdateCompleted -= OnUpdateCompleted;
         }
 
         private void OnDownloadProgressChanged(int value)
@@ -60,6 +69,22 @@ namespace PatagoniaWings.Acars.Master.Views
             {
                 StatusText.Text = "No se pudo completar la actualizacion. " + message;
                 ContinueButton.Visibility = Visibility.Visible;
+            });
+        }
+
+        private void OnUpdateCompleted(bool restartRequired)
+        {
+            if (restartRequired)
+            {
+                return;
+            }
+
+            Dispatcher.InvokeAsync(async () =>
+            {
+                StatusText.Text = "Actualizacion aplicada. Continuando al ACARS...";
+                ContinueButton.Visibility = Visibility.Collapsed;
+                await System.Threading.Tasks.Task.Delay(600);
+                Close();
             });
         }
 
