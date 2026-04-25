@@ -4,48 +4,46 @@
              Background="Transparent">
     <UserControl.Resources>
         <DataTemplate x:Key="RecentFlightTemplate">
-            <Border Style="{StaticResource InsetCardTight}" Margin="0,0,0,5" Padding="7,5">
+            <Border Background="#F0F6FF" BorderBrush="#C8DDF5" BorderThickness="1"
+                    CornerRadius="8" Padding="8,5" Margin="0,0,0,4">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <Ellipse Width="5"
-                             Height="5"
-                             Fill="{StaticResource AccentBlueBrush}"
-                             VerticalAlignment="Center"/>
+                    <Ellipse Width="5" Height="5"
+                             Fill="#1565C0"
+                             VerticalAlignment="Center"
+                             Margin="0,0,7,0"/>
 
                     <TextBlock Grid.Column="1"
                                Text="{Binding FlightNumber}"
-                               Foreground="{StaticResource TextPrimaryBrush}"
+                               Foreground="#0D1F3C"
                                FontFamily="Consolas"
                                FontSize="9.5"
                                FontWeight="SemiBold"
-                               Margin="7,0,8,0"
                                VerticalAlignment="Center"/>
 
-                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0">
                         <TextBlock Text="{Binding DepartureIcao}"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="#1E3A64"
                                    FontSize="8.8"/>
-                        <TextBlock Text=" -> "
-                                   Foreground="{StaticResource TextMutedBrush}"
+                        <TextBlock Text=" › "
+                                   Foreground="#4A6E9A"
                                    FontSize="8.8"/>
                         <TextBlock Text="{Binding ArrivalIcao}"
-                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Foreground="#1E3A64"
                                    FontSize="8.8"/>
                     </StackPanel>
 
                     <Border Grid.Column="3"
-                            Style="{StaticResource PillBlue}"
-                            Padding="6,2"
-                            Margin="8,0,0,0"
-                            VerticalAlignment="Center">
+                            Background="#E0EDFF" BorderBrush="#90B4D8" BorderThickness="1"
+                            CornerRadius="8" Padding="6,2" VerticalAlignment="Center">
                         <TextBlock Text="{Binding Score, Converter={StaticResource ScoreToDisplayConverter}}"
-                                   Foreground="{StaticResource AccentLightBlueBrush}"
+                                   Foreground="#1565C0"
                                    FontSize="8.1"
                                    FontWeight="Bold"/>
                     </Border>
@@ -66,31 +64,43 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- PAGE TITLE -->
         <TextBlock Text="SALA DE PILOTOS"
-                   Style="{StaticResource PageTitle}"
-                   Margin="0,0,0,7"/>
+                   Foreground="#0D1F3C"
+                   FontSize="14"
+                   FontWeight="Bold"
+                   FontFamily="Segoe UI"
+                   Margin="0,0,0,8"/>
 
-        <Border Grid.Row="1" Style="{StaticResource CardBlue}" Margin="0,0,0,7" Padding="9">
+        <!-- PILOT CARD -->
+        <Border Grid.Row="1"
+                Background="#FFFFFF"
+                BorderBrush="#B8D0EA"
+                BorderThickness="1.5"
+                CornerRadius="14"
+                Padding="12,10"
+                Margin="0,0,0,7"
+                Effect="{StaticResource PanelShadow}">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="66"/>
+                    <ColumnDefinition Width="64"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Width="60"
-                        Height="60"
-                        CornerRadius="30"
-                        BorderBrush="{StaticResource AccentBlueBrush}"
-                        BorderThickness="1.2"
-                        Background="#111B28"
-                        VerticalAlignment="Top"
+                <!-- Avatar circle -->
+                <Border Width="56"
+                        Height="56"
+                        CornerRadius="28"
+                        BorderBrush="#90B4D8"
+                        BorderThickness="2"
+                        Background="#E8F2FF"
+                        VerticalAlignment="Center"
                         ClipToBounds="True">
                     <Grid>
-                        <Border Background="#0E1621"/>
                         <TextBlock Text="&#xE77B;"
                                    FontFamily="Segoe MDL2 Assets"
-                                   Foreground="#5B77A1"
-                                   FontSize="23"
+                                   Foreground="#6A9DC8"
+                                   FontSize="22"
                                    HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                         <Image Source="{Binding PilotAvatarSource}"
@@ -98,162 +108,260 @@
                     </Grid>
                 </Border>
 
-                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                <!-- Pilot info -->
+                <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
                     <TextBlock Text="{Binding PilotCallsignDisplay}"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               FontSize="16"
+                               Foreground="#0D1F3C"
+                               FontSize="17"
                                FontWeight="Bold"
                                FontFamily="Consolas"/>
                     <TextBlock Text="{Binding PilotNameDisplay}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               FontSize="10"
+                               Foreground="#1E3A64"
+                               FontSize="9.5"
+                               FontFamily="Segoe UI"
                                Margin="0,2,0,0"
-                               TextWrapping="Wrap"
-                               TextTrimming="CharacterEllipsis"
-                               MaxHeight="28"/>
+                               TextWrapping="Wrap"/>
 
-                    <Grid Margin="0,7,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-
-                        <Border Style="{StaticResource PillGreen}" Margin="0,0,6,0" HorizontalAlignment="Left">
+                    <StackPanel Orientation="Horizontal" Margin="0,7,0,0">
+                        <Border Background="#E0F5EC" BorderBrush="#4CAF82" BorderThickness="1"
+                                CornerRadius="10" Padding="8,3" Margin="0,0,6,0">
                             <TextBlock Text="ACTIVO"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontSize="8.2"
-                                       FontWeight="SemiBold"/>
+                                       Foreground="#1B6B3A"
+                                       FontSize="8"
+                                       FontWeight="Bold"
+                                       FontFamily="Segoe UI"/>
                         </Border>
-
-                        <Border Grid.Column="1"
-                                Style="{StaticResource PillBlue}"
-                                HorizontalAlignment="Left">
+                        <Border Background="#E0EDFF" BorderBrush="#90B4D8" BorderThickness="1"
+                                CornerRadius="10" Padding="8,3">
                             <TextBlock Text="{Binding PilotLocationCodeDisplay}"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontSize="8.2"
-                                       FontWeight="SemiBold"/>
+                                       Foreground="#1565C0"
+                                       FontSize="8"
+                                       FontWeight="Bold"
+                                       FontFamily="Consolas"/>
                         </Border>
-                    </Grid>
+                    </StackPanel>
                 </StackPanel>
             </Grid>
         </Border>
 
+        <!-- STATS ROW: HORAS / SCORE / RANGO -->
         <UniformGrid Grid.Row="2" Columns="3" Margin="0,0,0,7">
-            <Border Style="{StaticResource Card}" Margin="0,0,3,0" Padding="7">
-                <StackPanel>
-                    <TextBlock Text="HORAS" Style="{StaticResource FieldLabel}"/>
+            <Border Background="#FFFFFF" BorderBrush="#B8D0EA" BorderThickness="1.5"
+                    CornerRadius="12" Padding="6,8" Margin="0,0,4,0"
+                    Effect="{StaticResource PanelShadow}">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="HORAS"
+                               Foreground="#4A6E9A"
+                               FontSize="7.5"
+                               FontWeight="Bold"
+                               FontFamily="Segoe UI"
+                               HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding PilotHoursDisplay}"
-                               Foreground="{StaticResource AccentLightBlueBrush}"
-                               FontSize="13"
-                               FontWeight="Bold"/>
+                               Foreground="#1565C0"
+                               FontSize="15"
+                               FontWeight="Bold"
+                               FontFamily="Consolas"
+                               HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Style="{StaticResource Card}" Margin="3,0,3,0" Padding="7">
-                <StackPanel>
-                    <TextBlock Text="PW SCORE" Style="{StaticResource FieldLabel}"/>
+            <Border Background="#FFFFFF" BorderBrush="#B8D0EA" BorderThickness="1.5"
+                    CornerRadius="12" Padding="6,8" Margin="2,0,2,0"
+                    Effect="{StaticResource PanelShadow}">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="PW SCORE"
+                               Foreground="#4A6E9A"
+                               FontSize="7.5"
+                               FontWeight="Bold"
+                               FontFamily="Segoe UI"
+                               HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding PilotScoreDisplay}"
-                               Foreground="{StaticResource AccentBlueBrush}"
-                               FontSize="13"
-                               FontWeight="Bold"/>
+                               Foreground="#0288D1"
+                               FontSize="15"
+                               FontWeight="Bold"
+                               FontFamily="Consolas"
+                               HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
-            <Border Style="{StaticResource Card}" Margin="3,0,0,0" Padding="7">
-                <StackPanel>
-                    <TextBlock Text="RANGO" Style="{StaticResource FieldLabel}"/>
+            <Border Background="#FFFFFF" BorderBrush="#B8D0EA" BorderThickness="1.5"
+                    CornerRadius="12" Padding="6,8" Margin="4,0,0,0"
+                    Effect="{StaticResource PanelShadow}">
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="RANGO"
+                               Foreground="#4A6E9A"
+                               FontSize="7.5"
+                               FontWeight="Bold"
+                               FontFamily="Segoe UI"
+                               HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding PilotRankDisplay}"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               FontSize="9.2"
-                               FontWeight="SemiBold"
+                               Foreground="#0D1F3C"
+                               FontSize="9.5"
+                               FontWeight="Bold"
+                               FontFamily="Segoe UI"
+                               HorizontalAlignment="Center"
                                TextWrapping="Wrap"
                                TextTrimming="CharacterEllipsis"
-                               MaxHeight="24"/>
+                               TextAlignment="Center"
+                               MaxHeight="28"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
 
-        <Border Grid.Row="3" Style="{StaticResource Card}" Margin="0,0,0,7" Padding="9,8">
-            <StackPanel>
-                <TextBlock Text="UBICACION ACTUAL" Style="{StaticResource SectionLabel}" Margin="0,0,0,4"/>
-                <TextBlock Text="{Binding PilotLocationCodeDisplay}"
-                           Foreground="{StaticResource TextPrimaryBrush}"
-                           FontSize="17"
+        <!-- UBICACION ACTUAL -->
+        <Border Grid.Row="3"
+                Background="#FFFFFF"
+                BorderBrush="#B8D0EA"
+                BorderThickness="1.5"
+                CornerRadius="12"
+                Padding="12,10"
+                Margin="0,0,0,7"
+                Effect="{StaticResource PanelShadow}">
+            <StackPanel HorizontalAlignment="Center">
+                <TextBlock Text="UBICACIÓN ACTUAL"
+                           Foreground="#1565C0"
+                           FontSize="7.5"
                            FontWeight="Bold"
-                           FontFamily="Consolas"/>
+                           FontFamily="Segoe UI"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,4"/>
+                <TextBlock Text="{Binding PilotLocationCodeDisplay}"
+                           Foreground="#0D1F3C"
+                           FontSize="22"
+                           FontWeight="Bold"
+                           FontFamily="Consolas"
+                           HorizontalAlignment="Center"/>
                 <TextBlock Text="{Binding PilotLocationSubtitle}"
-                           Foreground="{StaticResource TextMutedBrush}"
+                           Foreground="#4A6E9A"
                            FontSize="8.5"
+                           FontFamily="Segoe UI"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
                            Margin="0,2,0,0"
-                           TextWrapping="Wrap"
-                           TextTrimming="CharacterEllipsis"
-                           MaxHeight="24"/>
+                           TextWrapping="Wrap"/>
+                <!-- Clima lectura fácil - solo muestra si hay datos -->
+                <Border Background="#EEF7FF" BorderBrush="#C0D8F0" BorderThickness="1"
+                        CornerRadius="8" Padding="10,5" Margin="0,8,0,0"
+                        Visibility="{Binding MainVM.DashboardVM.WeatherLine, Converter={StaticResource StringToVisibilityConverter}, FallbackValue=Collapsed}">
+                    <TextBlock Text="{Binding MainVM.DashboardVM.WeatherLine}"
+                               Foreground="#1565C0"
+                               FontSize="9"
+                               FontFamily="Segoe UI"
+                               FontWeight="SemiBold"
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"/>
+                </Border>
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="4" Style="{StaticResource Card}" Margin="0,0,0,7" Padding="9,8">
+        <!-- ULTIMOS VUELOS -->
+        <Border Grid.Row="4"
+                Background="#FFFFFF"
+                BorderBrush="#B8D0EA"
+                BorderThickness="1.5"
+                CornerRadius="12"
+                Padding="10,8"
+                Margin="0,0,0,7"
+                Effect="{StaticResource PanelShadow}">
             <StackPanel>
-                <DockPanel Margin="0,0,0,5">
-                    <TextBlock Text="ULTIMOS VUELOS"
-                               Style="{StaticResource SectionLabel}"
-                               Margin="0"/>
-                    <Border DockPanel.Dock="Right"
-                            Style="{StaticResource PillBlue}">
+                <Grid Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="ÚLTIMOS VUELOS"
+                               Foreground="#1565C0"
+                               FontSize="8"
+                               FontWeight="Bold"
+                               FontFamily="Segoe UI"
+                               VerticalAlignment="Center"/>
+                    <Border Grid.Column="1"
+                            Background="#E0EDFF" BorderBrush="#90B4D8" BorderThickness="1"
+                            CornerRadius="8" Padding="8,2" VerticalAlignment="Center">
                         <TextBlock Text="{Binding MainVM.DashboardVM.RecentFlights.Count}"
-                                   Foreground="{StaticResource AccentLightBlueBrush}"
-                                   FontSize="8.2"
-                                   FontWeight="Bold"/>
+                                   Foreground="#1565C0"
+                                   FontSize="8"
+                                   FontWeight="Bold"
+                                   FontFamily="Consolas"/>
                     </Border>
-                </DockPanel>
+                </Grid>
 
                 <ItemsControl ItemsSource="{Binding MainVM.DashboardVM.RecentFlights}"
                               ItemTemplate="{StaticResource RecentFlightTemplate}"/>
 
                 <TextBlock Text="Sin vuelos recientes registrados."
-                           Foreground="{StaticResource TextMutedBrush}"
+                           Foreground="#4A6E9A"
                            FontSize="8.8"
+                           FontFamily="Segoe UI"
                            Margin="0,2,0,0"
                            TextWrapping="Wrap"
                            Visibility="{Binding MainVM.DashboardVM.RecentFlights.Count, Converter={StaticResource ZeroToVisibilityConverter}}"/>
             </StackPanel>
         </Border>
 
-        <Border Grid.Row="5" Style="{StaticResource Card}" Margin="0,0,0,7" Padding="9,8">
+        <!-- COMUNIDAD -->
+        <Border Grid.Row="5"
+                Background="#FFFFFF"
+                BorderBrush="#B8D0EA"
+                BorderThickness="1.5"
+                CornerRadius="12"
+                Padding="10,8"
+                Margin="0,0,0,7"
+                Effect="{StaticResource PanelShadow}">
             <StackPanel>
                 <TextBlock Text="COMUNIDAD"
-                           Style="{StaticResource SectionLabel}"
-                           Margin="0,0,0,5"/>
+                           Foreground="#1565C0"
+                           FontSize="8"
+                           FontWeight="Bold"
+                           FontFamily="Segoe UI"
+                           Margin="0,0,0,6"/>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="7"/>
+                        <ColumnDefinition Width="8"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
-                    <Border Style="{StaticResource InsetCard}" Padding="7,6">
-                        <StackPanel>
-                            <TextBlock Text="ONLINE" Style="{StaticResource FieldLabel}"/>
+                    <Border Background="#F0F6FF" BorderBrush="#C8DDF5" BorderThickness="1"
+                            CornerRadius="10" Padding="8,7">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="ONLINE"
+                                       Foreground="#4A6E9A"
+                                       FontSize="7.5"
+                                       FontWeight="Bold"
+                                       FontFamily="Segoe UI"
+                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="{Binding OnlinePilotsDisplay}"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontSize="14"
-                                       FontWeight="Bold"/>
+                                       Foreground="#0D1F3C"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       FontFamily="Consolas"
+                                       HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
 
                     <Border Grid.Column="2"
-                            Style="{StaticResource InsetCard}"
-                            Padding="7,6">
-                        <StackPanel>
-                            <TextBlock Text="EN BASE" Style="{StaticResource FieldLabel}"/>
+                            Background="#F0F6FF" BorderBrush="#C8DDF5" BorderThickness="1"
+                            CornerRadius="10" Padding="8,7">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="EN BASE"
+                                       Foreground="#4A6E9A"
+                                       FontSize="7.5"
+                                       FontWeight="Bold"
+                                       FontFamily="Segoe UI"
+                                       HorizontalAlignment="Center"/>
                             <TextBlock Text="{Binding BasePilotsDisplay}"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontSize="14"
-                                       FontWeight="Bold"/>
+                                       Foreground="#1565C0"
+                                       FontSize="16"
+                                       FontWeight="Bold"
+                                       FontFamily="Consolas"
+                                       HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                 </Grid>
             </StackPanel>
         </Border>
 
+        <!-- BUTTONS -->
         <Grid Grid.Row="7" Margin="0,4,0,2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
@@ -261,19 +369,65 @@
             </Grid.ColumnDefinitions>
 
             <Button Grid.Column="0"
-                    Style="{StaticResource SecondaryButton}"
                     Command="{Binding OpenSupportCommand}"
-                    Content="SOPORTE"
-                    Height="38"
-                    Margin="0,0,5,0"
-                    Background="#101A25"
-                    BorderBrush="#273849"/>
-            <Button Grid.Column="1"
-                    Style="{StaticResource PrimaryButton}"
-                    Command="{Binding BeginDispatchFlowCommand}"
-                    Content="COMENZAR"
                     Height="40"
-                    Margin="5,0,0,0"/>
+                    Margin="0,0,5,0"
+                    Background="#EEF5FF"
+                    BorderBrush="#90B4D8"
+                    BorderThickness="1.5"
+                    Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="12">
+                            <TextBlock Text="SOPORTE"
+                                       Foreground="#1565C0"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       FontFamily="Segoe UI"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#D0E8FF"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.85"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
+
+            <Button Grid.Column="1"
+                    Command="{Binding BeginDispatchFlowCommand}"
+                    Height="40"
+                    Margin="5,0,0,0"
+                    Cursor="Hand">
+                <Button.Template>
+                    <ControlTemplate TargetType="Button">
+                        <Border CornerRadius="12">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                    <GradientStop Color="#1565C0" Offset="0"/>
+                                    <GradientStop Color="#1976D2" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                            <TextBlock Text="COMENZAR"
+                                       Foreground="White"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       FontFamily="Segoe UI"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.92"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.80"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Button.Template>
+            </Button>
         </Grid>
     </Grid>
 </UserControl>

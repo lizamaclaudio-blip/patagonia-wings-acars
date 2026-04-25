@@ -72,6 +72,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(DispatchStateLine));
                     OnPropertyChanged(nameof(DispatchSourceLine));
                     OnPropertyChanged(nameof(FlightModeLine));
+                    OnPropertyChanged(nameof(FlightModeDisplayLabel));
                     OnPropertyChanged(nameof(AircraftDisplayLine));
                     OnPropertyChanged(nameof(RouteDisplayLine));
                     OnPropertyChanged(nameof(FuelDisplayLine));
@@ -267,11 +268,34 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             get
             {
                 if (PreparedDispatch == null || string.IsNullOrWhiteSpace(PreparedDispatch.FlightMode))
-                {
                     return "Modo operativo no informado por la web.";
-                }
-
                 return "Modo " + PreparedDispatch.FlightMode.Trim();
+            }
+        }
+
+        public string FlightModeDisplayLabel
+        {
+            get
+            {
+                var mode = (PreparedDispatch?.FlightMode ?? string.Empty).Trim().ToUpperInvariant();
+                return mode switch
+                {
+                    "CAREER"                         => "Itinerario",
+                    "ITINERARY"                      => "Itinerario",
+                    "CHARTER"                        => "Chárter",
+                    "TRAINING"                       => "Entrenamiento",
+                    "FREE_FLIGHT" or "FREE"          => "Vuelo Libre",
+                    "EVENT"                          => "Evento",
+                    "SPECIAL_MISSION" or "MISSION"   => "Misión Especial",
+                    "CHECKRIDE"                      => "Checkride",
+                    "ASSIGNMENT"                     => "Habilitación",
+                    "TOUR"                           => "Tour",
+                    _ when mode.Contains("CHARTER")  => "Chárter",
+                    _ when mode.Contains("TRAIN")    => "Entrenamiento",
+                    _ when mode.Contains("ITINERARY")=> "Itinerario",
+                    _ when mode.Length > 0           => mode,
+                    _                                => "Vuelo",
+                };
             }
         }
 

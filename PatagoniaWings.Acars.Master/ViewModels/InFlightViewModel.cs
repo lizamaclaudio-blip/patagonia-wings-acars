@@ -677,9 +677,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             var ac  = !string.IsNullOrWhiteSpace(flight.AircraftName)
                           ? flight.AircraftName : (flight.AircraftIcao ?? "—");
 
-            sb.AppendLine($"╔  PIREP PRELIMINAR  ·  {fn}");
-            sb.AppendLine($"   {dep} → {arr}   |   {ac}");
-            sb.AppendLine($"   Fase: {PhaseLabel}   |   Tiempo vuelo: {ElapsedTime}");
+            sb.AppendLine($"   {dep} → {arr}   ·   {fn}   ·   {ac}");
             sb.AppendLine($"───────────────────────────────────────────");
 
             if (fs.MaxAltitudeFeet > 0)

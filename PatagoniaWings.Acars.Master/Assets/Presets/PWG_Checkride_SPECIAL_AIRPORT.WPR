@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SimBase.Document Type="WeatherPreset" version="1,4">
+    <Descr>AceXML Document</Descr>
+    <WeatherPreset.Preset>
+        <Name>PWG Checkride Aeropuertos Especiales</Name>
+        <Image>weather/presets/overcast.jpg</Image>
+        <Icon>weather/presets/overcast.svg</Icon>
+        <LayeredImage>weather/presets/overcast_layer.png</LayeredImage>
+        <IsAltitudeAMGL>True</IsAltitudeAMGL>
+        <CloudLayer>
+            <CloudLayerDensity Value="6.000" Unit="(0 - 1)"/>
+            <CloudLayerCoverage Value="0.700" Unit="(0 - 1)"/>
+            <CloudLayerAltitudeBot Value="457.200" Unit="m"/>
+            <CloudLayerAltitudeTop Value="1200.000" Unit="m"/>
+            <CloudLayerScattering Value="0.800" Unit="(0 - 1)"/>
+        </CloudLayer>
+        <CloudLayer>
+            <CloudLayerDensity Value="4.000" Unit="(0 - 1)"/>
+            <CloudLayerCoverage Value="0.500" Unit="(0 - 1)"/>
+            <CloudLayerAltitudeBot Value="3000.000" Unit="m"/>
+            <CloudLayerAltitudeTop Value="5000.000" Unit="m"/>
+            <CloudLayerScattering Value="0.600" Unit="(0 - 1)"/>
+        </CloudLayer>
+        <CloudLayer>
+            <CloudLayerDensity Value="1.000" Unit="(0 - 1)"/>
+            <CloudLayerCoverage Value="0.000" Unit="(0 - 1)"/>
+            <CloudLayerAltitudeBot Value="9000.000" Unit="m"/>
+            <CloudLayerAltitudeTop Value="9500.000" Unit="m"/>
+            <CloudLayerScattering Value="0.000" Unit="(0 - 1)"/>
+        </CloudLayer>
+        <!-- Viento montañoso variable con turbulencia -->
+        <WindLayer>
+            <WindLayerAltitude Value="0.000" Unit="m"/>
+            <WindLayerAngle Value="240.000" Unit="degrees"/>
+            <WindLayerSpeed Value="14.000" Unit="knts"/>
+        </WindLayer>
+        <WindLayer>
+            <WindLayerAltitude Value="1000.000" Unit="m"/>
+            <WindLayerAngle Value="255.000" Unit="degrees"/>
+            <WindLayerSpeed Value="22.000" Unit="knts"/>
+        </WindLayer>
+        <WindLayer>
+            <WindLayerAltitude Value="4000.000" Unit="m"/>
+            <WindLayerAngle Value="270.000" Unit="degrees"/>
+            <WindLayerSpeed Value="38.000" Unit="knts"/>
+        </WindLayer>
+        <MSLPressure Value="101125.000" Unit="pa"/>
+        <MSLTemperature Value="284.150" Unit="k"/>
+        <AerosolDensity Value="7000.000" Unit="m"/>
+        <Pollution Value="0.100" Unit="(0 - 1)"/>
+        <Precipitations Value="0.800" Unit="mm/h"/>
+        <SnowCover Value="0.000" Unit="m"/>
+        <ThunderstormIntensity Value="0.000" Unit="(0 - 1)"/>
+    </WeatherPreset.Preset>
+</SimBase.Document>

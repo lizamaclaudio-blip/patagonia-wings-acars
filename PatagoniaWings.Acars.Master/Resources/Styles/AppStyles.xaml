@@ -7,21 +7,22 @@
         <ResourceDictionary Source="Converters.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <Color x:Key="BackgroundDarkColor">#060A10</Color>
-    <Color x:Key="BackgroundMidColor">#0A111A</Color>
-    <Color x:Key="BackgroundCardColor">#0E1622</Color>
-    <Color x:Key="BackgroundCardAltColor">#101B29</Color>
-    <Color x:Key="AccentBlueColor">#58A6FF</Color>
-    <Color x:Key="AccentLightBlueColor">#A9D1FF</Color>
-    <Color x:Key="AccentTealColor">#58D5FF</Color>
-    <Color x:Key="AccentVioletColor">#7A8CFF</Color>
-    <Color x:Key="TextPrimaryColor">#F7FAFF</Color>
-    <Color x:Key="TextSecondaryColor">#BAC7D9</Color>
-    <Color x:Key="TextMutedColor">#72839A</Color>
-    <Color x:Key="BorderColor">#1E2B3D</Color>
-    <Color x:Key="GreenColor">#4CD08C</Color>
-    <Color x:Key="RedColor">#FF6767</Color>
-    <Color x:Key="YellowColor">#F3C25B</Color>
+    <!-- ── Tema blanco/azul premium ── -->
+    <Color x:Key="BackgroundDarkColor">#0A1525</Color>
+    <Color x:Key="BackgroundMidColor">#0E1C30</Color>
+    <Color x:Key="BackgroundCardColor">#F3F8FF</Color>
+    <Color x:Key="BackgroundCardAltColor">#EBF3FF</Color>
+    <Color x:Key="AccentBlueColor">#1565C0</Color>
+    <Color x:Key="AccentLightBlueColor">#1976D2</Color>
+    <Color x:Key="AccentTealColor">#0288D1</Color>
+    <Color x:Key="AccentVioletColor">#5C6BC0</Color>
+    <Color x:Key="TextPrimaryColor">#0D1F3C</Color>
+    <Color x:Key="TextSecondaryColor">#1E3A64</Color>
+    <Color x:Key="TextMutedColor">#4A6E9A</Color>
+    <Color x:Key="BorderColor">#B8D0EA</Color>
+    <Color x:Key="GreenColor">#1B8A4C</Color>
+    <Color x:Key="RedColor">#C62828</Color>
+    <Color x:Key="YellowColor">#E65100</Color>
 
     <SolidColorBrush x:Key="BackgroundDarkBrush" Color="{StaticResource BackgroundDarkColor}"/>
     <SolidColorBrush x:Key="BackgroundMidBrush" Color="{StaticResource BackgroundMidColor}"/>
@@ -41,58 +42,59 @@
 
     <FontFamily x:Key="MainFont">Segoe UI</FontFamily>
 
-    <LinearGradientBrush x:Key="WindowBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
-        <GradientStop Color="#061018" Offset="0"/>
-        <GradientStop Color="#0B1622" Offset="0.48"/>
-        <GradientStop Color="#081019" Offset="1"/>
+    <!-- Fondo ventana: blanco premium -->
+    <LinearGradientBrush x:Key="WindowBackgroundBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#FFFFFF" Offset="0"/>
+        <GradientStop Color="#EEF5FF" Offset="0.5"/>
+        <GradientStop Color="#E6F0FF" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ActionGradientBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#5AA8FF" Offset="0"/>
-        <GradientStop Color="#7692FF" Offset="1"/>
+        <GradientStop Color="#1565C0" Offset="0"/>
+        <GradientStop Color="#1976D2" Offset="1"/>
     </LinearGradientBrush>
 
-    <DropShadowEffect x:Key="PanelShadow" Color="#CC000000" BlurRadius="24" ShadowDepth="0" Opacity="0.46"/>
-    <DropShadowEffect x:Key="GlowShadow" Color="#8058A6FF" BlurRadius="18" ShadowDepth="0" Opacity="0.36"/>
+    <DropShadowEffect x:Key="PanelShadow" Color="#440D1F3C" BlurRadius="18" ShadowDepth="2" Opacity="0.18"/>
+    <DropShadowEffect x:Key="GlowShadow" Color="#801565C0" BlurRadius="14" ShadowDepth="0" Opacity="0.32"/>
 
     <Style x:Key="PageTitle" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
-        <Setter Property="FontSize" Value="17"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+        <Setter Property="Margin" Value="0,0,0,6"/>
     </Style>
 
     <Style x:Key="FieldLabel" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}"/>
         <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
-        <Setter Property="FontSize" Value="8.5"/>
-        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="FontSize" Value="8"/>
+        <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
         <Setter Property="Margin" Value="0,0,0,2"/>
     </Style>
 
     <Style x:Key="SectionLabel" TargetType="TextBlock">
-        <Setter Property="Foreground" Value="{StaticResource AccentLightBlueBrush}"/>
+        <Setter Property="Foreground" Value="{StaticResource AccentBlueBrush}"/>
         <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
-        <Setter Property="FontSize" Value="8.5"/>
+        <Setter Property="FontSize" Value="8"/>
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="TextOptions.TextFormattingMode" Value="Ideal"/>
         <Setter Property="Margin" Value="0,0,0,6"/>
     </Style>
 
     <Style x:Key="Card" TargetType="Border">
-        <Setter Property="Background" Value="#B20E1622"/>
-        <Setter Property="BorderBrush" Value="#273444"/>
-        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Background" Value="#FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#B8D0EA"/>
+        <Setter Property="BorderThickness" Value="1.5"/>
         <Setter Property="CornerRadius" Value="12"/>
         <Setter Property="Padding" Value="10"/>
         <Setter Property="Effect" Value="{StaticResource PanelShadow}"/>
     </Style>
 
     <Style x:Key="InsetCard" TargetType="Border">
-        <Setter Property="Background" Value="#0B121C"/>
-        <Setter Property="BorderBrush" Value="#1D2A39"/>
+        <Setter Property="Background" Value="#F0F6FF"/>
+        <Setter Property="BorderBrush" Value="#C8DDF5"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="CornerRadius" Value="10"/>
         <Setter Property="Padding" Value="8,7"/>
@@ -104,16 +106,20 @@
     </Style>
 
     <Style x:Key="CardBlue" TargetType="Border" BasedOn="{StaticResource Card}">
-        <Setter Property="BorderBrush" Value="#4578AE"/>
+        <Setter Property="BorderBrush" Value="#90B4D8"/>
+        <Setter Property="Background" Value="#FFFFFF"/>
     </Style>
     <Style x:Key="CardTeal" TargetType="Border" BasedOn="{StaticResource Card}">
-        <Setter Property="BorderBrush" Value="#387D9E"/>
+        <Setter Property="BorderBrush" Value="#6EC4D8"/>
+        <Setter Property="Background" Value="#FFFFFF"/>
     </Style>
     <Style x:Key="CardGreen" TargetType="Border" BasedOn="{StaticResource Card}">
-        <Setter Property="BorderBrush" Value="#3C8B6D"/>
+        <Setter Property="BorderBrush" Value="#4CAF82"/>
+        <Setter Property="Background" Value="#FFFFFF"/>
     </Style>
     <Style x:Key="CardGold" TargetType="Border" BasedOn="{StaticResource Card}">
-        <Setter Property="BorderBrush" Value="#8A7042"/>
+        <Setter Property="BorderBrush" Value="#D4A647"/>
+        <Setter Property="Background" Value="#FFFFFF"/>
     </Style>
 
     <Style x:Key="PrimaryButton" TargetType="Button">
@@ -143,9 +149,9 @@
     </Style>
 
     <Style x:Key="SecondaryButton" TargetType="Button">
-        <Setter Property="Background" Value="#121D2B"/>
+        <Setter Property="Background" Value="#E8F2FF"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="#2A3B50"/>
+        <Setter Property="BorderBrush" Value="#90B4D8"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
         <Setter Property="FontSize" Value="9.5"/>
@@ -158,7 +164,7 @@
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#172437"/><Setter Property="BorderBrush" Value="#4E6887"/></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#D0E8FF"/><Setter Property="BorderBrush" Value="#6A9DC8"/></Trigger>
                         <Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.82"/></Trigger>
                         <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.35"/></Trigger>
                     </ControlTemplate.Triggers>
@@ -179,12 +185,12 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="Root" Background="{TemplateBinding Background}" BorderBrush="#1B2735" BorderThickness="1" CornerRadius="14" Padding="{TemplateBinding Padding}" Margin="0,0,0,8">
+                    <Border x:Name="Root" Background="{TemplateBinding Background}" BorderBrush="#B8D0EA" BorderThickness="1" CornerRadius="14" Padding="{TemplateBinding Padding}" Margin="0,0,0,8">
                         <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Root" Property="Background" Value="#121E2B"/><Setter Property="Foreground" Value="White"/></Trigger>
-                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Root" Property="Background" Value="#162639"/></Trigger>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Root" Property="Background" Value="#E0EDFF"/><Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/></Trigger>
+                        <Trigger Property="IsPressed" Value="True"><Setter TargetName="Root" Property="Background" Value="#C8DEFF"/></Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
             </Setter.Value>
@@ -192,7 +198,7 @@
     </Style>
 
     <ControlTemplate x:Key="SidebarActiveControlTemplate" TargetType="Button">
-        <Border Margin="0,0,0,8" CornerRadius="14" Background="#151F2D" BorderBrush="#4E6C8E" BorderThickness="1" Padding="{TemplateBinding Padding}">
+        <Border Margin="0,0,0,8" CornerRadius="14" Background="#E0EDFF" BorderBrush="#90B4D8" BorderThickness="1" Padding="{TemplateBinding Padding}">
             <Grid>
                 <Border Width="4" HorizontalAlignment="Left" Margin="-14,-12,0,-12" Background="{StaticResource AccentBlueBrush}" CornerRadius="2"/>
                 <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
@@ -201,20 +207,20 @@
     </ControlTemplate>
 
     <Style x:Key="DarkTextBox" TargetType="TextBox">
-        <Setter Property="Background" Value="#0A121D"/>
+        <Setter Property="Background" Value="#F0F6FF"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="#263648"/>
+        <Setter Property="BorderBrush" Value="#B8D0EA"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="10,7"/>
         <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
         <Setter Property="FontSize" Value="10"/>
-        <Setter Property="CaretBrush" Value="{StaticResource AccentLightBlueBrush}"/>
+        <Setter Property="CaretBrush" Value="{StaticResource AccentBlueBrush}"/>
     </Style>
 
     <Style x:Key="DarkPasswordBox" TargetType="PasswordBox">
-        <Setter Property="Background" Value="#0A121D"/>
+        <Setter Property="Background" Value="#F0F6FF"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="#263648"/>
+        <Setter Property="BorderBrush" Value="#B8D0EA"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="10,7"/>
         <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
@@ -222,9 +228,9 @@
     </Style>
 
     <Style x:Key="DarkComboBox" TargetType="ComboBox">
-        <Setter Property="Background" Value="#0A121D"/>
+        <Setter Property="Background" Value="#F0F6FF"/>
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-        <Setter Property="BorderBrush" Value="#263648"/>
+        <Setter Property="BorderBrush" Value="#B8D0EA"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="10,7"/>
         <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
@@ -233,7 +239,7 @@
             <Setter.Value>
                 <Style TargetType="ComboBoxItem">
                     <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
-                    <Setter Property="Background" Value="#101822"/>
+                    <Setter Property="Background" Value="#F0F6FF"/>
                     <Setter Property="Padding" Value="8,6"/>
                 </Style>
             </Setter.Value>
@@ -260,9 +266,9 @@
         <Setter Property="FontWeight" Value="Bold"/>
     </Style>
 
-    <Style x:Key="PillGreen" TargetType="Border"><Setter Property="Background" Value="#15231E"/><Setter Property="BorderBrush" Value="#2E5344"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="11"/><Setter Property="Padding" Value="8,3"/></Style>
-    <Style x:Key="PillBlue" TargetType="Border"><Setter Property="Background" Value="#131C28"/><Setter Property="BorderBrush" Value="#38506D"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="11"/><Setter Property="Padding" Value="8,3"/></Style>
-    <Style x:Key="PillGold" TargetType="Border"><Setter Property="Background" Value="#2A2318"/><Setter Property="BorderBrush" Value="#7B6740"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="11"/><Setter Property="Padding" Value="8,3"/></Style>
+    <Style x:Key="PillGreen" TargetType="Border"><Setter Property="Background" Value="#E0F5EC"/><Setter Property="BorderBrush" Value="#4CAF82"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="11"/><Setter Property="Padding" Value="8,3"/></Style>
+    <Style x:Key="PillBlue" TargetType="Border"><Setter Property="Background" Value="#E0EDFF"/><Setter Property="BorderBrush" Value="#90B4D8"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="11"/><Setter Property="Padding" Value="8,3"/></Style>
+    <Style x:Key="PillGold" TargetType="Border"><Setter Property="Background" Value="#FFF3E0"/><Setter Property="BorderBrush" Value="#D4A647"/><Setter Property="BorderThickness" Value="1"/><Setter Property="CornerRadius" Value="11"/><Setter Property="Padding" Value="8,3"/></Style>
 
     <Style x:Key="DarkListBox" TargetType="ListBox"><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/></Style>
     <Style x:Key="DarkListBoxItem" TargetType="ListBoxItem"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/><Setter Property="Padding" Value="6,4"/></Style>
@@ -273,7 +279,7 @@
         <Setter Property="Width" Value="12"/>
         <Setter Property="Height" Value="12"/>
         <Setter Property="HorizontalAlignment" Value="Center"/>
-        <Setter Property="Stroke" Value="#203040"/>
+        <Setter Property="Stroke" Value="#B8D0EA"/>
         <Setter Property="StrokeThickness" Value="0.8"/>
     </Style>
 

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SimBase.Document Type="WeatherPreset" version="1,4">
+    <Descr>AceXML Document</Descr>
+    <WeatherPreset.Preset>
+        <Name>PWG Checkride CAT III</Name>
+        <Image>weather/presets/overcast.jpg</Image>
+        <Icon>weather/presets/overcast.svg</Icon>
+        <LayeredImage>weather/presets/overcast_layer.png</LayeredImage>
+        <IsAltitudeAMGL>True</IsAltitudeAMGL>
+        <CloudLayer>
+            <CloudLayerDensity Value="10.000" Unit="(0 - 1)"/>
+            <CloudLayerCoverage Value="1.000" Unit="(0 - 1)"/>
+            <CloudLayerAltitudeBot Value="10.000" Unit="m"/>
+            <CloudLayerAltitudeTop Value="100.000" Unit="m"/>
+            <CloudLayerScattering Value="1.000" Unit="(0 - 1)"/>
+        </CloudLayer>
+        <CloudLayer>
+            <CloudLayerDensity Value="10.000" Unit="(0 - 1)"/>
+            <CloudLayerCoverage Value="1.000" Unit="(0 - 1)"/>
+            <CloudLayerAltitudeBot Value="400.000" Unit="m"/>
+            <CloudLayerAltitudeTop Value="1500.000" Unit="m"/>
+            <CloudLayerScattering Value="1.000" Unit="(0 - 1)"/>
+        </CloudLayer>
+        <CloudLayer>
+            <CloudLayerDensity Value="1.000" Unit="(0 - 1)"/>
+            <CloudLayerCoverage Value="0.000" Unit="(0 - 1)"/>
+            <CloudLayerAltitudeBot Value="9000.000" Unit="m"/>
+            <CloudLayerAltitudeTop Value="9500.000" Unit="m"/>
+            <CloudLayerScattering Value="0.000" Unit="(0 - 1)"/>
+        </CloudLayer>
+        <WindLayer>
+            <WindLayerAltitude Value="0.000" Unit="m"/>
+            <WindLayerAngle Value="270.000" Unit="degrees"/>
+            <WindLayerSpeed Value="4.000" Unit="knts"/>
+        </WindLayer>
+        <MSLPressure Value="100825.000" Unit="pa"/>
+        <MSLTemperature Value="279.150" Unit="k"/>
+        <AerosolDensity Value="75.000" Unit="m"/>
+        <Pollution Value="0.900" Unit="(0 - 1)"/>
+        <Precipitations Value="0.100" Unit="mm/h"/>
+        <SnowCover Value="0.000" Unit="m"/>
+        <ThunderstormIntensity Value="0.000" Unit="(0 - 1)"/>
+    </WeatherPreset.Preset>
+</SimBase.Document>

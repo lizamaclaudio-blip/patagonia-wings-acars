@@ -1,0 +1,67 @@
+{
+  "Version": "4.2.0",
+  "Revision": "4.2.0.0",
+  "Channel": "stable",
+  "ReleaseDate": "2026-04-25",
+  "Notes": "v4.2.0 — UI premium blanca total: ventana chrome blanca, Dashboard centrado, LoginPage animado con logo grande, clima en ubicación, ÚLTIMOS VUELOS fix, versión bump.",
+  "InstallerUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
+  "Files": [
+    {
+      "Path": "PatagoniaWings.Acars.Master.exe",
+      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/4.2.0/PatagoniaWings.Acars.Master.exe",
+      "Sha256": "",
+      "Size": 0,
+      "RestartRequired": true,
+      "UpdateMode": "binary"
+    },
+    {
+      "Path": "Assets/Presets/PWG_Checkride_IFR_IMC.WPR",
+      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/4.2.0/Assets/Presets/PWG_Checkride_IFR_IMC.WPR",
+      "Sha256": "",
+      "Size": 0,
+      "RestartRequired": false,
+      "UpdateMode": "hotswap"
+    },
+    {
+      "Path": "Assets/Presets/PWG_Checkride_CAT_I.WPR",
+      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/4.2.0/Assets/Presets/PWG_Checkride_CAT_I.WPR",
+      "Sha256": "",
+      "Size": 0,
+      "RestartRequired": false,
+      "UpdateMode": "hotswap"
+    },
+    {
+      "Path": "Assets/Presets/PWG_Checkride_CAT_II.WPR",
+      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/4.2.0/Assets/Presets/PWG_Checkride_CAT_II.WPR",
+      "Sha256": "",
+      "Size": 0,
+      "RestartRequired": false,
+      "UpdateMode": "hotswap"
+    },
+    {
+      "Path": "Assets/Presets/PWG_Checkride_CAT_III.WPR",
+      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/4.2.0/Assets/Presets/PWG_Checkride_CAT_III.WPR",
+      "Sha256": "",
+      "Size": 0,
+      "RestartRequired": false,
+      "UpdateMode": "hotswap"
+    },
+    {
+      "Path": "Assets/Presets/PWG_Checkride_XWIND.WPR",
+      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/4.2.0/Assets/Presets/PWG_Checkride_XWIND.WPR",
+      "Sha256": "",
+      "Size": 0,
+      "RestartRequired": false,
+      "UpdateMode": "hotswap"
+    },
+    {
+      "Path": "Assets/Presets/PWG_Checkride_SPECIAL_AIRPORT.WPR",
+      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/4.2.0/Assets/Presets/PWG_Checkride_SPECIAL_AIRPORT.WPR",
+      "Sha256": "",
+      "Size": 0,
+      "RestartRequired": false,
+      "UpdateMode": "hotswap"
+    }
+  ],
+  "Deleted": []
+}

@@ -14,22 +14,22 @@
                         <Grid Width="42" Height="22">
                             <Border x:Name="Track"
                                     CornerRadius="11"
-                                    Background="#15202E"
-                                    BorderBrush="#2A3B50"
+                                    Background="#D0DFF0"
+                                    BorderBrush="#90B4D8"
                                     BorderThickness="1"/>
                             <Ellipse x:Name="Thumb"
                                      Width="16"
                                      Height="16"
-                                     Fill="#7A8898"
+                                     Fill="#8AAAC8"
                                      HorizontalAlignment="Left"
                                      Margin="3,0,0,0"
                                      VerticalAlignment="Center"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Track" Property="Background" Value="#123A28"/>
-                                <Setter TargetName="Track" Property="BorderBrush" Value="#2E6F52"/>
-                                <Setter TargetName="Thumb" Property="Fill" Value="#59D98B"/>
+                                <Setter TargetName="Track" Property="Background" Value="#D0F0E0"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="#4CAF82"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="#22C55E"/>
                                 <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
                                 <Setter TargetName="Thumb" Property="Margin" Value="0,0,3,0"/>
                             </Trigger>

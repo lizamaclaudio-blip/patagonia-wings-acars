@@ -10,5 +10,6 @@
     <converters:ZeroToVisibilityConverter x:Key="ZeroToVisibilityConverter" />
     <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
     <converters:TabToVisibilityConverter x:Key="TabToVisibilityConverter" />
+    <converters:UrlToImageSourceConverter x:Key="UrlToImageSourceConverter" />
 
 </ResourceDictionary>

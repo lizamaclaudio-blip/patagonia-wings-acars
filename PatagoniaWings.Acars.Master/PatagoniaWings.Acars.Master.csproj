@@ -118,6 +118,24 @@
     <None Include="Assets\Presets\SUR Checkride C1.WPR" />
     <None Include="Assets\Presets\SUR Checkride C3.WPR" />
     <None Include="Assets\Presets\SUR Checkride CX.WPR" />
+    <Content Include="Assets\Presets\PWG_Checkride_IFR_IMC.WPR">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Presets\PWG_Checkride_CAT_I.WPR">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Presets\PWG_Checkride_CAT_II.WPR">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Presets\PWG_Checkride_CAT_III.WPR">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Presets\PWG_Checkride_XWIND.WPR">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Presets\PWG_Checkride_SPECIAL_AIRPORT.WPR">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
     <None Include="PatagoniaWings.Acars.Master.exe.config" />
     <None Include="Presets\PW Checkride A0.WPR" />
@@ -189,6 +207,7 @@
     <Compile Include="Converters\StringFallbackConverter.cs" />
     <Compile Include="Converters\StringToVisibilityConverter.cs" />
     <Compile Include="Converters\TabToVisibilityConverter.cs" />
+    <Compile Include="Converters\UrlToImageSourceConverter.cs" />
     <Compile Include="Converters\ZeroToVisibilityConverter.cs" />
     <Compile Include="Helpers\AcarsContext.cs" />
     <Compile Include="Helpers\RuntimeState.cs" />
@@ -202,6 +221,7 @@
     <Compile Include="Helpers\SoundPlayer.cs" />
     <Compile Include="Helpers\UiPreferencesStore.cs" />
     <Compile Include="Helpers\UpdateService.cs" />
+    <Compile Include="Helpers\WeatherPresetInstallService.cs" />
     <Compile Include="Preview\AcarsPreviewData.cs" />
     <Compile Include="ViewModels\AcarsShellViewModel.cs" />
     <Compile Include="ViewModels\CommunityViewModel.cs" />
@@ -294,6 +314,15 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="AircraftProfiles\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="AircraftProfiles\*.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
