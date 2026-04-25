@@ -46,19 +46,13 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Logo -->
-                        <Border Width="36"
-                                Height="36"
-                                CornerRadius="18"
-                                BorderBrush="#90B4D8"
-                                BorderThickness="1.5"
-                                Background="#E8F2FF"
-                                VerticalAlignment="Center">
-                            <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
-                                   Width="20"
-                                   Height="20"
-                                   Stretch="Uniform"/>
-                        </Border>
+                        <!-- Logo sin borde ni fondo -->
+                        <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
+                               Width="34"
+                               Height="34"
+                               Stretch="Uniform"
+                               VerticalAlignment="Center"
+                               RenderOptions.BitmapScalingMode="HighQuality"/>
 
                         <!-- Brand + page title -->
                         <StackPanel Grid.Column="1" Margin="10,0,6,0" VerticalAlignment="Center">

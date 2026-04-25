@@ -7,22 +7,21 @@
     </UserControl.DataContext>
 
     <UserControl.Resources>
-        <!-- Animación glow/pulse del logo -->
         <Storyboard x:Key="LogoPulse" RepeatBehavior="Forever">
-            <DoubleAnimation Storyboard.TargetName="LogoGlow"
+            <DoubleAnimation Storyboard.TargetName="BottomLogo"
                              Storyboard.TargetProperty="Opacity"
-                             From="0.3" To="1.0"
-                             Duration="0:0:1.8"
+                             From="0.55" To="1.0"
+                             Duration="0:0:2.2"
                              AutoReverse="True"/>
             <DoubleAnimation Storyboard.TargetName="LogoScale"
                              Storyboard.TargetProperty="ScaleX"
-                             From="0.95" To="1.05"
-                             Duration="0:0:1.8"
+                             From="0.93" To="1.07"
+                             Duration="0:0:2.2"
                              AutoReverse="True"/>
             <DoubleAnimation Storyboard.TargetName="LogoScale"
                              Storyboard.TargetProperty="ScaleY"
-                             From="0.95" To="1.05"
-                             Duration="0:0:1.8"
+                             From="0.93" To="1.07"
+                             Duration="0:0:2.2"
                              AutoReverse="True"/>
         </Storyboard>
     </UserControl.Resources>
@@ -35,7 +34,8 @@
 
     <Grid x:Name="PageRoot">
         <Grid.RowDefinitions>
-            <RowDefinition Height="148"/>
+            <RowDefinition Height="140"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -44,90 +44,56 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- HERO BANNER -->
+        <!-- HERO — foto limpia + texto con glow -->
         <Border Grid.Row="0"
                 CornerRadius="16"
                 Margin="0,0,0,14"
-                BorderBrush="#B8D0EA"
-                BorderThickness="1.5"
-                ClipToBounds="True"
-                Effect="{StaticResource PanelShadow}">
+                BorderThickness="0"
+                ClipToBounds="True">
             <Grid>
-                <!-- Foto de fondo más clara -->
                 <Grid.Background>
                     <ImageBrush ImageSource="pack://application:,,,/Assets/patagonia-bg.jpg"
                                 Stretch="UniformToFill"
-                                Opacity="0.70"/>
+                                Opacity="0.88"/>
                 </Grid.Background>
-                <!-- Overlay suave azul (no negro) -->
-                <Border>
+                <!-- Overlay muy suave solo en la parte inferior para legibilidad -->
+                <Border VerticalAlignment="Bottom" Height="70">
                     <Border.Background>
                         <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                            <GradientStop Color="#881565C0" Offset="0"/>
-                            <GradientStop Color="#CC0D3A8A" Offset="1"/>
+                            <GradientStop Color="#00000000" Offset="0"/>
+                            <GradientStop Color="#CC091426" Offset="1"/>
                         </LinearGradientBrush>
                     </Border.Background>
                 </Border>
 
-                <!-- Contenido centrado -->
-                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <!-- Logo con animación -->
-                    <Grid HorizontalAlignment="Center" Margin="0,0,0,8">
-                        <!-- Glow ring animado -->
-                        <Ellipse x:Name="LogoGlow"
-                                 Width="84" Height="84"
-                                 Opacity="0.5">
-                            <Ellipse.Fill>
-                                <RadialGradientBrush>
-                                    <GradientStop Color="#6090C8FF" Offset="0"/>
-                                    <GradientStop Color="#0090C8FF" Offset="1"/>
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
-                        <!-- Logo image -->
-                        <Border Width="70" Height="70"
-                                CornerRadius="35"
-                                Background="#E8F4FF"
-                                BorderBrush="White"
-                                BorderThickness="2.5"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center">
-                            <Border.RenderTransform>
-                                <ScaleTransform x:Name="LogoScale" ScaleX="1" ScaleY="1" CenterX="35" CenterY="35"/>
-                            </Border.RenderTransform>
-                            <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
-                                   Width="46"
-                                   Height="46"
-                                   Stretch="Uniform"/>
-                        </Border>
-                    </Grid>
-
+                <!-- Texto sobre la foto -->
+                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="0,0,0,10">
                     <TextBlock Text="PATAGONIA WINGS"
                                Foreground="White"
-                               FontSize="18"
+                               FontSize="20"
                                FontWeight="Bold"
                                FontFamily="Segoe UI"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"/>
+                               HorizontalAlignment="Center">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="#0099FF" BlurRadius="22" ShadowDepth="0" Opacity="0.95"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
                     <TextBlock Text="ACARS — SISTEMA DE VUELO"
-                               Foreground="#C8E4FF"
-                               FontSize="9"
-                               FontFamily="Segoe UI"
-                               HorizontalAlignment="Center"
-                               TextAlignment="Center"
-                               Margin="0,3,0,0"/>
-                    <TextBlock Text="{Binding VersionBadge}"
-                               Foreground="#A0C8F0"
+                               Foreground="#C8E8FF"
                                FontSize="8.5"
                                FontFamily="Segoe UI"
                                HorizontalAlignment="Center"
                                TextAlignment="Center"
-                               Margin="0,6,0,0"/>
+                               Margin="0,3,0,0">
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="#0066CC" BlurRadius="10" ShadowDepth="0" Opacity="0.8"/>
+                        </TextBlock.Effect>
+                    </TextBlock>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- CREDENCIALES -->
+        <!-- CAMPOS -->
         <TextBlock Grid.Row="1"
                    Text="NÚMERO / CORREO DEL PILOTO"
                    Foreground="#4A6E9A"
@@ -183,7 +149,7 @@
                       Foreground="#4A6E9A"
                       FontSize="9.5"
                       FontFamily="Segoe UI"
-                      Margin="0,0,0,6"/>
+                      Margin="0,0,0,5"/>
             <TextBlock Text="{Binding ErrorMessage}"
                        Foreground="#C62828"
                        FontSize="9.5"
@@ -192,42 +158,55 @@
                        Visibility="{Binding ErrorMessage, Converter={StaticResource StringToVisibilityConverter}}"/>
         </StackPanel>
 
-        <StackPanel Grid.Row="6" VerticalAlignment="Bottom">
-            <Button Command="{Binding LoginCommand}"
-                    Height="44"
-                    Cursor="Hand">
-                <Button.Template>
-                    <ControlTemplate TargetType="Button">
-                        <Border CornerRadius="13">
-                            <Border.Background>
-                                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
-                                    <GradientStop Color="#1565C0" Offset="0"/>
-                                    <GradientStop Color="#1976D2" Offset="1"/>
-                                </LinearGradientBrush>
-                            </Border.Background>
-                            <TextBlock Text="INGRESAR"
-                                       Foreground="White"
-                                       FontSize="12"
-                                       FontWeight="Bold"
-                                       FontFamily="Segoe UI"
-                                       HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.92"/></Trigger>
-                            <Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.80"/></Trigger>
-                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Button.Template>
-            </Button>
-            <TextBlock Text="{Binding FooterVersion}"
-                       Foreground="#4A6E9A"
-                       FontSize="8.5"
-                       FontFamily="Segoe UI"
-                       Margin="0,10,0,0"
-                       TextAlignment="Center"
-                       TextWrapping="Wrap"/>
-        </StackPanel>
+        <!-- BOTÓN INGRESAR -->
+        <Button Grid.Row="6"
+                Command="{Binding LoginCommand}"
+                Height="44"
+                Cursor="Hand"
+                Margin="0,0,0,6">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Border CornerRadius="13"
+                            Effect="{StaticResource GlowShadow}">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                <GradientStop Color="#1565C0" Offset="0"/>
+                                <GradientStop Color="#1976D2" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <TextBlock Text="INGRESAR"
+                                   Foreground="White"
+                                   FontSize="12"
+                                   FontWeight="Bold"
+                                   FontFamily="Segoe UI"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.92"/></Trigger>
+                        <Trigger Property="IsPressed" Value="True"><Setter Property="Opacity" Value="0.80"/></Trigger>
+                        <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+
+        <!-- LOGO ANIMADO abajo, sin borde, transparente -->
+        <Grid Grid.Row="7" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Image x:Name="BottomLogo"
+                   Source="pack://application:,,,/Assets/patagonia-logo.png"
+                   Width="64"
+                   Height="64"
+                   Stretch="Uniform"
+                   Opacity="0.7"
+                   RenderOptions.BitmapScalingMode="HighQuality">
+                <Image.RenderTransform>
+                    <ScaleTransform x:Name="LogoScale" ScaleX="1" ScaleY="1" CenterX="32" CenterY="32"/>
+                </Image.RenderTransform>
+                <Image.Effect>
+                    <DropShadowEffect Color="#1565C0" BlurRadius="18" ShadowDepth="0" Opacity="0.6"/>
+                </Image.Effect>
+            </Image>
+        </Grid>
     </Grid>
 </UserControl>
