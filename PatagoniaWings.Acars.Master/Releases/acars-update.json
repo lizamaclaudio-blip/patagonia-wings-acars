@@ -5,6 +5,15 @@
   "ReleaseDate": "2026-04-25",
   "Notes": "v6.0.1 — UI premium blanca total, InFlight AGL/QNH/TREN/RADIO ACARS, LoginPage logo animado, SupportPage sin scroll.",
   "InstallerUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
-  "Files": [],
+  "Files": [
+    {
+      "Path": "PatagoniaWings.Acars.Master.exe",
+      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/6.0.1/PatagoniaWings.Acars.Master.exe",
+      "Sha256": "557A6301B2E9019964BF7F34D00A6FD4E1E6A613382F8EB951E66CFFA081E237",
+      "Size": 6445056,
+      "RestartRequired": true,
+      "UpdateMode": "binary"
+    }
+  ],
   "Deleted": []
 }
