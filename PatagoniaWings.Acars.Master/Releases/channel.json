@@ -1,6 +1,7 @@
 {
   "channel": "stable",
   "latestVersion": "6.0.1",
+  "revision": "2026.4.25.1",
   "latestRevision": "2026.4.25.1",
   "releaseDate": "2026-04-25",
   "manifestUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/acars-update.json",
