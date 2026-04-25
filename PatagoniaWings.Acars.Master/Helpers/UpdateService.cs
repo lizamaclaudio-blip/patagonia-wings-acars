@@ -113,7 +113,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     return state.Revision;
                 }
 
-                return ReadSetting("AppRevision", "2026.4.23.1");
+                return ReadSetting("AppRevision", GetAssemblyRevision());
             }
         }
 
@@ -241,6 +241,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 var payload = File.ReadAllText(JustUpdatedFlagPath).Trim();
                 File.Delete(JustUpdatedFlagPath);
 
+                // Persistir revisión instalada para que el próximo chequeo compare correctamente
+                // Formato del flag: "{version} (rev {revision})"
+                TryPersistRevisionFromPayload(payload);
+
                 Application.Current?.Dispatcher?.BeginInvoke(new Action(() =>
                 {
                     ShowToast("Actualizacion completada correctamente", "#16B989", 6);
@@ -251,6 +255,29 @@ namespace PatagoniaWings.Acars.Master.Helpers
             catch (Exception ex)
             {
                 WriteLog("Post-update notification error: " + ex.Message);
+            }
+        }
+
+        private static void TryPersistRevisionFromPayload(string payload)
+        {
+            try
+            {
+                // Formato: "6.0.1 (rev 2026.4.25.1)"
+                var revIdx = payload.IndexOf("(rev ", StringComparison.OrdinalIgnoreCase);
+                var version = revIdx > 0 ? payload.Substring(0, revIdx).Trim() : payload.Trim();
+                var revision = revIdx >= 0
+                    ? payload.Substring(revIdx + 5).TrimEnd(')', ' ')
+                    : string.Empty;
+
+                if (string.IsNullOrWhiteSpace(revision))
+                    revision = version;
+
+                WriteLocalUpdateState(version, revision, CurrentChannel);
+                WriteLog($"Persisted post-install state: version={version} revision={revision}");
+            }
+            catch (Exception ex)
+            {
+                WriteLog("TryPersistRevisionFromPayload error: " + ex.Message);
             }
         }
 
@@ -1040,6 +1067,19 @@ namespace PatagoniaWings.Acars.Master.Helpers
             catch
             {
                 return "4.0.0";
+            }
+        }
+
+        private static string GetAssemblyRevision()
+        {
+            try
+            {
+                var v = (Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly())?.GetName()?.Version;
+                return v == null ? "0.0.0.0" : $"{v.Major}.{v.Minor}.{v.Build}.{v.Revision}";
+            }
+            catch
+            {
+                return "0.0.0.0";
             }
         }
 
