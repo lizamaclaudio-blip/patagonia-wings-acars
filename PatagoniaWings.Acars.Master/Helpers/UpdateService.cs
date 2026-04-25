@@ -327,9 +327,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
             installerUrl = string.IsNullOrWhiteSpace(installerUrl) ? InstallerDownloadUrl : installerUrl!;
             packagesIndexUrl = string.IsNullOrWhiteSpace(packagesIndexUrl) ? PackagesIndexUrl : packagesIndexUrl!;
 
+            var forceUpdate = channel["forceUpdate"]?.Value<bool?>() ?? false;
             var hasNewVisibleVersion = IsVersionNewer(latestVersion!, CurrentVersion);
             var hasNewRevision = SameVersion(latestVersion!, CurrentVersion) && IsVersionNewer(latestRevision!, CurrentRevision);
-            var updateAvailable = hasNewVisibleVersion || hasNewRevision;
+            var updateAvailable = forceUpdate == true || hasNewVisibleVersion || hasNewRevision;
 
             var restartRequired = false;
             var supportsDifferential = false;
