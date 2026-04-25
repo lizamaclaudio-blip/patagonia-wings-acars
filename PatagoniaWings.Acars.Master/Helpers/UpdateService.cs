@@ -327,7 +327,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             installerUrl = string.IsNullOrWhiteSpace(installerUrl) ? InstallerDownloadUrl : installerUrl!;
             packagesIndexUrl = string.IsNullOrWhiteSpace(packagesIndexUrl) ? PackagesIndexUrl : packagesIndexUrl!;
 
-            var forceUpdate = channel["forceUpdate"]?.Value<bool?>() ?? false;
+            var forceUpdate = channel.GetValue("forceUpdate", StringComparison.OrdinalIgnoreCase)?.Value<bool?>() ?? false;
             var hasNewVisibleVersion = IsVersionNewer(latestVersion!, CurrentVersion);
             var hasNewRevision = SameVersion(latestVersion!, CurrentVersion) && IsVersionNewer(latestRevision!, CurrentRevision);
             var updateAvailable = forceUpdate == true || hasNewVisibleVersion || hasNewRevision;
@@ -683,8 +683,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     Path = path!,
                     Url = url!,
                     Sha256 = ReadJsonString(fileJson, "sha256", "hash") ?? string.Empty,
-                    Size = fileJson["size"]?.Value<long?>() ?? 0,
-                    RestartRequired = fileJson["restartRequired"]?.Value<bool?>() ?? false,
+                    Size = fileJson.GetValue("size", StringComparison.OrdinalIgnoreCase)?.Value<long?>() ?? 0,
+                    RestartRequired = fileJson.GetValue("restartRequired", StringComparison.OrdinalIgnoreCase)?.Value<bool?>() ?? false,
                     UpdateMode = ReadJsonString(fileJson, "updateMode", "mode") ?? string.Empty
                 });
             }
@@ -699,7 +699,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                         deleted.Add(new RemoteDeletedFile
                         {
                             Path = path!,
-                            RestartRequired = deletedJson["restartRequired"]?.Value<bool?>() ?? false
+                            RestartRequired = deletedJson.GetValue("restartRequired", StringComparison.OrdinalIgnoreCase)?.Value<bool?>() ?? false
                         });
                     }
                 }
@@ -1145,7 +1145,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
         {
             foreach (var key in keys)
             {
-                var value = json[key]?.ToString();
+                var value = json.GetValue(key, StringComparison.OrdinalIgnoreCase)?.ToString();
                 if (!string.IsNullOrWhiteSpace(value))
                 {
                     return value.Trim();
