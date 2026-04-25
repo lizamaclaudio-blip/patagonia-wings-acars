@@ -9,8 +9,8 @@
     {
       "Path": "PatagoniaWings.Acars.Master.exe",
       "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/6.0.1/PatagoniaWings.Acars.Master.exe",
-      "Sha256": "557A6301B2E9019964BF7F34D00A6FD4E1E6A613382F8EB951E66CFFA081E237",
-      "Size": 6445056,
+      "Sha256": "F47BDD6EE20E7CC4716D42204982B7650BDDB67D859F0D297C124618DD2C016A",
+      "Size": 6447104,
       "RestartRequired": true,
       "UpdateMode": "binary"
     }

@@ -464,7 +464,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     var relativePath = NormalizeRelativePath(file.Path);
                     UpdateStatusChanged?.Invoke("Sincronizando " + relativePath + "...");
 
-                    var data = await DownloadBytesAsync(file.Url).ConfigureAwait(false);
+                    var data = await DownloadBytesAsync(file.Url, file.Size).ConfigureAwait(false);
                     ValidateDownloadedPayload(relativePath, data, file.Sha256);
 
                     if (NeedsRestart(relativePath, file.RestartRequired, file.UpdateMode))
@@ -1048,12 +1048,22 @@ namespace PatagoniaWings.Acars.Master.Helpers
             }
         }
 
-        private static async Task<byte[]> DownloadBytesAsync(string url)
+        private static async Task<byte[]> DownloadBytesAsync(string url, long expectedSize = 0)
         {
             using (var client = new WebClient())
             {
                 client.Headers[HttpRequestHeader.CacheControl] = "no-cache";
-                return await client.DownloadDataTaskAsync(new Uri(url)).ConfigureAwait(false);
+                if (expectedSize > 0)
+                {
+                    client.DownloadProgressChanged += (s, e) =>
+                        DownloadProgressChanged?.Invoke(e.ProgressPercentage);
+                }
+                var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(3));
+                var tcs = new System.Threading.Tasks.TaskCompletionSource<byte[]>();
+                cts.Token.Register(() => { try { client.CancelAsync(); } catch { } tcs.TrySetException(new TimeoutException("Descarga superó 3 minutos.")); });
+                var task = client.DownloadDataTaskAsync(new Uri(url));
+                var completed = await Task.WhenAny(task, tcs.Task).ConfigureAwait(false);
+                return await completed.ConfigureAwait(false);
             }
         }
 
