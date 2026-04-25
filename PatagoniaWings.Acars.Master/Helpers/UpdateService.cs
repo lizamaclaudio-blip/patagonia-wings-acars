@@ -329,8 +329,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             var forceUpdate = channel.GetValue("forceUpdate", StringComparison.OrdinalIgnoreCase)?.Value<bool?>() ?? false;
             var hasNewVisibleVersion = IsVersionNewer(latestVersion!, CurrentVersion);
-            var hasNewRevision = SameVersion(latestVersion!, CurrentVersion) && IsVersionNewer(latestRevision!, CurrentRevision);
-            var updateAvailable = forceUpdate == true || hasNewVisibleVersion || hasNewRevision;
+            var hasNewRevision = IsVersionNewer(latestRevision!, CurrentRevision);
+            var alreadyAtLatest = !hasNewVisibleVersion && !hasNewRevision;
+            var updateAvailable = hasNewVisibleVersion || hasNewRevision || (forceUpdate && !alreadyAtLatest);
 
             var restartRequired = false;
             var supportsDifferential = false;
@@ -517,7 +518,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     File.WriteAllText(stagedStatePath, BuildStatePayload(checkResult.LatestVersion, checkResult.LatestRevision, checkResult.Channel));
                     File.WriteAllText(deleteListPath, new JArray(restartDeleteList).ToString());
 
-                    var scriptPath = Path.Combine(pendingRoot, "apply-delta.ps1");
+                    var scriptPath = Path.Combine(pendingRoot, "apply-delta.cmd");
                     var appExePath = GetInstalledExePath();
                     File.WriteAllText(
                         scriptPath,
@@ -540,12 +541,12 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     {
                     }
 
-                    var psi = new ProcessStartInfo("powershell.exe")
+                    var psi = new ProcessStartInfo("cmd.exe")
                     {
-                        Arguments = $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{scriptPath}\"",
-                        UseShellExecute = true,
-                        WindowStyle = ProcessWindowStyle.Hidden,
-                        CreateNoWindow = true
+                        Arguments = $"/c \"{scriptPath}\"",
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        WindowStyle = ProcessWindowStyle.Hidden
                     };
 
                     Process.Start(psi);
@@ -1296,27 +1297,23 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private static string BuildDifferentialRestartScript(string stagedFilesRoot, string appRoot, string appExePath, string stagedStatePath, string deleteListPath, string splashCloseFlagPath, string currentVersion, string version, string revision)
         {
-            string Escape(string value) => value.Replace("'", "''");
-            return
-                "$exe = '" + Escape(appExePath) + "'\r\n" +
-                "$src = '" + Escape(stagedFilesRoot) + "'\r\n" +
-                "$tgt = '" + Escape(appRoot) + "'\r\n" +
-                "$d = (Get-Date).AddSeconds(30)\r\n" +
-                "while ((Get-Date) -lt $d) {\r\n" +
-                "  try { $s = [IO.File]::Open($exe,'Open','Read','None'); $s.Close(); break } catch { Start-Sleep -Milliseconds 300 }\r\n" +
-                "}\r\n" +
-                "Start-Sleep -Milliseconds 600\r\n" +
-                "if (Test-Path $src) {\r\n" +
-                "  Get-ChildItem -Path $src -Recurse -File | ForEach-Object {\r\n" +
-                "    $r = $_.FullName.Substring($src.Length).TrimStart('\\')\r\n" +
-                "    $t = Join-Path $tgt $r\r\n" +
-                "    $p = Split-Path $t -Parent\r\n" +
-                "    if ($p) { New-Item -ItemType Directory -Path $p -Force | Out-Null }\r\n" +
-                "    Copy-Item -LiteralPath $_.FullName -Destination $t -Force\r\n" +
-                "  }\r\n" +
-                "}\r\n" +
-                "if (Test-Path '" + Escape(stagedStatePath) + "') { Copy-Item -LiteralPath '" + Escape(stagedStatePath) + "' -Destination '" + Escape(UpdateStatePath) + "' -Force }\r\n" +
-                "Start-Process -FilePath $exe -WorkingDirectory $tgt\r\n";
+            // Genera un batch CMD que: espera 3s, copia archivos, copia estado, lanza app
+            var sb = new StringBuilder();
+            sb.AppendLine("@echo off");
+            sb.AppendLine("ping -n 4 127.0.0.1 >nul");
+            // Copiar EXE con reintentos
+            sb.AppendLine(":retry");
+            sb.AppendLine($"xcopy /Y /I /Q \"{stagedFilesRoot}\\*\" \"{appRoot}\\\" >nul 2>&1");
+            sb.AppendLine("if errorlevel 1 ( ping -n 2 127.0.0.1 >nul & goto :retry )");
+            // Copiar estado
+            if (File.Exists(stagedStatePath))
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(UpdateStatePath)!);
+            }
+            sb.AppendLine($"if exist \"{stagedStatePath}\" copy /Y \"{stagedStatePath}\" \"{UpdateStatePath}\" >nul");
+            // Lanzar app
+            sb.AppendLine($"start \"\" \"{appExePath}\"");
+            return sb.ToString();
         }
     }
 }
