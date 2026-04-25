@@ -4,12 +4,12 @@
         xmlns:pages="clr-namespace:PatagoniaWings.Acars.Master.Views.Pages"
         xmlns:vm="clr-namespace:PatagoniaWings.Acars.Master.ViewModels"
         Title="Patagonia Wings ACARS"
-        Width="300"
-        Height="730"
-        MinWidth="292"
-        MinHeight="720"
-        MaxWidth="306"
-        MaxHeight="736"
+        Width="318"
+        Height="760"
+        MinWidth="310"
+        MinHeight="750"
+        MaxWidth="326"
+        MaxHeight="768"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None"
@@ -68,7 +68,7 @@
                                        TextWrapping="Wrap"/>
                         </StackPanel>
 
-                        <!-- Step badge -->
+                        <!-- Step badge — solo visible si no es paso auxiliar -->
                         <Border Grid.Column="2"
                                 Background="#E0EDFF"
                                 BorderBrush="#90B4D8"
@@ -76,7 +76,8 @@
                                 CornerRadius="10"
                                 Padding="8,3"
                                 VerticalAlignment="Center"
-                                Margin="0,0,8,0">
+                                Margin="0,0,8,0"
+                                Visibility="{Binding StepBadge, Converter={StaticResource StringToVisibilityConverter}}">
                             <TextBlock Text="{Binding StepBadge}"
                                        Foreground="#1565C0"
                                        FontSize="8.5"
@@ -204,7 +205,7 @@
                                    TextTrimming="CharacterEllipsis"/>
 
                         <TextBlock Grid.Column="2"
-                                   Text="ACARS 4.2"
+                                   Text="ACARS 6.0.1"
                                    Foreground="#1565C0"
                                    FontSize="8.5"
                                    FontWeight="Bold"

@@ -15,12 +15,12 @@
                              AutoReverse="True"/>
             <DoubleAnimation Storyboard.TargetName="LogoScale"
                              Storyboard.TargetProperty="ScaleX"
-                             From="0.93" To="1.07"
+                             From="0.90" To="1.10"
                              Duration="0:0:2.2"
                              AutoReverse="True"/>
             <DoubleAnimation Storyboard.TargetName="LogoScale"
                              Storyboard.TargetProperty="ScaleY"
-                             From="0.93" To="1.07"
+                             From="0.90" To="1.10"
                              Duration="0:0:2.2"
                              AutoReverse="True"/>
         </Storyboard>
@@ -191,20 +191,20 @@
             </Button.Template>
         </Button>
 
-        <!-- LOGO ANIMADO abajo, sin borde, transparente -->
+        <!-- LOGO ANIMADO — grande, cubre espacio vacío, sin borde ni fondo -->
         <Grid Grid.Row="7" VerticalAlignment="Center" HorizontalAlignment="Center">
             <Image x:Name="BottomLogo"
                    Source="pack://application:,,,/Assets/patagonia-logo.png"
-                   Width="64"
-                   Height="64"
+                   Width="110"
+                   Height="110"
                    Stretch="Uniform"
-                   Opacity="0.7"
+                   Opacity="0.72"
                    RenderOptions.BitmapScalingMode="HighQuality">
                 <Image.RenderTransform>
-                    <ScaleTransform x:Name="LogoScale" ScaleX="1" ScaleY="1" CenterX="32" CenterY="32"/>
+                    <ScaleTransform x:Name="LogoScale" ScaleX="1" ScaleY="1" CenterX="55" CenterY="55"/>
                 </Image.RenderTransform>
                 <Image.Effect>
-                    <DropShadowEffect Color="#1565C0" BlurRadius="18" ShadowDepth="0" Opacity="0.6"/>
+                    <DropShadowEffect Color="#1565C0" BlurRadius="28" ShadowDepth="0" Opacity="0.55"/>
                 </Image.Effect>
             </Image>
         </Grid>
