@@ -1,8 +1,8 @@
 {
   "channel": "stable",
-  "latestVersion": "6.0.1",
-  "revision": "2026.4.25.10",
-  "latestRevision": "2026.4.25.10",
+  "latestVersion": "6.0.2",
+  "revision": "2026.4.25.11",
+  "latestRevision": "2026.4.25.11",
   "releaseDate": "2026-04-25",
   "manifestUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/acars-update.json",
   "installerUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
