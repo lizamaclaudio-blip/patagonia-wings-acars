@@ -90,7 +90,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             Path.Combine(Path.GetTempPath(), "PatagoniaWings_UpdateSplashClose.txt");
 
         private static DateTime _lastCheckUtc = DateTime.MinValue;
-        private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(10);
+        private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(5);
         private const long MinimumInstallerSizeBytes = 1024 * 1024;
         private static bool _updateInProgress;
 
@@ -288,7 +288,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             var channel = JObject.Parse(channelRaw);
             var latestVersion = ReadJsonString(channel, "version", "visibleVersion", "latestVersion");
-            var latestRevision = ReadJsonString(channel, "revision", "buildRevision", "releaseRevision");
+            var latestRevision = ReadJsonString(channel, "revision", "latestRevision", "buildRevision", "releaseRevision");
             var manifestUrl = ReadJsonString(channel, "manifestUrl", "manifest_url");
             var packagesIndexUrl = ReadJsonString(channel, "packagesIndexUrl", "packages_index_url");
             var installerUrl = ReadJsonString(channel, "installerUrl", "downloadUrl", "download_url");
@@ -397,11 +397,22 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 var installRoot = GetInstalledRootDirectory();
                 var changedFiles = manifest.Files
-                    .Where(file => ShouldDownloadFile(file, installRoot))
+                    .Where(file => !string.IsNullOrWhiteSpace(file.Url)
+                                   && Uri.IsWellFormedUriString(file.Url, UriKind.Absolute)
+                                   && ShouldDownloadFile(file, installRoot))
                     .ToList();
                 var deletedFiles = manifest.Deleted
                     .Where(file => File.Exists(Path.Combine(installRoot, NormalizeRelativePath(file.Path))))
                     .ToList();
+
+                // Sin archivos válidos en el diferencial → ir directo al instalador completo
+                if (changedFiles.Count == 0 && deletedFiles.Count == 0
+                    && manifest.Files.Count > 0 && manifest.Files.All(f => string.IsNullOrWhiteSpace(f.Url)))
+                {
+                    WriteLog("Differential manifest has no valid URLs. Falling back to full installer.");
+                    await DownloadAndInstallSilentAsync(checkResult.DownloadUrl, checkResult.LatestVersion, checkResult.LatestRevision).ConfigureAwait(false);
+                    return;
+                }
 
                 if (changedFiles.Count == 0 && deletedFiles.Count == 0)
                 {
@@ -633,7 +644,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
                 var path = ReadJsonString(fileJson, "path");
                 var url = ReadJsonString(fileJson, "url");
-                if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(url))
+                if (string.IsNullOrWhiteSpace(path) || string.IsNullOrWhiteSpace(url)
+                    || !Uri.IsWellFormedUriString(url, UriKind.Absolute))
                 {
                     continue;
                 }
