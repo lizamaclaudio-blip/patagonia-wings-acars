@@ -50,6 +50,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _noSmokingSign;
         private bool _gearDown;
         private bool _gearTransitioning;
+        private double _qnh;
+        private string _radioAcarsMessage = string.Empty;
         private double _flapsPercent;
         private bool _spoilersArmed;
         private bool _reverserActive;
@@ -109,7 +111,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private const double EngineN1StartThreshold = 15.0;
 
         public double Altitude    { get => _altitude;    set { if (SetField(ref _altitude,    value)) OnPropertyChanged(nameof(AltitudeDisplay)); } }
-        public double AltitudeAGL { get => _altitudeAgl; set { if (SetField(ref _altitudeAgl, value)) OnPropertyChanged(nameof(AglDisplay)); } }
+        public double AltitudeAGL { get => _altitudeAgl; set { if (SetField(ref _altitudeAgl, value)) { OnPropertyChanged(nameof(AglDisplay)); OnPropertyChanged(nameof(AltitudeAglDisplay)); } } }
         public double IAS { get => _ias; set { if (SetField(ref _ias, value)) { OnPropertyChanged(nameof(IasDisplay)); OnPropertyChanged(nameof(IASDisplay)); } } }
         public double GS { get => _gs; set { if (SetField(ref _gs, value)) { OnPropertyChanged(nameof(GsDisplay)); OnPropertyChanged(nameof(GSDisplay)); } } }
         public double VS { get => _vs; set { if (SetField(ref _vs, value)) { OnPropertyChanged(nameof(VsDisplay)); OnPropertyChanged(nameof(VSDisplay)); } } }
@@ -1003,7 +1005,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string GsDisplay => HasLiveTelemetry ? Math.Round(GS, 0).ToString("F0") : "---";
         public string GSDisplay => GsDisplay;
         public string AltitudeDisplay => HasLiveTelemetry ? Math.Round(Altitude, 0).ToString("F0") : "---";
-        public string AglDisplay      => HasLiveTelemetry ? Math.Round(AltitudeAGL, 0).ToString("F0") : "---";
+        public string AglDisplay           => HasLiveTelemetry ? Math.Round(AltitudeAGL, 0).ToString("F0") : "---";
+        public string AltitudeAglDisplay   => AglDisplay;
+        public string QnhDisplay           => HasLiveTelemetry && _qnh > 0 ? $"{Math.Round(_qnh, 0):F0} hPa" : "—";
+        public string RadioAcarsMessage
+        {
+            get => _radioAcarsMessage;
+            set => SetField(ref _radioAcarsMessage, value);
+        }
         // V/S: clamp a 0 cuando en tierra (SimConnect puede retornar ±1 fpm en suelo)
         public string VsDisplay => HasLiveTelemetry ? (OnGround ? "0" : Math.Round(VS, 0).ToString("+#;-#;0")) : "---";
         public string VSDisplay => VsDisplay;
@@ -1136,6 +1145,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(GsDisplay));
             OnPropertyChanged(nameof(GSDisplay));
             OnPropertyChanged(nameof(AltitudeDisplay));
+            OnPropertyChanged(nameof(AltitudeAglDisplay));
+            OnPropertyChanged(nameof(AglDisplay));
+            OnPropertyChanged(nameof(QnhDisplay));
             OnPropertyChanged(nameof(VsDisplay));
             OnPropertyChanged(nameof(VSDisplay));
             OnPropertyChanged(nameof(HeadingDisplay));
@@ -1233,6 +1245,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 OAT = Math.Round(data.OutsideTemperature, 1);
                 WindSpeed = Math.Round(data.WindSpeed, 0);
                 WindDir = Math.Round(data.WindDirection, 0);
+                if (data.QNH > 0) { _qnh = data.QNH; OnPropertyChanged(nameof(QnhDisplay)); }
                 Lat = data.Latitude;
                 Lon = data.Longitude;
                 AutopilotOn = data.AutopilotActive;
@@ -1355,6 +1368,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             PressDiff = 0;
             AlertNoStrobe = false;
             AlertPause = false;
+            _qnh = 0;
+            _radioAcarsMessage = string.Empty;
+            OnPropertyChanged(nameof(QnhDisplay));
+            OnPropertyChanged(nameof(RadioAcarsMessage));
             _fuelAtEngineStartKg = -1;    // resetear al desconectar
             _fuelKgNorm = 0;
             _totalWeightKg = 0;
