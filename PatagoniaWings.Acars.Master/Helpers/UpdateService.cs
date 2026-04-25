@@ -1297,83 +1297,26 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static string BuildDifferentialRestartScript(string stagedFilesRoot, string appRoot, string appExePath, string stagedStatePath, string deleteListPath, string splashCloseFlagPath, string currentVersion, string version, string revision)
         {
             string Escape(string value) => value.Replace("'", "''");
-
             return
-                "Add-Type -AssemblyName System.Windows.Forms\r\n" +
-                "Add-Type -AssemblyName System.Drawing\r\n" +
-                "[System.Windows.Forms.Application]::EnableVisualStyles()\r\n" +
-                "$form = New-Object System.Windows.Forms.Form\r\n" +
-                "$form.Text = 'Patagonia Wings ACARS'\r\n" +
-                "$form.StartPosition = 'CenterScreen'\r\n" +
-                "$form.FormBorderStyle = 'None'\r\n" +
-                "$form.TopMost = $true\r\n" +
-                "$form.Width = 540\r\n" +
-                "$form.Height = 310\r\n" +
-                "$form.BackColor = [System.Drawing.Color]::FromArgb(9,17,28)\r\n" +
-                "$title = New-Object System.Windows.Forms.Label\r\n" +
-                "$title.Text = 'Actualizando Patagonia Wings ACARS'\r\n" +
-                "$title.ForeColor = [System.Drawing.Color]::FromArgb(147,197,253)\r\n" +
-                "$title.Font = New-Object System.Drawing.Font('Segoe UI',18,[System.Drawing.FontStyle]::Bold)\r\n" +
-                "$title.AutoSize = $true\r\n" +
-                "$title.Location = New-Object System.Drawing.Point(24,24)\r\n" +
-                "$subtitle = New-Object System.Windows.Forms.Label\r\n" +
-                "$subtitle.Text = 'Version " + Escape(currentVersion) + " -> " + Escape(version) + " | revision " + Escape(revision) + "'\r\n" +
-                "$subtitle.ForeColor = [System.Drawing.Color]::FromArgb(191,219,254)\r\n" +
-                "$subtitle.Font = New-Object System.Drawing.Font('Segoe UI',10)\r\n" +
-                "$subtitle.AutoSize = $true\r\n" +
-                "$subtitle.Location = New-Object System.Drawing.Point(26,66)\r\n" +
-                "$status = New-Object System.Windows.Forms.Label\r\n" +
-                "$status.Text = 'Aplicando solo archivos modificados y relanzando...'\r\n" +
-                "$status.ForeColor = [System.Drawing.Color]::FromArgb(110,231,183)\r\n" +
-                "$status.Font = New-Object System.Drawing.Font('Segoe UI',11,[System.Drawing.FontStyle]::Regular)\r\n" +
-                "$status.AutoSize = $true\r\n" +
-                "$status.Location = New-Object System.Drawing.Point(26,118)\r\n" +
-                "$bar = New-Object System.Windows.Forms.ProgressBar\r\n" +
-                "$bar.Style = 'Marquee'\r\n" +
-                "$bar.MarqueeAnimationSpeed = 35\r\n" +
-                "$bar.Width = 490\r\n" +
-                "$bar.Height = 20\r\n" +
-                "$bar.Location = New-Object System.Drawing.Point(24,160)\r\n" +
-                "$form.Controls.AddRange(@($title,$subtitle,$status,$bar))\r\n" +
-                "$form.Add_Shown({\r\n" +
-                "  try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }\r\n" +
-                "  Start-Sleep -Milliseconds 600\r\n" +
-                "  $deadline = (Get-Date).AddSeconds(45)\r\n" +
-                "  while ((Get-Date) -lt $deadline) {\r\n" +
-                "    try { $stream = [System.IO.File]::Open('" + Escape(appExePath) + "', 'Open', 'Read', 'None'); $stream.Close(); break } catch { Start-Sleep -Milliseconds 500 }\r\n" +
+                "$exe = '" + Escape(appExePath) + "'\r\n" +
+                "$src = '" + Escape(stagedFilesRoot) + "'\r\n" +
+                "$tgt = '" + Escape(appRoot) + "'\r\n" +
+                "$d = (Get-Date).AddSeconds(30)\r\n" +
+                "while ((Get-Date) -lt $d) {\r\n" +
+                "  try { $s = [IO.File]::Open($exe,'Open','Read','None'); $s.Close(); break } catch { Start-Sleep -Milliseconds 300 }\r\n" +
+                "}\r\n" +
+                "Start-Sleep -Milliseconds 600\r\n" +
+                "if (Test-Path $src) {\r\n" +
+                "  Get-ChildItem -Path $src -Recurse -File | ForEach-Object {\r\n" +
+                "    $r = $_.FullName.Substring($src.Length).TrimStart('\\')\r\n" +
+                "    $t = Join-Path $tgt $r\r\n" +
+                "    $p = Split-Path $t -Parent\r\n" +
+                "    if ($p) { New-Item -ItemType Directory -Path $p -Force | Out-Null }\r\n" +
+                "    Copy-Item -LiteralPath $_.FullName -Destination $t -Force\r\n" +
                 "  }\r\n" +
-                "  $sourceRoot = '" + Escape(stagedFilesRoot) + "'\r\n" +
-                "  $targetRoot = '" + Escape(appRoot) + "'\r\n" +
-                "  if (Test-Path $sourceRoot) {\r\n" +
-                "    Get-ChildItem -Path $sourceRoot -Recurse -File | ForEach-Object {\r\n" +
-                "      $relative = $_.FullName.Substring($sourceRoot.Length).TrimStart('\\')\r\n" +
-                "      $target = Join-Path $targetRoot $relative\r\n" +
-                "      $dir = Split-Path $target -Parent\r\n" +
-                "      if (-not [string]::IsNullOrWhiteSpace($dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }\r\n" +
-                "      Copy-Item -LiteralPath $_.FullName -Destination $target -Force\r\n" +
-                "    }\r\n" +
-                "  }\r\n" +
-                "  if (Test-Path '" + Escape(deleteListPath) + "') {\r\n" +
-                "    try {\r\n" +
-                "      $deleteList = Get-Content -LiteralPath '" + Escape(deleteListPath) + "' -Raw | ConvertFrom-Json\r\n" +
-                "      foreach ($item in $deleteList) {\r\n" +
-                "        $target = Join-Path $targetRoot $item\r\n" +
-                "        if (Test-Path $target) { Remove-Item -LiteralPath $target -Force -ErrorAction SilentlyContinue }\r\n" +
-                "      }\r\n" +
-                "    } catch { }\r\n" +
-                "  }\r\n" +
-                "  if (Test-Path '" + Escape(stagedStatePath) + "') {\r\n" +
-                "    Copy-Item -LiteralPath '" + Escape(stagedStatePath) + "' -Destination '" + Escape(UpdateStatePath) + "' -Force\r\n" +
-                "  }\r\n" +
-                "  Start-Process -FilePath '" + Escape(appExePath) + "' -WorkingDirectory '" + Escape(appRoot) + "'\r\n" +
-                "  $watchDeadline = (Get-Date).AddSeconds(45)\r\n" +
-                "  while ((Get-Date) -lt $watchDeadline) {\r\n" +
-                "    if (Test-Path '" + Escape(splashCloseFlagPath) + "') { try { Remove-Item '" + Escape(splashCloseFlagPath) + "' -Force -ErrorAction SilentlyContinue } catch { }; break }\r\n" +
-                "    Start-Sleep -Milliseconds 500\r\n" +
-                "  }\r\n" +
-                "  $form.Close()\r\n" +
-                "})\r\n" +
-                "[void]$form.ShowDialog()\r\n";
+                "}\r\n" +
+                "if (Test-Path '" + Escape(stagedStatePath) + "') { Copy-Item -LiteralPath '" + Escape(stagedStatePath) + "' -Destination '" + Escape(UpdateStatePath) + "' -Force }\r\n" +
+                "Start-Process -FilePath $exe -WorkingDirectory $tgt\r\n";
         }
     }
 }
