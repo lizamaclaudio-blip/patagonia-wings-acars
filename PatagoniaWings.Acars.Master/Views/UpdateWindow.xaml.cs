@@ -20,7 +20,7 @@ namespace PatagoniaWings.Acars.Master.Views
                 string.IsNullOrWhiteSpace(checkResult.CurrentRevision) ? "rev local" : checkResult.CurrentRevision,
                 checkResult.LatestVersion,
                 string.IsNullOrWhiteSpace(checkResult.LatestRevision) ? "rev remota" : checkResult.LatestRevision);
-            SourceLine.Text = "Origen: " + (TryGetHost(checkResult.ManifestUrl) ?? TryGetHost(checkResult.DownloadUrl) ?? "patagoniaw.com");
+            SourceLine.Visibility = Visibility.Collapsed;
             StatusText.Text = checkResult.SupportsDifferential
                 ? "Preparando actualizacion diferencial..."
                 : "Preparando descarga inmediata...";

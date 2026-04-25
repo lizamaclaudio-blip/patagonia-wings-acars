@@ -34,8 +34,8 @@ namespace PatagoniaWings.Acars.Master
                     return false;
                 }
 
-                UpdateService.StartImmediateUpdate(check);
-                await Task.Delay(500).ConfigureAwait(true);
+                var updateWindow = new UpdateWindow(check);
+                updateWindow.ShowDialog();
                 return UpdateService.IsInstallerTakingControl;
             }
             catch
