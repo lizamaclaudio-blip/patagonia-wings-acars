@@ -1,19 +1,19 @@
 {
-  "Version": "6.0.2",
-  "Revision": "2026.4.25.11",
-  "Channel": "stable",
-  "ReleaseDate": "2026-04-25",
-  "Notes": "v6.0.2 — UI premium blanca, InFlight AGL/QNH/TREN/RADIO ACARS, updater diferencial blindado.",
-  "InstallerUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
-  "Files": [
+  "version": "6.0.2",
+  "revision": "2026.4.25.11",
+  "channel": "stable",
+  "releaseDate": "2026-04-25",
+  "notes": "v6.0.2 — UI premium blanca, InFlight AGL/QNH/TREN/RADIO ACARS, updater blindado.",
+  "installerUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
+  "files": [
     {
-      "Path": "PatagoniaWings.Acars.Master.exe",
-      "Url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/6.0.2/PatagoniaWings.Acars.Master.exe",
-      "Sha256": "984544D45EE7FE2A9D33E07B0C6D29F6DB7446DDB91338939BD803A3B6720BDC",
-      "Size": 6446080,
-      "RestartRequired": true,
-      "UpdateMode": "binary"
+      "path": "PatagoniaWings.Acars.Master.exe",
+      "url": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/files/6.0.2/PatagoniaWings.Acars.Master.exe",
+      "sha256": "984544D45EE7FE2A9D33E07B0C6D29F6DB7446DDB91338939BD803A3B6720BDC",
+      "size": 6446080,
+      "restartRequired": true,
+      "updateMode": "binary"
     }
   ],
-  "Deleted": []
+  "deleted": []
 }
