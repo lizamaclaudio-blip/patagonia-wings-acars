@@ -92,6 +92,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                             }
 
                             AcarsContext.Sound.PlayDing();
+                            _ = AcarsContext.Sound.PlayGroundBienvenidoAsync();
                             WriteAuthLog("Login success. Opening main window.");
                             Application.Current.Dispatcher.Invoke(() => OnLoginSuccess?.Invoke());
                         }

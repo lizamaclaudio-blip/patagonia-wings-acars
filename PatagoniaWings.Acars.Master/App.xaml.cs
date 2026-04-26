@@ -101,8 +101,14 @@ namespace PatagoniaWings.Acars.Master
                     ? AcarsContext.Api.ActiveDispatch.ReservationId
                     : null;
 
-                // Si ya existe closeout pendiente, no degradamos la reserva a interrupted al salir.
-                if (!string.IsNullOrWhiteSpace(reservationId) && AcarsContext.Api != null && !AcarsContext.Api.HasPendingCloseout(reservationId!))
+                // IMPORTANTE:
+                // Cerrar la app en Oficina/PreFlight NO debe cancelar una reserva despachada desde la web.
+                // Solo cerramos/interrumpimos si el vuelo realmente fue iniciado en ACARS.
+                if (AcarsContext.FlightService != null
+                    && AcarsContext.FlightService.IsFlightActive
+                    && !string.IsNullOrWhiteSpace(reservationId)
+                    && AcarsContext.Api != null
+                    && !AcarsContext.Api.HasPendingCloseout(reservationId!))
                 {
                     AcarsContext.Api.CloseReservationAsync(reservationId!, "interrupted")
                         .GetAwaiter().GetResult();

@@ -780,7 +780,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 // Query directo a flight_reservations usando columnas reales de Supabase.
                 // Priorizamos estados realmente activos del flujo web -> ACARS.
                 var cs = Uri.EscapeDataString(pilotCallsign.Trim().ToUpperInvariant());
-                var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{cs}&status=in.(reserved,dispatched,in_progress)&order=updated_at.desc.nullslast,created_at.desc.nullslast&limit=5";
+                var directEp = $"/rest/v1/flight_reservations?select=*&pilot_callsign=eq.{cs}&status=in.(reserved,dispatched,in_progress,dispatch_ready,active,confirmed,booked,ready,in_flight)&order=updated_at.desc.nullslast,created_at.desc.nullslast&limit=5";
                 using (var req = CreateSupabaseRequest(HttpMethod.Get, directEp, true))
                 {
                     var resp = await _http.SendAsync(req);
@@ -802,7 +802,7 @@ namespace PatagoniaWings.Acars.Core.Services
                                 if (st == "dispatch_ready") st = "dispatched";
                                 if (st == "in_flight") st = "in_progress";
 
-                                // Prioridad: dispatched / in_progress primero, luego cualquier activa.
+                                // Prioridad: dispatched / in_progress primero; reserved queda válido si tiene package preparado/released.
                                 if (st == "dispatched" || st == "in_progress")
                                 { selectedRow = row; break; }
                                 if (selectedRow == null) selectedRow = row;
@@ -1157,15 +1157,7 @@ namespace PatagoniaWings.Acars.Core.Services
         {
             var telemetry = (telemetryLog ?? Array.Empty<SimData>()).ToList();
             var lastSample = lastSimData ?? (telemetry.Count > 0 ? telemetry[telemetry.Count - 1] : new SimData());
-            var canonicalEvaluation = BuildCanonicalEvaluation(
-                pilot,
-                dispatch,
-                report,
-                activeFlight,
-                telemetry,
-                lastSample);
-
-            ApplyCanonicalEvaluationToReport(report, pilot, dispatch, canonicalEvaluation);
+            ApplyServerPendingCloseoutToReport(report, pilot, dispatch, telemetry, lastSample);
 
             var pirep = _pirepXmlBuilder.Build(
                 dispatch,
@@ -1173,6 +1165,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 report,
                 activeFlight,
                 telemetry);
+
+            SavePirepXmlFile(pirep);
 
             var payload = BuildCloseoutPayload(
                 pilot,
@@ -1196,6 +1190,105 @@ namespace PatagoniaWings.Acars.Core.Services
             };
         }
 
+        private void ApplyServerPendingCloseoutToReport(
+            FlightReport report,
+            Pilot pilot,
+            PreparedDispatch dispatch,
+            IReadOnlyList<SimData> telemetryLog,
+            SimData? lastSimData)
+        {
+            report.PilotQualifications = pilot.ActiveQualifications ?? string.Empty;
+            report.PilotCertifications = pilot.ActiveCertifications ?? string.Empty;
+            report.ReservationId = dispatch.ReservationId ?? string.Empty;
+
+            var firstSample = telemetryLog == null || telemetryLog.Count == 0 ? null : telemetryLog[0];
+            var maxAltitude = telemetryLog == null || telemetryLog.Count == 0 ? report.MaxAltitudeFeet : telemetryLog.Max(sample => sample.AltitudeFeet);
+            var maxSpeed = telemetryLog == null || telemetryLog.Count == 0 ? report.MaxSpeedKts : telemetryLog.Max(sample => sample.IndicatedAirspeed);
+            var fuelStartKg = firstSample == null ? dispatch.FuelPlannedKg : (firstSample.FuelKg > 0d ? firstSample.FuelKg : firstSample.FuelTotalLbs * 0.45359237d);
+            var fuelEndKg = lastSimData == null ? 0d : (lastSimData.FuelKg > 0d ? lastSimData.FuelKg : lastSimData.FuelTotalLbs * 0.45359237d);
+            var fuelUsedKg = Math.Max(0d, fuelStartKg - fuelEndKg);
+
+            report.MaxAltitudeFeet = Math.Max(report.MaxAltitudeFeet, maxAltitude);
+            report.MaxSpeedKts = Math.Max(report.MaxSpeedKts, maxSpeed);
+            report.ProceduralSummary = "PIREP RAW generado por ACARS. Evaluacion oficial pendiente en Supabase/Web.";
+            report.PatagoniaScore = 0;
+            report.ProcedureScore = 0;
+            report.PerformanceScore = 0;
+            report.MissionScore = 0;
+            report.Score = 0;
+            report.PointsEarned = 0;
+            report.PatagoniaGrade = "PENDING_SERVER_EVALUATION";
+            report.ProcedureGrade = "PENDING_SERVER_EVALUATION";
+            report.PerformanceGrade = "PENDING_SERVER_EVALUATION";
+            report.Violations = new List<ScoreEvent>();
+            report.Bonuses = new List<ScoreEvent>();
+            report.Evaluation = new PatagoniaEvaluationReport
+            {
+                ContractVersion = "patagonia-raw-pirep.v1",
+                RulesetVersion = "server-side",
+                VisibleScoreName = "Patagonia Score Oficial",
+                PatagoniaScore = 0,
+                ProcedureScore = 0,
+                PerformanceScore = 0,
+                PatagoniaGrade = "PENDING_SERVER_EVALUATION",
+                ProcedureGrade = "PENDING_SERVER_EVALUATION",
+                PerformanceGrade = "PENDING_SERVER_EVALUATION",
+                FlightValid = true,
+                Summary = "ACARS solo registra evidencia. Supabase/Web debe evaluar el reglaje oficial.",
+                TelemetrySummary = new PatagoniaTelemetrySummary
+                {
+                    SamplesCount = telemetryLog == null ? 0 : telemetryLog.Count,
+                    AirborneSamplesCount = telemetryLog == null ? 0 : telemetryLog.Count(sample => !sample.OnGround),
+                    OnGroundSamplesCount = telemetryLog == null ? 0 : telemetryLog.Count(sample => sample.OnGround),
+                    FuelUsedKg = fuelUsedKg,
+                    MaxAltitudeFt = report.MaxAltitudeFeet,
+                    MaxSpeedKts = report.MaxSpeedKts,
+                    LandingVsFpm = report.LandingVS,
+                    LandingG = report.LandingG,
+                    FirstSampleUtc = firstSample == null ? DateTime.MinValue : firstSample.CapturedAtUtc,
+                    LastSampleUtc = lastSimData == null ? DateTime.MinValue : lastSimData.CapturedAtUtc,
+                    LastLatitude = lastSimData == null ? 0d : lastSimData.Latitude,
+                    LastLongitude = lastSimData == null ? 0d : lastSimData.Longitude,
+                    AircraftProfileCode = lastSimData == null ? string.Empty : lastSimData.DetectedProfileCode
+                },
+                EventLog = new List<PatagoniaEventLogEntry>
+                {
+                    new PatagoniaEventLogEntry
+                    {
+                        TimestampUtc = DateTime.UtcNow,
+                        Phase = "CLOSEOUT",
+                        Source = "ACARS_RAW_RECORDER",
+                        Severity = "info",
+                        Message = "PIREP RAW generado; evaluacion oficial pendiente en servidor."
+                    }
+                }
+            };
+        }
+
+        private void SavePirepXmlFile(PirepXmlBuilder.BuildResult pirep)
+        {
+            if (pirep == null || string.IsNullOrWhiteSpace(pirep.XmlContent))
+            {
+                return;
+            }
+
+            try
+            {
+                var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                var folder = Path.Combine(appData, "PatagoniaWings", "Acars", "pireps");
+                Directory.CreateDirectory(folder);
+                var fileName = string.IsNullOrWhiteSpace(pirep.FileName)
+                    ? "Flight-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture) + ".XML"
+                    : pirep.FileName;
+                File.WriteAllText(Path.Combine(folder, fileName), pirep.XmlContent, Encoding.UTF8);
+                WriteAuthLog("PIREP XML RAW saved => " + Path.Combine(folder, fileName));
+            }
+            catch (Exception ex)
+            {
+                WriteAuthLog("PIREP XML RAW save warning => " + ex.Message);
+            }
+        }
+
         private PatagoniaEvaluationReport BuildCanonicalEvaluation(
             Pilot pilot,
             PreparedDispatch dispatch,
@@ -1204,6 +1297,7 @@ namespace PatagoniaWings.Acars.Core.Services
             IReadOnlyList<SimData> telemetryLog,
             SimData? lastSimData)
         {
+
             var evaluationInput = new PatagoniaEvaluationInput
             {
                 Flight = activeFlight ?? new Flight
@@ -1351,15 +1445,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 return ApiResult<FlightReport>.Ok(envelope.Report);
             }
 
-            return await TrySubmitHiddenPirepAsync(
-                envelope.Pilot,
-                envelope.Dispatch,
-                envelope.Report,
-                envelope.ActiveFlight,
-                envelope.TelemetryLog,
-                envelope.LastSimData,
-                envelope.DamageEvents,
-                envelope.Payload).ConfigureAwait(false);
+            return ApiResult<FlightReport>.Fail("Endpoint web ACARS no disponible: el PIREP RAW queda en cola local. La evaluacion oficial debe ejecutarse en Supabase/Web, no en el cliente ACARS.");
         }
 
         private ApiResult<FlightReport> BuildQueuedCloseoutResult(

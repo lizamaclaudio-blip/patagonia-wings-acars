@@ -57,6 +57,28 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             await vm.LoadPreparedDispatchAsync();
         }
 
+        private void BackButton_Click(object sender, RoutedEventArgs e)
+        {
+            var hostWindow = Window.GetWindow(this);
+            if (hostWindow == null)
+            {
+                return;
+            }
+
+            var shellVm = hostWindow.DataContext as AcarsShellViewModel;
+            if (shellVm != null && shellVm.GoPilotLoungeCommand != null && shellVm.GoPilotLoungeCommand.CanExecute(null))
+            {
+                shellVm.GoPilotLoungeCommand.Execute(null);
+                return;
+            }
+
+            var mainVm = hostWindow.DataContext as MainViewModel;
+            if (mainVm != null && mainVm.NavDashboardCommand != null && mainVm.NavDashboardCommand.CanExecute(null))
+            {
+                mainVm.NavDashboardCommand.Execute(null);
+            }
+        }
+
         private PreFlightViewModel? ResolveViewModel()
         {
             var vm = PageRoot != null ? PageRoot.DataContext as PreFlightViewModel : null;

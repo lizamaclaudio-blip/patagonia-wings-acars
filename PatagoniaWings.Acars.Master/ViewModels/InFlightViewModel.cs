@@ -52,6 +52,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _gearTransitioning;
         private double _qnh;
         private string _radioAcarsMessage = string.Empty;
+
+        // ── PIC Radio Check ───────────────────────────────────────────────────
+        private bool _picConfirmed;
+        private double _picFrequency;
+        private double _com2FrequencyMhz;
+        private bool _picCheckActive;
+        private int _picSecondsLeft;
+        private int _picChecksTotal;
+        private int _picChecksDone;
+        private int _picPenaltyPoints;
+        private DateTime _lastPicCheckTime = DateTime.MinValue;
+        private static readonly Random _picRandom = new Random();
+        private static readonly double[] _picFrequencies = {
+            118.305, 119.100, 120.500, 121.900, 122.800, 123.450,
+            124.000, 125.750, 126.200, 127.500, 128.100, 129.950,
+            130.250, 131.700, 132.500, 133.000, 134.450, 135.800
+        };
         private double _flapsPercent;
         private bool _spoilersArmed;
         private bool _reverserActive;
@@ -1017,7 +1034,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string VsDisplay => HasLiveTelemetry ? (OnGround ? "0" : Math.Round(VS, 0).ToString("+#;-#;0")) : "---";
         public string VSDisplay => VsDisplay;
         public string HeadingDisplay => HasLiveTelemetry ? Math.Round(Heading, 0).ToString("000") + "°" : "---";
-        public string FuelDisplay => HasLiveTelemetry ? Math.Round(FuelKg, 0).ToString("F0") : "---";
+        public string FuelDisplay => HasLiveTelemetry ? $"{Math.Round(FuelKg, 0):F0} kg" : "---";
         public string FuelKgDisplay => FuelDisplay;
         public string FuelLbsDisplay => HasLiveTelemetry ? Math.Round(FuelLbs, 0).ToString("F0") : "---";
         public string FlapsDisplay => HasLiveTelemetry ? Math.Round(FlapsPercent, 0).ToString("F0") + "%" : "---";
@@ -1088,6 +1105,35 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand ConnectXPlaneCommand { get; }
         public ICommand DisconnectSimCommand { get; }
         public ICommand FinishFlightCommand { get; }
+        public ICommand CancelFlightCommand { get; }
+        public ICommand ConfirmPicCommand { get; }
+
+        public bool PicConfirmed
+        {
+            get => _picConfirmed;
+            private set
+            {
+                if (SetField(ref _picConfirmed, value))
+                {
+                    OnPropertyChanged(nameof(PicCheckLabel));
+                    OnPropertyChanged(nameof(PicButtonLabel));
+                }
+            }
+        }
+        public string PicCheckLabel
+        {
+            get
+            {
+                if (_picConfirmed && !_picCheckActive)
+                    return $"✓  PIC OK — COM2: {_picFrequency:F3}";
+                if (_picCheckActive)
+                    return $"Sintonice COM2: {_picFrequency:F3}  [{_picSecondsLeft}s]";
+                if (_picChecksTotal == 0)
+                    return "Verificación PIC activa en crucero";
+                return $"Vuelo en curso · checks: {_picChecksDone}/{_picChecksTotal}";
+            }
+        }
+        public string PicButtonLabel => _picCheckActive ? $"{_picSecondsLeft}s" : (_picConfirmed ? "✓ OK" : "—");
 
         private readonly System.Windows.Threading.DispatcherTimer _elapsedTimer;
 
@@ -1098,13 +1144,27 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             ConnectXPlaneCommand = new RelayCommand(() => _main.NavigateToSimulatorConnect());
             DisconnectSimCommand = new RelayCommand(() => { });
             FinishFlightCommand = new RelayCommand(() => FinishFlight(), () => AcarsContext.FlightService.IsFlightActive && (Phase == FlightPhase.Arrived || (OnGround && GS < 3)));
+            CancelFlightCommand = new RelayCommand(() => CancelFlight(), () => AcarsContext.FlightService.IsFlightActive);
+            ConfirmPicCommand = new RelayCommand(
+                () => { if (_picCheckActive) CompletePicCheck(true); },
+                () => _picCheckActive);
+
+            _picFrequency = _picFrequencies[_picRandom.Next(_picFrequencies.Length)];
 
             _elapsedTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _elapsedTimer.Tick += (_, __) =>
             {
                 if (_startTime != default(DateTime))
-                {
                     ElapsedTime = (DateTime.UtcNow - _startTime).ToString(@"hh\:mm\:ss");
+
+                TickPicCheck();
+
+                // En crucero: programar checks periódicos para vuelos largos
+                if (Phase == FlightPhase.Cruise && !_picCheckActive && _picChecksDone < _picChecksTotal)
+                {
+                    if (_lastPicCheckTime == DateTime.MinValue ||
+                        (DateTime.UtcNow - _lastPicCheckTime).TotalMinutes >= 30)
+                        TriggerPicCheck();
                 }
             };
 
@@ -1257,6 +1317,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 LandingOn = data.LandingLightsOn;
                 TaxiOn = data.TaxiLightsOn;
                 NavOn = data.NavLightsOn;
+                _com2FrequencyMhz = data.Com2FrequencyMhz;
                 
                 Debug.WriteLine($"[InFlightVM] Luces - STROBE:{data.StrobeLightsOn} BEACON:{data.BeaconLightsOn} LANDING:{data.LandingLightsOn} TAXI:{data.TaxiLightsOn} NAV:{data.NavLightsOn}");
                 SeatBeltSign = data.SeatBeltSign;
@@ -1466,6 +1527,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                         if (_startTime == default(DateTime)) StartElapsedTimer();
                         StartElapsedTimer();
                         break;
+                    case FlightPhase.Cruise:
+                        // Calcular número de PIC checks según duración planificada
+                        var blockMin = AcarsContext.Runtime.CurrentDispatch?.ExpectedBlockP50Minutes
+                                    ?? AcarsContext.Runtime.CurrentDispatch?.ScheduledBlockMinutes
+                                    ?? 0;
+                        _picChecksTotal  = blockMin >= 120 ? 3 : 1;
+                        _picChecksDone   = 0;
+                        _picConfirmed    = false;
+                        _lastPicCheckTime = DateTime.MinValue;
+                        OnPropertyChanged(nameof(PicConfirmed));
+                        OnPropertyChanged(nameof(PicCheckLabel));
+                        OnPropertyChanged(nameof(PicButtonLabel));
+                        TriggerPicCheck();
+                        break;
+                    case FlightPhase.Approach:
+                        _ = AcarsContext.Sound.PlayCopilotAproximacionAsync();
+                        break;
                     case FlightPhase.Arrived:
                         _ = AcarsContext.Sound.PlayGroundArrivedAsync();
                         _elapsedTimer.Stop();
@@ -1477,13 +1555,105 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private void FinishFlight()
         {
             var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
-            if (pilot == null)
+            if (pilot == null) return;
+            var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
+
+            if (_picPenaltyPoints > 0)
             {
+                report.AirbornePenalty += _picPenaltyPoints;
+                report.Violations.Add(new ScoreEvent
+                {
+                    Code = "CRU-PIC",
+                    Phase = "CRU",
+                    Description = $"Radio PIC Check fallido ({_picPenaltyPoints / 5} vez/veces) — COM2 sin verificar",
+                    Points = -_picPenaltyPoints
+                });
+                report.PatagoniaScore = Math.Max(0, report.PatagoniaScore - _picPenaltyPoints);
+                report.ProcedureScore = Math.Max(0, report.ProcedureScore - _picPenaltyPoints);
+                report.ApplyLegacyScoreProjection();
+            }
+
+            _main.ShowPostFlightReport(report);
+        }
+
+        private void CancelFlight()
+        {
+            var result = MessageBox.Show(
+                "¿Cancelar el vuelo en curso?\n\nEsto registrará el vuelo como cancelado y penalizará tu puntuación. La reserva quedará marcada como cancelada.",
+                "Cancelar vuelo",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes) return;
+
+            var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+            if (pilot == null) return;
+            var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
+            _main.ShowPostFlightReport(report);
+        }
+
+        // ── PIC Check ─────────────────────────────────────────────────────────
+
+        private void TriggerPicCheck()
+        {
+            _picFrequency    = _picFrequencies[_picRandom.Next(_picFrequencies.Length)];
+            _picSecondsLeft  = 15;
+            _picCheckActive  = true;
+            _picConfirmed    = false;
+            _lastPicCheckTime = DateTime.UtcNow;
+            RadioAcarsMessage = $"PIC CHECK #{_picChecksDone + 1}/{_picChecksTotal} — Sintonice COM2: {_picFrequency:F3} MHz  ({_picSecondsLeft}s)";
+            _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone + 1} — COM2 requerido: {_picFrequency:F3}");
+            OnPropertyChanged(nameof(PicConfirmed));
+            OnPropertyChanged(nameof(PicCheckLabel));
+            OnPropertyChanged(nameof(PicButtonLabel));
+            CommandManager.InvalidateRequerySuggested();
+            AcarsContext.Sound.PlayDing();
+        }
+
+        private void TickPicCheck()
+        {
+            if (!_picCheckActive) return;
+
+            // Verificar si COM2 coincide con la frecuencia requerida (±10 kHz)
+            if (_com2FrequencyMhz > 100 && Math.Abs(_com2FrequencyMhz - _picFrequency) <= 0.010)
+            {
+                CompletePicCheck(true);
                 return;
             }
 
-            var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
-            _main.ShowPostFlightReport(report);
+            _picSecondsLeft--;
+            OnPropertyChanged(nameof(PicCheckLabel));
+            OnPropertyChanged(nameof(PicButtonLabel));
+            RadioAcarsMessage = $"PIC CHECK #{_picChecksDone + 1}/{_picChecksTotal} — COM2: {_picFrequency:F3} MHz  ({_picSecondsLeft}s)";
+
+            if (_picSecondsLeft <= 0)
+                CompletePicCheck(false);
+        }
+
+        private void CompletePicCheck(bool success)
+        {
+            _picCheckActive = false;
+            _picChecksDone++;
+
+            if (success)
+            {
+                _picConfirmed = true;
+                _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone} ✓ COM2 verificado ({_picFrequency:F3})");
+                RadioAcarsMessage = $"✓ PIC CHECK {_picChecksDone}/{_picChecksTotal} confirmado — COM2: {_picFrequency:F3}";
+                AcarsContext.Sound.PlayDing();
+            }
+            else
+            {
+                _picConfirmed = false;
+                _picPenaltyPoints += 5;
+                _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone} ✗ FALLIDO — penalización -5 pts");
+                RadioAcarsMessage = $"✗ PIC CHECK fallido — COM2: {_picFrequency:F3} no confirmado (-5 pts)";
+            }
+
+            OnPropertyChanged(nameof(PicConfirmed));
+            OnPropertyChanged(nameof(PicCheckLabel));
+            OnPropertyChanged(nameof(PicButtonLabel));
+            CommandManager.InvalidateRequerySuggested();
+            UpdatePirepPreview();
         }
 
         private static string GetPhaseLabel(FlightPhase phase)

@@ -5,6 +5,37 @@
              Background="Transparent">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolVis"/>
+
+        <Style x:Key="GateLedDotStyle" TargetType="Ellipse" BasedOn="{StaticResource LedStatusDot}">
+            <Setter Property="Fill" Value="#E8EDF5"/>
+            <Setter Property="Stroke" Value="#B8D0EA"/>
+            <Style.Triggers>
+                <Trigger Property="Tag" Value="True">
+                    <Setter Property="Fill" Value="#22C55E"/>
+                    <Setter Property="Stroke" Value="#16803D"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="11" ShadowDepth="0" Opacity="0.78" Color="#22C55E"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="GateLedCardStyle" TargetType="Border">
+            <Setter Property="Background" Value="#F8FBFF"/>
+            <Setter Property="BorderBrush" Value="#D4E4F4"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="11"/>
+            <Setter Property="Padding" Value="5,6"/>
+            <Setter Property="Margin" Value="2,0"/>
+        </Style>
+
+        <Style x:Key="GateLedLabelStyle" TargetType="TextBlock" BasedOn="{StaticResource LedStatusLabel}">
+            <Setter Property="FontSize" Value="7.1"/>
+            <Setter Property="Margin" Value="0,0,0,5"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
     </UserControl.Resources>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
@@ -53,10 +84,20 @@
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Text="{Binding RouteDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchRoute}}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               FontSize="9.2"
-                               TextWrapping="Wrap"/>
+                    <StackPanel Margin="0,1,0,0">
+                        <TextBlock Text="{Binding RouteDisplayHeader}"
+                                   Foreground="{StaticResource TextMutedBrush}"
+                                   FontSize="8.4"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="{Binding RouteDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchRoute}}"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="9.6"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,1,0,0"/>
+                    </StackPanel>
 
                     <Grid Margin="0,9,0,0">
                         <Grid.ColumnDefinitions>
@@ -71,7 +112,7 @@
                                 <TextBlock Text="{Binding PreparedDispatch.ScheduledDepartureUtc, StringFormat={}{0:HH:mm}, TargetNullValue={x:Static preview:AcarsPreviewData.DispatchStd}}"
                                            Foreground="{StaticResource AccentLightBlueBrush}"
                                            FontFamily="Consolas"
-                                           FontSize="13"
+                                           FontSize="15"
                                            FontWeight="SemiBold"/>
                             </StackPanel>
                         </Border>
@@ -83,8 +124,9 @@
                                 <TextBlock Text="{Binding BlockDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchBlock}}"
                                            Foreground="{StaticResource AccentLightBlueBrush}"
                                            FontFamily="Consolas"
-                                           FontSize="13"
-                                           FontWeight="SemiBold"/>
+                                           FontSize="15"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -100,43 +142,54 @@
                             <TextBlock Text="{Binding FlightNumber, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchFlightNumber}}"
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        FontFamily="Consolas"
-                                       FontSize="11"
+                                       FontSize="13"
                                        FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel Margin="4,0,0,8">
                             <TextBlock Text="AERONAVE" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Text="{Binding AircraftDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchAircraft}}"
                                        Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontSize="10"
+                                       FontSize="12"
                                        TextWrapping="Wrap"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,4,8">
                             <TextBlock Text="COMBUSTIBLE" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Text="{Binding FuelDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchFuel}}"
                                        Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontSize="10.5"
+                                       FontSize="12.5"
                                        FontWeight="SemiBold"/>
                         </StackPanel>
                         <StackPanel Margin="4,0,0,8">
-                            <TextBlock Text="PAYLOAD / PAX" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding PayloadDisplayLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchPayload}}"
+                            <TextBlock Text="PAYLOAD" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="{Binding PayloadMainLine}"
                                        Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontSize="10"
+                                       FontSize="12.5"
+                                       FontWeight="SemiBold"
                                        TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding PayloadPaxLine}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="8.3"
+                                       Margin="0,2,0,0"/>
+                            <TextBlock Text="{Binding PayloadCargoLine}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="8.3"/>
+                            <TextBlock Text="{Binding PayloadZfwLine}"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       FontSize="8.3"/>
                         </StackPanel>
                         <StackPanel Margin="0,0,4,0">
                             <TextBlock Text="ALTERNO" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Text="{Binding PreparedDispatch.AlternateIcao, TargetNullValue={x:Static preview:AcarsPreviewData.DispatchAlternate}}"
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        FontFamily="Consolas"
-                                       FontSize="11"/>
+                                       FontSize="13"/>
                         </StackPanel>
                         <StackPanel Margin="4,0,0,0">
                             <TextBlock Text="NIVEL" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Text="{Binding PreparedDispatch.CruiseLevel, TargetNullValue={x:Static preview:AcarsPreviewData.DispatchCruiseLevel}}"
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        FontFamily="Consolas"
-                                       FontSize="11"/>
+                                       FontSize="13"/>
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>
@@ -144,26 +197,33 @@
 
             <Border Style="{StaticResource Card}" Margin="0,0,0,8">
                 <StackPanel>
-                    <TextBlock Text="TELEMETRIA PREVIA" Style="{StaticResource SectionLabel}"/>
-                    <TextBlock Text="{Binding DispatchStatusLabel, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchStatus}}"
-                               Foreground="{StaticResource TextPrimaryBrush}"
-                               FontSize="12"
-                               FontWeight="SemiBold"/>
-                    <TextBlock Text="{Binding DispatchStateLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchState}}"
-                               Foreground="{StaticResource TextSecondaryBrush}"
-                               FontSize="9.5"
-                               Margin="0,5,0,0"
-                               TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding StartGateSummary, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchGate}}"
-                               Foreground="{StaticResource AccentLightBlueBrush}"
-                               FontSize="9.5"
-                               Margin="0,6,0,0"
-                               TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding DispatchSourceLine, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchSource}}"
-                               Foreground="{StaticResource TextMutedBrush}"
-                               FontSize="8.5"
-                               Margin="0,6,0,0"
-                               TextWrapping="Wrap"/>
+                    <TextBlock Text="TELEMETRIA VIVA" Style="{StaticResource SectionLabel}"/>
+                    <UniformGrid Columns="4" Margin="0,3,0,0">
+                        <Border Style="{StaticResource GateLedCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="FRENO" Style="{StaticResource GateLedLabelStyle}"/>
+                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateParkingBrakeOk}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource GateLedCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="COLD &amp; DARK" Style="{StaticResource GateLedLabelStyle}"/>
+                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateColdAndDarkOk}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource GateLedCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="TIPO AVION" Style="{StaticResource GateLedLabelStyle}"/>
+                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateAircraftTypeOk}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource GateLedCardStyle}">
+                            <StackPanel>
+                                <TextBlock Text="GATE" Style="{StaticResource GateLedLabelStyle}"/>
+                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateAirportOk}"/>
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
                 </StackPanel>
             </Border>
 
@@ -182,7 +242,7 @@
 
                 <Button Grid.Column="0"
                         Style="{StaticResource SecondaryButton}"
-                        Command="{Binding DataContext.GoPilotLoungeCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        Click="BackButton_Click"
                         Content="VOLVER"
                         Height="38"
                         Margin="0,0,5,0"/>

@@ -68,8 +68,11 @@ namespace PatagoniaWings.Acars.Core.Models
                 var dispatchStatus = (DispatchPackageStatus ?? string.Empty).Trim().ToLowerInvariant();
 
                 var reservationReady =
-                    // Oficiales
-                    reservationStatus == "dispatched"
+                    // Oficiales Web -> ACARS
+                    // La web puede dejar primero la reserva en reserved y el dispatch_package en released/prepared.
+                    // Eso ya debe ser utilizable por ACARS sin cancelar ni esconder el despacho.
+                    reservationStatus == "reserved"
+                    || reservationStatus == "dispatched"
                     || reservationStatus == "in_progress"
 
                     // Legacy, solo para no romper reservas antiguas

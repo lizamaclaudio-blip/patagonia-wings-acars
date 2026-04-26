@@ -105,6 +105,9 @@ namespace PatagoniaWings.Acars.Core.Models
         public double EmptyWeightLbs { get; set; }
         public double EmptyWeightKg { get; set; }
 
+        // Radios
+        public double Com2FrequencyMhz { get; set; }
+
         // Perfil de aeronave normalizado (código estable Patagonia Wings)
         // Ejemplos: C208_MSFS, C208_BLACKSQUARE, B738_PMDG, A320_FENIX, A20N_FBW
         public string DetectedProfileCode { get; set; } = "MSFS_NATIVE";

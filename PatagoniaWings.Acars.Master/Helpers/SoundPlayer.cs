@@ -19,7 +19,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         public AcarsSoundPlayer()
         {
-            _soundsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Sounds");
+            _soundsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Sounds");
         }
 
         // ── Sonidos generales ─────────────────────────────────────────────────

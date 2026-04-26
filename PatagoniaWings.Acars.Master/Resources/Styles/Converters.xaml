@@ -11,5 +11,7 @@
     <converters:StringToVisibilityConverter x:Key="StringToVisibilityConverter" />
     <converters:TabToVisibilityConverter x:Key="TabToVisibilityConverter" />
     <converters:UrlToImageSourceConverter x:Key="UrlToImageSourceConverter" />
+    <converters:BoolToOpacityConverter x:Key="BoolToOpacityConverter" />
+    <converters:BoolToGlowEffectConverter x:Key="BoolToGlowEffectConverter" />
 
 </ResourceDictionary>

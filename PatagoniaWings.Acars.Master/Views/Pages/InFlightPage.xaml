@@ -10,18 +10,14 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="6"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="6"/>
+            <RowDefinition Height="5"/>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="6"/>
+            <RowDefinition Height="5"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- ══ HEADER AZUL OSCURO ══ -->
-        <Border Grid.Row="0"
-                CornerRadius="16"
-                BorderThickness="1"
-                BorderBrush="#3A6DA0"
-                Effect="{StaticResource PanelShadow}">
+        <!-- ══ HEADER ══ -->
+        <Border Grid.Row="0" CornerRadius="16" BorderThickness="1" BorderBrush="#3A6DA0" Effect="{StaticResource PanelShadow}">
             <Border.Background>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
                     <GradientStop Color="#0C2A4E" Offset="0"/>
@@ -31,96 +27,64 @@
             </Border.Background>
             <StackPanel Margin="11,10,11,10">
 
-                <!-- TIPO DE VUELO — grande, blanco, centrado, negrita -->
+                <!-- TIPO DE VUELO -->
                 <TextBlock Text="{Binding DataContext.MainVM.PreFlightVM.FlightModeDisplayLabel,
                                           RelativeSource={RelativeSource AncestorType=Window},
                                           FallbackValue='VUELO LÍNEA'}"
-                           Foreground="White"
-                           FontSize="13"
-                           FontWeight="Bold"
-                           FontFamily="Segoe UI"
-                           HorizontalAlignment="Center"
-                           TextAlignment="Center"
-                           Margin="0,0,0,6">
-                    <TextBlock.Effect>
-                        <DropShadowEffect Color="#0099FF" BlurRadius="12" ShadowDepth="0" Opacity="0.7"/>
-                    </TextBlock.Effect>
+                           Foreground="White" FontSize="13" FontWeight="Bold" FontFamily="Segoe UI"
+                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,4">
+                    <TextBlock.Effect><DropShadowEffect Color="#0099FF" BlurRadius="12" ShadowDepth="0" Opacity="0.7"/></TextBlock.Effect>
                 </TextBlock>
 
                 <!-- Número de vuelo + matrícula -->
-                <StackPanel HorizontalAlignment="Center" Margin="0,0,0,8">
+                <StackPanel HorizontalAlignment="Center" Margin="0,0,0,6">
                     <TextBlock Text="{Binding DataContext.MainVM.PreFlightVM.FlightNumber,
                                               RelativeSource={RelativeSource AncestorType=Window},
                                               Converter={StaticResource StringFallbackConverter},
                                               ConverterParameter={x:Static preview:AcarsPreviewData.LiveFlightNumber}}"
-                               Foreground="#DDEEFF"
-                               FontSize="15"
-                               FontWeight="Bold"
-                               FontFamily="Consolas"
-                               HorizontalAlignment="Center"/>
+                               Foreground="#DDEEFF" FontSize="15" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding DataContext.MainVM.PreFlightVM.PreparedDispatch.AircraftRegistration,
                                               RelativeSource={RelativeSource AncestorType=Window},
                                               TargetNullValue={x:Static preview:AcarsPreviewData.LiveRegistration}}"
-                               Foreground="#7AAAD4"
-                               FontSize="9"
-                               HorizontalAlignment="Center"
-                               Margin="0,1,0,0"/>
+                               Foreground="#7AAAD4" FontSize="9" HorizontalAlignment="Center" Margin="0,1,0,0"/>
                 </StackPanel>
 
-                <!-- ORIG → DEST centrado -->
+                <!-- ORIG → DEST con ICAO grande -->
                 <Grid Margin="0,0,0,4">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-
                     <StackPanel HorizontalAlignment="Center">
                         <TextBlock Text="{Binding RouteOrigin,
                                                   Converter={StaticResource StringFallbackConverter},
                                                   ConverterParameter={x:Static preview:AcarsPreviewData.LiveOrigin}}"
-                                   Foreground="#FFFFFF"
-                                   FontFamily="Consolas"
-                                   FontSize="22"
-                                   FontWeight="Bold"
-                                   HorizontalAlignment="Center"/>
+                                   Foreground="#FFFFFF" FontFamily="Consolas" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center">
+                            <TextBlock.Effect><DropShadowEffect Color="#5BC8F5" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/></TextBlock.Effect>
+                        </TextBlock>
                         <TextBlock Text="{Binding RouteDistanceFromOriginDisplay,
                                                   Converter={StaticResource StringFallbackConverter},
                                                   ConverterParameter={x:Static preview:AcarsPreviewData.LiveDistanceFromOrigin}}"
-                                   Foreground="#6AAAD6"
-                                   FontSize="8"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,2,0,0"/>
+                                   Foreground="#6AAAD6" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                     </StackPanel>
-
-                    <TextBlock Grid.Column="1"
-                               Text="&#x2708;"
-                               Foreground="#5BC8F5"
-                               FontSize="18"
-                               Margin="6,6,6,0"
-                               VerticalAlignment="Top"/>
-
+                    <TextBlock Grid.Column="1" Text="&#x2708;" Foreground="#5BC8F5" FontSize="22" Margin="8,8,8,0" VerticalAlignment="Top"/>
                     <StackPanel Grid.Column="2" HorizontalAlignment="Center">
                         <TextBlock Text="{Binding RouteDestination,
                                                   Converter={StaticResource StringFallbackConverter},
                                                   ConverterParameter={x:Static preview:AcarsPreviewData.LiveDestination}}"
-                                   Foreground="#FFFFFF"
-                                   FontFamily="Consolas"
-                                   FontSize="22"
-                                   FontWeight="Bold"
-                                   HorizontalAlignment="Center"/>
+                                   Foreground="#FFFFFF" FontFamily="Consolas" FontSize="30" FontWeight="Bold" HorizontalAlignment="Center">
+                            <TextBlock.Effect><DropShadowEffect Color="#5BC8F5" BlurRadius="10" ShadowDepth="0" Opacity="0.5"/></TextBlock.Effect>
+                        </TextBlock>
                         <TextBlock Text="{Binding RouteDistanceToDestinationDisplay,
                                                   Converter={StaticResource StringFallbackConverter},
                                                   ConverterParameter={x:Static preview:AcarsPreviewData.LiveDistanceToDestination}}"
-                                   Foreground="#6AAAD6"
-                                   FontSize="8"
-                                   HorizontalAlignment="Center"
-                                   Margin="0,2,0,0"/>
+                                   Foreground="#6AAAD6" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                     </StackPanel>
                 </Grid>
 
                 <!-- Barra de progreso -->
-                <Viewbox Stretch="Fill" Height="14" Margin="0,5,0,2">
+                <Viewbox Stretch="Fill" Height="14" Margin="0,5,0,4">
                     <Canvas Width="256" Height="14">
                         <Ellipse Width="5" Height="5" Fill="#2C4E72" Canvas.Left="0" Canvas.Top="4.5"/>
                         <Ellipse Width="5" Height="5" Fill="#2C4E72" Canvas.Left="251" Canvas.Top="4.5"/>
@@ -131,8 +95,14 @@
                     </Canvas>
                 </Viewbox>
 
-                <!-- Fase elapsed (sin PREVUELO a la izquierda) -->
-                <Grid Margin="0,3,0,0">
+                <!-- Aeronave debajo de la barra -->
+                <TextBlock Text="{Binding DetectedDisplayName, FallbackValue='Aeronave'}"
+                           Foreground="#A8C8E8" FontSize="10" FontFamily="Segoe UI" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,6"
+                           TextTrimming="CharacterEllipsis"/>
+
+                <!-- Fase + reloj -->
+                <Grid Margin="0,0,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -140,143 +110,156 @@
                     <TextBlock Text="{Binding PhaseLabelDisplay,
                                              Converter={StaticResource StringFallbackConverter},
                                              ConverterParameter={x:Static preview:AcarsPreviewData.LivePhaseLabel}}"
-                               Foreground="#A8DAFF"
-                               FontSize="8.5"/>
+                               Foreground="#A8DAFF" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
                     <TextBlock Grid.Column="1"
                                Text="{Binding ElapsedTimeDisplay,
                                              Converter={StaticResource StringFallbackConverter},
                                              ConverterParameter={x:Static preview:AcarsPreviewData.LiveElapsed}}"
-                               Foreground="#DDEEFF"
-                               FontFamily="Consolas"
-                               FontSize="8.5"
-                               FontWeight="SemiBold"/>
+                               Foreground="#FFFFFF" FontFamily="Consolas" FontSize="22" FontWeight="Bold" VerticalAlignment="Center">
+                        <TextBlock.Effect><DropShadowEffect Color="#5BC8F5" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/></TextBlock.Effect>
+                    </TextBlock>
                 </Grid>
 
             </StackPanel>
         </Border>
 
-        <!-- ══ SISTEMAS Y PARÁMETROS (sin badge LIVE) ══ -->
-        <Border Grid.Row="2"
-                Background="#F4F8FF"
-                BorderBrush="#C2D8EF"
-                BorderThickness="1"
-                CornerRadius="14"
-                Padding="10,9"
-                Effect="{StaticResource PanelShadow}">
+        <!-- ══ SISTEMAS Y PARÁMETROS ══ -->
+        <Border Grid.Row="2" Background="#F4F8FF" BorderBrush="#C2D8EF" BorderThickness="1"
+                CornerRadius="14" Padding="10,9" Effect="{StaticResource PanelShadow}">
             <StackPanel>
 
-                <TextBlock Text="SISTEMAS Y PARÁMETROS"
-                           Foreground="#1554A8"
-                           FontSize="8"
-                           FontWeight="Bold"
-                           Margin="0,0,0,7"/>
+                <TextBlock Text="SISTEMAS Y PARÁMETROS" Foreground="#1554A8" FontSize="8" FontWeight="Bold" Margin="0,0,0,7"/>
 
-                <!-- LEDs LIVE — con TREN en lugar de XPDR C -->
-                <UniformGrid Columns="3"
-                             Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
+                <!-- ── LEDs LIVE: NAV BCN STB / TAXI LAND TREN / AP PUERTA FRENO ── -->
+                <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <!-- Fila 1 -->
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="NAV" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding NavOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
+                                     Fill="{Binding NavOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}"
+                                     Effect="{Binding NavOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#22C55E}"/>
                         </StackPanel>
                     </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="BCN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding BeaconOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#F97316|#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#F97316" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
+                                     Fill="{Binding BeaconOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#F97316|#CBD8E8}"
+                                     Effect="{Binding BeaconOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#F97316}"/>
                         </StackPanel>
                     </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="TAXI" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding TaxiOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#EAB308|#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#EAB308" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
-                        </StackPanel>
-                    </Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4">
-                        <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="STB" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding StrobeOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
+                                     Fill="{Binding StrobeOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}"
+                                     Effect="{Binding StrobeOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#22C55E}"/>
+                        </StackPanel>
+                    </Border>
+                    <!-- Fila 2 -->
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="TAXI" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
+                                     Fill="{Binding TaxiOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#EAB308|#CBD8E8}"
+                                     Effect="{Binding TaxiOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#EAB308}"/>
                         </StackPanel>
                     </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="LAND" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding LandingOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#EF4444|#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#EF4444" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
+                                     Fill="{Binding LandingOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#EF4444|#CBD8E8}"
+                                     Effect="{Binding LandingOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#EF4444}"/>
                         </StackPanel>
                     </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="FRENO" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="TREN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding LiveParkingBrakeOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
+                                     Fill="{Binding GearDown, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8, FallbackValue=#CBD8E8}"
+                                     Effect="{Binding GearDown, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#22C55E}"/>
                         </StackPanel>
                     </Border>
+                    <!-- Fila 3 -->
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="AP" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding LiveAutopilotOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
+                                     Fill="{Binding LiveAutopilotOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}"
+                                     Effect="{Binding LiveAutopilotOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#22C55E}"/>
                         </StackPanel>
                     </Border>
-                    <!-- TREN — detector de tren de aterrizaje -->
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="TREN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding GearDown, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8, FallbackValue=#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
+                                     Fill="{Binding LiveDoorOpen, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#EAB308|#CBD8E8}"
+                                     Effect="{Binding LiveDoorOpen, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#EAB308}"/>
                         </StackPanel>
                     </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="FRENO" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding LiveDoorOpen, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#EAB308|#CBD8E8}">
-                                <Ellipse.Effect><DropShadowEffect Color="#EAB308" BlurRadius="8" ShadowDepth="0" Opacity="0.7"/></Ellipse.Effect>
-                            </Ellipse>
+                                     Fill="{Binding LiveParkingBrakeOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}"
+                                     Effect="{Binding LiveParkingBrakeOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#22C55E}"/>
                         </StackPanel>
                     </Border>
                 </UniformGrid>
 
-                <!-- LEDs PREVIEW -->
-                <UniformGrid Columns="3"
-                             Visibility="{Binding HasLiveTelemetry, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <!-- ── LEDs PREVIEW ── -->
+                <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="NAV" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="BCN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#F97316"><Ellipse.Effect><DropShadowEffect Color="#F97316" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="TAXI" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="STB" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="STB" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="TAXI" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="LAND" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="FRENO" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="TREN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AP" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="TREN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="FRENO" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
                 </UniformGrid>
+
+                <!-- ── RADIO PIC CHECK (ancho completo) ── -->
+                <Border Margin="0,8,0,0" CornerRadius="8" BorderThickness="1.5"
+                        Background="{Binding PicConfirmed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#E8F5E9|#FFF8E1}"
+                        BorderBrush="{Binding PicConfirmed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#4CAF50|#F59E0B}">
+                    <Grid Margin="8,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="📻" FontSize="13" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="RADIO PIC CHECK" FontSize="7" FontWeight="Bold"
+                                       Foreground="{Binding PicConfirmed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#2E7D32|#92400E}"/>
+                            <TextBlock Text="{Binding PicCheckLabel, FallbackValue='Sintonice COM1: 118.305'}"
+                                       FontSize="9.5" FontWeight="Bold" FontFamily="Consolas"
+                                       Foreground="{Binding PicConfirmed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#1B5E20|#78350F}"/>
+                        </StackPanel>
+                        <Button Grid.Column="2" Content="{Binding PicButtonLabel, FallbackValue='✓ PIC'}"
+                                Command="{Binding ConfirmPicCommand}"
+                                FontSize="8" FontWeight="Bold" Padding="6,4"
+                                Background="{Binding PicConfirmed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#4CAF50|#F59E0B}"
+                                Foreground="White" BorderThickness="0" Cursor="Hand">
+                            <Button.Template>
+                                <ControlTemplate TargetType="Button">
+                                    <Border CornerRadius="5" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+                </Border>
 
                 <Border Height="1" Background="#C8DCF0" Margin="0,8,0,8"/>
 
-                <!-- Telemetría fila 1 — AGL en vez de MSL, QNH en vez de BLOCK -->
-                <UniformGrid Columns="3"
-                             Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
+                <!-- ── TELEMETRÍA LIVE ── -->
+                <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="AGL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -296,8 +279,7 @@
                         </StackPanel>
                     </Border>
                 </UniformGrid>
-                <UniformGrid Columns="3" Margin="0,4,0,0"
-                             Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
+                <UniformGrid Columns="3" Margin="0,4,0,0" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="V/S" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -322,9 +304,8 @@
                     </Border>
                 </UniformGrid>
 
-                <!-- Telemetría PREVIEW -->
-                <UniformGrid Columns="3"
-                             Visibility="{Binding HasLiveTelemetry, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <!-- ── TELEMETRÍA PREVIEW ── -->
+                <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AGL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="0 ft" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="RUMBO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="{x:Static preview:AcarsPreviewData.LiveHeading}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="GS" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="{x:Static preview:AcarsPreviewData.LiveGs}" Foreground="#1065D4" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
@@ -336,77 +317,84 @@
             </StackPanel>
         </Border>
 
-        <!-- ══ RADIO ACARS — ventanita COM2 max 2 líneas ══ -->
-        <Border Grid.Row="4"
-                Background="#EAF4FF"
-                BorderBrush="#90B4D8"
-                BorderThickness="1.5"
-                CornerRadius="10"
-                Padding="10,7"
-                Effect="{StaticResource PanelShadow}"
+        <!-- ══ RADIO ACARS ══ -->
+        <Border Grid.Row="4" Background="#EAF4FF" BorderBrush="#90B4D8" BorderThickness="1.5"
+                CornerRadius="10" Padding="10,7" Effect="{StaticResource PanelShadow}"
                 Visibility="{Binding RadioAcarsMessage, Converter={StaticResource StringToVisibilityConverter}, FallbackValue=Visible}">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="📻"
-                           FontSize="14"
-                           VerticalAlignment="Center"
-                           Margin="0,0,8,0"/>
+                <TextBlock Text="📻" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock Text="RADIO ACARS"
-                               Foreground="#1565C0"
-                               FontSize="7.5"
-                               FontWeight="Bold"
-                               FontFamily="Segoe UI"/>
+                    <TextBlock Text="RADIO ACARS" Foreground="#1565C0" FontSize="7.5" FontWeight="Bold" FontFamily="Segoe UI"/>
                     <TextBlock Text="{Binding RadioAcarsMessage, FallbackValue='COM2: Sintonice frecuencia asignada y esté atento.'}"
-                               Foreground="#0D2143"
-                               FontSize="9"
-                               FontFamily="Segoe UI"
-                               FontWeight="SemiBold"
-                               TextWrapping="Wrap"
-                               MaxHeight="32"
-                               TextTrimming="CharacterEllipsis"/>
+                               Foreground="#0D2143" FontSize="9" FontFamily="Segoe UI" FontWeight="SemiBold"
+                               TextWrapping="Wrap" MaxHeight="32" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- ══ COMBUSTIBLE + QNH (fila final) ══ -->
+        <!-- ══ COMBUSTIBLE + BOTONES ══ -->
         <Grid Grid.Row="6">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="6"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-            <Border Background="#F4F8FF" BorderBrush="#C2D8EF" BorderThickness="1"
-                    CornerRadius="12" Padding="8,7">
+            <!-- COMBUSTIBLE ancho completo -->
+            <Border Grid.Row="0" Background="#F4F8FF" BorderBrush="#C2D8EF" BorderThickness="1" CornerRadius="12" Padding="8,8">
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="COMBUSTIBLE" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                     <TextBlock Text="{Binding FuelKgDisplay,
                                              Converter={StaticResource StringFallbackConverter},
                                              ConverterParameter={x:Static preview:AcarsPreviewData.LiveFuel}}"
-                               Foreground="#1065D4"
-                               FontSize="12"
-                               FontWeight="Bold"
-                               FontFamily="Consolas"
-                               HorizontalAlignment="Center"/>
+                               Foreground="#1065D4" FontSize="14" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Center"/>
                 </StackPanel>
             </Border>
 
-            <Border Grid.Column="2" Background="#F4F8FF" BorderBrush="#C2D8EF" BorderThickness="1"
-                    CornerRadius="12" Padding="8,7">
-                <StackPanel HorizontalAlignment="Center">
-                    <TextBlock Text="QNH" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding QnhDisplay, FallbackValue='1013 hPa'}"
-                               Foreground="#0D2143"
-                               FontSize="11"
-                               FontWeight="SemiBold"
-                               FontFamily="Consolas"
-                               HorizontalAlignment="Center"/>
-                </StackPanel>
-            </Border>
+            <!-- Botones CANCELAR / FINALIZAR -->
+            <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="6"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0" Content="✕  CANCELAR VUELO"
+                        Command="{Binding CancelFlightCommand}"
+                        FontSize="9" FontWeight="Bold" Foreground="White" BorderThickness="0"
+                        Background="#DC2626" Padding="0,9" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border CornerRadius="10" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
+                                    Opacity="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=Button}, Converter={StaticResource BoolToOpacityConverter}, FallbackValue=1}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+
+                <Button Grid.Column="2" Content="✓  FINALIZAR VUELO"
+                        Command="{Binding FinishFlightCommand}"
+                        FontSize="9" FontWeight="Bold" Foreground="White" BorderThickness="0"
+                        Background="#16A34A" Padding="0,9" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border CornerRadius="10" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}"
+                                    Opacity="{Binding IsEnabled, RelativeSource={RelativeSource AncestorType=Button}, Converter={StaticResource BoolToOpacityConverter}, FallbackValue=0.4}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <Button.ToolTip>
+                        <ToolTip Content="Solo disponible en destino o alternativo con velocidad menor a 3 kt"/>
+                    </Button.ToolTip>
+                </Button>
+
+            </Grid>
         </Grid>
 
     </Grid>

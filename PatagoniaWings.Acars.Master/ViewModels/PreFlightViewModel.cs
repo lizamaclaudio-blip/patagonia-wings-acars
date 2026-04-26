@@ -75,8 +75,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(FlightModeDisplayLabel));
                     OnPropertyChanged(nameof(AircraftDisplayLine));
                     OnPropertyChanged(nameof(RouteDisplayLine));
+                    OnPropertyChanged(nameof(RouteDisplayHeader));
                     OnPropertyChanged(nameof(FuelDisplayLine));
                     OnPropertyChanged(nameof(PayloadDisplayLine));
+                    OnPropertyChanged(nameof(PayloadMainLine));
+                    OnPropertyChanged(nameof(PayloadPaxLine));
+                    OnPropertyChanged(nameof(PayloadCargoLine));
+                    OnPropertyChanged(nameof(PayloadZfwLine));
                     OnPropertyChanged(nameof(BlockDisplayLine));
                     OnPropertyChanged(nameof(HasUsablePreparedDispatch));
                     OnPropertyChanged(nameof(HasUsableWebDispatch));
@@ -325,6 +330,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
+        public string RouteDisplayHeader { get { return "RUTA:"; } }
+
         public string RouteDisplayLine
         {
             get
@@ -365,26 +372,78 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             get
             {
+                var parts = new List<string>();
+                if (!string.Equals(PayloadMainLine, "No informado", StringComparison.OrdinalIgnoreCase))
+                {
+                    parts.Add(PayloadMainLine);
+                }
+                if (!string.Equals(PayloadPaxLine, "Pax: —", StringComparison.OrdinalIgnoreCase))
+                {
+                    parts.Add(PayloadPaxLine);
+                }
+                if (!string.Equals(PayloadZfwLine, "ZFW: —", StringComparison.OrdinalIgnoreCase))
+                {
+                    parts.Add(PayloadZfwLine);
+                }
+
+                return parts.Count == 0 ? "No informado" : string.Join(" · ", parts.ToArray());
+            }
+        }
+
+        public string PayloadMainLine
+        {
+            get
+            {
                 if (PreparedDispatch == null)
                 {
                     return "—";
                 }
 
-                var parts = new List<string>();
                 if (PreparedDispatch.PayloadKg > 0)
                 {
-                    parts.Add("Payload " + FormatKg(PreparedDispatch.PayloadKg));
-                }
-                if (PreparedDispatch.ZeroFuelWeightKg > 0)
-                {
-                    parts.Add("ZFW " + FormatKg(PreparedDispatch.ZeroFuelWeightKg));
-                }
-                if (PreparedDispatch.PassengerCount > 0)
-                {
-                    parts.Add(PreparedDispatch.PassengerCount + " pax");
+                    return FormatKg(PreparedDispatch.PayloadKg);
                 }
 
-                return parts.Count == 0 ? "No informado" : string.Join(" · ", parts.ToArray());
+                return "No informado";
+            }
+        }
+
+        public string PayloadPaxLine
+        {
+            get
+            {
+                if (PreparedDispatch == null || PreparedDispatch.PassengerCount <= 0)
+                {
+                    return "Pax: —";
+                }
+
+                return "Pax: " + PreparedDispatch.PassengerCount;
+            }
+        }
+
+        public string PayloadCargoLine
+        {
+            get
+            {
+                if (PreparedDispatch == null || PreparedDispatch.PayloadKg <= 0)
+                {
+                    return "Carga: —";
+                }
+
+                return "Carga: " + FormatKg(PreparedDispatch.PayloadKg);
+            }
+        }
+
+        public string PayloadZfwLine
+        {
+            get
+            {
+                if (PreparedDispatch == null || PreparedDispatch.ZeroFuelWeightKg <= 0)
+                {
+                    return "ZFW: —";
+                }
+
+                return "ZFW: " + FormatKg(PreparedDispatch.ZeroFuelWeightKg);
             }
         }
 
@@ -397,27 +456,28 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return "—";
                 }
 
-                var parts = new List<string>();
                 if (PreparedDispatch.ScheduledBlockMinutes > 0)
                 {
-                    parts.Add("STD " + FormatMinutes(PreparedDispatch.ScheduledBlockMinutes));
-                }
-                if (PreparedDispatch.ExpectedBlockP50Minutes > 0)
-                {
-                    parts.Add("P50 " + FormatMinutes(PreparedDispatch.ExpectedBlockP50Minutes));
-                }
-                if (PreparedDispatch.ExpectedBlockP80Minutes > 0)
-                {
-                    parts.Add("P80 " + FormatMinutes(PreparedDispatch.ExpectedBlockP80Minutes));
-                }
-                if (PreparedDispatch.ScheduledDepartureUtc.HasValue)
-                {
-                    parts.Add("ETD " + PreparedDispatch.ScheduledDepartureUtc.Value.ToString("HH:mm") + "Z");
+                    return FormatMinutes(PreparedDispatch.ScheduledBlockMinutes);
                 }
 
-                return parts.Count == 0 ? "Sin block publicado" : string.Join(" · ", parts.ToArray());
+                if (PreparedDispatch.ExpectedBlockP50Minutes > 0)
+                {
+                    return FormatMinutes(PreparedDispatch.ExpectedBlockP50Minutes);
+                }
+
+                if (PreparedDispatch.ExpectedBlockP80Minutes > 0)
+                {
+                    return FormatMinutes(PreparedDispatch.ExpectedBlockP80Minutes);
+                }
+
+                return "Sin block publicado";
             }
         }
+        public bool StartGateParkingBrakeOk { get { return IsGateRulePassing("START_PARKING_BRAKE_ON"); } }
+        public bool StartGateColdAndDarkOk { get { return IsGateRulePassing("START_COLD_AND_DARK"); } }
+        public bool StartGateAircraftTypeOk { get { return IsGateRulePassing("START_AIRCRAFT_MATCH"); } }
+        public bool StartGateAirportOk { get { return IsGateRulePassing("START_AIRPORT_MATCH"); } }
 
         public string StartButtonTitle
         {
@@ -435,7 +495,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                 if (CanStartFlight)
                 {
-                    return "INICIAR VUELO ACARS";
+                    return "INICIAR VUELO";
                 }
 
                 if (PreparedDispatch != null && PreparedDispatch.IsDispatchReady)
@@ -862,6 +922,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             ResetWeatherContext();
             OnPropertyChanged(nameof(StartGateAllowsStart));
             OnPropertyChanged(nameof(StartGateSummary));
+            OnPropertyChanged(nameof(StartGateParkingBrakeOk));
+            OnPropertyChanged(nameof(StartGateColdAndDarkOk));
+            OnPropertyChanged(nameof(StartGateAircraftTypeOk));
+            OnPropertyChanged(nameof(StartGateAirportOk));
             OnPropertyChanged(nameof(CanStartFlight));
 
             if (clearRuntime)
@@ -959,6 +1023,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             OnPropertyChanged(nameof(StartGateAllowsStart));
             OnPropertyChanged(nameof(StartGateSummary));
+            OnPropertyChanged(nameof(StartGateParkingBrakeOk));
+            OnPropertyChanged(nameof(StartGateColdAndDarkOk));
+            OnPropertyChanged(nameof(StartGateAircraftTypeOk));
+            OnPropertyChanged(nameof(StartGateAirportOk));
             OnPropertyChanged(nameof(CanStartFlight));
             OnPropertyChanged(nameof(StartButtonTitle));
             OnPropertyChanged(nameof(StartButtonSubtitle));
@@ -967,6 +1035,28 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 StatusMessage = StartGateSummary;
             }
+        }
+
+        private bool IsGateRulePassing(string ruleId)
+        {
+            if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady || _startGateResult == null || _startGateResult.Evaluation == null)
+            {
+                return false;
+            }
+
+            var audit = _startGateResult.Evaluation.RuleAuditLog == null
+                ? null
+                : _startGateResult.Evaluation.RuleAuditLog.LastOrDefault(item => string.Equals(item.RuleId, ruleId, StringComparison.OrdinalIgnoreCase));
+
+            if (audit != null)
+            {
+                return string.Equals(audit.Result, PatagoniaAuditResults.Pass, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(audit.Result, "ok", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(audit.Result, "success", StringComparison.OrdinalIgnoreCase);
+            }
+
+            return _startGateResult.Evaluation.GateFailures == null
+                || !_startGateResult.Evaluation.GateFailures.Any(item => string.Equals(item.RuleId, ruleId, StringComparison.OrdinalIgnoreCase));
         }
 
         private void ApplyPilotPreferences()

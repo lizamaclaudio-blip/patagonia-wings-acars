@@ -202,6 +202,7 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT WING LEVELER",    "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 51
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT DISENGAGED",      "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 52
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER AVAILABLE",     "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 53
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "COM ACTIVE FREQUENCY:2",   "MHz",    SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 54
 
             _simConnect.RegisterDataDefineStruct<AircraftDataStruct>(DataDefineId.AircraftData);
 
@@ -501,6 +502,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 AvionicsMasterOn   = r.AvionicsMaster      != 0,
                 DoorOpen           = r.DoorPercent > 5.0,   // umbral 5% (igual que SUR Air)
                 DetectedProfileCode = profileCode,
+                Com2FrequencyMhz   = r.Com2FrequencyMhz > 100 ? r.Com2FrequencyMhz : 0,
             };
         }
 

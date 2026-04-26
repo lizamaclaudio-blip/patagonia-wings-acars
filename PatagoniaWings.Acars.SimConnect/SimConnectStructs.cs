@@ -97,6 +97,9 @@ namespace PatagoniaWings.Acars.SimConnect
         public double AutopilotWingLeveler;
         public double AutopilotDisengaged;
         public double TransponderAvailable;
+
+        // Radios (campo 54 — al final del struct)
+        public double Com2FrequencyMhz; // COM ACTIVE FREQUENCY:2
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]

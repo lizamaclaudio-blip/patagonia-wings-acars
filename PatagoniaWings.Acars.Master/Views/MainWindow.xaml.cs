@@ -98,7 +98,7 @@ namespace PatagoniaWings.Acars.Master.Views
                 {
                     AcarsContext.FlightService.MarkCrash();
                     var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
-                    if (!string.IsNullOrWhiteSpace(reservationId))
+                    if (AcarsContext.FlightService.IsFlightActive && !string.IsNullOrWhiteSpace(reservationId))
                     {
                         _ = AcarsContext.Api!.CloseReservationAsync(reservationId!, "crashed");
                     }
