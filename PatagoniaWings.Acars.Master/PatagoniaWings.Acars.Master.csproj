@@ -224,6 +224,7 @@
     <Compile Include="Helpers\UiPreferencesStore.cs" />
     <Compile Include="Helpers\UpdateService.cs" />
     <Compile Include="Helpers\WeatherPresetInstallService.cs" />
+    <Compile Include="Services\RankInsigniaResolver.cs" />
     <Compile Include="Preview\AcarsPreviewData.cs" />
     <Compile Include="ViewModels\AcarsShellViewModel.cs" />
     <Compile Include="ViewModels\CommunityViewModel.cs" />
@@ -274,6 +275,14 @@
     </Compile>
     <Resource Include="Assets\patagonia-logo.ico" />
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\Pilot\pilot-avatar.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Ranks\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Assets\SurKit\airbone.png" />

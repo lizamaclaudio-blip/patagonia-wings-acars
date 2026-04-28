@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>4.0.0.0</version>
+  <version>6.0.3.0</version>
   <url>https://patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>v4.0.0: perfiles hibridos por aeronave, metadata web alineada y autoupdater listo.</changelog>
+  <changelog>v6.0.3: insignias de rango, avatar piloto, LEDs de telemetria y cierre PIREP RAW server-side.</changelog>
   <mandatory>false</mandatory>
 </item>
 

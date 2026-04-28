@@ -1560,17 +1560,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             if (_picPenaltyPoints > 0)
             {
-                report.AirbornePenalty += _picPenaltyPoints;
-                report.Violations.Add(new ScoreEvent
-                {
-                    Code = "CRU-PIC",
-                    Phase = "CRU",
-                    Description = $"Radio PIC Check fallido ({_picPenaltyPoints / 5} vez/veces) — COM2 sin verificar",
-                    Points = -_picPenaltyPoints
-                });
-                report.PatagoniaScore = Math.Max(0, report.PatagoniaScore - _picPenaltyPoints);
-                report.ProcedureScore = Math.Max(0, report.ProcedureScore - _picPenaltyPoints);
-                report.ApplyLegacyScoreProjection();
+                var picEvidence = $"PIC_CHECK_PENDING_SERVER_EVALUATION:{_picPenaltyPoints / 5}";
+                report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
+                    ? picEvidence
+                    : report.Remarks + " | " + picEvidence;
             }
 
             _main.ShowPostFlightReport(report);

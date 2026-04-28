@@ -32,3 +32,6 @@ BundleArtifacts/
 Package.StoreAssociation.xml
 _ReSharper*/
 *.DotSettings.user
+
+libs.zip
+PatagoniaWings.Acars.Master/Views/Pages/PatagoniaWingsACARSSetup.exe

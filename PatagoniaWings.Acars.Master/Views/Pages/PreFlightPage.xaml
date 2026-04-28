@@ -7,8 +7,13 @@
         <BooleanToVisibilityConverter x:Key="BoolVis"/>
 
         <Style x:Key="GateLedDotStyle" TargetType="Ellipse" BasedOn="{StaticResource LedStatusDot}">
-            <Setter Property="Fill" Value="#E8EDF5"/>
-            <Setter Property="Stroke" Value="#B8D0EA"/>
+            <Setter Property="Fill" Value="#EF4444"/>
+            <Setter Property="Stroke" Value="#B91C1C"/>
+            <Setter Property="Effect">
+                <Setter.Value>
+                    <DropShadowEffect BlurRadius="9" ShadowDepth="0" Opacity="0.55" Color="#EF4444"/>
+                </Setter.Value>
+            </Setter>
             <Style.Triggers>
                 <Trigger Property="Tag" Value="True">
                     <Setter Property="Fill" Value="#22C55E"/>

@@ -250,19 +250,6 @@ namespace PatagoniaWings.Acars.Core.Services
                 ? Math.Max(0, _fuelAtStart - _lastSimData.FuelTotalLbs)
                 : 0;
 
-            // ── SUR Air dual scoring ────────────────────────────────────────
-            var aircraftProfile = AircraftNormalizationService.ResolveProfile(_currentFlight.AircraftName);
-            var evaluator = new FlightEvaluationService(
-                _telemetryLog,
-                _lastLandingVS,
-                _lastLandingG,
-                _currentFlight.AircraftIcao,
-                _currentFlight.AircraftName,
-                IsAircraftPressurized(),
-                cabinSystemsReliable: aircraftProfile.CabinSystemsReliable);
-
-            var eval = evaluator.Evaluate();
-
             var report = new FlightReport
             {
                 FlightNumber = _currentFlight.FlightNumber,
@@ -279,36 +266,46 @@ namespace PatagoniaWings.Acars.Core.Services
                 FuelUsed = Math.Round(fuelUsed, 0),
                 LandingVS = _lastLandingVS,
                 LandingG = Math.Round(_lastLandingG, 2),
-                PatagoniaScore = eval.PatagoniaScore,
-                PatagoniaGrade = eval.PatagoniaGrade,
+                PatagoniaScore = 0,
+                PatagoniaGrade = "PENDING_SERVER_EVALUATION",
 
-                // Canonical closeout contract
-                ProcedureScore   = eval.ProcedureScore,
-                PerformanceScore = eval.PerformanceScore,
-                ProcedureGrade   = eval.ProcedureGrade,
-                PerformanceGrade = eval.PerformanceGrade,
-                Violations       = eval.Violations,
-                Bonuses          = eval.Bonuses,
-                Evaluation       = eval.PatagoniaEvaluation,
+                ProcedureScore = 0,
+                PerformanceScore = 0,
+                ProcedureGrade = "PENDING_SERVER_EVALUATION",
+                PerformanceGrade = "PENDING_SERVER_EVALUATION",
+                Violations = new List<ScoreEvent>(),
+                Bonuses = new List<ScoreEvent>(),
+                Evaluation = BuildPendingServerEvaluation(),
 
                 Simulator = _currentFlight.Simulator,
                 Remarks = _currentFlight.Remarks ?? string.Empty,
                 Status = FlightStatus.Pending,
                 MaxAltitudeFeet = Math.Round(_maxAltitude, 0),
                 MaxSpeedKts = Math.Round(_maxSpeed, 0),
-                ApproachQnhHpa = ComputeApproachQnh(),
-
-                // Legacy penalty breakdown
-                LandingPenalty  = eval.LandingPenalty,
-                TaxiPenalty     = eval.TaxiPenalty,
-                AirbornePenalty = eval.AirbornePenalty,
-                ApproachPenalty = eval.ApproachPenalty,
-                CabinPenalty    = eval.CabinPenalty
+                ApproachQnhHpa = ComputeApproachQnh()
             };
 
-            report.ProceduralSummary = eval.Summary;
+            report.ProceduralSummary = "PIREP RAW generado por ACARS. Evaluacion oficial pendiente en Supabase/Web.";
             report.ApplyLegacyScoreProjection();
             return report;
+        }
+
+        private PatagoniaEvaluationReport BuildPendingServerEvaluation()
+        {
+            return new PatagoniaEvaluationReport
+            {
+                ContractVersion = "patagonia-raw-pirep.v1",
+                RulesetVersion = "server-side",
+                VisibleScoreName = "Patagonia Score Oficial",
+                PatagoniaScore = 0,
+                ProcedureScore = 0,
+                PerformanceScore = 0,
+                PatagoniaGrade = "PENDING_SERVER_EVALUATION",
+                ProcedureGrade = "PENDING_SERVER_EVALUATION",
+                PerformanceGrade = "PENDING_SERVER_EVALUATION",
+                FlightValid = true,
+                Summary = "ACARS solo registra evidencia. Supabase/Web debe evaluar el reglaje oficial."
+            };
         }
 
         private double ComputeApproachQnh()

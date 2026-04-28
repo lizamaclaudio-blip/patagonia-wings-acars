@@ -11,6 +11,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PatagoniaWings.Acars.Master.Helpers;
 using PatagoniaWings.Acars.Master.Preview;
+using PatagoniaWings.Acars.Master.Services;
 
 namespace PatagoniaWings.Acars.Master.ViewModels
 {
@@ -230,6 +231,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             => MainVM.Pilot != null
                 ? ResolvePilotRankDisplay()
                 : AcarsPreviewData.PilotRank;
+
+        public string PilotRankInsigniaPath
+            => MainVM.Pilot != null
+                ? RankInsigniaResolver.Resolve(ResolvePilotRankCode())
+                : RankInsigniaResolver.Resolve("CADET");
 
         public string PilotLocationCodeDisplay
             => MainVM.Pilot != null
@@ -560,6 +566,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(PilotHoursDisplay));
             OnPropertyChanged(nameof(PilotScoreDisplay));
             OnPropertyChanged(nameof(PilotRankDisplay));
+            OnPropertyChanged(nameof(PilotRankInsigniaPath));
             OnPropertyChanged(nameof(PilotLocationCodeDisplay));
             OnPropertyChanged(nameof(PilotLocationSubtitle));
             OnPropertyChanged(nameof(PilotAvatarSource));
@@ -591,6 +598,21 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             return !string.IsNullOrWhiteSpace(MainVM.Pilot?.RankName)
                 ? MainVM.Pilot!.RankName
                 : "Sin rango";
+        }
+
+        private string ResolvePilotRankCode()
+        {
+            if (!string.IsNullOrWhiteSpace(MainVM.Pilot?.CareerRankCode))
+            {
+                return MainVM.Pilot!.CareerRankCode;
+            }
+
+            if (!string.IsNullOrWhiteSpace(MainVM.Pilot?.RankCode))
+            {
+                return MainVM.Pilot!.RankCode;
+            }
+
+            return MainVM.Pilot?.RankName ?? string.Empty;
         }
 
         private string ResolvePilotLocationCodeDisplay()
@@ -627,7 +649,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             if (string.IsNullOrWhiteSpace(avatarUrl))
             {
-                return null;
+                return BuildLocalPilotAvatarSource();
             }
 
             try
@@ -636,6 +658,25 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var bitmap = new BitmapImage();
                 bitmap.BeginInit();
                 bitmap.UriSource = new Uri(normalizedAvatarUrl, UriKind.Absolute);
+                bitmap.DecodePixelWidth = 120;
+                bitmap.CacheOption = BitmapCacheOption.OnDemand;
+                bitmap.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+                bitmap.EndInit();
+                return bitmap;
+            }
+            catch
+            {
+                return BuildLocalPilotAvatarSource();
+            }
+        }
+
+        private static ImageSource? BuildLocalPilotAvatarSource()
+        {
+            try
+            {
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri("Assets/Pilot/pilot-avatar.png", UriKind.Relative);
                 bitmap.DecodePixelWidth = 120;
                 bitmap.CacheOption = BitmapCacheOption.OnDemand;
                 bitmap.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;

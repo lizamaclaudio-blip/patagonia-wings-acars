@@ -290,9 +290,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                 var isQueued = string.Equals(Report?.ResultStatus, "queued_retry", StringComparison.OrdinalIgnoreCase);
                 SubmitMessage = isQueued
-                    ? string.Format(
-                        "Vuelo cerrado localmente | Patagonia {0} pts | PIREP en cola para reintento automatico.",
-                        Report?.PatagoniaScore ?? 0)
+                    ? "Vuelo cerrado localmente | PIREP RAW en cola para evaluacion oficial."
                     : string.Format(
                         "Vuelo cerrado | Patagonia {0} pts | Proc {1} pts ({2}) | Perf {3} pts ({4}) | guardado en Supabase.",
                         Report?.PatagoniaScore ?? 0,

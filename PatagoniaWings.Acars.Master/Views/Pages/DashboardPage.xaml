@@ -85,6 +85,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="64"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- Avatar circle -->
@@ -141,6 +142,16 @@
                         </Border>
                     </StackPanel>
                 </StackPanel>
+
+                <Image Grid.Column="2"
+                       Source="{Binding PilotRankInsigniaPath}"
+                       Width="72"
+                       Height="72"
+                       Stretch="Uniform"
+                       SnapsToDevicePixels="True"
+                       RenderOptions.BitmapScalingMode="HighQuality"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"/>
             </Grid>
         </Border>
 
@@ -149,37 +160,41 @@
             <Border Background="#FFFFFF" BorderBrush="#B8D0EA" BorderThickness="1.5"
                     CornerRadius="12" Padding="6,8" Margin="0,0,4,0"
                     Effect="{StaticResource PanelShadow}">
-                <StackPanel HorizontalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock Text="HORAS"
                                Foreground="#4A6E9A"
                                FontSize="7.5"
                                FontWeight="Bold"
                                FontFamily="Segoe UI"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
                     <TextBlock Text="{Binding PilotHoursDisplay}"
                                Foreground="#1565C0"
                                FontSize="15"
                                FontWeight="Bold"
                                FontFamily="Consolas"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
                 </StackPanel>
             </Border>
             <Border Background="#FFFFFF" BorderBrush="#B8D0EA" BorderThickness="1.5"
                     CornerRadius="12" Padding="6,8" Margin="2,0,2,0"
                     Effect="{StaticResource PanelShadow}">
-                <StackPanel HorizontalAlignment="Center">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock Text="PW SCORE"
                                Foreground="#4A6E9A"
                                FontSize="7.5"
                                FontWeight="Bold"
                                FontFamily="Segoe UI"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
                     <TextBlock Text="{Binding PilotScoreDisplay}"
                                Foreground="#0288D1"
                                FontSize="15"
                                FontWeight="Bold"
                                FontFamily="Consolas"
-                               HorizontalAlignment="Center"/>
+                               HorizontalAlignment="Center"
+                               TextAlignment="Center"/>
                 </StackPanel>
             </Border>
             <Border Background="#FFFFFF" BorderBrush="#B8D0EA" BorderThickness="1.5"
@@ -202,6 +217,14 @@
                                TextTrimming="CharacterEllipsis"
                                TextAlignment="Center"
                                MaxHeight="28"/>
+                    <Image Source="{Binding PilotRankInsigniaPath}"
+                           Width="48"
+                           Height="48"
+                           Stretch="Uniform"
+                           SnapsToDevicePixels="True"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           HorizontalAlignment="Center"
+                           Margin="0,4,0,0"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
