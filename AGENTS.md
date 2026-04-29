@@ -10,6 +10,8 @@ Todo cambio que modifique ACARS debe validar tambien autoupdate antes de cerrar 
 - generar o documentar artefacto oficial (installer/exe) de la version publicada;
 - validar version compare desde la version anterior (ej: 6.0.1 -> 7.0.1);
 - no marcar release completo si una instalacion anterior no detecta update.
+- validar en cliente instalado real o simulado: ruta exe, config instalada, feed publico, comparacion de version, descarga de instalador y version final visible.
+- no basta actualizar App.config del repo: hay que verificar el comportamiento del cliente instalado.
 
 ## Build oficial ACARS
 - Build oficial: MSBuild VS2022 x64.

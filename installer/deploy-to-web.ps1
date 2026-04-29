@@ -91,10 +91,12 @@ $storageReleaseSuffix = "-r2"
 $storageGenericInstallerName = "PatagoniaWingsACARSSetup.exe"
 $storageGenericManifestName = "acars-update.json"
 $storageGenericXmlName = "autoupdater.xml"
+$storageGenericChannelName = "channel.json"
 
 $storageInstallerName = "PatagoniaWingsACARSSetup-$appVersion$storageReleaseSuffix.exe"
 $storageManifestName = "acars-update-$appVersion$storageReleaseSuffix.json"
 $storageXmlName = "autoupdater-$appVersion$storageReleaseSuffix.xml"
+$storageChannelName = "channel-$appVersion$storageReleaseSuffix.json"
 
 $genericInstallerPath = Join-Path $webPublic $genericInstallerName
 $versionedInstallerPath = Join-Path $webPublic $versionedInstallerName
@@ -102,6 +104,8 @@ $manifestPath = Join-Path $webPublic "acars-update.json"
 $versionedManifestPath = Join-Path $webPublic "acars-update-$appVersion.json"
 $xmlPath = Join-Path $webPublic "autoupdater.xml"
 $versionedXmlPath = Join-Path $webPublic "autoupdater-$appVersion.xml"
+$channelPath = Join-Path $webPublic "channel.json"
+$versionedChannelPath = Join-Path $webPublic "channel-$appVersion.json"
 
 Copy-Item -LiteralPath $installerSrc -Destination $genericInstallerPath -Force
 Copy-Item -LiteralPath $installerSrc -Destination $versionedInstallerPath -Force
@@ -119,9 +123,15 @@ else {
 
 $manifestObject = [ordered]@{
     version         = $appVersion
+    latestVersion   = $appVersion
+    currentVersion  = $appVersion
     webVersion      = "2.0"
     downloadUrl     = $genericDownloadUrl
+    url             = $genericDownloadUrl
+    installerUrl    = $genericDownloadUrl
     mandatory       = $true
+    required        = $true
+    revision        = $settings["AppRevision"]
     notes           = $releaseNotes
     releaseDate     = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
     minVersion      = "2.0.5"
@@ -130,6 +140,24 @@ $manifestObject = [ordered]@{
 }
 
 $manifestJson = $manifestObject | ConvertTo-Json -Depth 4
+
+$channelObject = [ordered]@{
+    channel          = $settings["UpdateChannel"]
+    version          = $appVersion
+    latestVersion    = $appVersion
+    revision         = $settings["AppRevision"]
+    latestRevision   = $settings["AppRevision"]
+    manifestUrl      = ""
+    packagesIndexUrl = "$storagePublicBase/packages/index.json"
+    installerUrl     = $genericDownloadUrl
+    downloadUrl      = $genericDownloadUrl
+    forceUpdate      = $true
+    mandatory        = $true
+    notes            = $releaseNotes
+    releaseDate      = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+}
+
+$channelJson = $channelObject | ConvertTo-Json -Depth 4
 
 $escapedChangelog = [System.Security.SecurityElement]::Escape($releaseNotes)
 $xmlContent = @"
@@ -146,14 +174,18 @@ Set-Content -LiteralPath $manifestPath -Value $manifestJson -Encoding UTF8
 Set-Content -LiteralPath $versionedManifestPath -Value $manifestJson -Encoding UTF8
 Set-Content -LiteralPath $xmlPath -Value $xmlContent -Encoding UTF8
 Set-Content -LiteralPath $versionedXmlPath -Value $xmlContent -Encoding UTF8
+Set-Content -LiteralPath $channelPath -Value $channelJson -Encoding UTF8
+Set-Content -LiteralPath $versionedChannelPath -Value $channelJson -Encoding UTF8
 
 $uploadEntries = @(
     @{ objectName = $storageGenericInstallerName; sourcePath = $genericInstallerPath;  preferredContentType = "application/octet-stream" }
     @{ objectName = $storageGenericManifestName; sourcePath = $manifestPath;           preferredContentType = "application/json" }
     @{ objectName = $storageGenericXmlName;      sourcePath = $xmlPath;                preferredContentType = "application/xml" }
+    @{ objectName = $storageGenericChannelName;  sourcePath = $channelPath;            preferredContentType = "application/json" }
     @{ objectName = $storageInstallerName;       sourcePath = $versionedInstallerPath; preferredContentType = "application/octet-stream" }
     @{ objectName = $storageManifestName;        sourcePath = $versionedManifestPath;  preferredContentType = "application/json" }
     @{ objectName = $storageXmlName;             sourcePath = $versionedXmlPath;       preferredContentType = "application/xml" }
+    @{ objectName = $storageChannelName;         sourcePath = $versionedChannelPath;   preferredContentType = "application/json" }
 )
 
 $uploadScriptPath = Join-Path $env:TEMP "patagonia-acars-upload.js"
@@ -251,6 +283,8 @@ Write-Host "Version: $appVersion" -ForegroundColor Green
 Write-Host "Instalador generico:   $storagePublicBase/$storageGenericInstallerName" -ForegroundColor Cyan
 Write-Host "Manifest generico:     $storagePublicBase/$storageGenericManifestName" -ForegroundColor Cyan
 Write-Host "XML generico:          $storagePublicBase/$storageGenericXmlName" -ForegroundColor Cyan
+Write-Host "Channel generico:      $storagePublicBase/$storageGenericChannelName" -ForegroundColor Cyan
 Write-Host "Instalador versionado: $downloadUrl" -ForegroundColor Cyan
 Write-Host "Manifest versionado:   $storagePublicBase/$storageManifestName" -ForegroundColor Cyan
 Write-Host "XML versionado:        $storagePublicBase/$storageXmlName" -ForegroundColor Cyan
+Write-Host "Channel versionado:    $storagePublicBase/$storageChannelName" -ForegroundColor Cyan
