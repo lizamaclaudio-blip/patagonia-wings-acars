@@ -81,6 +81,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _supportsSeatbeltSystem;
         private bool _supportsNoSmokingSystem;
         private bool _supportsBleedAirSystem;
+        private bool _supportsTransponderSystem = true;
         private bool _hasPressurization;
         private bool _hasApu;
         private bool _isSingleEngine;
@@ -453,7 +454,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool ShowNoSmokingSystem => _supportsNoSmokingSystem;
         public bool ShowAutopilotSystem => true;
         public bool ShowDoorsSystem => ShowDoors && !IsC208Family;
-        public bool ShowTransponderSystem => true;
+        public bool ShowTransponderSystem => _supportsTransponderSystem;
         public bool ShowBleedAirSystem => _supportsBleedAirSystem;
 
         // Props con guardia HasLiveTelemetry para el panel SISTEMAS
@@ -464,11 +465,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool LiveDoorOpen => ShowDoorsSystem && HasLiveTelemetry && _doorOpen;
         public string DoorOpenPercentDisplay => HasLiveTelemetry ? (_doorOpen ? "100%" : "0%") : "---";
         public bool LiveCharlieMode => ShowTransponderSystem && HasLiveTelemetry && _charlieMode;
-        public bool LiveTransponderOff => ShowTransponderSystem && HasLiveTelemetry && _transponderStateRaw <= 0;
-        public bool LiveTransponderStandby => false;
-        public bool LiveTransponderTest => false;
-        public bool LiveTransponderOn => ShowTransponderSystem && HasLiveTelemetry && _transponderStateRaw > 0;
-        public bool LiveTransponderModeC => false;
+        public bool LiveTransponderOff => ShowTransponderSystem && HasLiveTelemetry && _transponderStateRaw == 0;
+        public bool LiveTransponderStandby => ShowTransponderSystem && HasLiveTelemetry && _transponderStateRaw == 1;
+        public bool LiveTransponderTest => ShowTransponderSystem && HasLiveTelemetry && _transponderStateRaw == 2;
+        public bool LiveTransponderOn => ShowTransponderSystem && HasLiveTelemetry && (_charlieMode || _transponderStateRaw >= 3);
+        public bool LiveTransponderModeC => ShowTransponderSystem && HasLiveTelemetry && _charlieMode;
+        public bool LiveTransponderNd => !ShowTransponderSystem || !HasLiveTelemetry || _transponderStateRaw < 0;
         public bool GearDown { get => _gearDown; set => SetField(ref _gearDown, value); }
         public bool GearTransitioning { get => _gearTransitioning; set => SetField(ref _gearTransitioning, value); }
         public double FlapsPercent { get => _flapsPercent; set { if (SetField(ref _flapsPercent, value)) OnPropertyChanged(nameof(FlapsDisplay)); } }
@@ -487,6 +489,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(LiveTransponderTest));
                     OnPropertyChanged(nameof(LiveTransponderOn));
                     OnPropertyChanged(nameof(LiveTransponderModeC));
+                    OnPropertyChanged(nameof(LiveTransponderNd));
                     OnPropertyChanged(nameof(TransponderModeDisplay));
                 }
             }
@@ -816,6 +819,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private double ComputeRouteTotalDistanceNm()
         {
+            var planned = GetDispatchPlannedDistanceNm();
+            if (planned > 0.1)
+            {
+                return planned;
+            }
+
             if (TryGetRouteCoordinates(out var depLat, out var depLon, out var arrLat, out var arrLon))
             {
                 return CalculateDistanceNm(depLat, depLon, arrLat, arrLon);
@@ -826,17 +835,29 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private double ComputeDistanceFromOriginNm()
         {
+            var plannedTotal = GetDispatchPlannedDistanceNm();
             if (TryGetRouteCoordinates(out var depLat, out var depLon, out _, out _)
                 && TryGetAircraftCoordinates(out var aircraftLat, out var aircraftLon))
             {
-                return CalculateDistanceNm(depLat, depLon, aircraftLat, aircraftLon);
+                var geoFromOrigin = CalculateDistanceNm(depLat, depLon, aircraftLat, aircraftLon);
+                if (plannedTotal <= 0.1 || geoFromOrigin <= plannedTotal + 10.0)
+                {
+                    return Math.Max(0, geoFromOrigin);
+                }
             }
 
-            return Math.Max(0, AcarsContext.FlightService.TotalDistanceNm);
+            var flown = Math.Max(0, AcarsContext.FlightService.TotalDistanceNm);
+            return plannedTotal > 0.1 ? Math.Min(flown, plannedTotal) : flown;
         }
 
         private double ComputeDistanceToDestinationNm()
         {
+            var plannedTotal = GetDispatchPlannedDistanceNm();
+            if (plannedTotal > 0.1)
+            {
+                return Math.Max(0, plannedTotal - ComputeDistanceFromOriginNm());
+            }
+
             if (TryGetRouteCoordinates(out _, out _, out var arrLat, out var arrLon)
                 && TryGetAircraftCoordinates(out var aircraftLat, out var aircraftLon))
             {
@@ -846,6 +867,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             var flown = ComputeDistanceFromOriginNm();
             var total = ComputeRouteTotalDistanceNm();
             return Math.Max(0, total - flown);
+        }
+
+        private double GetDispatchPlannedDistanceNm()
+        {
+            var dispatchDistance = AcarsContext.Runtime.CurrentDispatch?.PlannedDistanceNm ?? 0;
+            if (dispatchDistance > 0.1)
+            {
+                return dispatchDistance;
+            }
+
+            return 0;
         }
 
         private bool TryGetAircraftCoordinates(out double latitude, out double longitude)
@@ -1069,8 +1101,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             get
             {
-                if (!ShowTransponderSystem || !HasLiveTelemetry) return "OFF";
-                return _transponderStateRaw > 0 ? "ON" : "OFF";
+                if (!ShowTransponderSystem || !HasLiveTelemetry || _transponderStateRaw < 0) return "N/D";
+                if (_charlieMode || _transponderStateRaw >= 3) return "ALT";
+                if (_transponderStateRaw == 2) return "ON";
+                if (_transponderStateRaw == 1) return "STBY";
+                return "OFF";
             }
         }
 
@@ -1560,10 +1595,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             if (_picPenaltyPoints > 0)
             {
-                var picEvidence = $"PIC_CHECK_PENDING_SERVER_EVALUATION:{_picPenaltyPoints / 5}";
-                report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
-                    ? picEvidence
-                    : report.Remarks + " | " + picEvidence;
+                report.AirbornePenalty += _picPenaltyPoints;
+                report.Violations.Add(new ScoreEvent
+                {
+                    Code = "CRU-PIC",
+                    Phase = "CRU",
+                    Description = $"Radio PIC Check fallido ({_picPenaltyPoints / 5} vez/veces) — COM2 sin verificar",
+                    Points = -_picPenaltyPoints
+                });
+                report.PatagoniaScore = Math.Max(0, report.PatagoniaScore - _picPenaltyPoints);
+                report.ProcedureScore = Math.Max(0, report.ProcedureScore - _picPenaltyPoints);
+                report.ApplyLegacyScoreProjection();
             }
 
             _main.ShowPostFlightReport(report);
@@ -1678,6 +1720,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             HasApu            = profile.HasApu;
             HasPressurization = profile.IsPressurized;
             IsSingleEngine    = profile.EngineCount == 1;
+            _supportsTransponderSystem = profile.SupportsTransponderModeSystem;
 
             // Si el perfil es MSFS_NATIVE (fallback), mantener la detección manual
             // para aeronaves que aún no estén en el catálogo

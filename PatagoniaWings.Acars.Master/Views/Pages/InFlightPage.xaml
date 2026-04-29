@@ -131,7 +131,7 @@
                 <TextBlock Text="SISTEMAS Y PARÁMETROS" Foreground="#1554A8" FontSize="8" FontWeight="Bold" Margin="0,0,0,7"/>
 
                 <!-- ── LEDs LIVE: NAV BCN STB / TAXI LAND TREN / AP PUERTA FRENO ── -->
-                <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
+                <UniformGrid Columns="5" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
                     <!-- Fila 1 -->
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4">
                         <StackPanel HorizontalAlignment="Center">
@@ -191,6 +191,41 @@
                                      Effect="{Binding LiveAutopilotOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#22C55E}"/>
                         </StackPanel>
                     </Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"
+                            ToolTip="{Binding TransponderModeDisplay, StringFormat=XPDR {0}}">
+                        <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="XPDR" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center">
+                                <Ellipse.Style>
+                                    <Style TargetType="Ellipse">
+                                        <Setter Property="Fill" Value="#CBD8E8"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding LiveTransponderOn}" Value="True">
+                                                <Setter Property="Fill" Value="#22C55E"/>
+                                                <Setter Property="Effect">
+                                                    <Setter.Value>
+                                                        <DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding LiveTransponderStandby}" Value="True">
+                                                <Setter Property="Fill" Value="#EAB308"/>
+                                                <Setter Property="Effect">
+                                                    <Setter.Value>
+                                                        <DropShadowEffect Color="#EAB308" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding LiveTransponderNd}" Value="True">
+                                                <Setter Property="Fill" Value="#CBD8E8"/>
+                                                <Setter Property="Effect" Value="{x:Null}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Ellipse.Style>
+                            </Ellipse>
+                        </StackPanel>
+                    </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -210,7 +245,7 @@
                 </UniformGrid>
 
                 <!-- ── LEDs PREVIEW ── -->
-                <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
+                <UniformGrid Columns="5" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="NAV" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="BCN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#F97316"><Ellipse.Effect><DropShadowEffect Color="#F97316" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="STB" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
@@ -218,6 +253,7 @@
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="LAND" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="TREN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AP" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="XPDR" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="FRENO" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#EF4444"/></StackPanel></Border>
                 </UniformGrid>
