@@ -73,10 +73,20 @@
                     </StackPanel>
                 </Border>
 
+                <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="ESTADO DEL CIERRE" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock Text="Reporte de caja negra preparado. La evaluación final de score/economía se calcula en Patagonia Wings Web."
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="9.2"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
+
                 <UniformGrid Columns="3" Margin="0,0,0,8">
                     <Border Style="{StaticResource Card}" Margin="0,0,3,0" Padding="8">
                         <StackPanel>
-                            <TextBlock Text="PATAGONIA" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="PATAGONIA (LOCAL)" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Text="{Binding PatagoniaScore, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.ClosePatagoniaScore}}"
                                        Foreground="{StaticResource AccentBlueBrush}"
                                        FontFamily="Consolas"
@@ -86,7 +96,7 @@
                     </Border>
                     <Border Style="{StaticResource Card}" Margin="3,0,3,0" Padding="8">
                         <StackPanel>
-                            <TextBlock Text="PROC" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="PROC (LOCAL)" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Text="{Binding ProcedureScore, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.CloseProcedureScore}}"
                                        Foreground="{StaticResource AccentLightBlueBrush}"
                                        FontFamily="Consolas"
@@ -96,7 +106,7 @@
                     </Border>
                     <Border Style="{StaticResource Card}" Margin="3,0,0,0" Padding="8">
                         <StackPanel>
-                            <TextBlock Text="PERF" Style="{StaticResource FieldLabel}"/>
+                            <TextBlock Text="PERF (LOCAL)" Style="{StaticResource FieldLabel}"/>
                             <TextBlock Text="{Binding PerformanceScore, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.ClosePerformanceScore}}"
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        FontFamily="Consolas"

@@ -183,7 +183,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 return CurrentStep switch
                 {
-                    AcarsShellStep.Login => "ACARS 6.0 listo",
+                    AcarsShellStep.Login => $"ACARS {UpdateService.CurrentVersion} listo",
                     AcarsShellStep.Support => "Configuracion y diagnostico",
                     AcarsShellStep.NoDispatch => "Esperando reserva o despacho desde Patagonia Wings Web",
                     AcarsShellStep.CloseFlight => "Cierre y sincronizacion post-vuelo",
@@ -191,6 +191,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 };
             }
         }
+
+        public string AcarsVersionDisplay => $"ACARS {UpdateService.CurrentVersion}";
 
         public string NoDispatchTitle => "NO TIENES UN VUELO DESPACHADO";
         public string NoDispatchBody => "Debes generar o reservar un vuelo desde Patagonia Wings Web antes de continuar con el flujo ACARS.";

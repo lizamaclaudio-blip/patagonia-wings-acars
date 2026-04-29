@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using PatagoniaWings.Acars.Core.Models;
@@ -226,7 +227,19 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     parts.Add(Report.PilotCertifications.Trim());
                 }
 
-                return string.Join(" | ", parts);
+                if (parts.Count == 0)
+                {
+                    return "No disponible";
+                }
+
+                var deduped = parts
+                    .SelectMany(value => value.Split(new[] { ',', ';', '|' }, StringSplitOptions.RemoveEmptyEntries))
+                    .Select(value => value.Trim())
+                    .Where(value => !string.IsNullOrWhiteSpace(value))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                return deduped.Count == 0 ? "No disponible" : string.Join(" | ", deduped);
             }
         }
 
@@ -290,14 +303,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                 var isQueued = string.Equals(Report?.ResultStatus, "queued_retry", StringComparison.OrdinalIgnoreCase);
                 SubmitMessage = isQueued
-                    ? "Vuelo cerrado localmente | PIREP RAW en cola para evaluacion oficial."
-                    : string.Format(
-                        "Vuelo cerrado | Patagonia {0} pts | Proc {1} pts ({2}) | Perf {3} pts ({4}) | guardado en Supabase.",
-                        Report?.PatagoniaScore ?? 0,
-                        Report?.ProcedureScore ?? 0,
-                        Report?.ProcedureGrade ?? "-",
-                        Report?.PerformanceScore ?? 0,
-                        Report?.PerformanceGrade ?? "-");
+                    ? "Reporte de caja negra preparado. Finalize en cola para evaluacion oficial en Patagonia Wings Web."
+                    : "Reporte de caja negra preparado y enviado. Score final pendiente de calculo oficial en Patagonia Wings Web.";
 
                 AcarsContext.FlightService.Reset();
                 AcarsContext.Sound.PlayDing();

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -53,7 +53,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private double _qnh;
         private string _radioAcarsMessage = string.Empty;
 
-        // ── PIC Radio Check ───────────────────────────────────────────────────
+        // â”€â”€ PIC Radio Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private bool _picConfirmed;
         private double _picFrequency;
         private double _com2FrequencyMhz;
@@ -103,14 +103,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private const double RouteCanvasWidth = 320;
         private const double RoutePlaneVisualWidth = 20;
 
-        // ── Pesos / comparación SimBrief vs Sim ──────────────────────────────────
-        private double _fuelAtEngineStartKg = -1; // -1 = no capturado aún
+        // â”€â”€ Pesos / comparaciÃ³n SimBrief vs Sim â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        private double _fuelAtEngineStartKg = -1; // -1 = no capturado aÃºn
         private string _pirepPreview = string.Empty;
 
-        // ── Perfil de aeronave normalizado ────────────────────────────────────
+        // â”€â”€ Perfil de aeronave normalizado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private string _detectedProfileCode = "MSFS_NATIVE";
 
-        // ── Log de eventos de procedimiento (para PIREP en tiempo real) ───────
+        // â”€â”€ Log de eventos de procedimiento (para PIREP en tiempo real) â”€â”€â”€â”€â”€â”€â”€
         private readonly System.Collections.Generic.List<string> _eventLog = new();
         private bool _prevBeaconOn;
         private bool _prevStrobeOn;
@@ -120,7 +120,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _prevApOn;
         private bool _prevSeatBelt;
 
-        // ── Orden de arranque de motores (arquitectura PRE/IGN) ──────────────
+        // â”€â”€ Orden de arranque de motores (arquitectura PRE/IGN) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private readonly System.Collections.Generic.List<int> _engineStartOrder = new();
         private bool _eng1Started;
         private bool _eng2Started;
@@ -135,7 +135,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double VS { get => _vs; set { if (SetField(ref _vs, value)) { OnPropertyChanged(nameof(VsDisplay)); OnPropertyChanged(nameof(VSDisplay)); } } }
         public double Heading { get => _heading; set { if (SetField(ref _heading, value)) OnPropertyChanged(nameof(HeadingDisplay)); } }
         public double FuelLbs { get => _fuelLbs; set { if (SetField(ref _fuelLbs, value)) { OnPropertyChanged(nameof(FuelKg)); OnPropertyChanged(nameof(FuelDisplay)); OnPropertyChanged(nameof(FuelKgDisplay)); OnPropertyChanged(nameof(FuelLbsDisplay)); } } }
-        // FuelKg: normalizado en kg por el backend (SimConnect convierte lbs→kg, FSUIPC es nativo en kg)
+        // FuelKg: normalizado en kg por el backend (SimConnect convierte lbsâ†’kg, FSUIPC es nativo en kg)
         // Usamos _fuelKgNorm que se actualiza en OnTelemetry desde data.FuelKg
         private double _fuelKgNorm;
         private double _totalWeightKg;
@@ -144,7 +144,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double ActualTotalWeightKg => Math.Round(_totalWeightKg, 0);
         public double ActualZeroFuelWeightKg => Math.Round(_zeroFuelWeightKg, 0);
         
-        // Propiedades de tanques individuales (visibles para diagnóstico de aviones complejos)
+        // Propiedades de tanques individuales (visibles para diagnÃ³stico de aviones complejos)
         public double FuelLeftTank { get => _fuelLeftTank; set { if (SetField(ref _fuelLeftTank, value)) OnPropertyChanged(nameof(FuelLeftTankDisplay)); } }
         public double FuelRightTank { get => _fuelRightTank; set { if (SetField(ref _fuelRightTank, value)) OnPropertyChanged(nameof(FuelRightTankDisplay)); } }
         public double FuelCenterTank { get => _fuelCenterTank; set { if (SetField(ref _fuelCenterTank, value)) OnPropertyChanged(nameof(FuelCenterTankDisplay)); } }
@@ -191,9 +191,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         /// <summary>
         /// Ruta absoluta a la imagen de la aeronave en Assets\Aircraft\.
         /// Nombres admitidos (en orden de prioridad):
-        ///   1. {ICAO_detectado}.png  → ej. A320.png, B738.png, C208.png
+        ///   1. {ICAO_detectado}.png  â†’ ej. A320.png, B738.png, C208.png
         ///   2. {ICAO_detectado}.jpg
-        /// Si no existe ningún archivo, retorna null y el XAML muestra el placeholder de iniciales.
+        /// Si no existe ningÃºn archivo, retorna null y el XAML muestra el placeholder de iniciales.
         /// </summary>
         public string? AircraftImageUrl
         {
@@ -212,7 +212,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                 var folders = new[] { localUserFolder, roamingUserFolder, exeFolder };
 
-                // 1. Buscar por código ICAO detectado
+                // 1. Buscar por cÃ³digo ICAO detectado
                 foreach (var folder in folders)
                     foreach (var ext in new[] { ".png", ".jpg", ".jpeg", ".webp" })
                     {
@@ -231,7 +231,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                         var path = Path.Combine(folder, asset);
                         if (File.Exists(path))
                             return path;
-                        // también probar el nombre sin prefijo de addon (ej. "a320_fenix.png" → "A320.png")
+                        // tambiÃ©n probar el nombre sin prefijo de addon (ej. "a320_fenix.png" â†’ "A320.png")
                         var stem = System.IO.Path.GetFileNameWithoutExtension(asset).ToUpperInvariant();
                         var ext  = System.IO.Path.GetExtension(asset).ToLowerInvariant();
                         if (!string.IsNullOrEmpty(stem))
@@ -285,28 +285,28 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         /// <summary>True cuando existe una imagen real para la aeronave activa.</summary>
         public bool HasAircraftImage => AircraftImageSource != null;
 
-        /// <summary>Addon/variante esperado según el despacho activo.</summary>
+        /// <summary>Addon/variante esperado segÃºn el despacho activo.</summary>
         public string ExpectedVariantLabel
         {
             get
             {
                 var flight = AcarsContext.FlightService.CurrentFlight;
-                if (flight == null) return "—";
+                if (flight == null) return "â€”";
                 var addon   = (flight.AddonProvider      ?? string.Empty).Trim();
                 var variant = (flight.AircraftVariantCode ?? string.Empty).Trim();
-                if (string.IsNullOrEmpty(addon) && string.IsNullOrEmpty(variant)) return "Estándar";
+                if (string.IsNullOrEmpty(addon) && string.IsNullOrEmpty(variant)) return "EstÃ¡ndar";
                 if (!string.IsNullOrEmpty(addon) && !string.IsNullOrEmpty(variant))
-                    return $"{addon} · {variant}";
+                    return $"{addon} Â· {variant}";
                 return !string.IsNullOrEmpty(addon) ? addon : variant;
             }
         }
 
-        /// <summary>Addon detectado en el título del avión del simulador.</summary>
+        /// <summary>Addon detectado en el tÃ­tulo del aviÃ³n del simulador.</summary>
         public string DetectedAddonLabel
         {
             get
             {
-                if (string.IsNullOrWhiteSpace(_aircraftTitle)) return "—";
+                if (string.IsNullOrWhiteSpace(_aircraftTitle)) return "â€”";
                 var t = _aircraftTitle.ToUpperInvariant();
                 if (t.Contains("PMDG"))                                   return "PMDG";
                 if (t.Contains("FENIX"))                                  return "Fenix";
@@ -343,28 +343,28 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var flight = AcarsContext.FlightService.CurrentFlight;
                 if (flight == null) return true;
                 var expected = (flight.AddonProvider ?? string.Empty).Trim();
-                if (string.IsNullOrEmpty(expected)) return true; // sin restricción
+                if (string.IsNullOrEmpty(expected)) return true; // sin restricciÃ³n
                 var detected = DetectedAddonLabel;
                 return detected.IndexOf(expected, System.StringComparison.OrdinalIgnoreCase) >= 0
                     || expected.IndexOf(detected, System.StringComparison.OrdinalIgnoreCase) >= 0;
             }
         }
 
-        public string VariantMatchDisplay => VariantMatchOk ? "✓ OK" : "⚠ Verificar";
+        public string VariantMatchDisplay => VariantMatchOk ? "âœ“ OK" : "âš  Verificar";
 
         /// <summary>
         /// Iniciales para mostrar en el placeholder de foto de aeronave.
-        /// Ej: "A320" → "A32", "B738" → "B73", "C208" → "C20"
+        /// Ej: "A320" â†’ "A32", "B738" â†’ "B73", "C208" â†’ "C20"
         /// </summary>
         public string AircraftImageInitials
         {
             get
             {
                 if (!HasLiveTelemetry || string.IsNullOrWhiteSpace(_aircraftTitle)) return "---";
-                // Tomar los primeros 4 caracteres del título en mayúsculas, eliminando espacios
+                // Tomar los primeros 4 caracteres del tÃ­tulo en mayÃºsculas, eliminando espacios
                 var t = _aircraftTitle.ToUpperInvariant();
-                // Intentar extraer el tipo ICAO del título
-                // Mapa de palabras clave a código de imagen (orden importa: más específico primero)
+                // Intentar extraer el tipo ICAO del tÃ­tulo
+                // Mapa de palabras clave a cÃ³digo de imagen (orden importa: mÃ¡s especÃ­fico primero)
                 var imageMap = new (string keyword, string code)[]
                 {
                     ("A318","A318"),("A319","A319"),("A320","A320"),("A321","A321"),
@@ -379,7 +379,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     ("E190","E190"),("E195","E195"),
                     ("ATR","ATR"),("DHC","DHC"),("Q400","Q400"),
                     ("TBM9","TBM9"),("TBM","TBM"),("PC12","PC12"),
-                    // Cessna 208 Caravan — incluye "208B", "208", "CARAVAN"
+                    // Cessna 208 Caravan â€” incluye "208B", "208", "CARAVAN"
                     ("208","C208"),("CARAVAN","C208"),
                     ("C172","C172"),("C152","C152"),("SR22","SR22"),
                     ("DA40","DA40"),("BE58","BE58"),("B350","B350"),
@@ -411,7 +411,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool RequiresLvars { get => _requiresLvars; set => SetField(ref _requiresLvars, value); }
         public string AircraftStatusDisplay => GetAircraftStatusDisplay();
 
-        /// <summary>Código estable normalizado. Ej: C208_MSFS, B738_PMDG, A320_FENIX</summary>
+        /// <summary>CÃ³digo estable normalizado. Ej: C208_MSFS, B738_PMDG, A320_FENIX</summary>
         public string DetectedProfileCode => _detectedProfileCode;
 
         /// <summary>Nombre de display del perfil normalizado. Ej: "Boeing 737-800 (PMDG)"</summary>
@@ -433,7 +433,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         
         private string GetAircraftStatusDisplay()
         {
-            if (!HasLiveTelemetry) return "Sin conexión";
+            if (!HasLiveTelemetry) return "Sin conexiÃ³n";
             return AircraftTitle;
         }
         public bool AutopilotOn { get => _autopilotOn; set { if (SetField(ref _autopilotOn, value)) OnPropertyChanged(nameof(LiveAutopilotOn)); } }
@@ -500,19 +500,19 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         /// <summary>Fila APU visible solo en jets comerciales/ejecutivos que tienen APU.</summary>
         public bool ShowApu => _hasApu;
-        /// <summary>Fila Bleed Air visible en aeronaves presurizadas (jets + turbohélices presurizados).</summary>
+        /// <summary>Fila Bleed Air visible en aeronaves presurizadas (jets + turbohÃ©lices presurizados).</summary>
         public bool HasPressurization
         {
             get => _hasPressurization;
             set { if (SetField(ref _hasPressurization, value)) { OnPropertyChanged(nameof(ShowApu)); OnPropertyChanged(nameof(ShowBleedAirSystem)); } }
         }
-        /// <summary>True en jets comerciales/ejecutivos que tienen APU estándar.</summary>
+        /// <summary>True en jets comerciales/ejecutivos que tienen APU estÃ¡ndar.</summary>
         public bool HasApu
         {
             get => _hasApu;
             set { if (SetField(ref _hasApu, value)) OnPropertyChanged(nameof(ShowApu)); }
         }
-        /// <summary>True para monomotores (C208, TBM, SR22, C172…). Oculta el N1 del motor 2 en la UI.</summary>
+        /// <summary>True para monomotores (C208, TBM, SR22, C172â€¦). Oculta el N1 del motor 2 en la UI.</summary>
         public bool IsSingleEngine { get => _isSingleEngine; set => SetField(ref _isSingleEngine, value); }
         public bool BleedAirOn { get => _bleedAirOn; set => SetField(ref _bleedAirOn, value); }
         public double CabinAlt { get => _cabinAlt; set => SetField(ref _cabinAlt, value); }
@@ -525,7 +525,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool HasLiveTelemetry => AcarsContext.Runtime.IsSimulatorConnected && AcarsContext.Runtime.LastTelemetry != null;
         public string RouteOrigin => _routeOrigin;
         public string RouteDestination => _routeDestination;
-        public string RouteDisplay => $"{RouteOrigin} → {RouteDestination}";
+        public string RouteDisplay => $"{RouteOrigin} â†’ {RouteDestination}";
         public string OfficialPhaseCode
         {
             get => _officialPhaseCode;
@@ -537,7 +537,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
             }
         }
-        public string OfficialPhaseDisplay => $"{OfficialPhaseCode} · {PhaseLabel}";
+        public string OfficialPhaseDisplay => $"{OfficialPhaseCode} Â· {PhaseLabel}";
         public string RouteStatusLabel
         {
             get => _routeStatusLabel;
@@ -579,11 +579,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (flown <= 0.1 && remaining <= 0.1)
                     return "Esperando recorrido";
 
-                return $"{flown:F1} nm recorridas · {remaining:F0} nm restantes";
+                return $"{flown:F1} nm recorridas Â· {remaining:F0} nm restantes";
             }
         }
 
-        // ── Propiedades de pesos (Plan SimBrief vs Actual Sim) ───────────────────
+        // â”€â”€ Propiedades de pesos (Plan SimBrief vs Actual Sim) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private PreparedDispatch? Dispatch => AcarsContext.Runtime.CurrentDispatch;
 
@@ -600,9 +600,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         /// <summary>
         /// Payload actual estimado del simulador.
-        /// Si no existe OEW directo en telemetría, se estima usando el plan activo:
-        /// OEW ≈ ZFW planificada - Payload planificado.
-        /// Payload actual ≈ ZFW actual - OEW estimado.
+        /// Si no existe OEW directo en telemetrÃ­a, se estima usando el plan activo:
+        /// OEW â‰ˆ ZFW planificada - Payload planificado.
+        /// Payload actual â‰ˆ ZFW actual - OEW estimado.
         /// </summary>
         public double WbActualPayloadKg
         {
@@ -622,7 +622,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         /// <summary>Combustible capturado en el primer arranque de motores (N1 > 15%).</summary>
         public double WbFuelAtEngineStartKg => _fuelAtEngineStartKg > 0 ? _fuelAtEngineStartKg : WbActualFuelKg;
 
-        /// <summary>True si el combustible al arranque está dentro del ±10% del plan.</summary>
+        /// <summary>True si el combustible al arranque estÃ¡ dentro del Â±10% del plan.</summary>
         public bool WbFuelMatchOk
         {
             get
@@ -639,7 +639,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             get
             {
-                if (WbPlanFuelKg <= 0 || WbFuelAtEngineStartKg <= 0) return "—";
+                if (WbPlanFuelKg <= 0 || WbFuelAtEngineStartKg <= 0) return "â€”";
                 var pct = (WbFuelAtEngineStartKg - WbPlanFuelKg) / WbPlanFuelKg * 100.0;
                 return $"{pct:+0.0;-0.0;0.0}%";
             }
@@ -647,9 +647,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         /// <summary>
         /// Etiqueta de estado del combustible al arranque:
-        ///   "Esperando arranque" → motores no iniciados aún
-        ///   "✓ ±4.2%  OK"       → dentro del ±10%
-        ///   "⚠ +14.5%  EXCESO"  → fuera del ±10%
+        ///   "Esperando arranque" â†’ motores no iniciados aÃºn
+        ///   "âœ“ Â±4.2%  OK"       â†’ dentro del Â±10%
+        ///   "âš  +14.5%  EXCESO"  â†’ fuera del Â±10%
         /// </summary>
         public string WbFuelStatusLabel
         {
@@ -658,21 +658,21 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (WbPlanFuelKg <= 0)          return "Sin plan SimBrief";
                 if (_fuelAtEngineStartKg < 0)   return "Esperando arranque de motores";
                 return WbFuelMatchOk
-                    ? $"✓  {WbFuelDiffDisplay}  COMBUSTIBLE OK"
-                    : $"⚠  {WbFuelDiffDisplay}  FUERA DE RANGO (±10%)";
+                    ? $"âœ“  {WbFuelDiffDisplay}  COMBUSTIBLE OK"
+                    : $"âš   {WbFuelDiffDisplay}  FUERA DE RANGO (Â±10%)";
             }
         }
 
-        public string WbPlanFuelDisplay    => WbPlanFuelKg    > 0 ? $"{WbPlanFuelKg:F0} kg"    : "—";
-        public string WbPlanPayloadDisplay => WbPlanPayloadKg > 0 ? $"{WbPlanPayloadKg:F0} kg"  : "—";
-        public string WbPlanZfwDisplay     => WbPlanZfwKg     > 0 ? $"{WbPlanZfwKg:F0} kg"     : "—";
-        public string WbActualFuelDisplay    => HasLiveTelemetry && WbActualFuelKg > 0    ? $"{WbActualFuelKg:F0} kg"    : "—";
-        public string WbActualPayloadDisplay => HasLiveTelemetry && WbActualPayloadKg > 0 ? $"{WbActualPayloadKg:F0} kg" : "—";
-        public string WbStartFuelDisplay     => _fuelAtEngineStartKg > 0 ? $"{_fuelAtEngineStartKg:F0} kg" : "—";
+        public string WbPlanFuelDisplay    => WbPlanFuelKg    > 0 ? $"{WbPlanFuelKg:F0} kg"    : "â€”";
+        public string WbPlanPayloadDisplay => WbPlanPayloadKg > 0 ? $"{WbPlanPayloadKg:F0} kg"  : "â€”";
+        public string WbPlanZfwDisplay     => WbPlanZfwKg     > 0 ? $"{WbPlanZfwKg:F0} kg"     : "â€”";
+        public string WbActualFuelDisplay    => HasLiveTelemetry && WbActualFuelKg > 0    ? $"{WbActualFuelKg:F0} kg"    : "â€”";
+        public string WbActualPayloadDisplay => HasLiveTelemetry && WbActualPayloadKg > 0 ? $"{WbActualPayloadKg:F0} kg" : "â€”";
+        public string WbStartFuelDisplay     => _fuelAtEngineStartKg > 0 ? $"{_fuelAtEngineStartKg:F0} kg" : "â€”";
 
-        // ── Log de PIREP en tiempo real ──────────────────────────────────────────
+        // â”€â”€ Log de PIREP en tiempo real â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-        public string WbActualZfwDisplay   => HasLiveTelemetry && ActualZeroFuelWeightKg > 0 ? $"{ActualZeroFuelWeightKg:F0} kg" : "—";
+        public string WbActualZfwDisplay   => HasLiveTelemetry && ActualZeroFuelWeightKg > 0 ? $"{ActualZeroFuelWeightKg:F0} kg" : "â€”";
 
         public string PirepPreview
         {
@@ -688,62 +688,62 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             if (flight == null)
             {
-                sb.AppendLine("Sin vuelo activo. Inicia un despacho desde la página de Despacho.");
+                sb.AppendLine("Sin vuelo activo. Inicia un despacho desde la pÃ¡gina de Despacho.");
                 PirepPreview = sb.ToString();
                 return;
             }
 
             var dep = flight.DepartureIcao ?? "????";
             var arr = flight.ArrivalIcao   ?? "????";
-            var fn  = flight.FlightNumber  ?? "—";
+            var fn  = flight.FlightNumber  ?? "â€”";
             var ac  = !string.IsNullOrWhiteSpace(flight.AircraftName)
-                          ? flight.AircraftName : (flight.AircraftIcao ?? "—");
+                          ? flight.AircraftName : (flight.AircraftIcao ?? "â€”");
 
-            sb.AppendLine($"   {dep} → {arr}   ·   {fn}   ·   {ac}");
-            sb.AppendLine($"───────────────────────────────────────────");
+            sb.AppendLine($"   {dep} â†’ {arr}   Â·   {fn}   Â·   {ac}");
+            sb.AppendLine($"â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€");
 
             if (fs.MaxAltitudeFeet > 0)
-                sb.AppendLine($"   Alt máx  : {fs.MaxAltitudeFeet:F0} ft");
+                sb.AppendLine($"   Alt mÃ¡x  : {fs.MaxAltitudeFeet:F0} ft");
             if (fs.MaxSpeedKts > 0)
-                sb.AppendLine($"   Vel máx  : {fs.MaxSpeedKts:F0} kt");
+                sb.AppendLine($"   Vel mÃ¡x  : {fs.MaxSpeedKts:F0} kt");
             if (fs.TotalDistanceNm > 0)
                 sb.AppendLine($"   Distancia: {fs.TotalDistanceNm:F1} nm");
 
-            // Combustible usado (si el vuelo ya inició con combustible registrado)
+            // Combustible usado (si el vuelo ya iniciÃ³ con combustible registrado)
             if (fs.FuelAtStartLbs > 0 && HasLiveTelemetry)
             {
                 var fuelUsed = Math.Max(0, (fs.FuelAtStartLbs / 2.20462) - FuelKg);
                 sb.AppendLine($"   Comb. usado: {fuelUsed:F0} kg   (actual: {FuelKg:F0} kg)");
             }
 
-            // V/S de aterrizaje (solo si ya aterrizó)
+            // V/S de aterrizaje (solo si ya aterrizÃ³)
             if (fs.LastLandingVS != 0)
             {
                 var vsStr = fs.LastLandingVS < 0
                     ? $"{fs.LastLandingVS:F0} fpm"
                     : $"+{fs.LastLandingVS:F0} fpm";
-                var rating = fs.LastLandingVS >= -180 ? "✓ Suave"
-                           : fs.LastLandingVS >= -350 ? "▲ Normal"
-                           : "⚠ Duro";
+                var rating = fs.LastLandingVS >= -180 ? "âœ“ Suave"
+                           : fs.LastLandingVS >= -350 ? "â–² Normal"
+                           : "âš  Duro";
                 sb.AppendLine($"   V/S aterrizaje: {vsStr}  {rating}");
             }
 
             // Entorno actual
             if (HasLiveTelemetry)
             {
-                sb.AppendLine($"───────────────────────────────────────────");
-                sb.AppendLine($"   OAT: {OAT:F0}°C   Viento: {WindDir:000}°/{WindSpeed:F0}kt");
+                sb.AppendLine($"â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€");
+                sb.AppendLine($"   OAT: {OAT:F0}Â°C   Viento: {WindDir:000}Â°/{WindSpeed:F0}kt");
             }
 
             // Log de eventos de procedimiento
             if (_eventLog.Count > 0)
             {
-                sb.AppendLine($"───────────────────────────────────────────");
+                sb.AppendLine($"â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€");
                 sb.AppendLine($"   LOG PROCEDIMIENTOS:");
-                // Mostrar los últimos 12 eventos
+                // Mostrar los Ãºltimos 12 eventos
                 var start = Math.Max(0, _eventLog.Count - 12);
                 for (int i = start; i < _eventLog.Count; i++)
-                    sb.AppendLine($"   · {_eventLog[i]}");
+                    sb.AppendLine($"   Â· {_eventLog[i]}");
             }
 
             PirepPreview = sb.ToString().TrimEnd();
@@ -1014,9 +1014,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 "TAX" => "Rodaje y salida en curso",
                 "TO" => "Despegue oficial detectado",
                 "ASC" => "Ascenso estabilizado",
-                "CRU" => "Crucero y telemetría oficial activa",
-                "DES" => "Descenso y preparación de llegada",
-                "LDG" => "Aproximación y aterrizaje en evaluación",
+                "CRU" => "Crucero y telemetrÃ­a oficial activa",
+                "DES" => "Descenso y preparaciÃ³n de llegada",
+                "LDG" => "AproximaciÃ³n y aterrizaje en evaluaciÃ³n",
                 "TAG" => "Taxi in y llegada al stand",
                 "PAR" => "Vuelo listo para cierre oficial",
                 _ => "Monitoreando vuelo",
@@ -1045,7 +1045,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             if (prev == current) return;
             var ctx = onGround ? "(suelo)" : "(vuelo)";
             _eventLog.Add($"{PhaseLabel}: {name} {(current ? "ON" : "OFF")} {ctx}");
-            // Mantener máximo 30 entradas
+            // Mantener mÃ¡ximo 30 entradas
             if (_eventLog.Count > 30) _eventLog.RemoveAt(0);
         }
 
@@ -1056,16 +1056,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string AltitudeDisplay => HasLiveTelemetry ? Math.Round(Altitude, 0).ToString("F0") : "---";
         public string AglDisplay           => HasLiveTelemetry ? Math.Round(AltitudeAGL, 0).ToString("F0") : "---";
         public string AltitudeAglDisplay   => AglDisplay;
-        public string QnhDisplay           => HasLiveTelemetry && _qnh > 0 ? $"{Math.Round(_qnh, 0):F0} hPa" : "—";
+        public string QnhDisplay           => HasLiveTelemetry && _qnh > 0 ? $"{Math.Round(_qnh, 0):F0} hPa" : "â€”";
         public string RadioAcarsMessage
         {
             get => _radioAcarsMessage;
             set => SetField(ref _radioAcarsMessage, value);
         }
-        // V/S: clamp a 0 cuando en tierra (SimConnect puede retornar ±1 fpm en suelo)
+        // V/S: clamp a 0 cuando en tierra (SimConnect puede retornar Â±1 fpm en suelo)
         public string VsDisplay => HasLiveTelemetry ? (OnGround ? "0" : Math.Round(VS, 0).ToString("+#;-#;0")) : "---";
         public string VSDisplay => VsDisplay;
-        public string HeadingDisplay => HasLiveTelemetry ? Math.Round(Heading, 0).ToString("000") + "°" : "---";
+        public string HeadingDisplay => HasLiveTelemetry ? Math.Round(Heading, 0).ToString("000") + "Â°" : "---";
         public string FuelDisplay => HasLiveTelemetry ? $"{Math.Round(FuelKg, 0):F0} kg" : "---";
         public string FuelKgDisplay => FuelDisplay;
         public string FuelLbsDisplay => HasLiveTelemetry ? Math.Round(FuelLbs, 0).ToString("F0") : "---";
@@ -1073,17 +1073,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string N1Eng1Display => HasLiveTelemetry ? Math.Round(N1Eng1, 1).ToString("F1") : "---";
         public string N1Eng2Display => HasLiveTelemetry ? Math.Round(N1Eng2, 1).ToString("F1") : "---";
 
-        /// <summary>Orden de arranque registrado (ej. "2 → 1" para bimotor, "4 → 2 → 3 → 1" para cuadrimotor).</summary>
+        /// <summary>Orden de arranque registrado (ej. "2 â†’ 1" para bimotor, "4 â†’ 2 â†’ 3 â†’ 1" para cuadrimotor).</summary>
         public string EngineStartOrderDisplay
         {
             get
             {
-                if (_engineStartOrder.Count == 0) return "—";
-                return string.Join(" → ", _engineStartOrder);
+                if (_engineStartOrder.Count == 0) return "â€”";
+                return string.Join(" â†’ ", _engineStartOrder);
             }
         }
 
-        /// <summary>True si el orden de arranque coincide con el estándar Patagonia Wings
+        /// <summary>True si el orden de arranque coincide con el estÃ¡ndar Patagonia Wings
         /// (2-1 para bimotores, 4-2-3-1 para cuadrimotores).</summary>
         public bool EngineStartOrderCorrect
         {
@@ -1121,17 +1121,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 {
                     return string.IsNullOrWhiteSpace(backend)
                         ? "Conectado"
-                        : backend + " · " + runtime.SimulatorType;
+                        : backend + " Â· " + runtime.SimulatorType;
                 }
 
                 if (string.IsNullOrWhiteSpace(backend))
                 {
-                    return "Sin conexión";
+                    return "Sin conexiÃ³n";
                 }
 
                 return runtime.HasTelemetry
-                    ? "Sin telemetría · " + backend
-                    : "Esperando · " + backend;
+                    ? "Sin telemetrÃ­a Â· " + backend
+                    : "Esperando Â· " + backend;
             }
         }
         public bool IsSimConnected => AcarsContext.Runtime.IsSimulatorConnected;
@@ -1160,15 +1160,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             get
             {
                 if (_picConfirmed && !_picCheckActive)
-                    return $"✓  PIC OK — COM2: {_picFrequency:F3}";
+                    return $"âœ“  PIC OK â€” COM2: {_picFrequency:F3}";
                 if (_picCheckActive)
                     return $"Sintonice COM2: {_picFrequency:F3}  [{_picSecondsLeft}s]";
                 if (_picChecksTotal == 0)
-                    return "Verificación PIC activa en crucero";
-                return $"Vuelo en curso · checks: {_picChecksDone}/{_picChecksTotal}";
+                    return "VerificaciÃ³n PIC activa en crucero";
+                return $"Vuelo en curso Â· checks: {_picChecksDone}/{_picChecksTotal}";
             }
         }
-        public string PicButtonLabel => _picCheckActive ? $"{_picSecondsLeft}s" : (_picConfirmed ? "✓ OK" : "—");
+        public string PicButtonLabel => _picCheckActive ? $"{_picSecondsLeft}s" : (_picConfirmed ? "âœ“ OK" : "â€”");
 
         private readonly System.Windows.Threading.DispatcherTimer _elapsedTimer;
 
@@ -1194,7 +1194,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                 TickPicCheck();
 
-                // En crucero: programar checks periódicos para vuelos largos
+                // En crucero: programar checks periÃ³dicos para vuelos largos
                 if (Phase == FlightPhase.Cruise && !_picCheckActive && _picChecksDone < _picChecksTotal)
                 {
                     if (_lastPicCheckTime == DateTime.MinValue ||
@@ -1212,7 +1212,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         public void StartElapsedTimer()
         {
-            if (_startTime != default(DateTime)) return; // ya está corriendo
+            if (_startTime != default(DateTime)) return; // ya estÃ¡ corriendo
             _startTime = DateTime.UtcNow;
             _elapsedTimer.Start();
         }
@@ -1304,7 +1304,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             Debug.WriteLine($"[InFlightVM] OnTelemetry - ACFT:{data.AircraftTitle} ALT={data.AltitudeFeet:F0} FUEL={data.FuelTotalLbs:F0}");
             Application.Current.Dispatcher.Invoke(() =>
             {
-                // ── Perfil normalizado ─────────────────────────────────────────
+                // â”€â”€ Perfil normalizado â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 if (_detectedProfileCode != data.DetectedProfileCode)
                 {
                     _detectedProfileCode = data.DetectedProfileCode;
@@ -1319,7 +1319,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 VS = data.VerticalSpeed;
                 Heading = data.Heading;
                 FuelLbs = data.FuelTotalLbs;
-                // Combustible normalizado en kg (SimConnect convierte lbs→kg en SimConnectService)
+                // Combustible normalizado en kg (SimConnect convierte lbsâ†’kg en SimConnectService)
                 _fuelKgNorm = data.FuelKg > 0 ? data.FuelKg : (data.FuelTotalLbs / 2.20462);
                 _totalWeightKg = data.TotalWeightKg > 0 ? data.TotalWeightKg : 0;
                 _zeroFuelWeightKg = data.ZeroFuelWeightKg > 0
@@ -1329,7 +1329,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 OnPropertyChanged(nameof(ActualTotalWeightKg));
                 OnPropertyChanged(nameof(ActualZeroFuelWeightKg));
 
-                // Tanques individuales (para diagnóstico)
+                // Tanques individuales (para diagnÃ³stico)
                 FuelLeftTank = data.FuelLeftTankLbs;
                 FuelRightTank = data.FuelRightTankLbs;
                 FuelCenterTank = data.FuelCenterTankLbs;
@@ -1371,9 +1371,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 BleedAirOn = data.BleedAirOn;
                 CabinAlt = Math.Round(data.CabinAltitudeFeet, 0);
                 PressDiff = Math.Round(data.PressureDiffPsi, 2);
-                // ── Detectar primer arranque de motores ────────────────────────
+                // â”€â”€ Detectar primer arranque de motores â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 // Cuando N1 supera el 15% por primera vez se captura el combustible actual.
-                // Ese valor se usa para comparar con el plan SimBrief (±10% de tolerancia).
+                // Ese valor se usa para comparar con el plan SimBrief (Â±10% de tolerancia).
                 if (_fuelAtEngineStartKg < 0 && (data.Engine1N1 > 15 || data.Engine2N1 > 15))
                 {
                     _fuelAtEngineStartKg = FuelKg;
@@ -1384,13 +1384,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(WbStartFuelDisplay));
                 }
 
-                // ── Orden de arranque de motores (IGN 2-1 / 4-2-3-1) ──────────
+                // â”€â”€ Orden de arranque de motores (IGN 2-1 / 4-2-3-1) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 if (!_eng2Started && data.Engine2N1 >= EngineN1StartThreshold) { _eng2Started = true; _engineStartOrder.Add(2); OnPropertyChanged(nameof(EngineStartOrderDisplay)); }
                 if (!_eng1Started && data.Engine1N1 >= EngineN1StartThreshold) { _eng1Started = true; _engineStartOrder.Add(1); OnPropertyChanged(nameof(EngineStartOrderDisplay)); }
                 if (!_eng4Started && data.Engine4N1 >= EngineN1StartThreshold) { _eng4Started = true; _engineStartOrder.Add(4); OnPropertyChanged(nameof(EngineStartOrderDisplay)); }
                 if (!_eng3Started && data.Engine3N1 >= EngineN1StartThreshold) { _eng3Started = true; _engineStartOrder.Add(3); OnPropertyChanged(nameof(EngineStartOrderDisplay)); }
 
-                // ── Detectar y registrar eventos de procedimiento ──────────────
+                // â”€â”€ Detectar y registrar eventos de procedimiento â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 LogLightEvent("BEACON",  _prevBeaconOn,  data.BeaconLightsOn,  data.OnGround);
                 LogLightEvent("STROBE",  _prevStrobeOn,  data.StrobeLightsOn,  data.OnGround);
                 LogLightEvent("LANDING", _prevLandingOn, data.LandingLightsOn, data.OnGround);
@@ -1408,7 +1408,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 _prevApOn      = data.AutopilotActive;
                 _prevSeatBelt  = data.SeatBeltSign;
 
-                // ── Notificar pesos actuales y log PIREP ────────────────────────
+                // â”€â”€ Notificar pesos actuales y log PIREP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 OnPropertyChanged(nameof(WbActualFuelKg));
                 OnPropertyChanged(nameof(WbActualPayloadKg));
                 OnPropertyChanged(nameof(WbActualFuelDisplay));
@@ -1512,7 +1512,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 AcarsContext.Runtime.SetTelemetry(data, AcarsContext.Runtime.SimulatorBackend);
                 
-                // Forzar actualización de todas las propiedades Display
+                // Forzar actualizaciÃ³n de todas las propiedades Display
                 OnPropertyChanged(nameof(IasDisplay));
                 OnPropertyChanged(nameof(IASDisplay));
                 OnPropertyChanged(nameof(GsDisplay));
@@ -1542,7 +1542,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 Phase = newPhase;
                 // Registrar cambio de fase en el log de eventos
                 if (newPhase != FlightPhase.Disconnected && newPhase != FlightPhase.PreFlight)
-                    _eventLog.Add($"▶ FASE: {GetPhaseLabel(newPhase)}");
+                    _eventLog.Add($"â–¶ FASE: {GetPhaseLabel(newPhase)}");
                 UpdatePirepPreview();
                 RefreshRouteSnapshot();
                 CommandManager.InvalidateRequerySuggested();
@@ -1553,17 +1553,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                         break;
                     case FlightPhase.PushbackTaxi:
                         _ = AcarsContext.Sound.PlayGroundDoorClosedAsync();
-                        // Arrancar cronómetro al block-out (inicio oficial del vuelo)
+                        // Arrancar cronÃ³metro al block-out (inicio oficial del vuelo)
                         if (_startTime == default(DateTime)) StartElapsedTimer();
                         break;
                     case FlightPhase.Takeoff:
                         _ = AcarsContext.Sound.PlayGroundEnginesAsync();
-                        // Arrancar cronómetro si aún no inició (vuelos sin rodaje previo)
+                        // Arrancar cronÃ³metro si aÃºn no iniciÃ³ (vuelos sin rodaje previo)
                         if (_startTime == default(DateTime)) StartElapsedTimer();
                         StartElapsedTimer();
                         break;
                     case FlightPhase.Cruise:
-                        // Calcular número de PIC checks según duración planificada
+                        // Calcular nÃºmero de PIC checks segÃºn duraciÃ³n planificada
                         var blockMin = AcarsContext.Runtime.CurrentDispatch?.ExpectedBlockP50Minutes
                                     ?? AcarsContext.Runtime.CurrentDispatch?.ScheduledBlockMinutes
                                     ?? 0;
@@ -1592,6 +1592,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
             if (pilot == null) return;
             var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
+            report.ResultStatus = "completed";
 
             if (_picPenaltyPoints > 0)
             {
@@ -1600,7 +1601,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 {
                     Code = "CRU-PIC",
                     Phase = "CRU",
-                    Description = $"Radio PIC Check fallido ({_picPenaltyPoints / 5} vez/veces) — COM2 sin verificar",
+                    Description = $"Radio PIC Check fallido ({_picPenaltyPoints / 5} vez/veces) â€” COM2 sin verificar",
                     Points = -_picPenaltyPoints
                 });
                 report.PatagoniaScore = Math.Max(0, report.PatagoniaScore - _picPenaltyPoints);
@@ -1614,7 +1615,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private void CancelFlight()
         {
             var result = MessageBox.Show(
-                "¿Cancelar el vuelo en curso?\n\nEsto registrará el vuelo como cancelado y penalizará tu puntuación. La reserva quedará marcada como cancelada.",
+                "Â¿Cancelar el vuelo en curso?\n\nSe enviara como cancelacion operacional (cancelled), no como vuelo completado.",
                 "Cancelar vuelo",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -1623,10 +1624,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
             if (pilot == null) return;
             var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
+            report.ResultStatus = "cancelled";
+            report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
+                ? "Cancelado por tripulacion desde ACARS."
+                : report.Remarks + " | Cancelado por tripulacion desde ACARS.";
             _main.ShowPostFlightReport(report);
         }
 
-        // ── PIC Check ─────────────────────────────────────────────────────────
+        // â”€â”€ PIC Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private void TriggerPicCheck()
         {
@@ -1635,8 +1640,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             _picCheckActive  = true;
             _picConfirmed    = false;
             _lastPicCheckTime = DateTime.UtcNow;
-            RadioAcarsMessage = $"PIC CHECK #{_picChecksDone + 1}/{_picChecksTotal} — Sintonice COM2: {_picFrequency:F3} MHz  ({_picSecondsLeft}s)";
-            _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone + 1} — COM2 requerido: {_picFrequency:F3}");
+            RadioAcarsMessage = $"PIC CHECK #{_picChecksDone + 1}/{_picChecksTotal} â€” Sintonice COM2: {_picFrequency:F3} MHz  ({_picSecondsLeft}s)";
+            _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone + 1} â€” COM2 requerido: {_picFrequency:F3}");
             OnPropertyChanged(nameof(PicConfirmed));
             OnPropertyChanged(nameof(PicCheckLabel));
             OnPropertyChanged(nameof(PicButtonLabel));
@@ -1648,7 +1653,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             if (!_picCheckActive) return;
 
-            // Verificar si COM2 coincide con la frecuencia requerida (±10 kHz)
+            // Verificar si COM2 coincide con la frecuencia requerida (Â±10 kHz)
             if (_com2FrequencyMhz > 100 && Math.Abs(_com2FrequencyMhz - _picFrequency) <= 0.010)
             {
                 CompletePicCheck(true);
@@ -1658,7 +1663,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             _picSecondsLeft--;
             OnPropertyChanged(nameof(PicCheckLabel));
             OnPropertyChanged(nameof(PicButtonLabel));
-            RadioAcarsMessage = $"PIC CHECK #{_picChecksDone + 1}/{_picChecksTotal} — COM2: {_picFrequency:F3} MHz  ({_picSecondsLeft}s)";
+            RadioAcarsMessage = $"PIC CHECK #{_picChecksDone + 1}/{_picChecksTotal} â€” COM2: {_picFrequency:F3} MHz  ({_picSecondsLeft}s)";
 
             if (_picSecondsLeft <= 0)
                 CompletePicCheck(false);
@@ -1672,16 +1677,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             if (success)
             {
                 _picConfirmed = true;
-                _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone} ✓ COM2 verificado ({_picFrequency:F3})");
-                RadioAcarsMessage = $"✓ PIC CHECK {_picChecksDone}/{_picChecksTotal} confirmado — COM2: {_picFrequency:F3}";
+                _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone} âœ“ COM2 verificado ({_picFrequency:F3})");
+                RadioAcarsMessage = $"âœ“ PIC CHECK {_picChecksDone}/{_picChecksTotal} confirmado â€” COM2: {_picFrequency:F3}";
                 AcarsContext.Sound.PlayDing();
             }
             else
             {
                 _picConfirmed = false;
                 _picPenaltyPoints += 5;
-                _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone} ✗ FALLIDO — penalización -5 pts");
-                RadioAcarsMessage = $"✗ PIC CHECK fallido — COM2: {_picFrequency:F3} no confirmado (-5 pts)";
+                _eventLog.Add($"CRU: PIC CHECK #{_picChecksDone} âœ— FALLIDO â€” penalizaciÃ³n -5 pts");
+                RadioAcarsMessage = $"âœ— PIC CHECK fallido â€” COM2: {_picFrequency:F3} no confirmado (-5 pts)";
             }
 
             OnPropertyChanged(nameof(PicConfirmed));
@@ -1702,7 +1707,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 FlightPhase.Climb => "Ascenso",
                 FlightPhase.Cruise => "Crucero",
                 FlightPhase.Descent => "Descenso",
-                FlightPhase.Approach => "Aproximación",
+                FlightPhase.Approach => "AproximaciÃ³n",
                 FlightPhase.Landing => "Aterrizaje",
                 FlightPhase.Taxi => "Taxi in",
                 FlightPhase.Arrived => "Arribado",
@@ -1712,18 +1717,18 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         
         private void DetectAircraftType(string title)
         {
-            // ── Perfil normalizado via AircraftNormalizationService ────────────────
+            // â”€â”€ Perfil normalizado via AircraftNormalizationService â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             var profile = AircraftNormalizationService.ResolveProfile(title);
             var t = (title ?? string.Empty).ToUpperInvariant();
 
-            // Usar capacidades del perfil para determinar APU, presurización y motores
+            // Usar capacidades del perfil para determinar APU, presurizaciÃ³n y motores
             HasApu            = profile.HasApu;
             HasPressurization = profile.IsPressurized;
             IsSingleEngine    = profile.EngineCount == 1;
             _supportsTransponderSystem = profile.SupportsTransponderModeSystem;
 
-            // Si el perfil es MSFS_NATIVE (fallback), mantener la detección manual
-            // para aeronaves que aún no estén en el catálogo
+            // Si el perfil es MSFS_NATIVE (fallback), mantener la detecciÃ³n manual
+            // para aeronaves que aÃºn no estÃ©n en el catÃ¡logo
             if (profile.Code == "MSFS_NATIVE")
             {
                 bool isJet =
@@ -1772,10 +1777,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     t.Contains("HEADWIND") || t.Contains("TOLISS")));
 
             AircraftStatus = RequiresLvars
-                ? $"{profile.AddonProvider} · Algunos datos via LVARs"
-                : $"{profile.AddonProvider} · SimConnect completo";
+                ? $"{profile.AddonProvider} Â· Algunos datos via LVARs"
+                : $"{profile.AddonProvider} Â· SimConnect completo";
 
-            Debug.WriteLine($"[InFlightVM] '{title}' → Code:{profile.Code} APU:{HasApu} Presurizado:{HasPressurization} Monomotor:{IsSingleEngine} LVARs:{RequiresLvars}");
+            Debug.WriteLine($"[InFlightVM] '{title}' â†’ Code:{profile.Code} APU:{HasApu} Presurizado:{HasPressurization} Monomotor:{IsSingleEngine} LVARs:{RequiresLvars}");
             OnPropertyChanged(nameof(RequiresLvars));
             OnPropertyChanged(nameof(AircraftStatus));
             OnPropertyChanged(nameof(ShowApu));
@@ -1791,3 +1796,4 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         }
     }
 }
+

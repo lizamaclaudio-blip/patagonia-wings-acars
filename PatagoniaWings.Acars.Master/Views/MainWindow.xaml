@@ -205,7 +205,7 @@
                                    TextTrimming="CharacterEllipsis"/>
 
                         <TextBlock Grid.Column="2"
-                                   Text="ACARS 6.0.1"
+                                   Text="{Binding AcarsVersionDisplay}"
                                    Foreground="#1565C0"
                                    FontSize="8.5"
                                    FontWeight="Bold"
