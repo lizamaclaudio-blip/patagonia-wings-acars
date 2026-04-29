@@ -125,17 +125,25 @@ $manifestObject = [ordered]@{
     version         = $appVersion
     latestVersion   = $appVersion
     currentVersion  = $appVersion
+    minSupportedVersion = "1.0.0"
+    forceUpdateBelow = $appVersion
     webVersion      = "2.0"
     downloadUrl     = $genericDownloadUrl
     url             = $genericDownloadUrl
     installerUrl    = $genericDownloadUrl
+    packageUrl      = $genericDownloadUrl
+    directDownloadUrl = $genericDownloadUrl
     mandatory       = $true
     required        = $true
     revision        = $settings["AppRevision"]
     notes           = $releaseNotes
+    releaseNotes    = $releaseNotes
     releaseDate     = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
-    minVersion      = "2.0.5"
+    minVersion      = "1.0.0"
+    fileName        = $storageGenericInstallerName
+    size            = [int64](Get-Item -LiteralPath $installerSrc).Length
     fileSize        = "$sizeMB MB"
+    checksumSha256  = (Get-FileHash -LiteralPath $installerSrc -Algorithm SHA256).Hash
     storageProvider = "supabase"
 }
 
@@ -145,15 +153,23 @@ $channelObject = [ordered]@{
     channel          = $settings["UpdateChannel"]
     version          = $appVersion
     latestVersion    = $appVersion
+    currentVersion   = $appVersion
+    minSupportedVersion = "1.0.0"
+    forceUpdateBelow = $appVersion
     revision         = $settings["AppRevision"]
     latestRevision   = $settings["AppRevision"]
     manifestUrl      = ""
     packagesIndexUrl = "$storagePublicBase/packages/index.json"
     installerUrl     = $genericDownloadUrl
     downloadUrl      = $genericDownloadUrl
+    url              = $genericDownloadUrl
+    packageUrl       = $genericDownloadUrl
+    directDownloadUrl = $genericDownloadUrl
     forceUpdate      = $true
     mandatory        = $true
+    required         = $true
     notes            = $releaseNotes
+    releaseNotes     = $releaseNotes
     releaseDate      = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
 }
 
@@ -164,9 +180,18 @@ $xmlContent = @"
 <?xml version="1.0" encoding="UTF-8"?>
 <item>
   <version>$appVersion.0</version>
+  <latestVersion>$appVersion</latestVersion>
+  <minSupportedVersion>1.0.0</minSupportedVersion>
+  <forceUpdateBelow>$appVersion</forceUpdateBelow>
   <url>$genericDownloadUrl</url>
+  <downloadUrl>$genericDownloadUrl</downloadUrl>
+  <installerUrl>$genericDownloadUrl</installerUrl>
+  <directDownloadUrl>$genericDownloadUrl</directDownloadUrl>
+  <revision>$($settings["AppRevision"])</revision>
   <changelog>$escapedChangelog</changelog>
+  <releaseNotes>$escapedChangelog</releaseNotes>
   <mandatory>true</mandatory>
+  <required>true</required>
 </item>
 "@
 
