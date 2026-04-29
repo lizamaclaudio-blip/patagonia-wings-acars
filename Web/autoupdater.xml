@@ -1,10 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <item>
   <version>7.0.1.0</version>
-  <url>https://patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>v7.0.1: detection confidence payload, addon diagnostics, capability-safe exclusions y validacion manual por variantes.</changelog>
-  <mandatory>false</mandatory>
+  <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe</url>
+  <changelog>v7.0.1: autoupdate obligatorio restaurado; instalador oficial 7.0.1.</changelog>
+  <mandatory>true</mandatory>
 </item>
-
-
-

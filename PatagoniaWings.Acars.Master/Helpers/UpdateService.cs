@@ -198,6 +198,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public static async Task<UpdateCheckResult> CheckForUpdatesAsync(bool force = false)
         {
             var now = DateTime.UtcNow;
+            WriteLog($"Update check start => installed_version={CurrentVersion} installed_revision={CurrentRevision} manifest_url={UpdateManifestUrl} channel_url={UpdateChannelUrl}");
             if (!force && (now - _lastCheckUtc) < CheckCooldown)
             {
                 return new UpdateCheckResult
@@ -262,7 +263,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
         {
             try
             {
-                // Formato: "6.0.1 (rev 2026.4.25.1)"
+                // Formato: "7.0.1 (rev 2026.4.29.3)"
                 var revIdx = payload.IndexOf("(rev ", StringComparison.OrdinalIgnoreCase);
                 var version = revIdx > 0 ? payload.Substring(0, revIdx).Trim() : payload.Trim();
                 var revision = revIdx >= 0
@@ -347,7 +348,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 }
             }
 
-            WriteLog($"Differential check => visible={CurrentVersion}->{latestVersion} revision={CurrentRevision}->{latestRevision} available={updateAvailable} differential={supportsDifferential}");
+            WriteLog($"Differential check => installed={CurrentVersion}/{CurrentRevision} latest={latestVersion}/{latestRevision} update_available={updateAvailable} differential={supportsDifferential} manifest_url={manifestUrl} installer_url={installerUrl}");
 
             return new UpdateCheckResult
             {
@@ -385,6 +386,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     latestRevision = CurrentRevision;
                 }
 
+                var available = IsVersionNewer(latestVersion, CurrentVersion)
+                    || (SameVersion(latestVersion, CurrentVersion) && IsVersionNewer(latestRevision, CurrentRevision));
+                WriteLog($"Legacy manifest check => installed={CurrentVersion}/{CurrentRevision} latest={latestVersion}/{latestRevision} update_available={available} manifest_url={UpdateManifestUrl} download_url={downloadUrl}");
+
                 return new UpdateCheckResult
                 {
                     Success = true,
@@ -392,8 +397,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     CurrentRevision = CurrentRevision,
                     LatestVersion = latestVersion,
                     LatestRevision = latestRevision,
-                    IsUpdateAvailable = IsVersionNewer(latestVersion, CurrentVersion)
-                        || (SameVersion(latestVersion, CurrentVersion) && IsVersionNewer(latestRevision, CurrentRevision)),
+                    IsUpdateAvailable = available,
                     DownloadUrl = string.IsNullOrWhiteSpace(downloadUrl) ? InstallerDownloadUrl : downloadUrl,
                     Channel = channel,
                     Notes = notes,

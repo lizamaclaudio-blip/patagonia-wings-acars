@@ -121,7 +121,7 @@ $manifestObject = [ordered]@{
     version         = $appVersion
     webVersion      = "2.0"
     downloadUrl     = $genericDownloadUrl
-    mandatory       = $false
+    mandatory       = $true
     notes           = $releaseNotes
     releaseDate     = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
     minVersion      = "2.0.5"
@@ -138,7 +138,7 @@ $xmlContent = @"
   <version>$appVersion.0</version>
   <url>$genericDownloadUrl</url>
   <changelog>$escapedChangelog</changelog>
-  <mandatory>false</mandatory>
+  <mandatory>true</mandatory>
 </item>
 "@
 
