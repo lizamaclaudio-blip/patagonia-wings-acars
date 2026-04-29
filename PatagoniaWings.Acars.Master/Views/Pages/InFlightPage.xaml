@@ -30,9 +30,9 @@
                 <!-- TIPO DE VUELO -->
                 <TextBlock Text="{Binding DataContext.MainVM.PreFlightVM.FlightModeDisplayLabel,
                                           RelativeSource={RelativeSource AncestorType=Window},
-                                          FallbackValue='VUELO LÍNEA'}"
+                                          FallbackValue='VUELO'}"
                            Foreground="White" FontSize="13" FontWeight="Bold" FontFamily="Segoe UI"
-                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,4">
+                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,4"                            Visibility="{Binding DataContext.MainVM.PreFlightVM.IsOnlineFlightMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
                     <TextBlock.Effect><DropShadowEffect Color="#0099FF" BlurRadius="12" ShadowDepth="0" Opacity="0.7"/></TextBlock.Effect>
                 </TextBlock>
 
@@ -226,7 +226,7 @@
                             </Ellipse>
                         </StackPanel>
                     </Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0">
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"                             Visibility="{Binding ShowDoorsSystem, Converter={StaticResource BoolToVisibilityConverter}}">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
@@ -253,8 +253,8 @@
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="LAND" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="TREN" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#22C55E"><Ellipse.Effect><DropShadowEffect Color="#22C55E" BlurRadius="8" ShadowDepth="0" Opacity="0.6"/></Ellipse.Effect></Ellipse></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AP" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="XPDR" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"                             Visibility="{Binding ShowTransponderSystem, Converter={StaticResource BoolToVisibilityConverter}}"><StackPanel HorizontalAlignment="Center"><TextBlock Text="XPDR" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"                             Visibility="{Binding ShowDoorsSystem, Converter={StaticResource BoolToVisibilityConverter}}"><StackPanel HorizontalAlignment="Center"><TextBlock Text="PUERTA" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#CBD8E8"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="FRENO" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/><Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center" Fill="#EF4444"/></StackPanel></Border>
                 </UniformGrid>
 
@@ -302,9 +302,7 @@
                             <TextBlock Text="{Binding AltitudeAglDisplay, FallbackValue='—'}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0">
-                        <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="RUMBO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="RUMBO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <TextBlock Text="{Binding HeadingDisplay}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
@@ -322,9 +320,7 @@
                             <TextBlock Text="{Binding VsDisplay}" Foreground="#1065D4" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0">
-                        <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="VIENTO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="VIENTO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <TextBlock Text="{Binding WindDir, StringFormat={}{0:000}}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold"/>
                                 <TextBlock Text="/" Foreground="#8AAAC8" FontSize="10" Margin="1,1,1,0"/>
@@ -399,7 +395,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Content="✕  CANCELAR VUELO"
+                <Button Grid.Column="0" Content="X CANCELAR VUELO"
                         Command="{Binding CancelFlightCommand}"
                         FontSize="9" FontWeight="Bold" Foreground="White" BorderThickness="0"
                         Background="#DC2626" Padding="0,9" Cursor="Hand">
@@ -413,7 +409,7 @@
                     </Button.Template>
                 </Button>
 
-                <Button Grid.Column="2" Content="✓  FINALIZAR VUELO"
+                <Button Grid.Column="2" Content="FINALIZAR VUELO"
                         Command="{Binding FinishFlightCommand}"
                         FontSize="9" FontWeight="Bold" Foreground="White" BorderThickness="0"
                         Background="#16A34A" Padding="0,9" Cursor="Hand">

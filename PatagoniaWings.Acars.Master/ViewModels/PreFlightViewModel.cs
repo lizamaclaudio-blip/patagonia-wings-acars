@@ -73,6 +73,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(DispatchSourceLine));
                     OnPropertyChanged(nameof(FlightModeLine));
                     OnPropertyChanged(nameof(FlightModeDisplayLabel));
+                    OnPropertyChanged(nameof(IsOnlineFlightMode));
                     OnPropertyChanged(nameof(AircraftDisplayLine));
                     OnPropertyChanged(nameof(RouteDisplayLine));
                     OnPropertyChanged(nameof(RouteDisplayHeader));
@@ -83,6 +84,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(PayloadCargoLine));
                     OnPropertyChanged(nameof(PayloadZfwLine));
                     OnPropertyChanged(nameof(BlockDisplayLine));
+                    OnPropertyChanged(nameof(PlannedDistanceLine));
                     OnPropertyChanged(nameof(HasUsablePreparedDispatch));
                     OnPropertyChanged(nameof(HasUsableWebDispatch));
                     OnPropertyChanged(nameof(StartButtonTitle));
@@ -304,6 +306,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
+        public bool IsOnlineFlightMode
+        {
+            get
+            {
+                var mode = (PreparedDispatch?.FlightMode ?? string.Empty).Trim().ToUpperInvariant();
+                if (string.IsNullOrWhiteSpace(mode))
+                {
+                    return false;
+                }
+
+                return mode.Contains("ONLINE")
+                    || mode.Contains("VATSIM")
+                    || mode.Contains("IVAO")
+                    || mode.Contains("NETWORK");
+            }
+        }
+
         public string AircraftDisplayLine
         {
             get
@@ -314,19 +333,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
 
                 var parts = new List<string>();
-                var display = Safe(PreparedDispatch.AircraftDisplayName);
                 var reg = Safe(PreparedDispatch.AircraftRegistration);
-                var icao = Safe(PreparedDispatch.AircraftIcao);
-                var variant = Safe(PreparedDispatch.AircraftVariantCode);
-                var addon = Safe(PreparedDispatch.AddonProvider);
+                var realName = ResolveAircraftRealName(PreparedDispatch);
+                var airframe = ResolveAircraftAirframe(PreparedDispatch);
 
-                if (!string.IsNullOrWhiteSpace(display)) parts.Add(display);
                 if (!string.IsNullOrWhiteSpace(reg)) parts.Add(reg);
-                if (!string.IsNullOrWhiteSpace(icao)) parts.Add(icao);
-                if (!string.IsNullOrWhiteSpace(variant)) parts.Add(variant);
-                if (!string.IsNullOrWhiteSpace(addon)) parts.Add(addon);
+                if (!string.IsNullOrWhiteSpace(realName)) parts.Add(realName);
+                if (!string.IsNullOrWhiteSpace(airframe)) parts.Add(airframe);
 
-                return parts.Count == 0 ? "Sin aeronave asignada" : string.Join(" · ", parts.Distinct().ToArray());
+                return parts.Count == 0 ? "Sin aeronave asignada" : string.Join(" - ", parts.Distinct().ToArray());
             }
         }
 
@@ -472,6 +487,24 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
 
                 return "Sin block publicado";
+            }
+        }
+
+        public string PlannedDistanceLine
+        {
+            get
+            {
+                if (PreparedDispatch == null)
+                {
+                    return "N/D";
+                }
+
+                if (PreparedDispatch.PlannedDistanceNm > 0)
+                {
+                    return Math.Round(PreparedDispatch.PlannedDistanceNm, 0).ToString("F0") + " NM";
+                }
+
+                return "N/D";
             }
         }
         public bool StartGateParkingBrakeOk { get { return IsGateRulePassing("START_PARKING_BRAKE_ON"); } }
@@ -1256,6 +1289,37 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return "sin estado";
             }
             return normalized.Replace("_", " ");
+        }
+
+        private static string ResolveAircraftRealName(PreparedDispatch dispatch)
+        {
+            var display = Safe(dispatch.AircraftDisplayName);
+            if (!string.IsNullOrWhiteSpace(display)
+                && display.IndexOf("_BASE", StringComparison.OrdinalIgnoreCase) < 0
+                && display.IndexOf("_MULTI", StringComparison.OrdinalIgnoreCase) < 0)
+            {
+                return display;
+            }
+
+            var variant = Safe(dispatch.AircraftVariantCode).ToUpperInvariant();
+            if (variant.StartsWith("C208", StringComparison.Ordinal))
+            {
+                return "Grand Caravan";
+            }
+
+            return Safe(dispatch.AircraftIcao).ToUpperInvariant();
+        }
+
+        private static string ResolveAircraftAirframe(PreparedDispatch dispatch)
+        {
+            var variant = Safe(dispatch.AircraftVariantCode).ToUpperInvariant();
+            if (variant.StartsWith("C208", StringComparison.Ordinal))
+            {
+                return "C208B";
+            }
+
+            var icao = Safe(dispatch.AircraftIcao).ToUpperInvariant();
+            return string.IsNullOrWhiteSpace(icao) ? string.Empty : icao;
         }
 
         private static string FormatKg(double value)

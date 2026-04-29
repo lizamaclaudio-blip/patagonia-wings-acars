@@ -24,7 +24,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
-            <TextBlock Text="SOPORTE DE APLICACIÓN"
+            <TextBlock Text="SOPORTE DE APLICACION"
                        Foreground="#0D1F3C"
                        FontSize="13"
                        FontWeight="Bold"
@@ -131,7 +131,7 @@
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
                                 <Border Background="#FFF5F5" BorderBrush="#F5BBBB" BorderThickness="1.5" CornerRadius="9">
-                                    <TextBlock Text="Cerrar sesión" Foreground="#C62828" FontSize="9" FontWeight="SemiBold"
+                                    <TextBlock Text="Cerrar sesion" Foreground="#C62828" FontSize="9" FontWeight="SemiBold"
                                                FontFamily="Segoe UI" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>

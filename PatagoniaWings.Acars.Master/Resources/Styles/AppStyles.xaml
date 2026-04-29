@@ -274,6 +274,14 @@
     <Style x:Key="DarkListBoxItem" TargetType="ListBoxItem"><Setter Property="Background" Value="Transparent"/><Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/><Setter Property="Padding" Value="6,4"/></Style>
     <Style x:Key="DarkCheckBox" TargetType="CheckBox"><Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/><Setter Property="FontFamily" Value="{StaticResource MainFont}"/><Setter Property="FontSize" Value="9.5"/></Style>
     <Style TargetType="ScrollBar"><Setter Property="Background" Value="Transparent"/><Setter Property="Width" Value="6"/><Setter Property="Opacity" Value="0.55"/></Style>
+    <Style TargetType="TextBlock">
+        <Setter Property="TextOptions.TextFormattingMode" Value="Display"/>
+        <Setter Property="TextOptions.TextRenderingMode" Value="ClearType"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
+    <Style TargetType="Control">
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+    </Style>
 
     <Style x:Key="LedStatusDot" TargetType="Ellipse">
         <Setter Property="Width" Value="12"/>

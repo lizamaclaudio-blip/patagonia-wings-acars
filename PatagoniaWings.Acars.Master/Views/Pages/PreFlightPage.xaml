@@ -222,6 +222,11 @@
                                        Foreground="{StaticResource TextPrimaryBrush}"
                                        FontFamily="Consolas"
                                        FontSize="13"/>
+                            <TextBlock Text="DISTANCIA" Style="{StaticResource FieldLabel}" Margin="0,6,0,0"/>
+                            <TextBlock Text="{Binding PlannedDistanceLine}"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       FontFamily="Consolas"
+                                       FontSize="12"/>
                         </StackPanel>
                     </UniformGrid>
                 </StackPanel>
