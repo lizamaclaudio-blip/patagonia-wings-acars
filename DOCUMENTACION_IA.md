@@ -262,3 +262,10 @@ Resources/Styles/AppStyles.xaml  ← Estilos globales
 **Última actualización:** 2026-04-13  
 **Versión actual:** 3.0.1  
 **Sistema de actualización:** AutoUpdater.NET integrado
+
+## Build oficial ACARS (obligatorio)
+- Proyecto: WPF .NET Framework legacy.
+- Validacion final oficial: MSBuild VS2022 x64.
+- Comando:
+  - "C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\MSBuild.exe" PatagoniaWings.Acars.sln /t:Clean,Build /p:Configuration=Debug /p:Platform=x64 /m
+- No usar `dotnet build` como validacion final para este proyecto, porque puede reportar errores falsos de XAML/InitializeComponent.
