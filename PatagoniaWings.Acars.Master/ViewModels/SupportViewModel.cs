@@ -32,6 +32,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OpenDebugFolderCommand = new RelayCommand(() => OpenFolder(GetDebugFolderPath()));
             OpenDataFolderCommand = new RelayCommand(() => OpenFolder(GetDataFolderPath()));
             OpenAppFolderCommand = new RelayCommand(() => OpenFolder(AppDomain.CurrentDomain.BaseDirectory));
+            OpenExportsFolderCommand = new RelayCommand(() => OpenFolder(GetExportsFolderPath()));
+            OpenConfigFolderCommand = new RelayCommand(() => OpenFolder(GetConfigFolderPath()));
         }
 
         public event Action<bool>? AlwaysVisibleChanged;
@@ -45,6 +47,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand OpenDebugFolderCommand { get; }
         public ICommand OpenDataFolderCommand { get; }
         public ICommand OpenAppFolderCommand { get; }
+        public ICommand OpenExportsFolderCommand { get; }
+        public ICommand OpenConfigFolderCommand { get; }
 
         public string AcarsVersion => "v" + UpdateService.CurrentVersion;
         public string FsuipcVersion => ResolveFsuipcVersion();
@@ -162,6 +166,24 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "PatagoniaWings",
                 "Acars");
+        }
+
+        private static string GetExportsFolderPath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "PatagoniaWings",
+                "Acars",
+                "exports");
+        }
+
+        private static string GetConfigFolderPath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "PatagoniaWings",
+                "Acars",
+                "config");
         }
 
         private void OpenFolder(string path)

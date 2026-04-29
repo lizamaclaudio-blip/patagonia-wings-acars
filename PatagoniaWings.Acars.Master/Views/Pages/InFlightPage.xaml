@@ -238,7 +238,7 @@
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="FRENO" Foreground="#5080A8" FontSize="7.5" FontWeight="Bold" HorizontalAlignment="Center"/>
                             <Ellipse Width="12" Height="12" Margin="0,3,0,0" HorizontalAlignment="Center"
-                                     Fill="{Binding LiveParkingBrakeOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#EF4444}"
+                                     Fill="{Binding LiveParkingBrakeOn, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#22C55E|#CBD8E8}"
                                      Effect="{Binding LiveParkingBrakeOn, Converter={StaticResource BoolToGlowEffectConverter}, ConverterParameter=#22C55E}"/>
                         </StackPanel>
                     </Border>

@@ -439,7 +439,19 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool AutopilotOn { get => _autopilotOn; set { if (SetField(ref _autopilotOn, value)) OnPropertyChanged(nameof(LiveAutopilotOn)); } }
         public bool ParkingBrakeOn { get => _parkingBrakeOn; set { if (SetField(ref _parkingBrakeOn, value)) OnPropertyChanged(nameof(LiveParkingBrakeOn)); } }
         public bool DoorOpen { get => _doorOpen; set { if (SetField(ref _doorOpen, value)) { OnPropertyChanged(nameof(LiveDoorOpen)); OnPropertyChanged(nameof(DoorOpenPercentDisplay)); } } }
-        public bool OnGround { get => _onGround; set => SetField(ref _onGround, value); }
+        public bool OnGround
+        {
+            get => _onGround;
+            set
+            {
+                if (SetField(ref _onGround, value))
+                {
+                    OnPropertyChanged(nameof(LiveAutopilotOn));
+                    OnPropertyChanged(nameof(AltitudeAglDisplay));
+                    OnPropertyChanged(nameof(AglDisplay));
+                }
+            }
+        }
         public bool StrobeOn { get => _strobeOn; set => SetField(ref _strobeOn, value); }
         public bool BeaconOn { get => _beaconOn; set => SetField(ref _beaconOn, value); }
         public bool LandingOn { get => _landingOn; set => SetField(ref _landingOn, value); }
@@ -1054,7 +1066,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string GsDisplay => HasLiveTelemetry ? Math.Round(GS, 0).ToString("F0") : "---";
         public string GSDisplay => GsDisplay;
         public string AltitudeDisplay => HasLiveTelemetry ? Math.Round(Altitude, 0).ToString("F0") : "---";
-        public string AglDisplay           => HasLiveTelemetry ? Math.Round(AltitudeAGL, 0).ToString("F0") : "---";
+        public string AglDisplay
+        {
+            get
+            {
+                if (!HasLiveTelemetry) return "---";
+                var normalizedAgl = (OnGround || AltitudeAGL <= 5d) ? 0d : AltitudeAGL;
+                return Math.Round(normalizedAgl, 0).ToString("F0");
+            }
+        }
         public string AltitudeAglDisplay   => AglDisplay;
         public string QnhDisplay           => HasLiveTelemetry && _qnh > 0 ? $"{Math.Round(_qnh, 0):F0} hPa" : "â€”";
         public string RadioAcarsMessage

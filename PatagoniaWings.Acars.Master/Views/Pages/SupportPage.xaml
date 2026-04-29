@@ -169,7 +169,7 @@
                 <TextBlock Text="CARPETAS"
                            Foreground="#1565C0" FontSize="7.5" FontWeight="Bold"
                            FontFamily="Segoe UI" Margin="0,0,0,7"/>
-                <UniformGrid Columns="3">
+                <UniformGrid Columns="5">
                     <Button Command="{Binding OpenDebugFolderCommand}" Height="32" Margin="0,0,4,0" Cursor="Hand">
                         <Button.Template>
                             <ControlTemplate TargetType="Button">
@@ -201,6 +201,32 @@
                             <ControlTemplate TargetType="Button">
                                 <Border Background="#F0F6FF" BorderBrush="#C8DDF5" BorderThickness="1" CornerRadius="8">
                                     <TextBlock Text="App" Foreground="#1565C0" FontSize="9" FontWeight="SemiBold"
+                                               FontFamily="Segoe UI" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.80"/></Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    <Button Command="{Binding OpenExportsFolderCommand}" Height="32" Margin="4,0,0,0" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="#F0F6FF" BorderBrush="#C8DDF5" BorderThickness="1" CornerRadius="8">
+                                    <TextBlock Text="Exports" Foreground="#1565C0" FontSize="9" FontWeight="SemiBold"
+                                               FontFamily="Segoe UI" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True"><Setter Property="Opacity" Value="0.80"/></Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    <Button Command="{Binding OpenConfigFolderCommand}" Height="32" Margin="4,0,0,0" Cursor="Hand">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border Background="#F0F6FF" BorderBrush="#C8DDF5" BorderThickness="1" CornerRadius="8">
+                                    <TextBlock Text="Config" Foreground="#1565C0" FontSize="9" FontWeight="SemiBold"
                                                FontFamily="Segoe UI" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
