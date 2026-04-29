@@ -4,6 +4,8 @@
 Todo cambio que modifique ACARS debe validar tambien autoupdate antes de cerrar release:
 - actualizar version central (App.config/AssemblyInfo/fuente visible UI);
 - actualizar manifests/canal/autoupdater (acars-update.json, channel.json, autoupdater.xml);
+- publicar instalador oficial en Supabase Storage/Web y apuntar manifests publicos a esa URL;
+- no depender de Control Center como unica fuente de actualizacion;
 - actualizar metadata de descarga web si aplica;
 - generar o documentar artefacto oficial (installer/exe) de la version publicada;
 - validar version compare desde la version anterior (ej: 6.0.1 -> 7.0.1);
