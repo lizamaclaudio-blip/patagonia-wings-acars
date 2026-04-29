@@ -478,6 +478,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool StartGateColdAndDarkOk { get { return IsGateRulePassing("START_COLD_AND_DARK"); } }
         public bool StartGateAircraftTypeOk { get { return IsGateRulePassing("START_AIRCRAFT_MATCH"); } }
         public bool StartGateAirportOk { get { return IsGateRulePassing("START_AIRPORT_MATCH"); } }
+        public string StartGateParkingBrakeState => GetGateRuleVisualState("START_PARKING_BRAKE_ON");
+        public string StartGateColdAndDarkState => GetGateRuleVisualState("START_COLD_AND_DARK");
+        public string StartGateAircraftTypeState => GetGateRuleVisualState("START_AIRCRAFT_MATCH");
+        public string StartGateAirportState => GetGateRuleVisualState("START_AIRPORT_MATCH");
+        public string StartGateParkingBrakeLabel => GetGateRuleVisualLabel("START_PARKING_BRAKE_ON");
+        public string StartGateColdAndDarkLabel => GetGateRuleVisualLabel("START_COLD_AND_DARK");
+        public string StartGateAircraftTypeLabel => GetGateRuleVisualLabel("START_AIRCRAFT_MATCH");
+        public string StartGateAirportLabel => GetGateRuleVisualLabel("START_AIRPORT_MATCH");
 
         public string StartButtonTitle
         {
@@ -1027,6 +1035,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(StartGateColdAndDarkOk));
             OnPropertyChanged(nameof(StartGateAircraftTypeOk));
             OnPropertyChanged(nameof(StartGateAirportOk));
+            OnPropertyChanged(nameof(StartGateParkingBrakeState));
+            OnPropertyChanged(nameof(StartGateColdAndDarkState));
+            OnPropertyChanged(nameof(StartGateAircraftTypeState));
+            OnPropertyChanged(nameof(StartGateAirportState));
+            OnPropertyChanged(nameof(StartGateParkingBrakeLabel));
+            OnPropertyChanged(nameof(StartGateColdAndDarkLabel));
+            OnPropertyChanged(nameof(StartGateAircraftTypeLabel));
+            OnPropertyChanged(nameof(StartGateAirportLabel));
             OnPropertyChanged(nameof(CanStartFlight));
             OnPropertyChanged(nameof(StartButtonTitle));
             OnPropertyChanged(nameof(StartButtonSubtitle));
@@ -1057,6 +1073,72 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             return _startGateResult.Evaluation.GateFailures == null
                 || !_startGateResult.Evaluation.GateFailures.Any(item => string.Equals(item.RuleId, ruleId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private PatagoniaRuleAuditEntry? GetGateRuleAudit(string ruleId)
+        {
+            if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady || _startGateResult == null || _startGateResult.Evaluation == null)
+            {
+                return null;
+            }
+
+            return _startGateResult.Evaluation.RuleAuditLog == null
+                ? null
+                : _startGateResult.Evaluation.RuleAuditLog.LastOrDefault(item => string.Equals(item.RuleId, ruleId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private string GetGateRuleVisualState(string ruleId)
+        {
+            if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady)
+            {
+                return "PENDING";
+            }
+
+            if (AcarsContext.Runtime.LastTelemetry == null || !AcarsContext.Runtime.IsTelemetryFresh())
+            {
+                return "PENDING";
+            }
+
+            var audit = GetGateRuleAudit(ruleId);
+            if (audit == null)
+            {
+                return IsGateRulePassing(ruleId) ? "PASS" : "PENDING";
+            }
+
+            if (string.Equals(audit.Result, PatagoniaAuditResults.Pass, StringComparison.OrdinalIgnoreCase))
+            {
+                return "PASS";
+            }
+
+            if (string.Equals(audit.Result, PatagoniaAuditResults.Warn, StringComparison.OrdinalIgnoreCase))
+            {
+                return "WARN";
+            }
+
+            if (string.Equals(audit.Result, PatagoniaAuditResults.NotApplicable, StringComparison.OrdinalIgnoreCase))
+            {
+                return "N_A";
+            }
+
+            return "FAIL";
+        }
+
+        private string GetGateRuleVisualLabel(string ruleId)
+        {
+            var state = GetGateRuleVisualState(ruleId);
+            switch (state)
+            {
+                case "PASS":
+                    return "OK";
+                case "WARN":
+                    return "PARCIAL";
+                case "N_A":
+                    return "N/D";
+                case "PENDING":
+                    return "PEND";
+                default:
+                    return "NO";
+            }
         }
 
         private void ApplyPilotPreferences()

@@ -7,20 +7,47 @@
         <BooleanToVisibilityConverter x:Key="BoolVis"/>
 
         <Style x:Key="GateLedDotStyle" TargetType="Ellipse" BasedOn="{StaticResource LedStatusDot}">
-            <Setter Property="Fill" Value="#EF4444"/>
-            <Setter Property="Stroke" Value="#B91C1C"/>
+            <Setter Property="Fill" Value="#6B7280"/>
+            <Setter Property="Stroke" Value="#4B5563"/>
             <Setter Property="Effect">
                 <Setter.Value>
-                    <DropShadowEffect BlurRadius="9" ShadowDepth="0" Opacity="0.55" Color="#EF4444"/>
+                    <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.45" Color="#6B7280"/>
                 </Setter.Value>
             </Setter>
             <Style.Triggers>
-                <Trigger Property="Tag" Value="True">
+                <Trigger Property="Tag" Value="PASS">
                     <Setter Property="Fill" Value="#22C55E"/>
                     <Setter Property="Stroke" Value="#16803D"/>
                     <Setter Property="Effect">
                         <Setter.Value>
                             <DropShadowEffect BlurRadius="11" ShadowDepth="0" Opacity="0.78" Color="#22C55E"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                <Trigger Property="Tag" Value="WARN">
+                    <Setter Property="Fill" Value="#F59E0B"/>
+                    <Setter Property="Stroke" Value="#B45309"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="10" ShadowDepth="0" Opacity="0.72" Color="#F59E0B"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                <Trigger Property="Tag" Value="FAIL">
+                    <Setter Property="Fill" Value="#9CA3AF"/>
+                    <Setter Property="Stroke" Value="#6B7280"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.5" Color="#9CA3AF"/>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                <Trigger Property="Tag" Value="N_A">
+                    <Setter Property="Fill" Value="#9CA3AF"/>
+                    <Setter Property="Stroke" Value="#6B7280"/>
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect BlurRadius="8" ShadowDepth="0" Opacity="0.5" Color="#9CA3AF"/>
                         </Setter.Value>
                     </Setter>
                 </Trigger>
@@ -207,25 +234,29 @@
                         <Border Style="{StaticResource GateLedCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="FRENO" Style="{StaticResource GateLedLabelStyle}"/>
-                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateParkingBrakeOk}"/>
+                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateParkingBrakeState}"/>
+                                <TextBlock Text="{Binding StartGateParkingBrakeLabel}" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource GateLedCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="COLD &amp; DARK" Style="{StaticResource GateLedLabelStyle}"/>
-                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateColdAndDarkOk}"/>
+                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateColdAndDarkState}"/>
+                                <TextBlock Text="{Binding StartGateColdAndDarkLabel}" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource GateLedCardStyle}">
                             <StackPanel>
-                                <TextBlock Text="TIPO AVION" Style="{StaticResource GateLedLabelStyle}"/>
-                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateAircraftTypeOk}"/>
+                                <TextBlock Text="AVION" Style="{StaticResource GateLedLabelStyle}"/>
+                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateAircraftTypeState}"/>
+                                <TextBlock Text="{Binding StartGateAircraftTypeLabel}" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource GateLedCardStyle}">
                             <StackPanel>
                                 <TextBlock Text="GATE" Style="{StaticResource GateLedLabelStyle}"/>
-                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateAirportOk}"/>
+                                <Ellipse Style="{StaticResource GateLedDotStyle}" Tag="{Binding StartGateAirportState}"/>
+                                <TextBlock Text="{Binding StartGateAirportLabel}" Style="{StaticResource FieldLabel}" HorizontalAlignment="Center" Margin="0,4,0,0"/>
                             </StackPanel>
                         </Border>
                     </UniformGrid>
