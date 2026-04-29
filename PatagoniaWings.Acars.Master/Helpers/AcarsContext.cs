@@ -3,6 +3,7 @@ using System.Configuration;
 using System.IO;
 using System.Threading.Tasks;
 using PatagoniaWings.Acars.Core.Services;
+using PatagoniaWings.Acars.Master.Services;
 
 namespace PatagoniaWings.Acars.Master.Helpers
 {
@@ -16,6 +17,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public static FlightService FlightService { get; private set; } = null!;
         public static AcarsSoundPlayer Sound { get; private set; } = null!;
         public static AcarsRuntimeState Runtime { get; private set; } = null!;
+        public static HudBridgeService HudBridge { get; private set; } = null!;
         private static bool _startupRetryScheduled;
 
         public static void Initialize()
@@ -44,6 +46,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
             Api = new ApiService(apiBaseUrl, webBaseUrl, supabaseUrl, supabaseAnonKey, useSupabaseDirect);
             FlightService = new FlightService();
             Sound = new AcarsSoundPlayer();
+            HudBridge = new HudBridgeService();
+            HudBridge.Initialize();
 
             if (Auth.TryRestoreSession() && Auth.CurrentPilot != null)
             {
@@ -99,6 +103,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         public static void Shutdown()
         {
+            HudBridge?.Shutdown();
             Sound?.Dispose();
         }
 

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patagonia Wings ACARS HUD</title>
+  <link rel="stylesheet" href="./hud.css" />
+</head>
+<body>
+  <main id="hud" class="hud hud--offline">
+    <section class="brand">
+      <div class="brand-mark">PW</div>
+      <div>
+        <div class="brand-title">PATAGONIA WINGS</div>
+        <div id="connection" class="brand-subtitle">ACARS offline</div>
+      </div>
+    </section>
+
+    <section class="flight-strip">
+      <div class="cell"><span>VUELO</span><strong id="flightNumber">--</strong></div>
+      <div class="cell"><span>DEP</span><strong id="dep">----</strong></div>
+      <div class="cell"><span>ARR</span><strong id="arr">----</strong></div>
+      <div class="cell"><span>A/C</span><strong id="aircraft">--</strong></div>
+      <div class="cell"><span>ALT</span><strong id="altitude">0 FT</strong></div>
+      <div class="cell"><span>GS</span><strong id="gs">0 KT</strong></div>
+      <div class="cell"><span>HDG</span><strong id="hdg">000°</strong></div>
+      <div class="cell"><span>V/S</span><strong id="vs">0 FPM</strong></div>
+      <div class="cell fuel"><span>FUEL</span><strong id="fuel">0 / N/D KG</strong></div>
+      <div class="cell"><span>QNH</span><strong id="qnh">N/D</strong></div>
+      <div class="cell"><span>XPDR</span><strong id="xpdr">----</strong></div>
+    </section>
+
+    <section id="systems" class="systems"></section>
+  </main>
+
+  <script src="./hud.js"></script>
+</body>
+</html>

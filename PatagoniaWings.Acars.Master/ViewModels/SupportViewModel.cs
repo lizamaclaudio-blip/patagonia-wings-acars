@@ -15,6 +15,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _alwaysVisible;
         private bool _useKg;
         private string _simulatorIp = "127.0.0.1";
+        private bool _enableInSimHud;
+        private int _localHudPort;
+        private int _hudUpdateRateHz;
+        private bool _hudOnlyInFlight;
         private string _statusMessage = string.Empty;
 
         public SupportViewModel()
@@ -25,6 +29,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             _simulatorIp = string.IsNullOrWhiteSpace(_preferences.SimulatorIp)
                 ? "127.0.0.1"
                 : _preferences.SimulatorIp.Trim();
+            _enableInSimHud = _preferences.EnableInSimHud;
+            _localHudPort = _preferences.LocalHudPort;
+            _hudUpdateRateHz = _preferences.HudUpdateRateHz;
+            _hudOnlyInFlight = _preferences.HudOnlyInFlight;
 
             LogoutCommand = new RelayCommand(() => RequestLogout?.Invoke());
             BackCommand = new RelayCommand(() => RequestBack?.Invoke());
@@ -34,6 +42,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OpenAppFolderCommand = new RelayCommand(() => OpenFolder(AppDomain.CurrentDomain.BaseDirectory));
             OpenExportsFolderCommand = new RelayCommand(() => OpenFolder(GetExportsFolderPath()));
             OpenConfigFolderCommand = new RelayCommand(() => OpenFolder(GetConfigFolderPath()));
+            OpenHudPackageFolderCommand = new RelayCommand(OpenHudPackageFolder);
+            CopyHudBridgeUrlCommand = new RelayCommand(CopyHudBridgeUrl);
         }
 
         public event Action<bool>? AlwaysVisibleChanged;
@@ -49,9 +59,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand OpenAppFolderCommand { get; }
         public ICommand OpenExportsFolderCommand { get; }
         public ICommand OpenConfigFolderCommand { get; }
+        public ICommand OpenHudPackageFolderCommand { get; }
+        public ICommand CopyHudBridgeUrlCommand { get; }
 
         public string AcarsVersion => "v" + UpdateService.CurrentVersion;
         public string FsuipcVersion => ResolveFsuipcVersion();
+        public string HudBridgeStatus => AcarsContext.HudBridge != null ? AcarsContext.HudBridge.GetHealthText() : "HUD bridge no disponible";
 
         public bool AlwaysVisible
         {
@@ -97,6 +110,58 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             set => SetField(ref _statusMessage, value);
         }
 
+        public bool EnableInSimHud
+        {
+            get => _enableInSimHud;
+            set
+            {
+                if (SetField(ref _enableInSimHud, value))
+                {
+                    SavePreferences();
+                    OnPropertyChanged(nameof(HudBridgeStatus));
+                }
+            }
+        }
+
+        public int LocalHudPort
+        {
+            get => _localHudPort;
+            set
+            {
+                var sanitized = value < 1024 || value > 65535 ? 37677 : value;
+                if (SetField(ref _localHudPort, sanitized))
+                {
+                    SavePreferences();
+                    OnPropertyChanged(nameof(HudBridgeStatus));
+                }
+            }
+        }
+
+        public int HudUpdateRateHz
+        {
+            get => _hudUpdateRateHz;
+            set
+            {
+                var sanitized = value < 1 ? 1 : (value > 5 ? 5 : value);
+                if (SetField(ref _hudUpdateRateHz, sanitized))
+                {
+                    SavePreferences();
+                }
+            }
+        }
+
+        public bool HudOnlyInFlight
+        {
+            get => _hudOnlyInFlight;
+            set
+            {
+                if (SetField(ref _hudOnlyInFlight, value))
+                {
+                    SavePreferences();
+                }
+            }
+        }
+
         private async Task RetryLastPirepAsync()
         {
             var before = AcarsContext.Api != null ? AcarsContext.Api.GetPendingCloseoutCount() : 0;
@@ -124,7 +189,49 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             _preferences.AlwaysVisible = _alwaysVisible;
             _preferences.UseKg = _useKg;
             _preferences.SimulatorIp = _simulatorIp;
+            _preferences.EnableInSimHud = _enableInSimHud;
+            _preferences.LocalHudPort = _localHudPort;
+            _preferences.HudUpdateRateHz = _hudUpdateRateHz;
+            _preferences.HudOnlyInFlight = _hudOnlyInFlight;
             UiPreferencesStore.Save(_preferences);
+
+            AcarsContext.HudBridge?.ApplySettings(
+                _enableInSimHud,
+                _localHudPort,
+                _hudUpdateRateHz,
+                _hudOnlyInFlight,
+                _preferences.HudTheme);
+        }
+
+        private void OpenHudPackageFolder()
+        {
+            try
+            {
+                var path = AcarsContext.HudBridge != null
+                    ? AcarsContext.HudBridge.GetPackageFolderPath()
+                    : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Packages", "patagoniawings-acars-hud");
+                OpenFolder(path);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude abrir carpeta HUD: " + ex.Message;
+            }
+        }
+
+        private void CopyHudBridgeUrl()
+        {
+            try
+            {
+                var url = AcarsContext.HudBridge != null
+                    ? AcarsContext.HudBridge.GetStateUrl()
+                    : "http://127.0.0.1:37677/api/hud/state";
+                System.Windows.Clipboard.SetText(url);
+                StatusMessage = "URL HUD copiada: " + url;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude copiar URL HUD: " + ex.Message;
+            }
         }
 
         private static string ResolveFsuipcVersion()

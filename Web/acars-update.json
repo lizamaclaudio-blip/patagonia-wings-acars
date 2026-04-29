@@ -1,9 +1,9 @@
 ﻿{
-  "version": "7.0.1",
+  "version": "7.0.3",
   "webVersion": "2.0",
   "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
   "mandatory": true,
-  "notes": "- Autoupdate obligatorio 7.0.1\n- Canal estable forzado a instalador oficial\n- Comparacion de version endurecida para upgrades desde 6.x",
+  "notes": "- Release ACARS 7.0.3 con HUD MSFS in-game\n- Finalize confirmado por servidor y summary web\n- Upgrade universal desde versiones legacy",
   "releaseDate": "2026-04-29",
   "minVersion": "6.0.0",
   "fileSize": "24.7 MB",

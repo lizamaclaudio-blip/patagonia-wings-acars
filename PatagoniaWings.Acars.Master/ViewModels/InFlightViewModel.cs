@@ -1198,7 +1198,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return $"Sintonice COM2: {_picFrequency:F3}  [{_picSecondsLeft}s]";
                 if (_picChecksTotal == 0)
                     return "Verificacion PIC activa en crucero";
-                return $"Vuelo en curso � checks: {_picChecksDone}/{_picChecksTotal}";
+                return $"Vuelo en curso | checks: {_picChecksDone}/{_picChecksTotal}";
             }
         }
         public string PicButtonLabel => _picCheckActive ? $"{_picSecondsLeft}s" : (_picConfirmed ? "OK" : "-");

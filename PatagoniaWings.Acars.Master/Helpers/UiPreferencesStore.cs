@@ -10,6 +10,11 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public bool AlwaysVisible { get; set; } = false;
         public bool UseKg { get; set; } = true;
         public string SimulatorIp { get; set; } = "127.0.0.1";
+        public bool EnableInSimHud { get; set; } = true;
+        public int LocalHudPort { get; set; } = 37677;
+        public int HudUpdateRateHz { get; set; } = 2;
+        public bool HudOnlyInFlight { get; set; } = true;
+        public string HudTheme { get; set; } = "patagonia-navy";
     }
 
     public static class UiPreferencesStore

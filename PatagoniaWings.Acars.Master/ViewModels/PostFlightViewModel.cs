@@ -56,6 +56,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(RouteDisplay));
                     OnPropertyChanged(nameof(CloseButtonTitle));
                     OnPropertyChanged(nameof(CanSubmit));
+                    OnPropertyChanged(nameof(IsPendingCloseoutRetry));
                     CommandManager.InvalidateRequerySuggested();
                 }
             }
@@ -70,6 +71,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 {
                     OnPropertyChanged(nameof(CloseButtonTitle));
                     OnPropertyChanged(nameof(CanSubmit));
+                    OnPropertyChanged(nameof(IsPendingCloseoutRetry));
                     CommandManager.InvalidateRequerySuggested();
                 }
             }
@@ -84,6 +86,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 {
                     OnPropertyChanged(nameof(CloseButtonTitle));
                     OnPropertyChanged(nameof(CanSubmit));
+                    OnPropertyChanged(nameof(IsPendingCloseoutRetry));
                     CommandManager.InvalidateRequerySuggested();
                 }
             }
@@ -131,6 +134,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool HasReport => Report != null;
         public bool CanSubmit => Report != null && !IsSubmitting && !Submitted;
 
+        public bool IsPendingCloseoutRetry => IsCloseoutPendingRetry(Report?.ResultStatus);
+
         public string FlightNumberDisplay => string.IsNullOrWhiteSpace(Report?.FlightNumber) ? "PW0000" : Report!.FlightNumber;
 
         public string RouteDisplay
@@ -160,6 +165,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (Submitted)
                 {
                     return "PIREP ENVIADO";
+                }
+
+                if (IsPendingCloseoutRetry)
+                {
+                    return "REENVIAR PIREP";
                 }
 
                 return "CERRAR VUELO";
@@ -254,11 +264,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             CloseoutComments = string.Empty;
             AircraftNotams = string.Empty;
 
-            SubmitMessage = Submitted
-                ? (string.Equals(report.ResultStatus, "queued_retry", StringComparison.OrdinalIgnoreCase)
-                    ? "PIREP ya consolidado localmente y en cola de reintento."
-                    : "PIREP ya consolidado y sincronizado.")
-                : "Completa el cierre y confirma el envio del PIREP.";
+            if (Submitted)
+            {
+                SubmitMessage = "PIREP enviado y consolidado correctamente.";
+            }
+            else if (IsCloseoutPendingRetry(report.ResultStatus))
+            {
+                SubmitMessage = "PIREP pendiente de sincronizacion. Reintenta el envio cuando tengas conexion.";
+            }
+            else
+            {
+                SubmitMessage = "Completa el cierre y confirma el envio del PIREP.";
+            }
+
+            OnPropertyChanged(nameof(CloseButtonTitle));
+            OnPropertyChanged(nameof(CanSubmit));
+            OnPropertyChanged(nameof(IsPendingCloseoutRetry));
+            CommandManager.InvalidateRequerySuggested();
         }
 
         private async Task RunCloseoutAsync()
@@ -269,12 +291,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
 
             IsSubmitting = true;
-            SubmitMessage = "Consolidando closeout y enviando PIREP...";
+            SubmitMessage = "Enviando PIREP a Patagonia Wings...";
 
             try
             {
                 ApplyCloseoutInputs();
 
+                // ── Enviar al backend oficial ────────────────────────────────────
                 var result = await AcarsContext.Api.SubmitFlightReportAsync(
                     Report,
                     AcarsContext.FlightService.CurrentFlight,
@@ -282,39 +305,75 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     AcarsContext.FlightService.LastSimData,
                     AcarsContext.FlightService.GetDamageEventsSnapshot());
 
+                // ── Validar respuesta del servidor ────────────────────────────────
                 if (!result.Success)
                 {
                     Submitted = false;
-                    SubmitMessage = "No se pudo cerrar el vuelo: " + result.Error;
+                    SubmitMessage = "Pendiente de sincronizacion. " + (result.Error ?? "Error de comunicacion con el servidor.");
+                    // Guardar en cola local para reintento posterior
                     return;
                 }
 
-                if (result.Data != null)
+                if (result.Data == null)
                 {
-                    Report = result.Data;
-                    Report.ReservationId = result.Data.ReservationId;
-                    Report.ResultUrl = result.Data.ResultUrl;
-                    Report.ResultStatus = result.Data.ResultStatus;
-                    Report.PilotQualifications = result.Data.PilotQualifications;
-                    Report.PilotCertifications = result.Data.PilotCertifications;
+                    Submitted = false;
+                    SubmitMessage = "Pendiente de sincronizacion. El servidor no confirmo el cierre.";
+                    return;
                 }
 
-                Submitted = true;
+                // Actualizar reporte con datos del servidor
+                Report = result.Data;
+                Report.ReservationId = result.Data.ReservationId;
+                Report.ResultUrl = result.Data.ResultUrl;
+                Report.ResultStatus = result.Data.ResultStatus;
+                Report.PilotQualifications = result.Data.PilotQualifications;
+                Report.PilotCertifications = result.Data.PilotCertifications;
 
-                var isQueued = string.Equals(Report?.ResultStatus, "queued_retry", StringComparison.OrdinalIgnoreCase);
-                SubmitMessage = isQueued
-                    ? "Reporte de caja negra preparado. Finalize en cola para evaluacion oficial en Patagonia Wings Web."
-                    : "Reporte de caja negra preparado y enviado. Score final pendiente de calculo oficial en Patagonia Wings Web.";
+                // Solo marcar como enviado si el servidor confirmo persistencia real.
+                var serverConfirmed = IsCloseoutServerConfirmed(Report.ResultStatus);
+                var isQueued = IsCloseoutPendingRetry(Report.ResultStatus);
+
+                if (serverConfirmed)
+                {
+                    Submitted = true;
+                    SubmitMessage = "PIREP enviado y consolidado correctamente.";
+                }
+                else if (isQueued)
+                {
+                    Submitted = false;
+                    SubmitMessage = "PIREP pendiente de sincronizacion. Quedo en cola local y se puede reenviar desde Soporte o desde esta pantalla.";
+
+                    OnPropertyChanged(nameof(CloseButtonTitle));
+                    OnPropertyChanged(nameof(CanSubmit));
+                    OnPropertyChanged(nameof(IsPendingCloseoutRetry));
+                    CommandManager.InvalidateRequerySuggested();
+
+                    return;
+                }
+                else
+                {
+                    Submitted = false;
+                    SubmitMessage = "Pendiente de sincronizacion. Estado: " + (Report?.ResultStatus ?? "unknown");
+
+                    OnPropertyChanged(nameof(CloseButtonTitle));
+                    OnPropertyChanged(nameof(CanSubmit));
+                    OnPropertyChanged(nameof(IsPendingCloseoutRetry));
+                    CommandManager.InvalidateRequerySuggested();
+
+                    return;
+                }
 
                 AcarsContext.FlightService.Reset();
                 AcarsContext.Sound.PlayDing();
                 _ = AcarsContext.Sound.PlayGroundArrivedAsync();
 
+                // ── Abrir resumen web tras confirmacion exitosa ──────────────────
                 var resultUrl = Report?.ResultUrl;
-                if (!isQueued && !string.IsNullOrWhiteSpace(resultUrl))
+                if (!string.IsNullOrWhiteSpace(resultUrl))
                 {
                     try
                     {
+                        SubmitMessage += " Abriendo resumen del vuelo...";
                         Process.Start(new ProcessStartInfo
                         {
                             FileName = resultUrl,
@@ -323,14 +382,32 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        SubmitMessage += " | No pude abrir la web: " + ex.Message;
+                        SubmitMessage += " (No se pudo abrir el navegador: " + ex.Message + ")";
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                Submitted = false;
+                SubmitMessage = "Error al enviar PIREP: " + ex.Message;
             }
             finally
             {
                 IsSubmitting = false;
             }
+        }
+
+        /// <summary>
+        /// Determina si el servidor confirmó oficialmente el cierre del vuelo.
+        /// </summary>
+        private static bool IsCloseoutServerConfirmed(string? status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return false;
+            var normalized = status.Trim().ToLowerInvariant();
+            return normalized == "completed" 
+                || normalized == "scored" 
+                || normalized == "approved"
+                || normalized == "finalized";
         }
 
         private void ApplyCloseoutInputs()
@@ -362,8 +439,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private static bool IsCloseoutAlreadyResolved(string? status)
         {
+            return IsCloseoutServerConfirmed(status);
+        }
+
+        private static bool IsCloseoutPendingRetry(string? status)
+        {
             var normalized = (status ?? string.Empty).Trim().ToLowerInvariant();
-            return normalized == "completed" || normalized == "queued_retry";
+            return normalized == "queued_retry"
+                || normalized == "pending"
+                || normalized == "pending_sync"
+                || normalized == "retry_pending";
         }
 
         private static string ScoreColor(int score)

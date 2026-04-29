@@ -677,7 +677,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 {
                     ReadyFlight = null;
                     StatusMessage = "La reserva existe en Patagonia Wings Web, pero el despacho todavia no trae datos operativos suficientes para ACARS.";
-                    StatusMessage = "La reserva existe en Patagonia Wings Web, pero el despacho todavÃ­a no trae datos operativos suficientes para ACARS.";
                     return;
                 }
 
@@ -690,7 +689,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 FlightStarted = false;
                 StatusMessage = dispatch.IsDispatchReady
                     ? "Despacho listo desde la web. Revisa METAR y simulador antes de iniciar el ACARS."
-                    : "Reserva cargada desde la web. El dispatch todavía no está liberado para ACARS.";
+                    : "Reserva cargada desde la web. El dispatch todavia no está liberado para ACARS.";
 
                 _ = LoadMetarAsync();
             }
@@ -841,7 +840,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             if (!PreparedDispatch.IsDispatchReady)
             {
-                StatusMessage = "La reserva todavía no está en estado despachable. Complétala primero en la web.";
+                StatusMessage = "La reserva todavia no está en estado despachable. Complétala primero en la web.";
                 return;
             }
 

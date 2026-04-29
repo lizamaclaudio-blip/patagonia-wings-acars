@@ -1,0 +1,34 @@
+{
+  "content": [
+    {
+      "path": "html_ui/InGamePanels/PatagoniaWingsHud/ToolbarIcon.svg",
+      "size": 544,
+      "date": 133590624000000000
+    },
+    {
+      "path": "html_ui/InGamePanels/PatagoniaWingsHud/hud.css",
+      "size": 3374,
+      "date": 133590624000000000
+    },
+    {
+      "path": "html_ui/InGamePanels/PatagoniaWingsHud/hud.js",
+      "size": 3230,
+      "date": 133590624000000000
+    },
+    {
+      "path": "html_ui/InGamePanels/PatagoniaWingsHud/index.html",
+      "size": 1624,
+      "date": 133590624000000000
+    },
+    {
+      "path": "html_ui/InGamePanels/PatagoniaWingsHud/panel.xml",
+      "size": 532,
+      "date": 133590624000000000
+    },
+    {
+      "path": "manifest.json",
+      "size": 412,
+      "date": 133590624000000000
+    }
+  ]
+}

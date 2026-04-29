@@ -12,7 +12,9 @@ x86/
 AnyCPU/
 
 TestResults/
-packages/
+packages/*
+!packages/patagoniawings-acars-hud/
+!packages/patagoniawings-acars-hud/**
 publish/
 artifacts/
 

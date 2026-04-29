@@ -88,6 +88,55 @@
                     <CheckBox Content="Usar KG"
                               IsChecked="{Binding UseKg}"
                               Foreground="#1E3A64" FontSize="9.5" FontFamily="Segoe UI"/>
+                    <Separator Margin="0,7,0,7"/>
+                    <TextBlock Text="HUD MSFS INTERNO"
+                               Foreground="#1565C0" FontSize="7.5" FontWeight="Bold"
+                               FontFamily="Segoe UI" Margin="0,0,0,5"/>
+                    <CheckBox Content="Activar HUD MSFS"
+                              IsChecked="{Binding EnableInSimHud}"
+                              Foreground="#1E3A64" FontSize="9.5" FontFamily="Segoe UI"
+                              Margin="0,0,0,4"/>
+                    <CheckBox Content="Solo durante vuelo"
+                              IsChecked="{Binding HudOnlyInFlight}"
+                              Foreground="#1E3A64" FontSize="9.5" FontFamily="Segoe UI"
+                              Margin="0,0,0,6"/>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Puerto:" Foreground="#4A6E9A" FontSize="8" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding LocalHudPort, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="6,0,0,0"
+                                 Height="24"
+                                 VerticalContentAlignment="Center"
+                                 Foreground="#0D1F3C" FontSize="9" FontFamily="Consolas"/>
+                    </Grid>
+                    <Grid Margin="0,0,0,6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="Rate Hz:" Foreground="#4A6E9A" FontSize="8" VerticalAlignment="Center"/>
+                        <TextBox Grid.Column="1"
+                                 Text="{Binding HudUpdateRateHz, UpdateSourceTrigger=PropertyChanged}"
+                                 Margin="6,0,0,0"
+                                 Height="24"
+                                 VerticalContentAlignment="Center"
+                                 Foreground="#0D1F3C" FontSize="9" FontFamily="Consolas"/>
+                    </Grid>
+                    <TextBlock Text="{Binding HudBridgeStatus}"
+                               Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
+                               TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <UniformGrid Columns="2">
+                        <Button Command="{Binding OpenHudPackageFolderCommand}" Height="26" Margin="0,0,3,0">
+                            <TextBlock Text="Paquete HUD" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Command="{Binding CopyHudBridgeUrlCommand}" Height="26" Margin="3,0,0,0">
+                            <TextBlock Text="Copiar URL" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </Button>
+                    </UniformGrid>
                 </StackPanel>
             </Border>
 

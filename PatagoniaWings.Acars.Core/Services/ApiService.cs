@@ -1605,8 +1605,18 @@ namespace PatagoniaWings.Acars.Core.Services
                 }
 
                 var resultPayload = webResponse.Data;
+                var successFlag = ConvertToBool(resultPayload, "success", false);
+                var reservationIdConfirmed = ConvertToString(resultPayload, "reservationId");
+                var summaryUrl = FirstNonEmpty(resultPayload, "summaryUrl", "resultUrl");
+                if (!successFlag || string.IsNullOrWhiteSpace(reservationIdConfirmed))
+                {
+                    return ApiResult<FlightReport>.Fail("Finalize sin confirmación real del servidor.");
+                }
+
                 var officialScores = GetNestedDictionary(resultPayload, "officialScores");
-                envelope.Report.ResultUrl = BuildAbsoluteWebUrl(ConvertToString(resultPayload, "resultUrl"));
+                envelope.Report.ResultUrl = string.IsNullOrWhiteSpace(summaryUrl)
+                    ? BuildFlightResultUrl(envelope.Dispatch?.ReservationId ?? string.Empty)
+                    : BuildAbsoluteWebUrl(summaryUrl);
                 envelope.Report.ResultStatus = ConvertToString(resultPayload, "resultStatus");
                 envelope.Report.ProcedureScore = ConvertToInt(officialScores, "procedure_score", envelope.Report.ProcedureScore);
                 envelope.Report.PerformanceScore = ConvertToInt(officialScores, "performance_score", envelope.Report.PerformanceScore);

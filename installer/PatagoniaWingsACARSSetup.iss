@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-  #define MyAppVersion   "7.0.1"
+  #define MyAppVersion   "7.0.3"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
@@ -80,6 +80,8 @@ Source: "..\PatagoniaWings.Acars.Master\Assets\Aircraft\.gitkeep"; DestDir: "{ap
 Source: "..\PatagoniaWings.Acars.Master\Assets\Sounds\*"; DestDir: "{app}\Assets\Sounds"; Flags: ignoreversion recursesubdirs createallsubdirs; Check: DirExists(ExpandConstant('{src}\\..\\PatagoniaWings.Acars.Master\\Assets\\Sounds'))
 ; MobiFlight WASM Module - se copia a temp, el codigo lo instala en Community
 Source: "MobiFlightWasm\mobiflight-event-module\*"; DestDir: "{tmp}\mobiflight-event-module"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Patagonia Wings HUD package (instalacion manual o copia a Community por el usuario)
+Source: "..\packages\patagoniawings-acars-hud\*"; DestDir: "{app}\MSFS-HUD-Package\patagoniawings-acars-hud"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\Patagonia Wings ACARS"; Filename: "{app}\{#MyAppExe}"; IconFilename: "{app}\{#MyAppExe}"
