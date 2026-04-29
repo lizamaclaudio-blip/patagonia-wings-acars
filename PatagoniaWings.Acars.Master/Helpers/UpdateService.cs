@@ -110,12 +110,15 @@ namespace PatagoniaWings.Acars.Master.Helpers
             get
             {
                 var state = ReadLocalUpdateState();
-                if (!string.IsNullOrWhiteSpace(state.Revision))
+                var configRevision = ReadSetting("AppRevision", GetAssemblyRevision());
+
+                if (string.IsNullOrWhiteSpace(state.Revision))
                 {
-                    return state.Revision;
+                    return configRevision;
                 }
 
-                return ReadSetting("AppRevision", GetAssemblyRevision());
+                // Evita loops cuando update-state queda atrasado respecto al App.config instalado.
+                return IsVersionNewer(configRevision, state.Revision) ? configRevision : state.Revision;
             }
         }
 
@@ -631,6 +634,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 catch
                 {
                 }
+
+                // Persistir estado antes del handoff al instalador evita loops por revision stale.
+                WriteLocalUpdateState(version, revision, CurrentChannel);
 
                 var splashScriptPath = Path.Combine(tempDir, "show_update_splash.ps1");
                 var appExePath = GetInstalledExePath();
