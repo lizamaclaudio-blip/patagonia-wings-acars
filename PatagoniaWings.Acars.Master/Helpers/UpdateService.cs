@@ -6,9 +6,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
@@ -118,6 +120,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
         }
 
         public static string CurrentChannel => ReadSetting("UpdateChannel", "beta");
+
+        public static string LogsDirectory => Path.Combine(AppDataRoot, "logs");
 
         public static void NotifyStartupComplete()
         {
@@ -592,24 +596,32 @@ namespace PatagoniaWings.Acars.Master.Helpers
         {
             try
             {
-                var tempDir = Path.Combine(Path.GetTempPath(), "PWAcarsUpdate");
+                var tempDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "PatagoniaWings",
+                    "ACARS",
+                    "Updates");
                 Directory.CreateDirectory(tempDir);
                 var installerPath = Path.Combine(tempDir, $"PatagoniaWingsACARSSetup-{SanitizePathSegment(version)}.exe");
 
-                WriteLog("Downloading installer => " + installerPath);
+                WriteLog($"update_download_prepare => download_url={downloadUrl} target_temp_path={installerPath}");
+                UpdateStatusChanged?.Invoke("Conectando con servidor de actualizacion...");
+                DownloadProgressChanged?.Invoke(0);
 
-                using (var client = new WebClient())
+                var downloadMeta = await DownloadInstallerWithProgressAsync(downloadUrl, installerPath).ConfigureAwait(false);
+                WriteLog(
+                    $"update_download_response => http_status={downloadMeta.StatusCode} content_type={downloadMeta.ContentType} " +
+                    $"content_length={downloadMeta.ContentLength} redirect_url={downloadMeta.FinalUrl}");
+                ValidateDownloadedInstaller(installerPath, version);
+                WriteLog("update_download_complete => installer_path=" + installerPath);
+
+                if (downloadMeta.ContentLength <= 0)
                 {
-                    client.DownloadProgressChanged += (s, e) =>
-                    {
-                        DownloadProgressChanged?.Invoke(e.ProgressPercentage);
-                    };
-
-                    await client.DownloadFileTaskAsync(new Uri(downloadUrl), installerPath).ConfigureAwait(false);
+                    WriteLog("warning: content_length not reported by server, file validated by size/hash checks.");
                 }
 
-                ValidateDownloadedInstaller(installerPath, version);
                 DownloadProgressChanged?.Invoke(100);
+                UpdateStatusChanged?.Invoke("Instalador listo. Iniciando instalacion...");
                 UpdateStatusChanged?.Invoke("Instalando release completa. El ACARS se relanzara automaticamente.");
 
                 try
@@ -638,16 +650,106 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
                     IsInstallerTakingControl = true;
-                    WriteLog("Installer handoff ready. Closing app.");
+                    WriteLog("installer_started => handoff ready. Closing app.");
                     Application.Current.Shutdown();
                 });
+            }
+            catch (TimeoutException timeoutEx)
+            {
+                _updateInProgress = false;
+                WriteLog("update_error timeout => " + timeoutEx.Message);
+                UpdateStatusChanged?.Invoke("Tiempo de espera agotado al descargar instalador.");
+                UpdateFailed?.Invoke(
+                    timeoutEx.Message +
+                    " | Usa descarga manual o reintenta. URL: " + downloadUrl);
             }
             catch (Exception ex)
             {
                 _updateInProgress = false;
-                WriteLog("Installer update error: " + ex.Message);
+                WriteLog("update_error => " + ex);
                 UpdateStatusChanged?.Invoke("No se pudo completar la actualizacion. " + ex.Message);
-                UpdateFailed?.Invoke(ex.Message);
+                UpdateFailed?.Invoke(
+                    ex.Message +
+                    " | Descarga manual: " + downloadUrl);
+            }
+        }
+
+        private sealed class InstallerDownloadMeta
+        {
+            public int StatusCode { get; set; }
+            public string ContentType { get; set; } = string.Empty;
+            public long ContentLength { get; set; }
+            public string FinalUrl { get; set; } = string.Empty;
+        }
+
+        private static async Task<InstallerDownloadMeta> DownloadInstallerWithProgressAsync(string downloadUrl, string installerPath)
+        {
+            var requestUri = new Uri(downloadUrl);
+            var timeout = TimeSpan.FromSeconds(120);
+            using (var cts = new CancellationTokenSource(timeout))
+            using (var handler = new HttpClientHandler { AllowAutoRedirect = true })
+            using (var client = new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan })
+            using (var request = new HttpRequestMessage(HttpMethod.Get, requestUri))
+            using (var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token).ConfigureAwait(false))
+            {
+                var statusCode = (int)response.StatusCode;
+                var contentType = response.Content.Headers.ContentType?.MediaType ?? string.Empty;
+                var contentLength = response.Content.Headers.ContentLength ?? 0;
+                var finalUrl = response.RequestMessage?.RequestUri?.ToString() ?? downloadUrl;
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new InvalidOperationException("Servidor de update respondio HTTP " + statusCode);
+                }
+
+                if (!string.IsNullOrWhiteSpace(contentType) &&
+                    contentType.IndexOf("text/html", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    throw new InvalidOperationException("Download URL devolvio HTML en vez de instalador.");
+                }
+
+                UpdateStatusChanged?.Invoke("Descargando instalador...");
+                var bytesReadTotal = 0L;
+                var lastProgress = -1;
+                using (var responseStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false))
+                using (var fileStream = new FileStream(installerPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    var buffer = new byte[81920];
+                    while (true)
+                    {
+                        var read = await responseStream.ReadAsync(buffer, 0, buffer.Length, cts.Token).ConfigureAwait(false);
+                        if (read <= 0)
+                        {
+                            break;
+                        }
+
+                        await fileStream.WriteAsync(buffer, 0, read, cts.Token).ConfigureAwait(false);
+                        bytesReadTotal += read;
+
+                        if (contentLength > 0)
+                        {
+                            var progress = (int)Math.Min(100, Math.Max(0, (bytesReadTotal * 100L) / contentLength));
+                            if (progress != lastProgress)
+                            {
+                                lastProgress = progress;
+                                DownloadProgressChanged?.Invoke(progress);
+                                WriteLog($"update_download_progress => bytes_received={bytesReadTotal} total_bytes={contentLength} percent={progress}");
+                            }
+                        }
+                        else if ((bytesReadTotal % (1024 * 1024)) < buffer.Length)
+                        {
+                            WriteLog($"update_download_progress => bytes_received={bytesReadTotal} total_bytes=unknown");
+                        }
+                    }
+                }
+
+                return new InstallerDownloadMeta
+                {
+                    StatusCode = statusCode,
+                    ContentType = contentType,
+                    ContentLength = contentLength,
+                    FinalUrl = finalUrl
+                };
             }
         }
 

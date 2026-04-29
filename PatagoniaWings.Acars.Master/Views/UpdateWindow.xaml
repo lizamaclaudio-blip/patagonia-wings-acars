@@ -70,6 +70,30 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="ManualButton"
+                            Style="{StaticResource SecondaryButton}"
+                            Content="DESCARGA MANUAL"
+                            Width="150"
+                            Height="38"
+                            Margin="0,0,8,0"
+                            Visibility="Collapsed"
+                            Click="ManualButton_Click"/>
+                    <Button x:Name="RetryButton"
+                            Style="{StaticResource SecondaryButton}"
+                            Content="REINTENTAR"
+                            Width="120"
+                            Height="38"
+                            Margin="0,0,8,0"
+                            Visibility="Collapsed"
+                            Click="RetryButton_Click"/>
+                    <Button x:Name="LogsButton"
+                            Style="{StaticResource SecondaryButton}"
+                            Content="ABRIR LOGS"
+                            Width="120"
+                            Height="38"
+                            Margin="0,0,8,0"
+                            Visibility="Collapsed"
+                            Click="LogsButton_Click"/>
                     <Button x:Name="ContinueButton"
                             Style="{StaticResource SecondaryButton}"
                             Content="CONTINUAR SIN ACTUALIZAR"

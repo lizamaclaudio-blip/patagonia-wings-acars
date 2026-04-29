@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using PatagoniaWings.Acars.Master.Helpers;
 
@@ -8,6 +10,7 @@ namespace PatagoniaWings.Acars.Master.Views
     {
         private readonly UpdateService.UpdateCheckResult _checkResult;
         private bool _started;
+        private readonly string _manualDownloadUrl;
 
         public UpdateWindow(UpdateService.UpdateCheckResult checkResult)
         {
@@ -24,6 +27,7 @@ namespace PatagoniaWings.Acars.Master.Views
             StatusText.Text = checkResult.SupportsDifferential
                 ? "Preparando actualizacion diferencial..."
                 : "Preparando descarga inmediata...";
+            _manualDownloadUrl = checkResult.DownloadUrl ?? string.Empty;
 
             Loaded += OnLoaded;
             Closed += OnClosed;
@@ -69,6 +73,9 @@ namespace PatagoniaWings.Acars.Master.Views
             {
                 StatusText.Text = "No se pudo completar la actualizacion. " + message;
                 ContinueButton.Visibility = Visibility.Visible;
+                RetryButton.Visibility = Visibility.Visible;
+                ManualButton.Visibility = string.IsNullOrWhiteSpace(_manualDownloadUrl) ? Visibility.Collapsed : Visibility.Visible;
+                LogsButton.Visibility = Visibility.Visible;
             });
         }
 
@@ -91,6 +98,55 @@ namespace PatagoniaWings.Acars.Master.Views
         private void ContinueButton_Click(object sender, RoutedEventArgs e)
         {
             Close();
+        }
+
+        private void RetryButton_Click(object sender, RoutedEventArgs e)
+        {
+            ContinueButton.Visibility = Visibility.Collapsed;
+            RetryButton.Visibility = Visibility.Collapsed;
+            ManualButton.Visibility = Visibility.Collapsed;
+            LogsButton.Visibility = Visibility.Collapsed;
+            StatusText.Text = "Reintentando descarga del instalador...";
+            UpdateService.StartImmediateUpdate(_checkResult);
+        }
+
+        private void ManualButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_manualDownloadUrl))
+            {
+                return;
+            }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = _manualDownloadUrl,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = "No se pudo abrir la descarga manual: " + ex.Message;
+            }
+        }
+
+        private void LogsButton_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var logsPath = UpdateService.LogsDirectory;
+                Directory.CreateDirectory(logsPath);
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = logsPath,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                StatusText.Text = "No se pudo abrir carpeta de logs: " + ex.Message;
+            }
         }
 
         private static string? TryGetHost(string url)
