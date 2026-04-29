@@ -45,6 +45,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public int ScheduledBlockMinutes { get; set; }
         public int ExpectedBlockP50Minutes { get; set; }
         public int ExpectedBlockP80Minutes { get; set; }
+        public double PlannedDistanceNm { get; set; }
 
         public PreparedDispatch ToPreparedDispatch()
         {
@@ -90,6 +91,7 @@ namespace PatagoniaWings.Acars.Core.Models
                 ScheduledBlockMinutes = ScheduledBlockMinutes,
                 ExpectedBlockP50Minutes = ExpectedBlockP50Minutes,
                 ExpectedBlockP80Minutes = ExpectedBlockP80Minutes,
+                PlannedDistanceNm = PlannedDistanceNm,
                 ScheduledDepartureUtc = ScheduledDepartureUtc
             };
         }

@@ -16,6 +16,11 @@ namespace PatagoniaWings.Acars.Core.Models
         public double Longitude { get; set; }
         public double AltitudeFeet { get; set; }
         public double AltitudeAGL { get; set; }
+        public double IndicatedAltitudeFeet { get; set; }
+        public double TrueAltitudeFeet { get; set; }
+        public double PressureAltitudeFeet { get; set; }
+        public double RadioAltitudeFeet { get; set; }
+        public double GroundAltitudeFeet { get; set; }
 
         // Velocidad
         public double IndicatedAirspeed { get; set; }
@@ -87,6 +92,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public double WindSpeed { get; set; }
         public double WindDirection { get; set; }
         public double QNH { get; set; }
+        public double QnhInHg { get; set; }
         public bool IsRaining { get; set; }
 
         // Motores extendidos (soporte 4 motores – 737/A320 usan 1-2, B744/A340 usan 1-4)

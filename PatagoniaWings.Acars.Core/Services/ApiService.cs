@@ -1172,7 +1172,9 @@ namespace PatagoniaWings.Acars.Core.Services
                 pilot,
                 dispatch,
                 report,
-                pirep);
+                pirep,
+                telemetry,
+                lastSample);
 
             return new PatagoniaPendingCloseoutEnvelope
             {
@@ -1210,7 +1212,12 @@ namespace PatagoniaWings.Acars.Core.Services
 
             report.MaxAltitudeFeet = Math.Max(report.MaxAltitudeFeet, maxAltitude);
             report.MaxSpeedKts = Math.Max(report.MaxSpeedKts, maxSpeed);
-            report.ProceduralSummary = "PIREP RAW generado por ACARS. Evaluacion oficial pendiente en Supabase/Web.";
+            var isCrashCloseout = string.Equals(report.ResultStatus, "crashed", StringComparison.OrdinalIgnoreCase) ||
+                                  (!string.IsNullOrWhiteSpace(report.Remarks) && report.Remarks.IndexOf("AUTO_CLOSEOUT_CRASH", StringComparison.OrdinalIgnoreCase) >= 0);
+
+            report.ProceduralSummary = isCrashCloseout
+                ? "PIREP RAW generado por ACARS tras impacto/crash. Evaluacion oficial pendiente en Supabase/Web."
+                : "PIREP RAW generado por ACARS. Evaluacion oficial pendiente en Supabase/Web.";
             report.PatagoniaScore = 0;
             report.ProcedureScore = 0;
             report.PerformanceScore = 0;
@@ -1233,8 +1240,13 @@ namespace PatagoniaWings.Acars.Core.Services
                 PatagoniaGrade = "PENDING_SERVER_EVALUATION",
                 ProcedureGrade = "PENDING_SERVER_EVALUATION",
                 PerformanceGrade = "PENDING_SERVER_EVALUATION",
-                FlightValid = true,
-                Summary = "ACARS solo registra evidencia. Supabase/Web debe evaluar el reglaje oficial.",
+                FlightValid = !isCrashCloseout,
+                Summary = isCrashCloseout
+                    ? "ACARS detecto impacto/crash y envio evidencia RAW. Supabase/Web debe aplicar la evaluacion oficial y castigo correspondiente."
+                    : "ACARS solo registra evidencia. Supabase/Web debe evaluar el reglaje oficial.",
+                InvalidReasons = isCrashCloseout
+                    ? new List<string> { "AUTO_CLOSEOUT_CRASH" }
+                    : new List<string>(),
                 TelemetrySummary = new PatagoniaTelemetrySummary
                 {
                     SamplesCount = telemetryLog == null ? 0 : telemetryLog.Count,
@@ -1259,10 +1271,26 @@ namespace PatagoniaWings.Acars.Core.Services
                         Phase = "CLOSEOUT",
                         Source = "ACARS_RAW_RECORDER",
                         Severity = "info",
-                        Message = "PIREP RAW generado; evaluacion oficial pendiente en servidor."
+                        Message = isCrashCloseout
+                            ? "PIREP RAW generado por crash/impacto; evaluacion oficial y penalizacion pendiente en servidor."
+                            : "PIREP RAW generado; evaluacion oficial pendiente en servidor."
                     }
                 }
             };
+
+            if (isCrashCloseout)
+            {
+                report.Evaluation.Incidents.Add(new PatagoniaIncidentRecord
+                {
+                    Code = "AUTO_CLOSEOUT_CRASH",
+                    Phase = "CRASH",
+                    Severity = "critical",
+                    Source = "ACARS_RAW_RECORDER",
+                    ScoreDelta = 0,
+                    TimestampUtc = DateTime.UtcNow,
+                    Message = report.Remarks ?? "Crash detectado por ACARS"
+                });
+            }
         }
 
         private void SavePirepXmlFile(PirepXmlBuilder.BuildResult pirep)
@@ -1366,8 +1394,61 @@ namespace PatagoniaWings.Acars.Core.Services
             Pilot pilot,
             PreparedDispatch dispatch,
             FlightReport report,
-            PirepXmlBuilder.BuildResult pirep)
+            PirepXmlBuilder.BuildResult pirep,
+            IReadOnlyList<SimData> telemetryLog,
+            SimData lastSample)
         {
+            var evaluation = report.Evaluation ?? new PatagoniaEvaluationReport();
+            var capabilityMatrix = evaluation.AircraftValidation == null
+                ? new List<PatagoniaAircraftCapabilityMatrixEntry>()
+                : evaluation.AircraftValidation.CapabilityMatrix ?? new List<PatagoniaAircraftCapabilityMatrixEntry>();
+
+            var unsupportedSignals = capabilityMatrix
+                .Where(item => !item.Evaluate)
+                .Select(item => new Dictionary<string, object>
+                {
+                    ["signal"] = item.CapabilityCode ?? string.Empty,
+                    ["supported"] = false,
+                    ["reliable"] = false,
+                    ["visibleInUi"] = false,
+                    ["penaltyApplicable"] = false,
+                    ["reason"] = string.IsNullOrWhiteSpace(item.Observation) ? "No confirmado en perfil" : item.Observation
+                })
+                .ToList();
+
+            var capabilitySnapshot = capabilityMatrix
+                .Select(item => new Dictionary<string, object>
+                {
+                    ["signal"] = item.CapabilityCode ?? string.Empty,
+                    ["status"] = item.Status ?? string.Empty,
+                    ["source"] = item.ImplementedSource ?? string.Empty,
+                    ["supported"] = item.Evaluate,
+                    ["reliable"] = item.Evaluate,
+                    ["visibleInUi"] = item.Evaluate,
+                    ["penaltyApplicable"] = item.Evaluate,
+                    ["reason"] = item.Observation ?? string.Empty
+                })
+                .ToList();
+
+            var penaltyExclusions = unsupportedSignals
+                .Select(item => new Dictionary<string, object>
+                {
+                    ["signal"] = item["signal"],
+                    ["rule"] = "capability_gate",
+                    ["supported"] = false,
+                    ["reliable"] = false,
+                    ["expected"] = "N/A",
+                    ["observed"] = "N/A",
+                    ["penalty_applied"] = false,
+                    ["reason"] = item["reason"]
+                })
+                .ToList();
+
+            var criticalEvents = BuildEventLog(report, telemetryLog)
+                .Where(evt => ConvertToString(evt, "severity").Equals("warning", StringComparison.OrdinalIgnoreCase)
+                           || ConvertToString(evt, "severity").Equals("critical", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
             return new PatagoniaFlightCloseoutPayload
             {
                 GeneratedAtUtc = DateTime.UtcNow,
@@ -1392,7 +1473,27 @@ namespace PatagoniaWings.Acars.Core.Services
                     PerformanceScore = report.PerformanceScore,
                     FlightValid = report.Evaluation == null || report.Evaluation.FlightValid
                 },
-                Evaluation = report.Evaluation ?? new PatagoniaEvaluationReport(),
+                Evaluation = evaluation,
+                BlackboxSummary = new Dictionary<string, object>
+                {
+                    ["samples"] = telemetryLog == null ? 0 : telemetryLog.Count,
+                    ["max_altitude_indicated_ft"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.IndicatedAltitudeFeet > 0 ? s.IndicatedAltitudeFeet : s.AltitudeFeet),
+                    ["max_altitude_true_ft"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.TrueAltitudeFeet),
+                    ["max_ias_kt"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.IndicatedAirspeed),
+                    ["xpdr_last_state_raw"] = lastSample == null ? 0 : lastSample.TransponderStateRaw,
+                    ["xpdr_last_code"] = lastSample == null ? 0 : lastSample.TransponderCode
+                },
+                EventSummary = new Dictionary<string, object>
+                {
+                    ["events_total"] = evaluation.EventLog == null ? 0 : evaluation.EventLog.Count,
+                    ["critical_events_total"] = criticalEvents.Count,
+                    ["penalties"] = evaluation.Penalties == null ? 0 : evaluation.Penalties.Count,
+                    ["gate_failures"] = evaluation.GateFailures == null ? 0 : evaluation.GateFailures.Count
+                },
+                CriticalEvents = criticalEvents,
+                CapabilitySnapshot = capabilitySnapshot,
+                UnsupportedSignals = unsupportedSignals,
+                PenaltyExclusions = penaltyExclusions,
                 PirepFileName = pirep == null ? string.Empty : pirep.FileName,
                 PirepChecksumSha256 = pirep == null ? string.Empty : pirep.ChecksumSha256,
                 PirepXmlContent = pirep == null ? string.Empty : pirep.XmlContent
@@ -1990,8 +2091,17 @@ namespace PatagoniaWings.Acars.Core.Services
                         ["vertical_speed_fpm"] = sample.VerticalSpeed,
                         ["fuel_kg"] = Math.Max(0, sample.FuelTotalLbs) * 0.45359237d,
                         ["ft_agl"] = sample.AltitudeAGL,
-                        ["indicated_altitude_ft"] = sample.AltitudeFeet,
+                        ["indicated_altitude_ft"] = sample.IndicatedAltitudeFeet > 0 ? sample.IndicatedAltitudeFeet : sample.AltitudeFeet,
+                        ["true_altitude_ft"] = sample.TrueAltitudeFeet,
+                        ["pressure_altitude_ft"] = sample.PressureAltitudeFeet,
+                        ["radio_altitude_ft"] = sample.RadioAltitudeFeet,
+                        ["ground_altitude_ft"] = sample.GroundAltitudeFeet,
+                        ["altitude_agl_ft"] = sample.AltitudeAGL,
                         ["altimeter_hpa"] = sample.QNH,
+                        ["altimeter_inhg"] = sample.QnhInHg,
+                        ["xpdr_state_raw"] = sample.TransponderStateRaw,
+                        ["xpdr_code"] = sample.TransponderCode,
+                        ["xpdr_charlie"] = sample.TransponderCharlieMode,
                         ["bank_deg"] = sample.Bank
                     });
                 }
@@ -2047,27 +2157,130 @@ namespace PatagoniaWings.Acars.Core.Services
 
         private List<Dictionary<string, object>> BuildEventLog(FlightReport report, IReadOnlyList<SimData>? telemetryLog)
         {
-            var events = new List<Dictionary<string, object>>
-            {
-                new Dictionary<string, object>
-                {
-                    ["code"] = "completed",
-                    ["message"] = $"Vuelo {report.FlightNumber} marcado completed en Supabase",
-                    ["time_utc"] = report.ArrivalTime.ToUniversalTime().ToString("o", CultureInfo.InvariantCulture)
-                }
-            };
+            var events = new List<Dictionary<string, object>>();
 
-            if (telemetryLog != null && telemetryLog.Count > 0)
+            void AddEvent(
+                string code,
+                string phase,
+                string severity,
+                bool supported,
+                bool reliable,
+                bool penaltyApplied,
+                string reason,
+                object evidence,
+                DateTime? timestampUtc = null)
             {
                 events.Add(new Dictionary<string, object>
                 {
-                    ["code"] = "telemetry_captured",
-                    ["message"] = $"Se guardaron {telemetryLog.Count} muestras ACARS",
-                    ["time_utc"] = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture)
+                    ["code"] = code,
+                    ["phase"] = string.IsNullOrWhiteSpace(phase) ? "GEN" : phase,
+                    ["timestamp"] = (timestampUtc ?? DateTime.UtcNow).ToUniversalTime().ToString("o", CultureInfo.InvariantCulture),
+                    ["severity"] = string.IsNullOrWhiteSpace(severity) ? "info" : severity,
+                    ["supported"] = supported,
+                    ["reliable"] = reliable,
+                    ["penalty_applied"] = penaltyApplied,
+                    ["reason"] = reason ?? string.Empty,
+                    ["evidence"] = evidence ?? string.Empty
                 });
             }
 
+            AddEvent(
+                "FINALIZE_SENT",
+                "ARRIVED",
+                "info",
+                true,
+                true,
+                false,
+                "Closeout enviado a finalize",
+                "api/acars/finalize");
+
+            if (telemetryLog != null && telemetryLog.Count > 0)
+            {
+                AddEvent(
+                    "TELEMETRY_STARTED",
+                    "PREFLIGHT",
+                    "info",
+                    true,
+                    true,
+                    false,
+                    "Telemetría ACARS disponible",
+                    new Dictionary<string, object> { ["samples"] = telemetryLog.Count });
+            }
+
+            var auditLog = report.Evaluation == null ? null : report.Evaluation.RuleAuditLog;
+            if (auditLog != null)
+            {
+                foreach (var audit in auditLog.Where(item => item != null && item.Triggered))
+                {
+                    var code = MapCriticalEventCode(audit.RuleId, audit.IncidentCode);
+                    var supported = !string.Equals(audit.Result, PatagoniaAuditResults.NotApplicable, StringComparison.OrdinalIgnoreCase);
+                    var penalty = (audit.ScoreDelta < 0) && supported;
+                    AddEvent(
+                        code,
+                        string.IsNullOrWhiteSpace(audit.Phase) ? "GEN" : audit.Phase,
+                        NormalizeSeverity(audit.Severity, penalty),
+                        supported,
+                        supported,
+                        penalty,
+                        string.IsNullOrWhiteSpace(audit.Reason) ? "Evento detectado por regla de evaluación" : audit.Reason,
+                        new Dictionary<string, object>
+                        {
+                            ["rule_id"] = audit.RuleId ?? string.Empty,
+                            ["incident_code"] = audit.IncidentCode ?? string.Empty,
+                            ["score_delta"] = audit.ScoreDelta
+                        },
+                        audit.TimestampUtc == DateTime.MinValue ? (DateTime?)null : audit.TimestampUtc);
+                }
+            }
+
+            AddEvent(
+                "FINALIZE_OK",
+                "ARRIVED",
+                "info",
+                true,
+                true,
+                false,
+                "Closeout generado localmente",
+                $"Vuelo {report.FlightNumber} listo para persistencia");
+
             return events;
+        }
+
+        private static string NormalizeSeverity(string rawSeverity, bool penaltyApplied)
+        {
+            var normalized = (rawSeverity ?? string.Empty).Trim().ToLowerInvariant();
+            if (normalized == "critical" || normalized == "warning" || normalized == "info")
+            {
+                return normalized;
+            }
+
+            return penaltyApplied ? "warning" : "info";
+        }
+
+        private static string MapCriticalEventCode(string ruleId, string incidentCode)
+        {
+            var key = ((incidentCode ?? string.Empty) + "|" + (ruleId ?? string.Empty)).ToLowerInvariant();
+            if (key.Contains("stall")) return "STALL_WARNING";
+            if (key.Contains("overspeed")) return "OVERSPEED";
+            if (key.Contains("hard_landing") || key.Contains("hardlanding")) return "HARD_LANDING";
+            if (key.Contains("crash")) return "CRASH_DETECTED";
+            if (key.Contains("pause")) return "PAUSE_DETECTED";
+            if (key.Contains("slew")) return "SLEW_DETECTED";
+            if (key.Contains("xpdr") || key.Contains("transponder")) return "XPDR_STATE_CHANGE";
+            if (key.Contains("door")) return "DOOR_OPEN_CLOSE";
+            if (key.Contains("gear")) return "GEAR_MISUSE";
+            if (key.Contains("flap")) return "FLAPS_MISUSE";
+            if (key.Contains("light")) return "LIGHTS_MISUSE";
+            if (key.Contains("fuel")) return "FUEL_DEVIATION";
+            if (key.Contains("wind")) return "STRONG_WIND_FACTOR";
+            if (key.Contains("taxi")) return "TAXI_START";
+            if (key.Contains("takeoff")) return "TAKEOFF";
+            if (key.Contains("climb")) return "CLIMB";
+            if (key.Contains("cruise")) return "CRUISE";
+            if (key.Contains("descent")) return "DESCENT";
+            if (key.Contains("approach")) return "APPROACH";
+            if (key.Contains("landing")) return "LANDING";
+            return "UNSUPPORTED_SIGNAL";
         }
 
         private static object? NullIfEmpty(string value)
@@ -3301,6 +3514,12 @@ namespace PatagoniaWings.Acars.Core.Services
                     flightValid = payload.Scores.FlightValid
                 },
                 evaluation = SerializePatagoniaEvaluation(payload.Evaluation),
+                blackboxSummary = payload.BlackboxSummary ?? new Dictionary<string, object>(),
+                eventSummary = payload.EventSummary ?? new Dictionary<string, object>(),
+                criticalEvents = payload.CriticalEvents ?? new List<Dictionary<string, object>>(),
+                capabilitySnapshot = payload.CapabilitySnapshot ?? new List<Dictionary<string, object>>(),
+                unsupportedSignals = payload.UnsupportedSignals ?? new List<Dictionary<string, object>>(),
+                penaltyExclusions = payload.PenaltyExclusions ?? new List<Dictionary<string, object>>(),
                 pirepFileName = payload.PirepFileName,
                 pirepChecksumSha256 = payload.PirepChecksumSha256,
                 pirepXmlContent = payload.PirepXmlContent
@@ -3343,6 +3562,11 @@ namespace PatagoniaWings.Acars.Core.Services
                 longitude = data.Longitude,
                 altitudeFeet = data.AltitudeFeet,
                 altitudeAGL = data.AltitudeAGL,
+                indicatedAltitudeFeet = data.IndicatedAltitudeFeet,
+                trueAltitudeFeet = data.TrueAltitudeFeet,
+                pressureAltitudeFeet = data.PressureAltitudeFeet,
+                radioAltitudeFeet = data.RadioAltitudeFeet,
+                groundAltitudeFeet = data.GroundAltitudeFeet,
                 indicatedAirspeed = data.IndicatedAirspeed,
                 groundSpeed = data.GroundSpeed,
                 verticalSpeed = data.VerticalSpeed,
@@ -3381,6 +3605,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 windSpeed = data.WindSpeed,
                 windDirection = data.WindDirection,
                 qnh = data.QNH,
+                qnhInHg = data.QnhInHg,
                 isRaining = data.IsRaining,
                 simulatorType = data.SimulatorType.ToString(),
                 detectedProfileCode = data.DetectedProfileCode

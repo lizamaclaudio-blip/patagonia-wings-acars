@@ -235,6 +235,12 @@ namespace PatagoniaWings.Acars.Core.Models
         public PatagoniaFlightCloseoutHeader Header { get; set; } = new PatagoniaFlightCloseoutHeader();
         public PatagoniaFlightCloseoutScores Scores { get; set; } = new PatagoniaFlightCloseoutScores();
         public PatagoniaEvaluationReport Evaluation { get; set; } = new PatagoniaEvaluationReport();
+        public Dictionary<string, object> BlackboxSummary { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> EventSummary { get; set; } = new Dictionary<string, object>();
+        public List<Dictionary<string, object>> CriticalEvents { get; set; } = new List<Dictionary<string, object>>();
+        public List<Dictionary<string, object>> CapabilitySnapshot { get; set; } = new List<Dictionary<string, object>>();
+        public List<Dictionary<string, object>> UnsupportedSignals { get; set; } = new List<Dictionary<string, object>>();
+        public List<Dictionary<string, object>> PenaltyExclusions { get; set; } = new List<Dictionary<string, object>>();
         public string PirepFileName { get; set; } = string.Empty;
         public string PirepChecksumSha256 { get; set; } = string.Empty;
         public string PirepXmlContent { get; set; } = string.Empty;

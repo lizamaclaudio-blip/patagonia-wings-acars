@@ -29,6 +29,8 @@ namespace PatagoniaWings.Acars.Core.Services
         private DamageEventCollector? _damageCollector;
         private readonly List<AircraftDamageEvent> _finalDamageEvents = new List<AircraftDamageEvent>();
         private bool _crashMarked;
+        private DateTime _crashMarkedAtUtc = default(DateTime);
+        private string _crashReason = string.Empty;
 
         public FlightPhase CurrentPhase { get; private set; } = FlightPhase.Disconnected;
         public bool IsFlightActive => _currentFlight != null;
@@ -49,6 +51,7 @@ namespace PatagoniaWings.Acars.Core.Services
         public event Action<FlightPhase>? PhaseChanged;
         public event Action<SimData>? TelemetryUpdated;
         public event Action<bool>? FlightLockChanged;
+        public event Action<string>? CrashDetected;
 
         public void StartFlight(Flight flight, double initialFuel)
         {
@@ -109,6 +112,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 {
                     _damageCollector.RecordSample(data);
                 }
+
+                DetectCrashLikeImpact(data);
 
                 if (_hasPosition)
                 {
@@ -250,6 +255,19 @@ namespace PatagoniaWings.Acars.Core.Services
                 ? Math.Max(0, _fuelAtStart - _lastSimData.FuelTotalLbs)
                 : 0;
 
+            // ── SUR Air dual scoring ────────────────────────────────────────
+            var aircraftProfile = AircraftNormalizationService.ResolveProfile(_currentFlight.AircraftName);
+            var evaluator = new FlightEvaluationService(
+                _telemetryLog,
+                _lastLandingVS,
+                _lastLandingG,
+                _currentFlight.AircraftIcao,
+                _currentFlight.AircraftName,
+                IsAircraftPressurized(),
+                cabinSystemsReliable: aircraftProfile.CabinSystemsReliable);
+
+            var eval = evaluator.Evaluate();
+
             var report = new FlightReport
             {
                 FlightNumber = _currentFlight.FlightNumber,
@@ -266,46 +284,36 @@ namespace PatagoniaWings.Acars.Core.Services
                 FuelUsed = Math.Round(fuelUsed, 0),
                 LandingVS = _lastLandingVS,
                 LandingG = Math.Round(_lastLandingG, 2),
-                PatagoniaScore = 0,
-                PatagoniaGrade = "PENDING_SERVER_EVALUATION",
+                PatagoniaScore = eval.PatagoniaScore,
+                PatagoniaGrade = eval.PatagoniaGrade,
 
-                ProcedureScore = 0,
-                PerformanceScore = 0,
-                ProcedureGrade = "PENDING_SERVER_EVALUATION",
-                PerformanceGrade = "PENDING_SERVER_EVALUATION",
-                Violations = new List<ScoreEvent>(),
-                Bonuses = new List<ScoreEvent>(),
-                Evaluation = BuildPendingServerEvaluation(),
+                // Canonical closeout contract
+                ProcedureScore   = eval.ProcedureScore,
+                PerformanceScore = eval.PerformanceScore,
+                ProcedureGrade   = eval.ProcedureGrade,
+                PerformanceGrade = eval.PerformanceGrade,
+                Violations       = eval.Violations,
+                Bonuses          = eval.Bonuses,
+                Evaluation       = eval.PatagoniaEvaluation,
 
                 Simulator = _currentFlight.Simulator,
                 Remarks = _currentFlight.Remarks ?? string.Empty,
                 Status = FlightStatus.Pending,
                 MaxAltitudeFeet = Math.Round(_maxAltitude, 0),
                 MaxSpeedKts = Math.Round(_maxSpeed, 0),
-                ApproachQnhHpa = ComputeApproachQnh()
+                ApproachQnhHpa = ComputeApproachQnh(),
+
+                // Legacy penalty breakdown
+                LandingPenalty  = eval.LandingPenalty,
+                TaxiPenalty     = eval.TaxiPenalty,
+                AirbornePenalty = eval.AirbornePenalty,
+                ApproachPenalty = eval.ApproachPenalty,
+                CabinPenalty    = eval.CabinPenalty
             };
 
-            report.ProceduralSummary = "PIREP RAW generado por ACARS. Evaluacion oficial pendiente en Supabase/Web.";
+            report.ProceduralSummary = eval.Summary;
             report.ApplyLegacyScoreProjection();
             return report;
-        }
-
-        private PatagoniaEvaluationReport BuildPendingServerEvaluation()
-        {
-            return new PatagoniaEvaluationReport
-            {
-                ContractVersion = "patagonia-raw-pirep.v1",
-                RulesetVersion = "server-side",
-                VisibleScoreName = "Patagonia Score Oficial",
-                PatagoniaScore = 0,
-                ProcedureScore = 0,
-                PerformanceScore = 0,
-                PatagoniaGrade = "PENDING_SERVER_EVALUATION",
-                ProcedureGrade = "PENDING_SERVER_EVALUATION",
-                PerformanceGrade = "PENDING_SERVER_EVALUATION",
-                FlightValid = true,
-                Summary = "ACARS solo registra evidencia. Supabase/Web debe evaluar el reglaje oficial."
-            };
         }
 
         private double ComputeApproachQnh()
@@ -365,11 +373,80 @@ namespace PatagoniaWings.Acars.Core.Services
 
         public void MarkCrash()
         {
+            MarkCrash("simconnect_crashed_event");
+        }
+
+        public void MarkCrash(string reason)
+        {
+            if (_crashMarked)
+            {
+                return;
+            }
+
             _crashMarked = true;
+            _crashMarkedAtUtc = DateTime.UtcNow;
+            _crashReason = string.IsNullOrWhiteSpace(reason) ? "crash_detected" : reason.Trim();
+
             if (_damageCollector != null)
             {
                 _damageCollector.MarkCrash();
             }
+        }
+
+        private void DetectCrashLikeImpact(SimData data)
+        {
+            if (_currentFlight == null || _crashMarked || data == null)
+            {
+                return;
+            }
+
+            var phase = CurrentPhase;
+            var activeFlightPhase = phase == FlightPhase.Takeoff ||
+                                    phase == FlightPhase.Climb ||
+                                    phase == FlightPhase.Cruise ||
+                                    phase == FlightPhase.Descent ||
+                                    phase == FlightPhase.Approach ||
+                                    phase == FlightPhase.Landing;
+
+            if (!activeFlightPhase)
+            {
+                return;
+            }
+
+            var landingG = Math.Abs(data.LandingG);
+            var landingVs = Math.Abs(data.LandingVS);
+            var verticalSpeed = Math.Abs(data.VerticalSpeed);
+            var bank = Math.Abs(data.Bank);
+            var pitch = Math.Abs(data.Pitch);
+            var highEnergyGroundContact = data.OnGround && (data.GroundSpeed > 115 || data.IndicatedAirspeed > 120);
+
+            var severeImpact = data.OnGround &&
+                               (landingG >= 4.0 ||
+                                landingVs >= 1200 ||
+                                verticalSpeed >= 2500 ||
+                                bank >= 70 ||
+                                pitch >= 45 ||
+                                highEnergyGroundContact);
+
+            if (!severeImpact)
+            {
+                return;
+            }
+
+            var reason = string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                "crash_like_impact phase={0} gs={1:F0} ias={2:F0} vs={3:F0} ldg_vs={4:F0} g={5:F1} pitch={6:F0} bank={7:F0}",
+                phase,
+                data.GroundSpeed,
+                data.IndicatedAirspeed,
+                data.VerticalSpeed,
+                data.LandingVS,
+                data.LandingG,
+                data.Pitch,
+                data.Bank);
+
+            MarkCrash(reason);
+            CrashDetected?.Invoke(reason);
         }
 
         public IReadOnlyList<AircraftDamageEvent> GetDamageEventsSnapshot()
@@ -385,6 +462,8 @@ namespace PatagoniaWings.Acars.Core.Services
         }
 
         public bool HasCrashMarked => _crashMarked;
+        public string CrashReason => _crashReason;
+        public DateTime CrashMarkedAtUtc => _crashMarkedAtUtc;
 
         public void Reset()
         {
@@ -404,6 +483,8 @@ namespace PatagoniaWings.Acars.Core.Services
             _lastLongitude = 0;
             _hasPosition = false;
             _crashMarked = false;
+            _crashMarkedAtUtc = default(DateTime);
+            _crashReason = string.Empty;
             _damageCollector = null;
             _finalDamageEvents.Clear();
             SetFlightLock(false);

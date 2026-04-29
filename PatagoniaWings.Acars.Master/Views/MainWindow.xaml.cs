@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Master.Helpers;
@@ -15,6 +16,7 @@ namespace PatagoniaWings.Acars.Master.Views
         private SimulatorCoordinator? _coordinator;
         private Timer? _reconnectTimer;
         private bool _isConnecting;
+        private bool _crashCloseoutInProgress;
 
         private static readonly string LogFile = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -31,6 +33,7 @@ namespace PatagoniaWings.Acars.Master.Views
 
             Loaded += OnWindowLoaded;
             Closed += OnWindowClosed;
+            AcarsContext.FlightService.CrashDetected += OnFlightServiceCrashDetected;
         }
 
         private async void OnWindowLoaded(object sender, RoutedEventArgs e)
@@ -96,12 +99,7 @@ namespace PatagoniaWings.Acars.Master.Views
 
                 _coordinator.Crashed += () => Dispatcher.Invoke(() =>
                 {
-                    AcarsContext.FlightService.MarkCrash();
-                    var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
-                    if (AcarsContext.FlightService.IsFlightActive && !string.IsNullOrWhiteSpace(reservationId))
-                    {
-                        _ = AcarsContext.Api!.CloseReservationAsync(reservationId!, "crashed");
-                    }
+                    _ = HandleCrashDetectedAsync("simconnect_crashed_event");
                 });
 
                 _coordinator.DataReceived += data =>
@@ -135,8 +133,102 @@ namespace PatagoniaWings.Acars.Master.Views
 
         public void ConnectSim(bool silent = false) => ConnectSimulator(silent);
 
+        private void OnFlightServiceCrashDetected(string reason)
+        {
+            Dispatcher.Invoke(() =>
+            {
+                _ = HandleCrashDetectedAsync(reason);
+            });
+        }
+
+        private async Task HandleCrashDetectedAsync(string reason)
+        {
+            if (_crashCloseoutInProgress)
+            {
+                return;
+            }
+
+            _crashCloseoutInProgress = true;
+
+            try
+            {
+                AcarsContext.FlightService.MarkCrash(reason);
+
+                var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
+                if (!AcarsContext.FlightService.IsFlightActive)
+                {
+                    if (!string.IsNullOrWhiteSpace(reservationId))
+                    {
+                        await AcarsContext.Api!.CloseReservationAsync(reservationId!, "crashed").ConfigureAwait(false);
+                    }
+                    return;
+                }
+
+                var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+                if (pilot == null || AcarsContext.Api == null)
+                {
+                    if (AcarsContext.Api != null && !string.IsNullOrWhiteSpace(reservationId))
+                    {
+                        await AcarsContext.Api.CloseReservationAsync(reservationId!, "crashed").ConfigureAwait(false);
+                    }
+                    return;
+                }
+
+                var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
+                report.ResultStatus = "crashed";
+                report.Status = PatagoniaWings.Acars.Core.Models.FlightStatus.Rejected;
+                report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
+                    ? "AUTO_CLOSEOUT_CRASH: " + reason
+                    : report.Remarks + " | AUTO_CLOSEOUT_CRASH: " + reason;
+
+                var closeoutResult = await AcarsContext.Api.SubmitFlightReportAsync(
+                    report,
+                    AcarsContext.FlightService.CurrentFlight,
+                    AcarsContext.FlightService.GetTelemetrySnapshot(),
+                    AcarsContext.FlightService.LastSimData,
+                    AcarsContext.FlightService.GetDamageEventsSnapshot()).ConfigureAwait(false);
+
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    if (closeoutResult.Success && closeoutResult.Data != null)
+                    {
+                        _shellVm.MainVM.ShowPostFlightReport(closeoutResult.Data);
+                        AcarsContext.FlightService.Reset();
+                    }
+                    else
+                    {
+                        _shellVm.MainVM.ShowPostFlightReport(report);
+                    }
+
+                    AcarsContext.Sound.PlayDing();
+                });
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+                    var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
+                    if (!string.IsNullOrWhiteSpace(reservationId))
+                    {
+                        await AcarsContext.Api!.CloseReservationAsync(reservationId!, "crashed").ConfigureAwait(false);
+                    }
+                }
+                catch
+                {
+                    // No bloquear la app si falla el fallback de cierre.
+                }
+
+                System.Diagnostics.Debug.WriteLine("[ACARS CRASH CLOSEOUT] " + ex);
+            }
+            finally
+            {
+                _crashCloseoutInProgress = false;
+            }
+        }
+
         private void OnWindowClosed(object? sender, EventArgs e)
         {
+            AcarsContext.FlightService.CrashDetected -= OnFlightServiceCrashDetected;
             _shellVm.SupportVM.AlwaysVisibleChanged -= OnAlwaysVisibleChanged;
 
             _reconnectTimer?.Dispose();

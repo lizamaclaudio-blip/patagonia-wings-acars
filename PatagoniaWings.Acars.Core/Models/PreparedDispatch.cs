@@ -39,6 +39,7 @@ namespace PatagoniaWings.Acars.Core.Models
         public int ScheduledBlockMinutes { get; set; }
         public int ExpectedBlockP50Minutes { get; set; }
         public int ExpectedBlockP80Minutes { get; set; }
+        public double PlannedDistanceNm { get; set; }
 
         public string FlightNumberDisplay
         {

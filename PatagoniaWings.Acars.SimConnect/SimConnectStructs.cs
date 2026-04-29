@@ -28,6 +28,10 @@ namespace PatagoniaWings.Acars.SimConnect
         public string Title;
 
         public double AltitudeFeet;
+        public double TrueAltitudeFeet;
+        public double PressureAltitudeFeet;
+        public double RadioAltitudeFeet;
+        public double GroundAltitudeFeet;
         public double GroundSpeed;
         public double VerticalSpeed;
         public double Latitude;

@@ -135,6 +135,10 @@ namespace PatagoniaWings.Acars.SimConnect
 
             // Bloque base SUR-compatible
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "INDICATED ALTITUDE CALIBRATED", "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE ALTITUDE",                "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PRESSURE ALTITUDE",             "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "RADIO HEIGHT",                  "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GROUND ALTITUDE",               "feet",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GROUND VELOCITY",            "knots",            SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "VERTICAL SPEED",             "feet per minute",  SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE LATITUDE",             "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
@@ -428,6 +432,11 @@ namespace PatagoniaWings.Acars.SimConnect
                 Longitude          = r.Longitude,
                 AltitudeFeet       = r.AltitudeFeet,
                 AltitudeAGL        = r.AltitudeAGL,
+                IndicatedAltitudeFeet = r.AltitudeFeet,
+                TrueAltitudeFeet      = r.TrueAltitudeFeet,
+                PressureAltitudeFeet  = r.PressureAltitudeFeet,
+                RadioAltitudeFeet     = r.RadioAltitudeFeet,
+                GroundAltitudeFeet    = r.GroundAltitudeFeet,
                 IndicatedAirspeed  = indicatedAirspeed,
                 GroundSpeed        = groundSpeed,
                 // Clamp VS a 0 en tierra: SIM ON GROUND puede oscilar brevemente
@@ -493,6 +502,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 WindSpeed          = e.WindSpeed,
                 WindDirection      = e.WindDirection,
                 QNH                = e.SeaLevelPressure,
+                QnhInHg            = Math.Round(e.SeaLevelPressure * 0.029529983071445d, 2),
                 IsRaining          = e.PrecipState > 0,
 
                 // ── Campos extendidos (arquitectura SUR Air) ──
