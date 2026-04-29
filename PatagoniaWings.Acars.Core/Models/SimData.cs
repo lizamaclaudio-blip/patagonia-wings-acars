@@ -117,6 +117,17 @@ namespace PatagoniaWings.Acars.Core.Models
         // Perfil de aeronave normalizado (código estable Patagonia Wings)
         // Ejemplos: C208_MSFS, C208_BLACKSQUARE, B738_PMDG, A320_FENIX, A20N_FBW
         public string DetectedProfileCode { get; set; } = "MSFS_NATIVE";
+        public string AircraftTypeCode { get; set; } = string.Empty;
+        public string AircraftVariantCode { get; set; } = string.Empty;
+        public string AddonSource { get; set; } = string.Empty;
+        public string ProfileCode { get; set; } = string.Empty;
+        public string DetectionConfidence { get; set; } = "unknown";
+        public string DetectionReason { get; set; } = string.Empty;
+        public string DetectionSource { get; set; } = "simconnect_title";
+        public string MatchedTitle { get; set; } = string.Empty;
+        public string MatchedPattern { get; set; } = string.Empty;
+        public bool FallbackUsed { get; set; }
+        public string ProfileStatus { get; set; } = "unknown_profile";
 
         // Sim
         public SimulatorType SimulatorType { get; set; }

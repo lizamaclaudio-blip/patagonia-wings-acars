@@ -1,8 +1,10 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>6.0.3.0</version>
+  <version>7.0.1.0</version>
   <url>https://patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>v6.0.3: insignias de rango, avatar piloto, LEDs de telemetria y cierre PIREP RAW server-side.</changelog>
+  <changelog>v7.0.1: detection confidence payload, addon diagnostics, capability-safe exclusions y validacion manual por variantes.</changelog>
   <mandatory>false</mandatory>
 </item>
+
+
 

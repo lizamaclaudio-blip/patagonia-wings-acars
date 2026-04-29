@@ -424,6 +424,7 @@ namespace PatagoniaWings.Acars.SimConnect
             }
 
             var simconnectXpdrRaw = NormalizeTransponderState(r.TransponderAvailable != 0, Convert.ToInt32(Math.Round(r.TransponderState)));
+            var detection = BuildDetectionMetadata(r.Title ?? string.Empty, profile);
 
             return new SimData
             {
@@ -512,8 +513,137 @@ namespace PatagoniaWings.Acars.SimConnect
                 AvionicsMasterOn   = r.AvionicsMaster      != 0,
                 DoorOpen           = r.DoorPercent > 5.0,   // umbral 5% (igual que SUR Air)
                 DetectedProfileCode = profileCode,
+                AircraftTypeCode   = detection.AircraftTypeCode,
+                AircraftVariantCode = detection.AircraftVariantCode,
+                AddonSource        = detection.AddonSource,
+                ProfileCode        = detection.ProfileCode,
+                DetectionConfidence = detection.DetectionConfidence,
+                DetectionReason    = detection.DetectionReason,
+                DetectionSource    = detection.DetectionSource,
+                MatchedTitle       = detection.MatchedTitle,
+                MatchedPattern     = detection.MatchedPattern,
+                FallbackUsed       = detection.FallbackUsed,
+                ProfileStatus      = detection.ProfileStatus,
                 Com2FrequencyMhz   = r.Com2FrequencyMhz > 100 ? r.Com2FrequencyMhz : 0,
             };
+        }
+
+        private sealed class DetectionMetadata
+        {
+            public string AircraftTypeCode { get; set; } = string.Empty;
+            public string AircraftVariantCode { get; set; } = string.Empty;
+            public string AddonSource { get; set; } = "UNKNOWN";
+            public string ProfileCode { get; set; } = "MSFS_NATIVE";
+            public string DetectionConfidence { get; set; } = "unknown";
+            public string DetectionReason { get; set; } = string.Empty;
+            public string DetectionSource { get; set; } = "simconnect_title";
+            public string MatchedTitle { get; set; } = string.Empty;
+            public string MatchedPattern { get; set; } = string.Empty;
+            public bool FallbackUsed { get; set; }
+            public string ProfileStatus { get; set; } = "unknown_profile";
+        }
+
+        private static DetectionMetadata BuildDetectionMetadata(string aircraftTitle, AircraftProfile? profile)
+        {
+            var title = (aircraftTitle ?? string.Empty).Trim();
+            var code = (profile?.Code ?? "MSFS_NATIVE").Trim();
+            var addon = string.IsNullOrWhiteSpace(profile?.AddonProvider) ? "UNKNOWN" : profile.AddonProvider.Trim().ToUpperInvariant();
+            var isFallback = string.Equals(code, "MSFS_NATIVE", StringComparison.OrdinalIgnoreCase);
+            var matchedPattern = ResolveMatchedPattern(title, profile);
+            var exact = IsExactProfileMatch(title, profile);
+            var containsMatch = !exact && !string.IsNullOrWhiteSpace(matchedPattern);
+
+            var confidence = isFallback ? "fallback" : exact ? "exact" : containsMatch ? "high" : "medium";
+            var profileStatus = isFallback ? "fallback_profile" :
+                (string.Equals(profile?.CapabilityAuditState, "PARCIAL", StringComparison.OrdinalIgnoreCase) ? "partial_profile" : "exact_profile");
+            var reason = isFallback
+                ? "No profile title match. Using conservative fallback profile."
+                : exact
+                    ? "Exact aircraft title matched profile."
+                    : containsMatch
+                        ? "Aircraft title matched profile pattern."
+                        : "Profile resolved with medium confidence.";
+
+            return new DetectionMetadata
+            {
+                AircraftTypeCode = ResolveTypeCodeFromProfile(code),
+                AircraftVariantCode = code,
+                AddonSource = addon,
+                ProfileCode = code,
+                DetectionConfidence = confidence,
+                DetectionReason = reason,
+                DetectionSource = "simconnect_title",
+                MatchedTitle = title,
+                MatchedPattern = matchedPattern,
+                FallbackUsed = isFallback,
+                ProfileStatus = profileStatus
+            };
+        }
+
+        private static string ResolveTypeCodeFromProfile(string profileCode)
+        {
+            var code = (profileCode ?? string.Empty).Trim().ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(code) || code == "MSFS_NATIVE")
+            {
+                return string.Empty;
+            }
+
+            var idx = code.IndexOf('_');
+            return idx > 0 ? code.Substring(0, idx) : code;
+        }
+
+        private static bool IsExactProfileMatch(string title, AircraftProfile? profile)
+        {
+            if (profile == null || profile.ExactTitles == null) return false;
+            var normalized = (title ?? string.Empty).Trim();
+            if (normalized.Length == 0) return false;
+
+            foreach (var item in profile.ExactTitles)
+            {
+                var candidate = (item ?? string.Empty).Trim();
+                if (candidate.Length == 0) continue;
+                if (string.Equals(candidate, normalized, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static string ResolveMatchedPattern(string title, AircraftProfile? profile)
+        {
+            if (profile == null) return string.Empty;
+            var normalized = (title ?? string.Empty).Trim();
+            if (normalized.Length == 0) return string.Empty;
+
+            if (profile.ExactTitles != null)
+            {
+                foreach (var item in profile.ExactTitles)
+                {
+                    var candidate = (item ?? string.Empty).Trim();
+                    if (candidate.Length == 0) continue;
+                    if (string.Equals(candidate, normalized, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            if (profile.Matches != null)
+            {
+                foreach (var item in profile.Matches)
+                {
+                    var candidate = (item ?? string.Empty).Trim();
+                    if (candidate.Length == 0 || candidate == "*") continue;
+                    if (normalized.IndexOf(candidate, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        return candidate;
+                    }
+                }
+            }
+
+            return string.Empty;
         }
 
         private static int NormalizeTransponderCode(int rawCode)

@@ -15,6 +15,25 @@ namespace PatagoniaWings.Acars.Core.Services
 {
     public class ApiService
     {
+        private sealed class DetectionContext
+        {
+            public string AircraftTypeCode { get; set; } = string.Empty;
+            public string AircraftVariantCode { get; set; } = string.Empty;
+            public string AddonSource { get; set; } = "UNKNOWN";
+            public string Simulator { get; set; } = string.Empty;
+            public string ProfileCode { get; set; } = "MSFS_NATIVE";
+            public string DetectionConfidence { get; set; } = "unknown";
+            public string DetectionReason { get; set; } = string.Empty;
+            public string DetectionSource { get; set; } = "simconnect_title";
+            public string MatchedTitle { get; set; } = string.Empty;
+            public string MatchedPattern { get; set; } = string.Empty;
+            public bool FallbackUsed { get; set; }
+            public string ProfileStatus { get; set; } = "unknown_profile";
+            public bool IsLowConfidence => string.Equals(DetectionConfidence, "low", StringComparison.OrdinalIgnoreCase)
+                                           || string.Equals(DetectionConfidence, "fallback", StringComparison.OrdinalIgnoreCase)
+                                           || string.Equals(DetectionConfidence, "unknown", StringComparison.OrdinalIgnoreCase);
+        }
+
         private readonly HttpClient _http;
         private readonly JavaScriptSerializer _json;
         private readonly string _baseUrl;
@@ -1399,6 +1418,7 @@ namespace PatagoniaWings.Acars.Core.Services
             SimData lastSample)
         {
             var evaluation = report.Evaluation ?? new PatagoniaEvaluationReport();
+            var detection = ResolveDetectionContext(dispatch, lastSample);
             var capabilityMatrix = evaluation.AircraftValidation == null
                 ? new List<PatagoniaAircraftCapabilityMatrixEntry>()
                 : evaluation.AircraftValidation.CapabilityMatrix ?? new List<PatagoniaAircraftCapabilityMatrixEntry>();
@@ -1426,7 +1446,13 @@ namespace PatagoniaWings.Acars.Core.Services
                     ["reliable"] = item.Evaluate,
                     ["visibleInUi"] = item.Evaluate,
                     ["penaltyApplicable"] = item.Evaluate,
-                    ["reason"] = item.Observation ?? string.Empty
+                    ["reason"] = item.Observation ?? string.Empty,
+                    ["aircraft_type_code"] = detection.AircraftTypeCode,
+                    ["aircraft_variant_code"] = detection.AircraftVariantCode,
+                    ["addon_source"] = detection.AddonSource,
+                    ["profile_code"] = detection.ProfileCode,
+                    ["detection_confidence"] = detection.DetectionConfidence,
+                    ["detection_reason"] = detection.DetectionReason
                 })
                 .ToList();
 
@@ -1443,6 +1469,37 @@ namespace PatagoniaWings.Acars.Core.Services
                     ["reason"] = item["reason"]
                 })
                 .ToList();
+
+            if (detection.IsLowConfidence)
+            {
+                penaltyExclusions.Add(new Dictionary<string, object>
+                {
+                    ["signal"] = "detection_confidence_guard",
+                    ["rule"] = "confidence_gate",
+                    ["supported"] = false,
+                    ["reliable"] = false,
+                    ["expected"] = "high_or_exact_detection",
+                    ["observed"] = detection.DetectionConfidence,
+                    ["penalty_applied"] = false,
+                    ["reason"] = "Detection confidence is low/fallback/unknown; ambiguous signals are excluded from automatic penalty."
+                });
+
+                foreach (var partial in capabilitySnapshot
+                    .Where(item => string.Equals(ConvertToString(item, "status"), "PARTIAL", StringComparison.OrdinalIgnoreCase)))
+                {
+                    penaltyExclusions.Add(new Dictionary<string, object>
+                    {
+                        ["signal"] = ConvertToString(partial, "signal"),
+                        ["rule"] = "confidence_partial_gate",
+                        ["supported"] = false,
+                        ["reliable"] = false,
+                        ["expected"] = "reliable_signal",
+                        ["observed"] = "partial_signal",
+                        ["penalty_applied"] = false,
+                        ["reason"] = "Signal marked PARTIAL under low-confidence profile detection."
+                    });
+                }
+            }
 
             var criticalEvents = BuildEventLog(report, telemetryLog)
                 .Where(evt => ConvertToString(evt, "severity").Equals("warning", StringComparison.OrdinalIgnoreCase)
@@ -1481,14 +1538,31 @@ namespace PatagoniaWings.Acars.Core.Services
                     ["max_altitude_true_ft"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.TrueAltitudeFeet),
                     ["max_ias_kt"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.IndicatedAirspeed),
                     ["xpdr_last_state_raw"] = lastSample == null ? 0 : lastSample.TransponderStateRaw,
-                    ["xpdr_last_code"] = lastSample == null ? 0 : lastSample.TransponderCode
+                    ["xpdr_last_code"] = lastSample == null ? 0 : lastSample.TransponderCode,
+                    ["aircraft_type_code"] = detection.AircraftTypeCode,
+                    ["aircraft_variant_code"] = detection.AircraftVariantCode,
+                    ["addon_source"] = detection.AddonSource,
+                    ["simulator"] = detection.Simulator,
+                    ["profile_code"] = detection.ProfileCode,
+                    ["detection_confidence"] = detection.DetectionConfidence,
+                    ["detection_reason"] = detection.DetectionReason,
+                    ["detection_source"] = detection.DetectionSource,
+                    ["matched_title"] = detection.MatchedTitle,
+                    ["matched_pattern"] = detection.MatchedPattern,
+                    ["fallback_used"] = detection.FallbackUsed,
+                    ["profile_status"] = detection.ProfileStatus
                 },
                 EventSummary = new Dictionary<string, object>
                 {
                     ["events_total"] = evaluation.EventLog == null ? 0 : evaluation.EventLog.Count,
                     ["critical_events_total"] = criticalEvents.Count,
                     ["penalties"] = evaluation.Penalties == null ? 0 : evaluation.Penalties.Count,
-                    ["gate_failures"] = evaluation.GateFailures == null ? 0 : evaluation.GateFailures.Count
+                    ["gate_failures"] = evaluation.GateFailures == null ? 0 : evaluation.GateFailures.Count,
+                    ["aircraft_type_code"] = detection.AircraftTypeCode,
+                    ["aircraft_variant_code"] = detection.AircraftVariantCode,
+                    ["profile_code"] = detection.ProfileCode,
+                    ["detection_confidence"] = detection.DetectionConfidence,
+                    ["detection_reason"] = detection.DetectionReason
                 },
                 CriticalEvents = criticalEvents,
                 CapabilitySnapshot = capabilitySnapshot,
@@ -1547,6 +1621,127 @@ namespace PatagoniaWings.Acars.Core.Services
             }
 
             return ApiResult<FlightReport>.Fail("Endpoint web ACARS no disponible: el PIREP RAW queda en cola local. La evaluacion oficial debe ejecutarse en Supabase/Web, no en el cliente ACARS.");
+        }
+
+        private DetectionContext ResolveDetectionContext(PreparedDispatch dispatch, SimData? lastSample)
+        {
+            var sample = lastSample ?? new SimData();
+            var typeCode = FirstNonEmptyString(
+                sample.AircraftTypeCode,
+                dispatch == null ? string.Empty : dispatch.AircraftIcao,
+                ResolveTypeFromVariant(sample.AircraftVariantCode),
+                ResolveTypeFromVariant(sample.DetectedProfileCode));
+            var variantCode = FirstNonEmptyString(
+                sample.AircraftVariantCode,
+                sample.ProfileCode,
+                sample.DetectedProfileCode,
+                dispatch == null ? string.Empty : dispatch.AircraftVariantCode,
+                "MSFS_NATIVE");
+            var addon = FirstNonEmptyString(
+                sample.AddonSource,
+                dispatch == null ? string.Empty : dispatch.AddonProvider,
+                ResolveAddonFromVariant(variantCode),
+                "UNKNOWN").ToUpperInvariant();
+            var profileCode = FirstNonEmptyString(sample.ProfileCode, sample.DetectedProfileCode, variantCode, "MSFS_NATIVE");
+            var confidence = NormalizeDetectionConfidence(FirstNonEmptyString(sample.DetectionConfidence));
+            var matchedTitle = FirstNonEmptyString(sample.MatchedTitle, sample.AircraftTitle);
+            var matchedPattern = FirstNonEmptyString(sample.MatchedPattern);
+            var fallbackUsed = sample.FallbackUsed || string.Equals(confidence, "fallback", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(profileCode, "MSFS_NATIVE", StringComparison.OrdinalIgnoreCase);
+            var profileStatus = NormalizeProfileStatus(FirstNonEmptyString(sample.ProfileStatus));
+            if (string.IsNullOrWhiteSpace(profileStatus))
+            {
+                profileStatus = fallbackUsed ? "fallback_profile" : "exact_profile";
+            }
+
+            var reason = FirstNonEmptyString(sample.DetectionReason);
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                reason = fallbackUsed
+                    ? "Fallback profile selected because aircraft variant was not fully confirmed."
+                    : string.IsNullOrWhiteSpace(matchedPattern)
+                        ? "Profile derived from SimConnect aircraft title."
+                        : "Profile matched by aircraft title pattern.";
+            }
+
+            return new DetectionContext
+            {
+                AircraftTypeCode = typeCode,
+                AircraftVariantCode = variantCode,
+                AddonSource = addon,
+                Simulator = sample.SimulatorType == SimulatorType.None ? "MSFS2020" : sample.SimulatorType.ToString(),
+                ProfileCode = profileCode,
+                DetectionConfidence = confidence,
+                DetectionReason = reason,
+                DetectionSource = FirstNonEmptyString(sample.DetectionSource, "simconnect_title"),
+                MatchedTitle = matchedTitle,
+                MatchedPattern = matchedPattern,
+                FallbackUsed = fallbackUsed,
+                ProfileStatus = profileStatus
+            };
+        }
+
+        private static string NormalizeDetectionConfidence(string raw)
+        {
+            var value = (raw ?? string.Empty).Trim().ToLowerInvariant();
+            switch (value)
+            {
+                case "exact":
+                case "high":
+                case "medium":
+                case "low":
+                case "fallback":
+                case "unknown":
+                    return value;
+                default:
+                    return "unknown";
+            }
+        }
+
+        private static string NormalizeProfileStatus(string raw)
+        {
+            var value = (raw ?? string.Empty).Trim().ToLowerInvariant();
+            switch (value)
+            {
+                case "exact_profile":
+                case "base_profile":
+                case "partial_profile":
+                case "fallback_profile":
+                case "unknown_profile":
+                    return value;
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private static string ResolveTypeFromVariant(string variant)
+        {
+            var normalized = (variant ?? string.Empty).Trim().ToUpperInvariant();
+            if (normalized.Length == 0) return string.Empty;
+            var idx = normalized.IndexOf('_');
+            return idx > 0 ? normalized.Substring(0, idx) : normalized;
+        }
+
+        private static string ResolveAddonFromVariant(string variant)
+        {
+            var normalized = (variant ?? string.Empty).Trim().ToUpperInvariant();
+            if (normalized.Length == 0) return string.Empty;
+            var idx = normalized.IndexOf('_');
+            return idx > 0 && idx < normalized.Length - 1 ? normalized.Substring(idx + 1) : string.Empty;
+        }
+
+        private static string FirstNonEmptyString(params string[] values)
+        {
+            if (values == null) return string.Empty;
+            foreach (var value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value.Trim();
+                }
+            }
+
+            return string.Empty;
         }
 
         private ApiResult<FlightReport> BuildQueuedCloseoutResult(
@@ -3608,7 +3803,18 @@ namespace PatagoniaWings.Acars.Core.Services
                 qnhInHg = data.QnhInHg,
                 isRaining = data.IsRaining,
                 simulatorType = data.SimulatorType.ToString(),
-                detectedProfileCode = data.DetectedProfileCode
+                detectedProfileCode = data.DetectedProfileCode,
+                aircraftTypeCode = data.AircraftTypeCode,
+                aircraftVariantCode = data.AircraftVariantCode,
+                addonSource = data.AddonSource,
+                profileCode = data.ProfileCode,
+                detectionConfidence = data.DetectionConfidence,
+                detectionReason = data.DetectionReason,
+                detectionSource = data.DetectionSource,
+                matchedTitle = data.MatchedTitle,
+                matchedPattern = data.MatchedPattern,
+                fallbackUsed = data.FallbackUsed,
+                profileStatus = data.ProfileStatus
             };
         }
         private Dictionary<string, object> GetNestedDictionary(Dictionary<string, object> row, string key)

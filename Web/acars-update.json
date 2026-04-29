@@ -1,12 +1,13 @@
-﻿{
-  "version": "4.0.0",
+{
+  "version": "7.0.1",
   "webVersion": "2.0",
   "downloadUrl": "https://patagoniaw.com/downloads/PatagoniaWingsACARSSetup.exe",
   "mandatory": false,
-  "notes": "- Sistema hibrido por perfil de aeronave\n- Maddog preparado en pipeline LVAR/FSUIPC/MobiFlight\n- Web y autoupdater alineados a la release 4.0.0",
+  "notes": "- Sistema hibrido por perfil de aeronave\n- Maddog preparado en pipeline LVAR/FSUIPC/MobiFlight\n- Web y autoupdater alineados a la release 7.0.1",
   "releaseDate": "2026-04-19",
   "minVersion": "2.0.5",
   "fileSize": "24.7 MB",
   "storageProvider": "supabase"
 }
+
 
