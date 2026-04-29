@@ -156,12 +156,12 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 return;
             }
 
-            _updateInProgress = true;
             IsInstallerTakingControl = false;
             DownloadProgressChanged?.Invoke(0);
 
             if (checkResult.SupportsDifferential && !string.IsNullOrWhiteSpace(checkResult.ManifestUrl))
             {
+                _updateInProgress = true;
                 UpdateStatusChanged?.Invoke("Preparando actualizacion diferencial...");
                 Task.Run(async () => await ApplyDifferentialUpdateAsync(checkResult));
                 return;
