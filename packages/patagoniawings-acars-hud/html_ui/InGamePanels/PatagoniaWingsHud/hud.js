@@ -6,51 +6,44 @@
   const HEALTH_URL = `http://127.0.0.1:${PORT}/api/hud/health`;
   const POLL_MS = 1000;
 
-  const LS_HIDDEN   = 'pw-hud-hidden';
-  const LS_MODE     = 'pw-hud-mode';
-  const LS_POSITION = 'pw-hud-position';
+  const LS_HIDDEN = 'pw-hud-hidden';
+  const LS_MODE = 'pw-hud-mode';
+  const MODES = ['mode-compact', 'mode-expanded'];
 
-  const POSITIONS = ['pos-center', 'pos-left', 'pos-right'];
-  const MODES     = ['mode-compact', 'mode-expanded'];
-
-  // â”€â”€ DOM refs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const body    = document.body;
-  const hud     = document.getElementById('hud');
-  const restore = document.getElementById('restore');
+  const body = document.body;
+  const hud = document.getElementById('hud');
   const systems = document.getElementById('systems');
   const btnMode = document.getElementById('btnMode');
-  const btnPos  = document.getElementById('btnPos');
 
   const els = {
-    status:       document.getElementById('status'),
+    status: document.getElementById('status'),
     flightNumber: document.getElementById('flightNumber'),
-    dep:          document.getElementById('dep'),
-    arr:          document.getElementById('arr'),
-    aircraft:     document.getElementById('aircraft'),
-    altitude:     document.getElementById('altitude'),
-    gs:           document.getElementById('gs'),
-    hdg:          document.getElementById('hdg'),
-    vs:           document.getElementById('vs'),
-    fuel:         document.getElementById('fuel'),
-    qnh:          document.getElementById('qnh'),
-    xpdr:         document.getElementById('xpdr'),
-    pilotName:    document.getElementById('pilotName'),
-    pilotRank:    document.getElementById('pilotRank'),
+    dep: document.getElementById('dep'),
+    arr: document.getElementById('arr'),
+    aircraft: document.getElementById('aircraft'),
+    altitude: document.getElementById('altitude'),
+    gs: document.getElementById('gs'),
+    hdg: document.getElementById('hdg'),
+    vs: document.getElementById('vs'),
+    fuel: document.getElementById('fuel'),
+    qnh: document.getElementById('qnh'),
+    xpdr: document.getElementById('xpdr'),
+    pilotName: document.getElementById('pilotName'),
+    pilotRank: document.getElementById('pilotRank'),
   };
 
   const SYSTEM_LABELS = [
-    ['nav',         'NAV'],
-    ['beaconStrobe','BCN/STB'],
-    ['taxi',        'TAXI'],
-    ['landing',     'LAND'],
-    ['gear',        'GEAR'],
-    ['apMaster',    'AP'],
-    ['doors',       'DOORS'],
-    ['parkingBrake','BRAKE'],
-    ['xpdr',        'XPDR'],
+    ['nav', 'NAV'],
+    ['beaconStrobe', 'BCN/STB'],
+    ['taxi', 'TAXI'],
+    ['landing', 'LAND'],
+    ['gear', 'GEAR'],
+    ['apMaster', 'AP'],
+    ['doors', 'DOORS'],
+    ['parkingBrake', 'BRAKE'],
+    ['xpdr', 'XPDR'],
   ];
 
-  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function set(el, text, fallback = '--') {
     if (!el) return;
     el.textContent = (text == null || text === '') ? fallback : String(text);
@@ -68,45 +61,6 @@
     try { localStorage.setItem(key, val); } catch {}
   }
 
-  // â”€â”€ Rank badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const RANK_ABBREV = [
-    [/comandante\s+transatl[aÃ¡]ntico/i, 'CMD TLA'],
-    [/comandante\s+primera/i,           'CMD 1RA'],
-    [/comandante\s+internacional/i,     'CMD INT'],
-    [/comandante\s+regional/i,          'CMD REG'],
-    [/comandante\s+dom[eÃ©]stico/i,      'CMD DOM'],
-    [/comandante/i,                     'CMD'],
-    [/primer oficial\s+transatl[aÃ¡]ntico/i, 'P/O TLA'],
-    [/primer oficial\s+internacional/i, 'P/O INT'],
-    [/primer oficial\s+regional/i,      'P/O REG'],
-    [/primer oficial\s+dom[eÃ©]stico/i,  'P/O DOM'],
-    [/primer oficial/i,                 'P/O'],
-    [/segundo oficial\s+dom[eÃ©]stico/i, 'S/O DOM'],
-    [/segundo oficial/i,                'S/O'],
-    [/aspirante/i,                      'ASP'],
-  ];
-
-  function rankAbbrev(name) {
-    if (!name) return '';
-    for (const [rx, abbr] of RANK_ABBREV) {
-      if (rx.test(name)) return abbr;
-    }
-    return name.length > 12 ? name.slice(0, 11) + "..." : name;
-  }
-
-  function rankClass(name, code) {
-    const t = ((name || '') + ' ' + (code || '')).toLowerCase();
-    if (!t.trim()) return 'rk-gray';
-    if (t.includes('tla') || t.includes('transatl')) return 'rk-cyan';
-    if (t.includes('primera') || t.includes('1ra'))  return 'rk-gold';
-    if (t.includes('comandante') || t.includes('cmd')) return 'rk-amber';
-    if (t.includes('primer') || t.includes('p/o'))   return 'rk-blue';
-    if (t.includes('segundo') || t.includes('s/o'))  return 'rk-indigo';
-    if (t.includes('asp'))                            return 'rk-gray';
-    return 'rk-gray';
-  }
-
-  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function renderSystems(raw) {
     systems.innerHTML = '';
     const src = (raw && typeof raw === 'object') ? raw : {};
@@ -121,48 +75,45 @@
     }
   }
 
-  function render(data, healthOnline = false) {
-    const online = !!(data && data.connected);
+  function render(data, bridgeOnline = false) {
+    const simConnected = !!(data && data.connected);
+    const hasTelemetry = !!(data && (data.flightActive || Number(data.altitudeFt) > 0 || Number(data.groundSpeedKt) > 0 || data.flightNumber));
+    const online = simConnected || hasTelemetry;
+
     hud.classList.toggle('hud--offline', !online);
     if (online) {
       applyHidden(false);
     }
 
-    set(els.status, online ? `ACARS LIVE | ${data.phase || ''}` : (healthOnline ? 'ACARS esperando datos' : 'ACARS offline'));
+    let status = 'ACARS OFFLINE';
+    if (online) status = `ACARS LIVE${data?.phase ? ' | ' + data.phase : ''}`;
+    else if (bridgeOnline) status = 'BRIDGE OK | ESPERANDO SIM';
+    set(els.status, status);
+
     set(els.flightNumber, data?.flightNumber || data?.callsign);
-    set(els.dep,      data?.dep,  '----');
-    set(els.arr,      data?.arr,  '----');
-    set(els.aircraft, data?.aircraftType || data?.aircraftDisplayName || data?.aircraft);
+    set(els.dep, data?.dep, '----');
+    set(els.arr, data?.arr, '----');
+    set(els.aircraft, data?.aircraftDisplayName || data?.aircraftType || data?.aircraft);
 
     set(els.altitude, num(data?.altitudeFt) ?? '0');
-    set(els.gs,       num(data?.groundSpeedKt) ?? '0');
-    set(els.hdg,      (num(data?.headingDeg) ?? '000') + '°');
-    set(els.vs,       num(data?.verticalSpeedFpm) ?? '0');
+    set(els.gs, num(data?.groundSpeedKt) ?? '0');
+    set(els.hdg, `${num(data?.headingDeg) ?? '000'}°`);
+    set(els.vs, num(data?.verticalSpeedFpm) ?? '0');
 
-    const fuelKg  = num(data?.fuelCurrentKg);
+    const fuelKg = num(data?.fuelCurrentKg);
     const fuelCap = Number(data?.fuelCapacityKg) > 10 ? num(data?.fuelCapacityKg) : null;
     set(els.fuel, `${fuelKg ?? '--'} / ${fuelCap ?? 'N/D'}`);
 
-    set(els.qnh,  data?.qnh ? String(data.qnh) : '--');
+    set(els.qnh, data?.qnh ? String(data.qnh) : '--');
     const xMode = data?.xpdrMode ? ` ${String(data.xpdrMode).toUpperCase()}` : '';
     set(els.xpdr, `${data?.xpdrCode || '----'}${xMode}`);
 
-    // Pilot name + rank
-    const pName = (data?.pilotName || data?.callsign || '').trim();
-    const pRankName = data?.pilotRankName || '';
-    const pRankCode = data?.pilotRankCode || '';
-    set(els.pilotName, pName || '--');
-
-    const abbr = rankAbbrev(pRankName || pRankCode);
-    set(els.pilotRank, abbr || '--');
-    if (els.pilotRank) {
-      els.pilotRank.className = `pilot-rank ${rankClass(pRankName, pRankCode)}`;
-    }
+    set(els.pilotName, (data?.pilotName || data?.callsign || '').trim() || '--');
+    set(els.pilotRank, (data?.pilotRankCode || data?.pilotRankName || '--'));
 
     renderSystems(data?.systems);
   }
 
-  // â”€â”€ Poll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   async function tick() {
     try {
       const [healthRes, stateRes] = await Promise.all([
@@ -170,20 +121,19 @@
         fetch(`${STATE_URL}?t=${Date.now()}`, { cache: 'no-store' }),
       ]);
 
-      const healthOnline = healthRes.ok;
+      const bridgeOnline = healthRes.ok;
       if (!stateRes.ok) {
-        render(null, healthOnline);
+        render(null, bridgeOnline);
       } else {
-        render(await stateRes.json(), healthOnline);
+        render(await stateRes.json(), bridgeOnline);
       }
     } catch {
-      render(null);
+      render(null, false);
     } finally {
       window.setTimeout(tick, POLL_MS);
     }
   }
 
-  // â”€â”€ State: show / hide / mode / position â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   function applyHidden(hidden) {
     body.classList.toggle('hud-hidden', hidden);
     lsSet(LS_HIDDEN, hidden ? '1' : '0');
@@ -196,37 +146,19 @@
     lsSet(LS_MODE, mode);
   }
 
-  function applyPosition(pos) {
-    body.classList.remove(...POSITIONS);
-    body.classList.add(pos);
-    lsSet(LS_POSITION, pos);
-  }
-
-  // â”€â”€ Public API (attached to window for onclick handlers) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   window.pwHud = {
-    show() {
-      applyHidden(false);
-    },
-    hide() {
-      applyHidden(true);
-    },
+    show() { applyHidden(false); },
+    hide() { applyHidden(true); },
     toggleMode() {
       const current = body.classList.contains('mode-expanded') ? 'mode-expanded' : 'mode-compact';
       applyMode(current === 'mode-compact' ? 'mode-expanded' : 'mode-compact');
     },
-    cyclePosition() {
-      const current = POSITIONS.find(p => body.classList.contains(p)) || POSITIONS[0];
-      const next = POSITIONS[(POSITIONS.indexOf(current) + 1) % POSITIONS.length];
-      applyPosition(next);
-    },
+    cyclePosition() {}
   };
 
-  // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   applyHidden(lsGet(LS_HIDDEN, '0') === '1');
   applyMode(lsGet(LS_MODE, 'mode-compact'));
-  applyPosition(lsGet(LS_POSITION, 'pos-center'));
 
-  render(null);
+  render(null, false);
   tick();
 })();
-

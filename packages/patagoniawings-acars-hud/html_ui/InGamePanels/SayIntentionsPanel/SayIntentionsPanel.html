@@ -5,31 +5,26 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Patagonia Wings ACARS HUD</title>
-  <link rel="stylesheet" href="./SayIntentionsPanel.css" />
+  <link rel="stylesheet" href="./hud.css" />
 </head>
-<body class="pos-center mode-compact">
-
-  <!-- Restore pill â€” visible only when HUD is hidden -->
+<body class="mode-compact">
   <button id="restore" class="restore" title="Mostrar HUD" onclick="pwHud.show()">
     <span class="restore-mark">PW</span>
-    <span class="restore-label">â–² HUD</span>
+    <span class="restore-label">HUD</span>
   </button>
 
-  <!-- Main HUD panel -->
   <main id="hud" class="hud hud--offline">
-
-    <!-- â”€â”€ Row 1: Brand Â· Pilot Â· Flight strip Â· Controls â”€â”€ -->
     <section class="brand">
       <div class="brand-mark">PW</div>
       <div class="brand-info">
         <div class="brand-title">PATAGONIA WINGS</div>
-        <div id="status" class="brand-status">ACARS offline</div>
+        <div id="status" class="brand-status">ACARS OFFLINE</div>
       </div>
     </section>
 
     <div class="pilot-block">
-      <span id="pilotName" class="pilot-name">â€”</span>
-      <span id="pilotRank" class="pilot-rank">â€”</span>
+      <span id="pilotName" class="pilot-name">--</span>
+      <span id="pilotRank" class="pilot-rank">--</span>
     </div>
 
     <section class="flight-strip">
@@ -39,25 +34,21 @@
       <div class="cell"><span>A/C</span><strong id="aircraft">--</strong></div>
       <div class="cell"><span>ALT ft</span><strong id="altitude">0</strong></div>
       <div class="cell"><span>GS kt</span><strong id="gs">0</strong></div>
-      <div class="cell"><span>HDG</span><strong id="hdg">000Â°</strong></div>
+      <div class="cell"><span>HDG</span><strong id="hdg">000°</strong></div>
       <div class="cell"><span>V/S fpm</span><strong id="vs">0</strong></div>
-      <div class="cell cell--fuel"><span>FUEL kg</span><strong id="fuel">â€”</strong></div>
-      <div class="cell"><span>QNH</span><strong id="qnh">â€”</strong></div>
+      <div class="cell cell--fuel"><span>FUEL kg</span><strong id="fuel">--</strong></div>
+      <div class="cell"><span>QNH</span><strong id="qnh">--</strong></div>
       <div class="cell"><span>XPDR</span><strong id="xpdr">----</strong></div>
     </section>
 
     <div class="hud-controls">
-      <button class="ctrl" id="btnPos"  title="Cambiar posiciÃ³n (izq / centro / der)" onclick="pwHud.cyclePosition()">âŠ•</button>
-      <button class="ctrl" id="btnMode" title="Compacto / Expandido"                  onclick="pwHud.toggleMode()">âŠž</button>
-      <button class="ctrl ctrl--close"  title="Ocultar HUD"                            onclick="pwHud.hide()">Ã—</button>
+      <button class="ctrl" id="btnMode" title="Compacto / Expandido" onclick="pwHud.toggleMode()">M</button>
+      <button class="ctrl ctrl--close" title="Ocultar HUD" onclick="pwHud.hide()">X</button>
     </div>
 
-    <!-- â”€â”€ Row 2 (expanded only): Systems pills â”€â”€ -->
     <section id="systems" class="systems"></section>
-
   </main>
 
-  <script src="./SayIntentionsPanel.js"></script>
+  <script src="./hud.js"></script>
 </body>
 </html>
-
