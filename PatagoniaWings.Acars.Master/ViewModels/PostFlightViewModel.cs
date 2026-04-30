@@ -172,7 +172,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return "REENVIAR PIREP";
                 }
 
-                return "CERRAR VUELO";
+                return "ENVIAR PIREP";
             }
         }
 

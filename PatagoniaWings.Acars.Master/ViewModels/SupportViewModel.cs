@@ -392,14 +392,25 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return;
                 }
 
+                // Reaplica settings antes de probar para evitar estado stale.
+                bridge.ApplySettings(_enableInSimHud, _localHudPort, _hudUpdateRateHz, _hudOnlyInFlight, _preferences.HudTheme);
+                await Task.Delay(250);
+
+                if (!bridge.IsBridgeListening)
+                {
+                    StatusMessage = "HUD bridge no iniciado. " + bridge.GetHealthText();
+                    OnPropertyChanged(nameof(HudBridgeStatus));
+                    return;
+                }
+
                 var stateUrl = bridge.GetStateUrl();
                 var healthUrl = stateUrl.Replace("/api/hud/state", "/api/hud/health");
-                var timeout = TimeSpan.FromSeconds(6);
+                var timeout = TimeSpan.FromSeconds(20);
 
                 using (var http = new HttpClient { Timeout = timeout })
                 {
-                    var healthRes = await http.GetAsync(healthUrl).ConfigureAwait(false);
-                    var stateRes = await http.GetAsync(stateUrl).ConfigureAwait(false);
+                    var healthRes = await http.GetAsync(healthUrl);
+                    var stateRes = await http.GetAsync(stateUrl);
                     var healthOk = healthRes.IsSuccessStatusCode ? "OK" : ("HTTP " + (int)healthRes.StatusCode);
                     var stateOk = stateRes.IsSuccessStatusCode ? "OK" : ("HTTP " + (int)stateRes.StatusCode);
 
@@ -412,6 +423,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 OnPropertyChanged(nameof(HudBridgeStatus));
                 OnPropertyChanged(nameof(HudCommunityStatus));
                 OnPropertyChanged(nameof(SayIntentionsStatus));
+            }
+            catch (TaskCanceledException)
+            {
+                var err = AcarsContext.HudBridge != null ? AcarsContext.HudBridge.LastBridgeError : "timeout";
+                StatusMessage = "HUD bridge timeout/cancelado. " + err;
             }
             catch (Exception ex)
             {
@@ -464,7 +480,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             try
             {
-                var diagnostic = await UpdateService.GetDiagnosticsAsync(true).ConfigureAwait(false);
+                var diagnostic = await UpdateService.GetDiagnosticsAsync(true);
                 UpdateInstalledVersion = diagnostic.InstalledVersion;
                 UpdateLatestVersion = diagnostic.LatestVersion;
                 UpdateChannel = diagnostic.Channel;
@@ -487,7 +503,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             try
             {
-                var check = await UpdateService.CheckForUpdatesAsync(true).ConfigureAwait(false);
+                var check = await UpdateService.CheckForUpdatesAsync(true);
                 UpdateInstalledVersion = check.CurrentVersion;
                 UpdateLatestVersion = check.LatestVersion;
                 UpdateChannel = check.Channel;

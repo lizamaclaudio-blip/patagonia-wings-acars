@@ -19,21 +19,29 @@ namespace PatagoniaWings.Acars.Master.Services
         private HttpListener? _listener;
         private CancellationTokenSource? _cts;
         private Task? _loopTask;
+        private string _lastBridgeError = string.Empty;
 
         public bool Enabled { get; private set; }
         public int Port { get; private set; } = 37677;
         public int UpdateRateHz { get; private set; } = 2;
         public bool OnlyInFlight { get; private set; } = true;
         public string HudTheme { get; private set; } = "patagonia-navy";
+        public bool IsBridgeListening => _listener != null && _listener.IsListening;
+        public string LastBridgeError => _lastBridgeError;
 
         public void Initialize()
         {
             var prefs = UiPreferencesStore.Load();
-            Enabled = prefs.EnableInSimHud;
+            // Hotfix operativo: HUD debe estar disponible desde el arranque de ACARS.
+            Enabled = true;
             Port = ClampPort(prefs.LocalHudPort);
             UpdateRateHz = ClampHz(prefs.HudUpdateRateHz);
-            OnlyInFlight = prefs.HudOnlyInFlight;
+            OnlyInFlight = false;
             HudTheme = string.IsNullOrWhiteSpace(prefs.HudTheme) ? "patagonia-navy" : prefs.HudTheme.Trim();
+
+            prefs.EnableInSimHud = true;
+            prefs.HudOnlyInFlight = false;
+            UiPreferencesStore.Save(prefs);
 
             if (Enabled)
             {
@@ -95,6 +103,10 @@ namespace PatagoniaWings.Acars.Master.Services
 
             if (_listener == null || !_listener.IsListening)
             {
+                if (!string.IsNullOrWhiteSpace(_lastBridgeError))
+                {
+                    return "HUD puente local detenido: " + _lastBridgeError;
+                }
                 return "HUD puente local detenido";
             }
 
@@ -151,9 +163,14 @@ namespace PatagoniaWings.Acars.Master.Services
 
             try
             {
-                var target = Path.Combine(communities[0], "patagoniawings-acars-hud");
-                CopyDirectory(source, target);
-                statusMessage = "HUD instalado en: " + target;
+                var installedTargets = new List<string>();
+                foreach (var communityPath in communities)
+                {
+                    var target = Path.Combine(communityPath, "patagoniawings-acars-hud");
+                    CopyDirectory(source, target);
+                    installedTargets.Add(target);
+                }
+                statusMessage = "HUD instalado en: " + string.Join(" | ", installedTargets);
                 return true;
             }
             catch (Exception ex)
@@ -173,6 +190,7 @@ namespace PatagoniaWings.Acars.Master.Services
             try
             {
                 Stop();
+                _lastBridgeError = string.Empty;
 
                 _cts = new CancellationTokenSource();
                 _listener = new HttpListener();
@@ -180,8 +198,9 @@ namespace PatagoniaWings.Acars.Master.Services
                 _listener.Start();
                 _loopTask = Task.Run(() => ListenLoopAsync(_cts.Token));
             }
-            catch
+            catch (Exception ex)
             {
+                _lastBridgeError = ex.Message;
                 Stop();
             }
         }
@@ -271,7 +290,9 @@ namespace PatagoniaWings.Acars.Master.Services
                 {
                     ok = true,
                     enabled = Enabled,
-                    url = GetStateUrl()
+                    listening = IsBridgeListening,
+                    url = GetStateUrl(),
+                    error = _lastBridgeError
                 }).ConfigureAwait(false);
                 return;
             }
@@ -318,7 +339,9 @@ namespace PatagoniaWings.Acars.Master.Services
 
             return new
             {
-                connected = isFlightActive && shouldExposeLive,
+                connected = isConnected,
+                flightActive = isFlightActive,
+                telemetryVisible = shouldExposeLive,
                 simConnected = isConnected,
                 profileCode = profileCode,
                 detectionConfidence = data != null ? (data.DetectionConfidence ?? "unknown") : "unknown",

@@ -3,6 +3,7 @@
 
   const PORT = 37677;
   const STATE_URL = `http://127.0.0.1:${PORT}/api/hud/state`;
+  const HEALTH_URL = `http://127.0.0.1:${PORT}/api/hud/health`;
   const POLL_MS = 1000;
 
   const LS_HIDDEN   = 'pw-hud-hidden';
@@ -120,11 +121,14 @@
     }
   }
 
-  function render(data) {
+  function render(data, healthOnline = false) {
     const online = !!(data && data.connected);
     hud.classList.toggle('hud--offline', !online);
+    if (online) {
+      applyHidden(false);
+    }
 
-    set(els.status, online ? `▸ ACARS LIVE · ${data.phase || ''}` : 'ACARS offline');
+    set(els.status, online ? `▸ ACARS LIVE · ${data.phase || ''}` : (healthOnline ? 'ACARS esperando datos' : 'ACARS offline'));
     set(els.flightNumber, data?.flightNumber || data?.callsign);
     set(els.dep,      data?.dep,  '----');
     set(els.arr,      data?.arr,  '----');
@@ -137,7 +141,7 @@
 
     const fuelKg  = num(data?.fuelCurrentKg);
     const fuelCap = Number(data?.fuelCapacityKg) > 10 ? num(data?.fuelCapacityKg) : null;
-    set(els.fuel, fuelCap ? `${fuelKg ?? 0} / ${fuelCap}` : `${fuelKg ?? '—'}`);
+    set(els.fuel, `${fuelKg ?? '—'} / ${fuelCap ?? 'N/D'}`);
 
     set(els.qnh,  data?.qnh ? String(data.qnh) : '—');
     const xMode = data?.xpdrMode ? ` ${String(data.xpdrMode).toUpperCase()}` : '';
@@ -161,9 +165,17 @@
   // ── Poll ─────────────────────────────────────────────────────────────────────
   async function tick() {
     try {
-      const res = await fetch(`${STATE_URL}?t=${Date.now()}`, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      render(await res.json());
+      const [healthRes, stateRes] = await Promise.all([
+        fetch(`${HEALTH_URL}?t=${Date.now()}`, { cache: 'no-store' }),
+        fetch(`${STATE_URL}?t=${Date.now()}`, { cache: 'no-store' }),
+      ]);
+
+      const healthOnline = healthRes.ok;
+      if (!stateRes.ok) {
+        render(null, healthOnline);
+      } else {
+        render(await stateRes.json(), healthOnline);
+      }
     } catch {
       render(null);
     } finally {

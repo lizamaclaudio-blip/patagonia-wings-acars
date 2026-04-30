@@ -65,9 +65,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private DateTime _lastPicCheckTime = DateTime.MinValue;
         private static readonly Random _picRandom = new Random();
         private static readonly double[] _picFrequencies = {
-            118.305, 119.100, 120.500, 121.900, 122.800, 123.450,
-            124.000, 125.750, 126.200, 127.500, 128.100, 129.950,
-            130.250, 131.700, 132.500, 133.000, 134.450, 135.800
+            118.00, 125.00, 127.00, 133.00, 135.00
         };
         private double _flapsPercent;
         private bool _spoilersArmed;
@@ -1260,8 +1258,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             FinishFlightCommand = new RelayCommand(() => FinishFlight(), () => AcarsContext.FlightService.IsFlightActive && (Phase == FlightPhase.Arrived || (OnGround && GS < 3)));
             CancelFlightCommand = new RelayCommand(() => CancelFlight(), () => AcarsContext.FlightService.IsFlightActive);
             ConfirmPicCommand = new RelayCommand(
-                () => { if (_picCheckActive) CompletePicCheck(true); },
-                () => _picCheckActive);
+                () => { },
+                () => false);
 
             _picFrequency = _picFrequencies[_picRandom.Next(_picFrequencies.Length)];
 

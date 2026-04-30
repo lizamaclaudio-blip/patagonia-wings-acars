@@ -1,1 +1,1 @@
-- ACARS 7.0.10 hotfix de Soporte: DataContext corregido para comandos activos.`n- Soporte sin recortes, botones y toggles operativos con persistencia saneada.`n- Autoupdate reforzado hacia 7.0.10.
+- ACARS 7.0.11 consolidado: HUD MSFS, fuel, finalize manual PIREP y soporte operativo.`n- Integracion SayIntentions y persistencia de eventos closeout estabilizada.`n- Publicacion de installer real 7.0.11 con autoupdate y manifests sincronizados.

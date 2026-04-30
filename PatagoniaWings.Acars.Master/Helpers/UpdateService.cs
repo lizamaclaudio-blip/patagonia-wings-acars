@@ -385,12 +385,13 @@ namespace PatagoniaWings.Acars.Master.Helpers
             var hasNewVisibleVersion = IsVersionNewer(latestVersion!, CurrentVersion);
             var hasNewRevision = IsVersionNewer(latestRevision!, CurrentRevision);
             var alreadyAtLatest = !hasNewVisibleVersion && !hasNewRevision;
-            var updateAvailable = hasNewVisibleVersion || hasNewRevision || (forceUpdate && !alreadyAtLatest);
+            var updateAvailable = hasNewVisibleVersion || hasNewRevision || forceUpdate;
 
             var restartRequired = false;
             var supportsDifferential = false;
+            var hasManifestChanges = false;
 
-            if (updateAvailable && !string.IsNullOrWhiteSpace(manifestUrl))
+            if (!string.IsNullOrWhiteSpace(manifestUrl))
             {
                 var manifest = await LoadRemoteManifestAsync(manifestUrl!).ConfigureAwait(false);
                 if (manifest != null)
@@ -398,7 +399,23 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     supportsDifferential = manifest.Files.Count > 0;
                     restartRequired = manifest.Files.Any(file => NeedsRestart(file.Path, file.RestartRequired, file.UpdateMode))
                         || manifest.Deleted.Any(file => NeedsRestart(file.Path, file.RestartRequired, "restart"));
+
+                    var installRoot = GetInstalledRootDirectory();
+                    var changedFiles = manifest.Files
+                        .Where(file => !string.IsNullOrWhiteSpace(file.Url)
+                                       && Uri.IsWellFormedUriString(file.Url, UriKind.Absolute)
+                                       && ShouldDownloadFile(file, installRoot))
+                        .ToList();
+                    var deletedFiles = manifest.Deleted
+                        .Where(file => File.Exists(Path.Combine(installRoot, NormalizeRelativePath(file.Path))))
+                        .ToList();
+                    hasManifestChanges = changedFiles.Count > 0 || deletedFiles.Count > 0;
                 }
+            }
+
+            if (alreadyAtLatest && hasManifestChanges)
+            {
+                updateAvailable = true;
             }
 
             WriteLog($"Differential check => installed={CurrentVersion}/{CurrentRevision} latest={latestVersion}/{latestRevision} update_available={updateAvailable} differential={supportsDifferential} manifest_url={manifestUrl} installer_url={installerUrl}");

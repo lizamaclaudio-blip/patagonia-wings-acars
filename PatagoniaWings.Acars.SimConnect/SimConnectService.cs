@@ -184,10 +184,10 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE PITCH DEGREES",        "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "PLANE BANK DEGREES",         "degrees",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL TOTAL CAPACITY",        "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL LEFT QUANTITY",         "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL RIGHT QUANTITY",        "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL CENTER QUANTITY",       "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL TOTAL CAPACITY WEIGHT", "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL LEFT QUANTITY WEIGHT",  "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL RIGHT QUANTITY WEIGHT", "pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FUEL CENTER QUANTITY WEIGHT","pounds",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG FUEL FLOW PPH:1","pounds per hour",  SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "GENERAL ENG FUEL FLOW PPH:2","pounds per hour",  SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
