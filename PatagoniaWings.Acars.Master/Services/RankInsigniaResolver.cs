@@ -1,38 +1,57 @@
 using System;
+using System.IO;
 
 namespace PatagoniaWings.Acars.Master.Services
 {
     public static class RankInsigniaResolver
     {
-        private const string Fallback = "Assets/Ranks/cadet-school.png";
+        private const string FallbackFile = "cadet-school.png";
 
         public static string Resolve(string? rankCode)
         {
-            switch ((rankCode ?? string.Empty).Trim().ToUpperInvariant())
+            var fileName = ResolveFileName((rankCode ?? string.Empty).Trim().ToUpperInvariant());
+            return BuildSiteOfOriginUri(fileName);
+        }
+
+        private static string ResolveFileName(string normalizedRankCode)
+        {
+            switch (normalizedRankCode)
             {
                 case "CADET":
-                    return Fallback;
+                    return FallbackFile;
                 case "SECOND_OFFICER":
-                    return "Assets/Ranks/second-officer.png";
+                    return "second-officer.png";
                 case "JUNIOR_FIRST_OFFICER":
-                    return "Assets/Ranks/junior-first-officer.png";
+                    return "junior-first-officer.png";
                 case "FIRST_OFFICER":
-                    return "Assets/Ranks/first-officer.png";
+                    return "first-officer.png";
                 case "SENIOR_FIRST_OFFICER":
-                    return "Assets/Ranks/senior-first-officer.png";
+                    return "senior-first-officer.png";
                 case "JUNIOR_CAPTAIN":
-                    return "Assets/Ranks/junior-captain.png";
+                    return "junior-captain.png";
                 case "CAPTAIN":
-                    return "Assets/Ranks/captain.png";
+                    return "captain.png";
                 case "SENIOR_CAPTAIN":
-                    return "Assets/Ranks/senior-captain.png";
+                    return "senior-captain.png";
                 case "INTERNATIONAL_COMMANDER":
-                    return "Assets/Ranks/international-commander.png";
+                    return "international-commander.png";
                 case "LINE_CHECK_CAPTAIN":
-                    return "Assets/Ranks/line-check-captain.png";
+                    return "line-check-captain.png";
                 default:
-                    return Fallback;
+                    return FallbackFile;
             }
+        }
+
+        private static string BuildSiteOfOriginUri(string fileName)
+        {
+            var filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Ranks", fileName);
+            if (!File.Exists(filePath))
+            {
+                filePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "Ranks", FallbackFile);
+            }
+
+            var absoluteUri = new Uri(filePath, UriKind.Absolute);
+            return absoluteUri.AbsoluteUri;
         }
     }
 }

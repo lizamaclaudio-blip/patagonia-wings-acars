@@ -3,6 +3,7 @@ using System.Windows.Input;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
 using PatagoniaWings.Acars.Master.Helpers;
+using PatagoniaWings.Acars.Master.Services;
 
 namespace PatagoniaWings.Acars.Master.ViewModels
 {
@@ -19,7 +20,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool VoiceFemale { get => _voiceFemale; set { SetField(ref _voiceFemale, value); AcarsContext.Sound.VoiceFemale = value; } }
 
         public string RankImageResource => Pilot != null
-            ? string.Format("pack://application:,,,/Resources/Ranks/Rango{0}.png", (int)Pilot.Rank)
+            ? RankInsigniaResolver.Resolve(
+                !string.IsNullOrWhiteSpace(Pilot.CareerRankCode)
+                    ? Pilot.CareerRankCode
+                    : !string.IsNullOrWhiteSpace(Pilot.RankCode)
+                        ? Pilot.RankCode
+                        : Pilot.RankName)
             : string.Empty;
 
         public string ProgressToNextRank
