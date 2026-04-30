@@ -95,6 +95,10 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(5);
         private const long MinimumInstallerSizeBytes = 1024 * 1024;
         private static bool _updateInProgress;
+        private static string _lastDownloadStatus = string.Empty;
+        private static string _lastInstallerPath = string.Empty;
+        private static bool _lastInstallerStarted;
+        private static string _lastError = string.Empty;
 
         public static event Action<int>? DownloadProgressChanged;
         public static event Action<string>? UpdateStatusChanged;
@@ -102,6 +106,24 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public static event Action<bool>? UpdateCompleted;
 
         public static bool IsInstallerTakingControl { get; private set; }
+
+        public sealed class UpdateDiagnostics
+        {
+            public string InstalledVersion { get; set; } = string.Empty;
+            public string InstalledRevision { get; set; } = string.Empty;
+            public string LatestVersion { get; set; } = string.Empty;
+            public string LatestRevision { get; set; } = string.Empty;
+            public string ManifestUrl { get; set; } = string.Empty;
+            public string DownloadUrl { get; set; } = string.Empty;
+            public bool UpdateAvailable { get; set; }
+            public bool Mandatory { get; set; }
+            public string DownloadStatus { get; set; } = string.Empty;
+            public string InstallerPath { get; set; } = string.Empty;
+            public bool InstallerStarted { get; set; }
+            public string LastError { get; set; } = string.Empty;
+            public string Channel { get; set; } = string.Empty;
+            public bool SupportsDifferential { get; set; }
+        }
 
         public static string CurrentVersion => ReadSetting("AppVersion", GetAssemblyVersion());
 
@@ -202,9 +224,32 @@ namespace PatagoniaWings.Acars.Master.Helpers
             Task.Run(async () => await DownloadAndInstallSilentAsync(downloadUrl, version, revision));
         }
 
+        public static async Task<UpdateDiagnostics> GetDiagnosticsAsync(bool forceCheck = false)
+        {
+            var check = await CheckForUpdatesAsync(forceCheck).ConfigureAwait(false);
+            return new UpdateDiagnostics
+            {
+                InstalledVersion = CurrentVersion,
+                InstalledRevision = CurrentRevision,
+                LatestVersion = check.LatestVersion,
+                LatestRevision = check.LatestRevision,
+                ManifestUrl = string.IsNullOrWhiteSpace(check.ManifestUrl) ? UpdateManifestUrl : check.ManifestUrl,
+                DownloadUrl = check.DownloadUrl,
+                UpdateAvailable = check.IsUpdateAvailable,
+                Mandatory = check.IsUpdateAvailable,
+                DownloadStatus = _lastDownloadStatus,
+                InstallerPath = _lastInstallerPath,
+                InstallerStarted = _lastInstallerStarted,
+                LastError = _lastError,
+                Channel = string.IsNullOrWhiteSpace(check.Channel) ? CurrentChannel : check.Channel,
+                SupportsDifferential = check.SupportsDifferential
+            };
+        }
+
         public static async Task<UpdateCheckResult> CheckForUpdatesAsync(bool force = false)
         {
             var now = DateTime.UtcNow;
+            _lastError = string.Empty;
             WriteLog($"Update check start => installed_version={CurrentVersion} installed_revision={CurrentRevision} manifest_url={UpdateManifestUrl} channel_url={UpdateChannelUrl}");
             if (!force && (now - _lastCheckUtc) < CheckCooldown)
             {
@@ -231,6 +276,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             }
             catch (Exception ex)
             {
+                _lastError = ex.Message;
                 WriteLog("Differential feed error: " + ex.Message);
             }
 
@@ -412,6 +458,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             }
             catch (Exception ex)
             {
+                _lastError = ex.Message;
                 WriteLog("Legacy manifest check error: " + ex.Message);
                 return new UpdateCheckResult
                 {
@@ -617,6 +664,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
                     $"content_length={downloadMeta.ContentLength} redirect_url={downloadMeta.FinalUrl}");
                 ValidateDownloadedInstaller(installerPath, version);
                 WriteLog("update_download_complete => installer_path=" + installerPath);
+                _lastDownloadStatus = "HTTP " + downloadMeta.StatusCode;
+                _lastInstallerPath = installerPath;
+                _lastInstallerStarted = false;
 
                 if (downloadMeta.ContentLength <= 0)
                 {
@@ -653,6 +703,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 };
 
                 Process.Start(psi);
+                _lastInstallerStarted = true;
                 Application.Current?.Dispatcher?.Invoke(() =>
                 {
                     IsInstallerTakingControl = true;
@@ -663,6 +714,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             catch (TimeoutException timeoutEx)
             {
                 _updateInProgress = false;
+                _lastError = timeoutEx.Message;
                 WriteLog("update_error timeout => " + timeoutEx.Message);
                 UpdateStatusChanged?.Invoke("Tiempo de espera agotado al descargar instalador.");
                 UpdateFailed?.Invoke(
@@ -672,6 +724,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
             catch (Exception ex)
             {
                 _updateInProgress = false;
+                _lastError = ex.Message;
                 WriteLog("update_error => " + ex);
                 UpdateStatusChanged?.Invoke("No se pudo completar la actualizacion. " + ex.Message);
                 UpdateFailed?.Invoke(
@@ -1023,7 +1076,7 @@ namespace PatagoniaWings.Acars.Master.Helpers
                 Version b;
                 if (!Version.TryParse(normalizedAvailable, out a) || !Version.TryParse(normalizedInstalled, out b))
                 {
-                    return !string.Equals(available.Trim(), installed.Trim(), StringComparison.OrdinalIgnoreCase);
+                    return true;
                 }
 
                 return a > b;
@@ -1043,6 +1096,27 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static string NormalizeVersion(string value)
         {
             var raw = string.IsNullOrWhiteSpace(value) ? "0" : value.Trim();
+            var rawLower = raw.ToLowerInvariant();
+            if (rawLower.StartsWith("acars "))
+            {
+                raw = raw.Substring(6).Trim();
+            }
+
+            var firstDigit = -1;
+            for (var i = 0; i < raw.Length; i++)
+            {
+                if (char.IsDigit(raw[i]))
+                {
+                    firstDigit = i;
+                    break;
+                }
+            }
+
+            if (firstDigit > 0)
+            {
+                raw = raw.Substring(firstDigit);
+            }
+
             var suffix = raw.IndexOfAny(new[] { '-', '+', ' ' });
             if (suffix >= 0)
             {
@@ -1051,6 +1125,18 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
             var source = raw.Split('.');
             var normalized = new string[4];
+
+            // Legacy compact version format support:
+            // "6.01" => "6.0.1.0", "6.003" => "6.0.3.0"
+            if (source.Length == 2 && source[1].Length > 1 && source[1].StartsWith("0", StringComparison.Ordinal))
+            {
+                source = new[]
+                {
+                    source[0],
+                    "0",
+                    source[1].TrimStart('0').Length == 0 ? "0" : source[1].TrimStart('0')
+                };
+            }
 
             for (var i = 0; i < normalized.Length; i++)
             {
@@ -1154,11 +1240,21 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private static async Task<string> DownloadStringAsync(string url)
         {
-            using (var client = new WebClient())
+            using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
+            using (var handler = new HttpClientHandler { AllowAutoRedirect = true })
+            using (var client = new HttpClient(handler))
             {
-                client.Headers[HttpRequestHeader.CacheControl] = "no-cache";
-                client.Encoding = Encoding.UTF8;
-                return await client.DownloadStringTaskAsync(new Uri(url)).ConfigureAwait(false);
+                using (var request = new HttpRequestMessage(HttpMethod.Get, new Uri(url)))
+                using (var response = await client.SendAsync(request, cts.Token).ConfigureAwait(false))
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        throw new InvalidOperationException("Manifest request failed HTTP " + (int)response.StatusCode);
+                    }
+
+                    var content = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    return content;
+                }
             }
         }
 

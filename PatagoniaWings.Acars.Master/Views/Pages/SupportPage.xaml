@@ -148,6 +148,32 @@
                             <TextBlock Text="Probar bridge" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
                     </UniformGrid>
+                    <Separator Margin="0,7,0,7"/>
+                    <TextBlock Text="AUTOUPDATE"
+                               Foreground="#1565C0" FontSize="7.5" FontWeight="Bold"
+                               FontFamily="Segoe UI" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding UpdateState}" Foreground="#1E3A64" FontSize="8.5" FontFamily="Segoe UI" Margin="0,0,0,2"/>
+                    <TextBlock Text="{Binding UpdateInstalledVersion, StringFormat=Instalada: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"/>
+                    <TextBlock Text="{Binding UpdateLatestVersion, StringFormat=Disponible: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"/>
+                    <TextBlock Text="{Binding UpdateChannel, StringFormat=Canal: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"/>
+                    <TextBlock Text="{Binding UpdateManifestUrl, StringFormat=Manifest: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding UpdateLastError, StringFormat=Error: {0}}" Foreground="#B91C1C" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap"/>
+                    <UniformGrid Columns="2" Margin="0,4,0,4">
+                        <Button Command="{Binding CheckUpdateCommand}" Height="26" Margin="0,0,3,0">
+                            <TextBlock Text="Buscar actualizacion" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Command="{Binding DownloadUpdateCommand}" Height="26" Margin="3,0,0,0">
+                            <TextBlock Text="Descargar actualizacion" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </Button>
+                    </UniformGrid>
+                    <UniformGrid Columns="2">
+                        <Button Command="{Binding OpenUpdateLogsCommand}" Height="26" Margin="0,0,3,0">
+                            <TextBlock Text="Abrir logs update" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Command="{Binding CopyUpdateDiagnosticCommand}" Height="26" Margin="3,0,0,0">
+                            <TextBlock Text="Copiar diagnostico" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </Button>
+                    </UniformGrid>
                 </StackPanel>
             </Border>
 

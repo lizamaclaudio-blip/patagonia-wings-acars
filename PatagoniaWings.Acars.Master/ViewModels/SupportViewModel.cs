@@ -20,6 +20,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private int _hudUpdateRateHz;
         private bool _hudOnlyInFlight;
         private string _statusMessage = string.Empty;
+        private string _updateInstalledVersion = string.Empty;
+        private string _updateLatestVersion = string.Empty;
+        private string _updateChannel = string.Empty;
+        private string _updateManifestUrl = string.Empty;
+        private string _updateLastError = string.Empty;
+        private string _updateState = "Sin diagnostico";
 
         public SupportViewModel()
         {
@@ -46,6 +52,22 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             CopyHudBridgeUrlCommand = new RelayCommand(CopyHudBridgeUrl);
             InstallHudToCommunityCommand = new RelayCommand(InstallHudToCommunity);
             ProbeHudBridgeCommand = new RelayCommand(ProbeHudBridge);
+            CheckUpdateCommand = new AsyncRelayCommand(async _ => await CheckUpdateAsync());
+            DownloadUpdateCommand = new AsyncRelayCommand(async _ => await DownloadUpdateAsync());
+            OpenUpdateLogsCommand = new RelayCommand(OpenUpdateLogs);
+            CopyUpdateDiagnosticCommand = new RelayCommand(CopyUpdateDiagnostic);
+
+            UpdateService.UpdateStatusChanged += message =>
+            {
+                StatusMessage = message;
+                UpdateState = message;
+            };
+            UpdateService.UpdateFailed += message =>
+            {
+                UpdateLastError = message;
+                StatusMessage = message;
+            };
+            _ = CheckUpdateAsync();
         }
 
         public event Action<bool>? AlwaysVisibleChanged;
@@ -65,10 +87,44 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand CopyHudBridgeUrlCommand { get; }
         public ICommand InstallHudToCommunityCommand { get; }
         public ICommand ProbeHudBridgeCommand { get; }
+        public ICommand CheckUpdateCommand { get; }
+        public ICommand DownloadUpdateCommand { get; }
+        public ICommand OpenUpdateLogsCommand { get; }
+        public ICommand CopyUpdateDiagnosticCommand { get; }
 
         public string AcarsVersion => "v" + UpdateService.CurrentVersion;
         public string FsuipcVersion => ResolveFsuipcVersion();
         public string HudBridgeStatus => AcarsContext.HudBridge != null ? AcarsContext.HudBridge.GetHealthText() : "HUD bridge no disponible";
+        public string UpdateInstalledVersion
+        {
+            get => _updateInstalledVersion;
+            set => SetField(ref _updateInstalledVersion, value);
+        }
+        public string UpdateLatestVersion
+        {
+            get => _updateLatestVersion;
+            set => SetField(ref _updateLatestVersion, value);
+        }
+        public string UpdateChannel
+        {
+            get => _updateChannel;
+            set => SetField(ref _updateChannel, value);
+        }
+        public string UpdateManifestUrl
+        {
+            get => _updateManifestUrl;
+            set => SetField(ref _updateManifestUrl, value);
+        }
+        public string UpdateLastError
+        {
+            get => _updateLastError;
+            set => SetField(ref _updateLastError, value);
+        }
+        public string UpdateState
+        {
+            get => _updateState;
+            set => SetField(ref _updateState, value);
+        }
         public string HudCommunityStatus
         {
             get
@@ -287,6 +343,87 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             catch (Exception ex)
             {
                 StatusMessage = "No pude probar HUD bridge: " + ex.Message;
+            }
+        }
+
+        private async Task CheckUpdateAsync()
+        {
+            try
+            {
+                var diagnostic = await UpdateService.GetDiagnosticsAsync(true).ConfigureAwait(false);
+                UpdateInstalledVersion = diagnostic.InstalledVersion;
+                UpdateLatestVersion = diagnostic.LatestVersion;
+                UpdateChannel = diagnostic.Channel;
+                UpdateManifestUrl = diagnostic.ManifestUrl;
+                UpdateLastError = diagnostic.LastError;
+                UpdateState = diagnostic.UpdateAvailable
+                    ? "Actualizacion disponible"
+                    : "Cliente al dia";
+                StatusMessage = $"Update: {diagnostic.InstalledVersion} -> {diagnostic.LatestVersion} | disponible={diagnostic.UpdateAvailable}";
+            }
+            catch (Exception ex)
+            {
+                UpdateLastError = ex.Message;
+                StatusMessage = "No pude consultar actualizacion: " + ex.Message;
+            }
+        }
+
+        private async Task DownloadUpdateAsync()
+        {
+            try
+            {
+                var check = await UpdateService.CheckForUpdatesAsync(true).ConfigureAwait(false);
+                UpdateInstalledVersion = check.CurrentVersion;
+                UpdateLatestVersion = check.LatestVersion;
+                UpdateChannel = check.Channel;
+                UpdateManifestUrl = string.IsNullOrWhiteSpace(check.ManifestUrl) ? "manifest legado" : check.ManifestUrl;
+
+                if (!check.Success)
+                {
+                    UpdateLastError = check.Error;
+                    StatusMessage = "Chequeo update fallo: " + check.Error;
+                    return;
+                }
+
+                if (!check.IsUpdateAvailable)
+                {
+                    StatusMessage = "No hay actualizacion disponible.";
+                    UpdateState = "Cliente al dia";
+                    return;
+                }
+
+                UpdateState = "Iniciando descarga";
+                UpdateService.StartImmediateUpdate(check);
+            }
+            catch (Exception ex)
+            {
+                UpdateLastError = ex.Message;
+                StatusMessage = "No pude descargar update: " + ex.Message;
+            }
+        }
+
+        private void OpenUpdateLogs()
+        {
+            OpenFolder(UpdateService.LogsDirectory);
+        }
+
+        private void CopyUpdateDiagnostic()
+        {
+            try
+            {
+                var payload =
+                    $"installedVersion={UpdateInstalledVersion}\n" +
+                    $"latestVersion={UpdateLatestVersion}\n" +
+                    $"channel={UpdateChannel}\n" +
+                    $"manifestUrl={UpdateManifestUrl}\n" +
+                    $"state={UpdateState}\n" +
+                    $"lastError={UpdateLastError}";
+                System.Windows.Clipboard.SetText(payload);
+                StatusMessage = "Diagnostico de update copiado.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude copiar diagnostico: " + ex.Message;
             }
         }
 
