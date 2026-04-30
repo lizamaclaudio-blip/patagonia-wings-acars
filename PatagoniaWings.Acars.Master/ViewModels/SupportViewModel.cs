@@ -329,7 +329,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 var path = AcarsContext.HudBridge != null
                     ? AcarsContext.HudBridge.GetPackageFolderPath()
-                    : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Packages", "patagoniawings-acars-hud");
+                    : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "packages", "patagoniawings-acars-hud");
                 OpenFolder(path);
             }
             catch (Exception ex)
@@ -551,6 +551,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     $"downloadUrl={UpdateDownloadUrl}\n" +
                     $"state={UpdateState}\n" +
                     $"lastError={UpdateLastError}\n" +
+                    $"pendingCloseouts={AcarsContext.Api.GetPendingCloseoutCount()}\n" +
+                    $"lastFinalize={AcarsContext.Api.GetLastFinalizeDiagnostic()}\n" +
                     $"simulatorStatus={SimulatorConnectionStatus}\n" +
                     $"hudStatus={HudBridgeStatus}\n" +
                     $"sayIntentions={SayIntentionsStatus}";

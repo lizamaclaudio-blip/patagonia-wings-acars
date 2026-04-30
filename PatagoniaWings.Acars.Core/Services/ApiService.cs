@@ -53,6 +53,10 @@ namespace PatagoniaWings.Acars.Core.Services
         /// <summary>Despacho activo actual (null si no hay vuelo en curso).</summary>
         public PreparedDispatch? ActiveDispatch => _activePreparedDispatch;
         private string _token = string.Empty;
+        private string _lastFinalizeDiagnostic = "finalize_diag=none";
+
+        public string GetLastFinalizeDiagnostic()
+            => _lastFinalizeDiagnostic;
 
         public ApiService(string baseUrl, string webBaseUrl = "", string supabaseUrl = "", string supabaseAnonKey = "", bool useSupabaseDirect = false)
         {
@@ -1596,8 +1600,26 @@ namespace PatagoniaWings.Acars.Core.Services
                         closeoutPayload = SerializeCloseoutPayload(envelope.Payload)
                     }).ConfigureAwait(false);
 
+                if (!webResponse.Success && IsPayloadTooLargeError(webResponse.Error))
+                {
+                    WriteAuthLog("Finalize payload too large; retrying with compact payload for reservation=" + (envelope.ReservationId ?? string.Empty));
+                    webResponse = await PostWebApiAsync(
+                        "/api/acars/finalize",
+                        new
+                        {
+                            report = SerializeFlightReport(envelope.Report),
+                            activeFlight = SerializeFlight(envelope.ActiveFlight),
+                            preparedDispatch = SerializePreparedDispatch(envelope.Dispatch),
+                            telemetryLog = SerializeTelemetryLog(envelope.TelemetryLog, 600),
+                            lastSimData = SerializeSimData(envelope.LastSimData),
+                            damageEvents = SerializeDamageEvents(envelope.DamageEvents),
+                            closeoutPayload = SerializeCloseoutPayload(envelope.Payload, true)
+                        }).ConfigureAwait(false);
+                }
+
                 if (!webResponse.Success || webResponse.Data == null)
                 {
+                    _lastFinalizeDiagnostic = "finalize_ok=false | reason=empty_or_failed_response | error=" + (webResponse.Error ?? "unknown");
                     return ApiResult<FlightReport>.Fail(
                         string.IsNullOrWhiteSpace(webResponse.Error)
                             ? "El backend web no pudo cerrar el vuelo oficialmente."
@@ -1606,19 +1628,37 @@ namespace PatagoniaWings.Acars.Core.Services
 
                 var resultPayload = webResponse.Data;
                 var successFlag = ConvertToBool(resultPayload, "success", false);
+                var persisted = ConvertToBool(resultPayload, "persisted", false);
+                var reservationClosed = ConvertToBool(resultPayload, "reservationClosed", false);
                 var reservationIdConfirmed = ConvertToString(resultPayload, "reservationId");
                 var summaryUrl = FirstNonEmpty(resultPayload, "summaryUrl", "resultUrl");
-                if (!successFlag || string.IsNullOrWhiteSpace(reservationIdConfirmed))
+                var resolvedSummaryUrl = BuildAbsoluteWebUrl(summaryUrl);
+                var summaryUrlIsValid = Uri.TryCreate(resolvedSummaryUrl, UriKind.Absolute, out var summaryUri)
+                                        && (summaryUri.Scheme == Uri.UriSchemeHttp || summaryUri.Scheme == Uri.UriSchemeHttps);
+
+                _lastFinalizeDiagnostic =
+                    "finalize_ok=" + successFlag +
+                    " | persisted=" + persisted +
+                    " | reservationClosed=" + reservationClosed +
+                    " | reservationId=" + (reservationIdConfirmed ?? string.Empty) +
+                    " | resultStatus=" + (ConvertToString(resultPayload, "resultStatus") ?? string.Empty) +
+                    " | summaryUrl=" + (resolvedSummaryUrl ?? string.Empty);
+
+                if (!successFlag || !persisted || !reservationClosed || string.IsNullOrWhiteSpace(reservationIdConfirmed) || !summaryUrlIsValid)
                 {
                     return ApiResult<FlightReport>.Fail("Finalize sin confirmación real del servidor.");
                 }
 
+                if (!string.IsNullOrWhiteSpace(envelope.ReservationId)
+                    && !string.Equals(envelope.ReservationId, reservationIdConfirmed, StringComparison.OrdinalIgnoreCase))
+                {
+                    return ApiResult<FlightReport>.Fail("Finalize inconsistente: reservationId no coincide.");
+                }
+
                 var officialScores = GetNestedDictionary(resultPayload, "officialScores");
-                envelope.Report.ResultUrl = string.IsNullOrWhiteSpace(summaryUrl)
-                    ? BuildFlightResultUrl(envelope.Dispatch?.ReservationId ?? string.Empty)
-                    : BuildAbsoluteWebUrl(summaryUrl);
+                envelope.Report.ResultUrl = resolvedSummaryUrl;
                 envelope.Report.ResultStatus = ConvertToString(resultPayload, "resultStatus");
-                envelope.Report.ReservationClosed = ConvertToBool(resultPayload, "reservationClosed", false);
+                envelope.Report.ReservationClosed = reservationClosed;
                 envelope.Report.ProcedureScore = ConvertToInt(officialScores, "procedure_score", envelope.Report.ProcedureScore);
                 envelope.Report.PerformanceScore = ConvertToInt(officialScores, "performance_score", envelope.Report.PerformanceScore);
                 envelope.Report.PatagoniaScore = ConvertToInt(officialScores, "final_score", envelope.Report.PatagoniaScore > 0 ? envelope.Report.PatagoniaScore : envelope.Report.Score);
@@ -1632,6 +1672,19 @@ namespace PatagoniaWings.Acars.Core.Services
             }
 
             return ApiResult<FlightReport>.Fail("Endpoint web ACARS no disponible: el PIREP RAW queda en cola local. La evaluacion oficial debe ejecutarse en Supabase/Web, no en el cliente ACARS.");
+        }
+
+        private static bool IsPayloadTooLargeError(string? error)
+        {
+            var text = (error ?? string.Empty).Trim();
+            if (text.Length == 0)
+            {
+                return false;
+            }
+
+            return text.IndexOf("Request Entity Too Large", StringComparison.OrdinalIgnoreCase) >= 0
+                   || text.IndexOf("FUNCTION_PAYLOAD_TOO_LARGE", StringComparison.OrdinalIgnoreCase) >= 0
+                   || text.IndexOf("413", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         private DetectionContext ResolveDetectionContext(PreparedDispatch dispatch, SimData? lastSample)
@@ -3724,7 +3777,7 @@ namespace PatagoniaWings.Acars.Core.Services
             };
         }
 
-        private object SerializeCloseoutPayload(PatagoniaFlightCloseoutPayload? payload)
+        private object SerializeCloseoutPayload(PatagoniaFlightCloseoutPayload? payload, bool compact = false)
         {
             if (payload == null)
             {
@@ -3756,22 +3809,55 @@ namespace PatagoniaWings.Acars.Core.Services
                     performanceScore = payload.Scores.PerformanceScore,
                     flightValid = payload.Scores.FlightValid
                 },
-                evaluation = SerializePatagoniaEvaluation(payload.Evaluation),
+                evaluation = compact ? new { } : SerializePatagoniaEvaluation(payload.Evaluation),
                 blackboxSummary = payload.BlackboxSummary ?? new Dictionary<string, object>(),
                 eventSummary = payload.EventSummary ?? new Dictionary<string, object>(),
-                criticalEvents = payload.CriticalEvents ?? new List<Dictionary<string, object>>(),
-                capabilitySnapshot = payload.CapabilitySnapshot ?? new List<Dictionary<string, object>>(),
-                unsupportedSignals = payload.UnsupportedSignals ?? new List<Dictionary<string, object>>(),
-                penaltyExclusions = payload.PenaltyExclusions ?? new List<Dictionary<string, object>>(),
+                criticalEvents = compact
+                    ? (payload.CriticalEvents ?? new List<Dictionary<string, object>>()).Take(80).ToList()
+                    : payload.CriticalEvents ?? new List<Dictionary<string, object>>(),
+                capabilitySnapshot = compact
+                    ? (payload.CapabilitySnapshot ?? new List<Dictionary<string, object>>()).Take(80).ToList()
+                    : payload.CapabilitySnapshot ?? new List<Dictionary<string, object>>(),
+                unsupportedSignals = compact
+                    ? (payload.UnsupportedSignals ?? new List<Dictionary<string, object>>()).Take(40).ToList()
+                    : payload.UnsupportedSignals ?? new List<Dictionary<string, object>>(),
+                penaltyExclusions = compact
+                    ? (payload.PenaltyExclusions ?? new List<Dictionary<string, object>>()).Take(40).ToList()
+                    : payload.PenaltyExclusions ?? new List<Dictionary<string, object>>(),
                 pirepFileName = payload.PirepFileName,
                 pirepChecksumSha256 = payload.PirepChecksumSha256,
-                pirepXmlContent = payload.PirepXmlContent
+                pirepXmlContent = compact ? string.Empty : payload.PirepXmlContent
             };
         }
 
-        private object SerializeTelemetryLog(IReadOnlyList<SimData>? telemetryLog)
+        private object SerializeTelemetryLog(IReadOnlyList<SimData>? telemetryLog, int maxSamples = 0)
         {
-            return (telemetryLog ?? Array.Empty<SimData>()).Select(SerializeSimData).ToArray();
+            var samples = (telemetryLog ?? Array.Empty<SimData>()).ToList();
+            if (maxSamples > 0 && samples.Count > maxSamples)
+            {
+                var step = Math.Max(1, samples.Count / maxSamples);
+                var reduced = new List<SimData>(maxSamples + 4);
+                for (var i = 0; i < samples.Count; i += step)
+                {
+                    reduced.Add(samples[i]);
+                    if (reduced.Count >= maxSamples - 2)
+                    {
+                        break;
+                    }
+                }
+
+                if (samples.Count > 0)
+                {
+                    reduced.Add(samples[samples.Count - 1]);
+                }
+
+                samples = reduced
+                    .Distinct()
+                    .Take(maxSamples)
+                    .ToList();
+            }
+
+            return samples.Select(SerializeSimData).ToArray();
         }
 
         private object SerializeDamageEvents(IReadOnlyList<AircraftDamageEvent>? damageEvents)

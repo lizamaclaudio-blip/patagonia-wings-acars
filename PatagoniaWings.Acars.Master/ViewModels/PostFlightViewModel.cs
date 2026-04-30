@@ -334,16 +334,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var serverConfirmed = IsCloseoutServerConfirmed(Report.ResultStatus);
                 var isQueued = IsCloseoutPendingRetry(Report.ResultStatus);
 
-                var hasSummaryUrl = !string.IsNullOrWhiteSpace(Report?.ResultUrl);
+                var hasSummaryUrl = Uri.TryCreate(Report?.ResultUrl, UriKind.Absolute, out var resultUri)
+                                    && (resultUri.Scheme == Uri.UriSchemeHttp || resultUri.Scheme == Uri.UriSchemeHttps);
                 var reservationClosed = Report?.ReservationClosed == true;
-                if (serverConfirmed && reservationClosed)
+                if (serverConfirmed && reservationClosed && hasSummaryUrl)
                 {
                     Submitted = true;
                     SubmitMessage = "PIREP enviado y consolidado correctamente.";
-                    if (!hasSummaryUrl)
-                    {
-                        SubmitMessage += " (sin URL de resumen)";
-                    }
+                }
+                else if (serverConfirmed && reservationClosed && !hasSummaryUrl)
+                {
+                    Submitted = false;
+                    SubmitMessage = "Pendiente de sincronizacion. El servidor no confirmo summaryUrl valido para el cierre.";
+                    OnPropertyChanged(nameof(CloseButtonTitle));
+                    OnPropertyChanged(nameof(CanSubmit));
+                    OnPropertyChanged(nameof(IsPendingCloseoutRetry));
+                    CommandManager.InvalidateRequerySuggested();
+                    return;
                 }
                 else if (serverConfirmed && !reservationClosed)
                 {

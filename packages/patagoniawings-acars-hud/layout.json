@@ -1,34 +1,29 @@
 ﻿{
     "content":  [
                     {
-                        "path":  "manifest.json",
-                        "size":  1164,
-                        "date":  134220392747831254
-                    },
-                    {
                         "path":  "html_ui\\icons\\toolbar\\ICON_TOOLBAR_SAYINTENTIONSAI.svg",
                         "size":  544,
                         "date":  134219748556635135
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\hud.css",
-                        "size":  8745,
-                        "date":  134219939145328812
+                        "size":  4843,
+                        "date":  134220402671790428
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\hud.js",
-                        "size":  9405,
-                        "date":  134220317620073325
+                        "size":  6065,
+                        "date":  134220406632218263
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\index.html",
-                        "size":  2664,
-                        "date":  134219938467389788
+                        "size":  2239,
+                        "date":  134220401825961203
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\panel.xml",
-                        "size":  592,
-                        "date":  134220385159430627
+                        "size":  653,
+                        "date":  134220417772757843
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\ToolbarIcon.png",
@@ -37,33 +32,33 @@
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\ToolbarIcon.svg",
-                        "size":  544,
-                        "date":  134219748556635135
+                        "size":  726,
+                        "date":  134220417911249999
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\hud.css",
-                        "size":  8745,
-                        "date":  134219939145328812
+                        "size":  4843,
+                        "date":  134220402671790428
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\hud.js",
-                        "size":  9405,
-                        "date":  134220317620073325
+                        "size":  6065,
+                        "date":  134220406632218263
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\SayIntentionsPanel.css",
-                        "size":  8745,
-                        "date":  134219939145328812
+                        "size":  4843,
+                        "date":  134220402671790428
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\SayIntentionsPanel.html",
-                        "size":  2664,
-                        "date":  134219938467389788
+                        "size":  2239,
+                        "date":  134220401825961203
                     },
                     {
                         "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\SayIntentionsPanel.js",
-                        "size":  9405,
-                        "date":  134220317620073325
+                        "size":  6065,
+                        "date":  134220406632218263
                     },
                     {
                         "path":  "html_ui\\Textures\\Menu\\toolbar\\ICON_TOOLBAR_SAYINTENTIONSAI.svg",
@@ -74,6 +69,11 @@
                         "path":  "InGamePanels\\panel-sayintentionsai.spb",
                         "size":  704,
                         "date":  133523274880000000
+                    },
+                    {
+                        "path":  "manifest.json",
+                        "size":  1166,
+                        "date":  134220402817398278
                     }
                 ]
 }

@@ -1,2 +1,4 @@
-﻿- ACARS 7.0.12 consolidado: HUD MSFS, fuel, finalize manual PIREP y soporte operativo.`n- Integracion SayIntentions y persistencia de eventos closeout estabilizada.`n- Publicacion de installer real 7.0.12 con autoupdate y manifests sincronizados.
-
+﻿- ACARS 7.0.13 con finalize confirmado solo por servidor real (success+persisted+reservationClosed+summaryUrl).
+- Reenviar PIREP seguro para pendientes/queued_retry, sin marcar enviado en falsos positivos.
+- HUD MSFS2020 independiente + bridge localhost state/health y soporte operativo.
+- Publicacion de installer real 7.0.13 con autoupdate y manifests sincronizados.

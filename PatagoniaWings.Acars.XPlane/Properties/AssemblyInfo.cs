@@ -4,6 +4,5 @@
 [assembly: AssemblyCompany("Patagonia Wings Virtual Airline")]
 [assembly: AssemblyProduct("Patagonia Wings ACARS")]
 [assembly: AssemblyCopyright("Copyright 2026 Patagonia Wings")]
-[assembly: AssemblyVersion("7.0.12.0")]
-[assembly: AssemblyFileVersion("7.0.12.0")]
-
+[assembly: AssemblyVersion("7.0.13.0")]
+[assembly: AssemblyFileVersion("7.0.13.0")]

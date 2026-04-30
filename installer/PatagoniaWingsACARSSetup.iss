@@ -7,7 +7,7 @@
   #define MyAppName      "Patagonia Wings ACARS"
 #endif
 #ifndef MyAppVersion
-#define MyAppVersion   "7.0.10"
+#define MyAppVersion   "7.0.13"
 #endif
 #ifndef MyAppPublisher
   #define MyAppPublisher "Patagonia Wings Virtual Airline"
@@ -183,6 +183,42 @@ begin
   end;
 end;
 
+procedure InstallPatagoniaHud();
+var
+  CommunityFolder, HudDest, HudSrc: String;
+  FindRec: TFindRec;
+begin
+  CommunityFolder := FindMSFSCommunityFolder();
+  if CommunityFolder = '' then
+    Exit;
+
+  HudSrc  := ExpandConstant('{app}\MSFS-HUD-Package\patagoniawings-acars-hud');
+  HudDest := CommunityFolder + '\patagoniawings-acars-hud';
+
+  if not DirExists(HudSrc) then
+    Exit;
+
+  if not DirExists(HudDest) then
+    CreateDir(HudDest);
+
+  // Copiar recursivo simple via robocopy-style
+  if FindFirst(HudSrc + '\*', FindRec) then
+  begin
+    repeat
+      if (FindRec.Name <> '.') and (FindRec.Name <> '..') then
+      begin
+        if FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY <> 0 then
+        begin
+          if not DirExists(HudDest + '\' + FindRec.Name) then
+            CreateDir(HudDest + '\' + FindRec.Name);
+        end else
+          FileCopy(HudSrc + '\' + FindRec.Name, HudDest + '\' + FindRec.Name, False);
+      end;
+    until not FindNext(FindRec);
+    FindClose(FindRec);
+  end;
+end;
+
 procedure InstallMobiFlightWasm();
 var
   CommunityFolder, WasmDest, WasmSrc: String;
@@ -224,5 +260,8 @@ end;
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
+  begin
     InstallMobiFlightWasm();
+    InstallPatagoniaHud();
+  end;
 end;
