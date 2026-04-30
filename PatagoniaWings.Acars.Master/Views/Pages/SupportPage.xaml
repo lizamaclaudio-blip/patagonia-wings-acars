@@ -129,12 +129,23 @@
                     <TextBlock Text="{Binding HudBridgeStatus}"
                                Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
                                TextWrapping="Wrap" Margin="0,0,0,5"/>
-                    <UniformGrid Columns="2">
-                        <Button Command="{Binding OpenHudPackageFolderCommand}" Height="26" Margin="0,0,3,0">
+                    <TextBlock Text="{Binding HudCommunityStatus}"
+                               Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
+                               TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <UniformGrid Columns="2" Margin="0,0,0,4">
+                        <Button Command="{Binding InstallHudToCommunityCommand}" Height="26" Margin="0,0,3,0">
+                            <TextBlock Text="Instalar HUD" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Command="{Binding OpenHudPackageFolderCommand}" Height="26" Margin="3,0,0,0">
                             <TextBlock Text="Paquete HUD" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
-                        <Button Command="{Binding CopyHudBridgeUrlCommand}" Height="26" Margin="3,0,0,0">
+                    </UniformGrid>
+                    <UniformGrid Columns="2">
+                        <Button Command="{Binding CopyHudBridgeUrlCommand}" Height="26" Margin="0,0,3,0">
                             <TextBlock Text="Copiar URL" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                        </Button>
+                        <Button Command="{Binding ProbeHudBridgeCommand}" Height="26" Margin="3,0,0,0">
+                            <TextBlock Text="Probar bridge" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
                     </UniformGrid>
                 </StackPanel>

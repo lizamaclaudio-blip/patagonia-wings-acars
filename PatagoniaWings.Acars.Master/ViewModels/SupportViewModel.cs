@@ -44,6 +44,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OpenConfigFolderCommand = new RelayCommand(() => OpenFolder(GetConfigFolderPath()));
             OpenHudPackageFolderCommand = new RelayCommand(OpenHudPackageFolder);
             CopyHudBridgeUrlCommand = new RelayCommand(CopyHudBridgeUrl);
+            InstallHudToCommunityCommand = new RelayCommand(InstallHudToCommunity);
+            ProbeHudBridgeCommand = new RelayCommand(ProbeHudBridge);
         }
 
         public event Action<bool>? AlwaysVisibleChanged;
@@ -61,10 +63,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand OpenConfigFolderCommand { get; }
         public ICommand OpenHudPackageFolderCommand { get; }
         public ICommand CopyHudBridgeUrlCommand { get; }
+        public ICommand InstallHudToCommunityCommand { get; }
+        public ICommand ProbeHudBridgeCommand { get; }
 
         public string AcarsVersion => "v" + UpdateService.CurrentVersion;
         public string FsuipcVersion => ResolveFsuipcVersion();
         public string HudBridgeStatus => AcarsContext.HudBridge != null ? AcarsContext.HudBridge.GetHealthText() : "HUD bridge no disponible";
+        public string HudCommunityStatus
+        {
+            get
+            {
+                var bridge = AcarsContext.HudBridge;
+                if (bridge == null) return "Community: no disponible";
+                var paths = bridge.DetectCommunityFolders();
+                if (paths.Length == 0) return "Community: no detectada";
+                return "Community: " + string.Join(" | ", paths);
+            }
+        }
 
         public bool AlwaysVisible
         {
@@ -117,8 +132,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 if (SetField(ref _enableInSimHud, value))
                 {
-                    SavePreferences();
+                SavePreferences();
                     OnPropertyChanged(nameof(HudBridgeStatus));
+                    OnPropertyChanged(nameof(HudCommunityStatus));
                 }
             }
         }
@@ -133,6 +149,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 {
                     SavePreferences();
                     OnPropertyChanged(nameof(HudBridgeStatus));
+                    OnPropertyChanged(nameof(HudCommunityStatus));
                 }
             }
         }
@@ -231,6 +248,45 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             catch (Exception ex)
             {
                 StatusMessage = "No pude copiar URL HUD: " + ex.Message;
+            }
+        }
+
+        private void InstallHudToCommunity()
+        {
+            try
+            {
+                if (AcarsContext.HudBridge == null)
+                {
+                    StatusMessage = "HUD bridge no disponible.";
+                    return;
+                }
+
+                if (AcarsContext.HudBridge.InstallHudToCommunity(out var message))
+                {
+                    StatusMessage = message;
+                }
+                else
+                {
+                    StatusMessage = message + " Abre 'Paquete HUD' y copia manualmente a Community.";
+                }
+
+                OnPropertyChanged(nameof(HudCommunityStatus));
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude instalar HUD: " + ex.Message;
+            }
+        }
+
+        private void ProbeHudBridge()
+        {
+            try
+            {
+                StatusMessage = HudBridgeStatus + " | " + HudCommunityStatus;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude probar HUD bridge: " + ex.Message;
             }
         }
 

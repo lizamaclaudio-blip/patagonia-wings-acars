@@ -73,7 +73,7 @@
     setText(fields.vs, `${num(data?.verticalSpeedFpm) ?? 0} FPM`);
 
     const fuelCurrent = num(data?.fuelCurrentKg);
-    const fuelCapacity = Number(data?.fuelCapacityKg) > 0 ? num(data?.fuelCapacityKg) : "N/D";
+    const fuelCapacity = Number(data?.fuelCapacityKg) > 10 ? num(data?.fuelCapacityKg) : "N/D";
     setText(fields.fuel, `${fuelCurrent ?? 0} / ${fuelCapacity} KG`);
 
     setText(fields.qnh, data?.qnh ? String(data.qnh) : "N/D");

@@ -119,6 +119,8 @@
                         <TextBlock.Effect><DropShadowEffect Color="#5BC8F5" BlurRadius="8" ShadowDepth="0" Opacity="0.8"/></TextBlock.Effect>
                     </TextBlock>
                 </Grid>
+                <TextBlock Text="{Binding RouteDistanceSourceDisplay, FallbackValue='Fuente distancia: N/D'}"
+                           Foreground="#6AAAD6" FontSize="10" FontWeight="SemiBold" Margin="0,4,0,0"/>
 
             </StackPanel>
         </Border>
@@ -384,6 +386,8 @@
                                              Converter={StaticResource StringFallbackConverter},
                                              ConverterParameter={x:Static preview:AcarsPreviewData.LiveFuel}}"
                                Foreground="#1065D4" FontSize="14" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Center"/>
+                    <TextBlock Text="{Binding FuelSourceDisplay, FallbackValue='Fuente fuel: N/D'}"
+                               Foreground="#6AAAD6" FontSize="10" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,2,0,0"/>
                 </StackPanel>
             </Border>
 

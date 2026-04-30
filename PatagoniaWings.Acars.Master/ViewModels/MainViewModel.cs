@@ -65,6 +65,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public MainViewModel()
         {
             InFlightVM = new InFlightViewModel(this);
+            PostFlightVM.CloseoutCompleted += () =>
+            {
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    NavigateTo("Dashboard");
+                });
+            };
 
             NavDashboardCommand = new RelayCommand(() => NavigateTo("Dashboard"), () => CanNavigate("Dashboard"));
             NavPreFlightCommand = new RelayCommand(() => NavigateTo("PreFlight"), () => CanNavigate("PreFlight"));

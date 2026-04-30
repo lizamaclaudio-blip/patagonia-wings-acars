@@ -83,38 +83,15 @@
                     </StackPanel>
                 </Border>
 
-                <UniformGrid Columns="3" Margin="0,0,0,8">
-                    <Border Style="{StaticResource Card}" Margin="0,0,3,0" Padding="8">
-                        <StackPanel>
-                            <TextBlock Text="PATAGONIA (LOCAL)" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding PatagoniaScore, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.ClosePatagoniaScore}}"
-                                       Foreground="{StaticResource AccentBlueBrush}"
-                                       FontFamily="Consolas"
-                                       FontSize="14"
-                                       FontWeight="Bold"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Card}" Margin="3,0,3,0" Padding="8">
-                        <StackPanel>
-                            <TextBlock Text="PROC (LOCAL)" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding ProcedureScore, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.CloseProcedureScore}}"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontFamily="Consolas"
-                                       FontSize="14"
-                                       FontWeight="Bold"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource Card}" Margin="3,0,0,0" Padding="8">
-                        <StackPanel>
-                            <TextBlock Text="PERF (LOCAL)" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding PerformanceScore, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.ClosePerformanceScore}}"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontFamily="Consolas"
-                                       FontSize="14"
-                                       FontWeight="Bold"/>
-                        </StackPanel>
-                    </Border>
-                </UniformGrid>
+                <Border Style="{StaticResource Card}" Margin="0,0,0,8">
+                    <StackPanel>
+                        <TextBlock Text="EVALUACION OFICIAL" Style="{StaticResource SectionLabel}"/>
+                        <TextBlock Text="ACARS envia solo caja negra RAW. El score, reglaje y economia oficiales se calculan en Patagonia Wings Web/Supabase."
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   FontSize="9.2"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Border>
 
                 <Border Style="{StaticResource Card}" Margin="0,0,0,8">
                     <StackPanel>

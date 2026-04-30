@@ -135,7 +135,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double GS { get => _gs; set { if (SetField(ref _gs, value)) { OnPropertyChanged(nameof(GsDisplay)); OnPropertyChanged(nameof(GSDisplay)); } } }
         public double VS { get => _vs; set { if (SetField(ref _vs, value)) { OnPropertyChanged(nameof(VsDisplay)); OnPropertyChanged(nameof(VSDisplay)); } } }
         public double Heading { get => _heading; set { if (SetField(ref _heading, value)) OnPropertyChanged(nameof(HeadingDisplay)); } }
-        public double FuelLbs { get => _fuelLbs; set { if (SetField(ref _fuelLbs, value)) { OnPropertyChanged(nameof(FuelKg)); OnPropertyChanged(nameof(FuelDisplay)); OnPropertyChanged(nameof(FuelKgDisplay)); OnPropertyChanged(nameof(FuelLbsDisplay)); } } }
+        public double FuelLbs { get => _fuelLbs; set { if (SetField(ref _fuelLbs, value)) { OnPropertyChanged(nameof(FuelKg)); OnPropertyChanged(nameof(FuelDisplay)); OnPropertyChanged(nameof(FuelSourceDisplay)); OnPropertyChanged(nameof(FuelKgDisplay)); OnPropertyChanged(nameof(FuelLbsDisplay)); } } }
         // FuelKg: normalizado en kg por el backend (SimConnect convierte lbs→kg, FSUIPC es nativo en kg)
         // Usamos _fuelKgNorm que se actualiza en OnTelemetry desde data.FuelKg
         private double _fuelKgNorm;
@@ -149,7 +149,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double FuelLeftTank { get => _fuelLeftTank; set { if (SetField(ref _fuelLeftTank, value)) OnPropertyChanged(nameof(FuelLeftTankDisplay)); } }
         public double FuelRightTank { get => _fuelRightTank; set { if (SetField(ref _fuelRightTank, value)) OnPropertyChanged(nameof(FuelRightTankDisplay)); } }
         public double FuelCenterTank { get => _fuelCenterTank; set { if (SetField(ref _fuelCenterTank, value)) OnPropertyChanged(nameof(FuelCenterTankDisplay)); } }
-        public double FuelCapacity { get => _fuelCapacity; set { if (SetField(ref _fuelCapacity, value)) { OnPropertyChanged(nameof(FuelCapacityDisplay)); OnPropertyChanged(nameof(FuelDisplay)); } } }
+        public double FuelCapacity { get => _fuelCapacity; set { if (SetField(ref _fuelCapacity, value)) { OnPropertyChanged(nameof(FuelCapacityDisplay)); OnPropertyChanged(nameof(FuelDisplay)); OnPropertyChanged(nameof(FuelSourceDisplay)); } } }
         
         public string FuelLeftTankDisplay => HasLiveTelemetry ? $"{Math.Round(FuelLeftTank, 0):F0}" : "---";
         public string FuelRightTankDisplay => HasLiveTelemetry ? $"{Math.Round(FuelRightTank, 0):F0}" : "---";
@@ -160,7 +160,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             get
             {
-                if (FuelCapacity > 0)
+                if (FuelCapacity > 10)
                 {
                     return Math.Round(FuelCapacity, 0).ToString("F0");
                 }
@@ -581,6 +581,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(RouteDistanceFromOriginDisplay));
                     OnPropertyChanged(nameof(RouteDistanceToDestinationDisplay));
                     OnPropertyChanged(nameof(RouteDistanceDisplay));
+                    OnPropertyChanged(nameof(RouteDistanceSourceDisplay));
                 }
             }
         }
@@ -595,6 +596,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public double RoutePlaneLeft => Math.Max(0, Math.Min(RouteCanvasWidth - RoutePlaneVisualWidth, RouteTrackWidth - (RoutePlaneVisualWidth / 2.0)));
         public string RouteDistanceFromOriginDisplay => $"{ComputeDistanceFromOriginNm():F0} NM";
         public string RouteDistanceToDestinationDisplay => $"{ComputeDistanceToDestinationNm():F0} NM";
+        public string RouteDistanceSourceDisplay => $"Fuente: {GetDistanceSourceLabel()}";
         public string RouteDistanceDisplay
         {
             get
@@ -604,7 +606,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (flown <= 0.1 && remaining <= 0.1)
                     return "Esperando recorrido";
 
-                return $"{flown:F1} nm recorridas · {remaining:F0} nm restantes";
+                var planned = ComputeRouteTotalDistanceNm();
+                return $"Planificada {planned:F0} nm · Recorrida {flown:F1} nm · Restante {remaining:F0} nm";
             }
         }
 
@@ -905,6 +908,47 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             return 0;
         }
 
+        private string GetDistanceSourceLabel()
+        {
+            var dispatch = AcarsContext.Runtime.CurrentDispatch;
+            if (dispatch != null && dispatch.PlannedDistanceNm > 0.1)
+            {
+                var source = (dispatch.PlannedDistanceSource ?? string.Empty).Trim();
+                return string.IsNullOrWhiteSpace(source) ? "preparedDispatch.distanceNm" : source;
+            }
+
+            if (TryGetRouteCoordinates(out _, out _, out _, out _))
+            {
+                return "geodesic.airports";
+            }
+
+            return "fallback.local";
+        }
+
+        private string ResolveFuelSourceLabel()
+        {
+            var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+            return sample != null && sample.FuelKg > 0 ? "sim.telemetry" : "no_data";
+        }
+
+        private string ResolveFuelCapacitySourceLabel()
+        {
+            var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+            var simCapacityKg = sample == null ? 0 : Math.Round(sample.FuelTotalCapacityLbs * 0.45359237d, 0);
+            if (simCapacityKg > 10)
+            {
+                return "simconnect.capacity";
+            }
+
+            var dispatchFuel = Dispatch?.FuelPlannedKg ?? 0;
+            if (dispatchFuel > 10)
+            {
+                return "dispatch.fuel_plan";
+            }
+
+            return "n/d";
+        }
+
         private bool TryGetAircraftCoordinates(out double latitude, out double longitude)
         {
             var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
@@ -1063,6 +1107,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(RouteDistanceDisplay));
             OnPropertyChanged(nameof(RouteDistanceFromOriginDisplay));
             OnPropertyChanged(nameof(RouteDistanceToDestinationDisplay));
+            OnPropertyChanged(nameof(RouteDistanceSourceDisplay));
         }
 
         private void LogLightEvent(string name, bool prev, bool current, bool onGround)
@@ -1100,6 +1145,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string VSDisplay => VsDisplay;
         public string HeadingDisplay => HasLiveTelemetry ? Math.Round(Heading, 0).ToString("000") + " deg" : "---";
         public string FuelDisplay => HasLiveTelemetry ? $"{Math.Round(FuelKg, 0):F0} / {FuelCapacityForDisplay} kg" : "---";
+        public string FuelSourceDisplay => $"Fuente: {ResolveFuelSourceLabel()} / {ResolveFuelCapacitySourceLabel()}";
         public string FuelKgDisplay => FuelDisplay;
         public string FuelLbsDisplay => HasLiveTelemetry ? Math.Round(FuelLbs, 0).ToString("F0") : "---";
         public string FlapsDisplay => HasLiveTelemetry ? Math.Round(FlapsPercent, 0).ToString("F0") + "%" : "---";
@@ -1280,6 +1326,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(VSDisplay));
             OnPropertyChanged(nameof(HeadingDisplay));
             OnPropertyChanged(nameof(FuelDisplay));
+            OnPropertyChanged(nameof(FuelSourceDisplay));
             OnPropertyChanged(nameof(FuelKgDisplay));
             OnPropertyChanged(nameof(FuelLbsDisplay));
             OnPropertyChanged(nameof(FlapsDisplay));
@@ -1322,6 +1369,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(RouteTrackWidth));
             OnPropertyChanged(nameof(RoutePlaneLeft));
             OnPropertyChanged(nameof(RouteDistanceDisplay));
+            OnPropertyChanged(nameof(RouteDistanceSourceDisplay));
 
             UpdatePirepPreview();
             RefreshRouteSnapshot();
@@ -1555,6 +1603,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 OnPropertyChanged(nameof(VSDisplay));
                 OnPropertyChanged(nameof(HeadingDisplay));
                 OnPropertyChanged(nameof(FuelDisplay));
+                OnPropertyChanged(nameof(FuelSourceDisplay));
                 OnPropertyChanged(nameof(FuelKgDisplay));
                 OnPropertyChanged(nameof(FuelLbsDisplay));
                 OnPropertyChanged(nameof(FlapsDisplay));
@@ -1669,7 +1718,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private void TriggerPicCheck()
         {
             _picFrequency    = _picFrequencies[_picRandom.Next(_picFrequencies.Length)];
-            _picSecondsLeft  = 15;
+            _picSecondsLeft  = 120;
             _picCheckActive  = true;
             _picConfirmed    = false;
             _lastPicCheckTime = DateTime.UtcNow;

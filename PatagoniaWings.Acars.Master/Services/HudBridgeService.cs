@@ -5,6 +5,8 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
@@ -97,6 +99,68 @@ namespace PatagoniaWings.Acars.Master.Services
             }
 
             return "HUD disponible en " + GetStateUrl();
+        }
+
+        public string[] DetectCommunityFolders()
+        {
+            var candidates = new List<string>();
+            void AddIfValid(string path)
+            {
+                if (string.IsNullOrWhiteSpace(path)) return;
+                var normalized = path.Trim();
+                if (!candidates.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+                {
+                    candidates.Add(normalized);
+                }
+            }
+
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+
+            AddIfValid(Path.Combine(localAppData, "Packages", "Microsoft.FlightSimulator_8wekyb3d8bbwe", "LocalCache", "Packages", "Community"));
+            AddIfValid(Path.Combine(appData, "Microsoft Flight Simulator", "Packages", "Community"));
+
+            foreach (var userCfg in GetKnownUserCfgLocations(localAppData, appData))
+            {
+                var custom = TryReadCommunityFromUserCfg(userCfg);
+                if (!string.IsNullOrWhiteSpace(custom))
+                {
+                    AddIfValid(custom);
+                }
+            }
+
+            return candidates.ToArray();
+        }
+
+        public bool InstallHudToCommunity(out string statusMessage)
+        {
+            statusMessage = string.Empty;
+            var source = GetPackageFolderPath();
+            if (!Directory.Exists(source))
+            {
+                statusMessage = "Paquete HUD no encontrado: " + source;
+                return false;
+            }
+
+            var communities = DetectCommunityFolders().Where(Directory.Exists).ToArray();
+            if (communities.Length == 0)
+            {
+                statusMessage = "No se detectó carpeta Community automáticamente.";
+                return false;
+            }
+
+            try
+            {
+                var target = Path.Combine(communities[0], "patagoniawings-acars-hud");
+                CopyDirectory(source, target);
+                statusMessage = "HUD instalado en: " + target;
+                return true;
+            }
+            catch (Exception ex)
+            {
+                statusMessage = "Falló instalación HUD: " + ex.Message;
+                return false;
+            }
         }
 
         public void Shutdown()
@@ -200,7 +264,8 @@ namespace PatagoniaWings.Acars.Master.Services
                 return;
             }
 
-            if (string.Equals(path, "/health", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(path, "/health", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(path, "/api/hud/health", StringComparison.OrdinalIgnoreCase))
             {
                 await WriteJsonAsync(context.Response, new
                 {
@@ -244,6 +309,11 @@ namespace PatagoniaWings.Acars.Master.Services
             }
 
             var altitude = data != null ? (data.IndicatedAltitudeFeet > 0 ? data.IndicatedAltitudeFeet : data.AltitudeFeet) : 0;
+            var fuelCapacityKg = Math.Round(data != null ? (data.FuelTotalCapacityLbs * 0.45359237d) : 0, 0);
+            if (fuelCapacityKg <= 10)
+            {
+                fuelCapacityKg = 0;
+            }
             var phaseCode = phase.ToString().ToUpperInvariant();
 
             return new
@@ -265,12 +335,14 @@ namespace PatagoniaWings.Acars.Master.Services
                 aircraftDisplayName = flight != null ? flight.AircraftDisplayName : string.Empty,
                 registration = registration,
                 indicatedAltitudeFt = Math.Round(altitude, 0),
+                altitudeFt = Math.Round(altitude, 0),
                 groundSpeedKt = Math.Round(data != null ? data.GroundSpeed : 0, 0),
                 headingDeg = Math.Round(data != null ? data.Heading : 0, 0),
                 verticalSpeedFpm = Math.Round(data != null ? data.VerticalSpeed : 0, 0),
                 qnh = data != null ? data.QNH : 0,
                 fuelCurrentKg = Math.Round(data != null ? data.FuelKg : 0, 0),
-                fuelCapacityKg = Math.Round(data != null ? (data.FuelTotalCapacityLbs * 0.45359237d) : 0, 0),
+                fuelCapacityKg = fuelCapacityKg > 0 ? fuelCapacityKg : (double?)null,
+                fuelCapacityDisplay = fuelCapacityKg > 0 ? fuelCapacityKg.ToString("F0", CultureInfo.InvariantCulture) : "N/D",
                 xpdrCode = data != null ? data.TransponderCode.ToString("D4", CultureInfo.InvariantCulture) : "0000",
                 xpdrMode = ResolveXpdrMode(data),
                 systems = new
@@ -349,6 +421,62 @@ namespace PatagoniaWings.Acars.Master.Services
             if (value < 1) return 1;
             if (value > 5) return 5;
             return value;
+        }
+
+        private static IEnumerable<string> GetKnownUserCfgLocations(string localAppData, string appData)
+        {
+            yield return Path.Combine(localAppData, "Packages", "Microsoft.FlightSimulator_8wekyb3d8bbwe", "LocalCache", "UserCfg.opt");
+            yield return Path.Combine(appData, "Microsoft Flight Simulator", "UserCfg.opt");
+            yield return Path.Combine(localAppData, "Packages", "Microsoft.Limitless_8wekyb3d8bbwe", "LocalCache", "UserCfg.opt");
+            yield return Path.Combine(appData, "Microsoft Flight Simulator 2024", "UserCfg.opt");
+        }
+
+        private static string TryReadCommunityFromUserCfg(string userCfgPath)
+        {
+            try
+            {
+                if (!File.Exists(userCfgPath)) return string.Empty;
+                foreach (var line in File.ReadAllLines(userCfgPath))
+                {
+                    var trimmed = line == null ? string.Empty : line.Trim();
+                    if (!trimmed.StartsWith("InstalledPackagesPath", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var firstQuote = trimmed.IndexOf('"');
+                    var lastQuote = trimmed.LastIndexOf('"');
+                    if (firstQuote >= 0 && lastQuote > firstQuote)
+                    {
+                        var root = trimmed.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+                        if (!string.IsNullOrWhiteSpace(root))
+                        {
+                            return Path.Combine(root, "Community");
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return string.Empty;
+        }
+
+        private static void CopyDirectory(string sourceDir, string targetDir)
+        {
+            Directory.CreateDirectory(targetDir);
+            foreach (var file in Directory.GetFiles(sourceDir))
+            {
+                var name = Path.GetFileName(file);
+                File.Copy(file, Path.Combine(targetDir, name), true);
+            }
+
+            foreach (var dir in Directory.GetDirectories(sourceDir))
+            {
+                var name = Path.GetFileName(dir);
+                CopyDirectory(dir, Path.Combine(targetDir, name));
+            }
         }
 
         private static string FindRepoRoot(string startDirectory)

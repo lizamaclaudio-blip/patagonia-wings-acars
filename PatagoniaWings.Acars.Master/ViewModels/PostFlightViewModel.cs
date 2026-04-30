@@ -162,7 +162,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     return "ENVIANDO...";
                 }
 
-                if (Submitted)
+                if (Submitted && !IsPendingCloseoutRetry)
                 {
                     return "PIREP ENVIADO";
                 }
@@ -254,6 +254,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         }
 
         public ICommand SubmitCommand { get; }
+        public event Action? CloseoutCompleted;
 
         public void LoadReport(FlightReport report)
         {
@@ -333,10 +334,21 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var serverConfirmed = IsCloseoutServerConfirmed(Report.ResultStatus);
                 var isQueued = IsCloseoutPendingRetry(Report.ResultStatus);
 
-                if (serverConfirmed)
+                var hasSummaryUrl = !string.IsNullOrWhiteSpace(Report?.ResultUrl);
+                if (serverConfirmed && hasSummaryUrl)
                 {
                     Submitted = true;
                     SubmitMessage = "PIREP enviado y consolidado correctamente.";
+                }
+                else if (serverConfirmed && !hasSummaryUrl)
+                {
+                    Submitted = false;
+                    SubmitMessage = "Pendiente de sincronizacion. El servidor no devolvio summaryUrl valido.";
+                    OnPropertyChanged(nameof(CloseButtonTitle));
+                    OnPropertyChanged(nameof(CanSubmit));
+                    OnPropertyChanged(nameof(IsPendingCloseoutRetry));
+                    CommandManager.InvalidateRequerySuggested();
+                    return;
                 }
                 else if (isQueued)
                 {
@@ -364,6 +376,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
 
                 AcarsContext.FlightService.Reset();
+                AcarsContext.Runtime.ClearDispatch();
                 AcarsContext.Sound.PlayDing();
                 _ = AcarsContext.Sound.PlayGroundArrivedAsync();
 
@@ -385,6 +398,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                         SubmitMessage += " (No se pudo abrir el navegador: " + ex.Message + ")";
                     }
                 }
+
+                CloseoutCompleted?.Invoke();
             }
             catch (Exception ex)
             {

@@ -2762,7 +2762,9 @@ namespace PatagoniaWings.Acars.Core.Services
                 ZeroFuelWeightKg = preparedDispatch.ZeroFuelWeightKg,
                 ScheduledBlockMinutes = preparedDispatch.ScheduledBlockMinutes,
                 ExpectedBlockP50Minutes = preparedDispatch.ExpectedBlockP50Minutes,
-                ExpectedBlockP80Minutes = preparedDispatch.ExpectedBlockP80Minutes
+                ExpectedBlockP80Minutes = preparedDispatch.ExpectedBlockP80Minutes,
+                PlannedDistanceNm = preparedDispatch.PlannedDistanceNm,
+                PlannedDistanceSource = preparedDispatch.PlannedDistanceSource
             };
         }
 
@@ -2892,6 +2894,37 @@ namespace PatagoniaWings.Acars.Core.Services
             var blockP80 = ConvertToInt(safeDispatchPackage, "expected_block_p80_minutes",
                                ConvertToInt(sbNorm, "expected_block_p80_minutes",
                                    ConvertToInt(sbOfp, "expected_block_p80_minutes", 0)));
+            var plannedDistanceNm = 0d;
+            var plannedDistanceSource = string.Empty;
+            var dispatchDistance = FirstNonEmptyNumber(safeDispatchPackage, "distance_nm", "planned_distance_nm", "distance");
+            if (dispatchDistance > 0)
+            {
+                plannedDistanceNm = dispatchDistance;
+                plannedDistanceSource = "preparedDispatch.distanceNm";
+            }
+            else
+            {
+                var simbriefDistance = FirstNonEmptyNumber(sbNorm, "distance_nm", "planned_distance_nm", "route_distance_nm", "ofp_distance_nm");
+                if (simbriefDistance <= 0)
+                {
+                    simbriefDistance = FirstNonEmptyNumber(sbOfp, "distance_nm", "planned_distance_nm", "route_distance_nm", "ofp_distance_nm");
+                }
+
+                if (simbriefDistance > 0)
+                {
+                    plannedDistanceNm = simbriefDistance;
+                    plannedDistanceSource = "simbrief.ofp";
+                }
+                else
+                {
+                    var reservationDistance = FirstNonEmptyNumber(reservationRow, "distance_nm", "planned_distance_nm");
+                    if (reservationDistance > 0)
+                    {
+                        plannedDistanceNm = reservationDistance;
+                        plannedDistanceSource = "reservation.route";
+                    }
+                }
+            }
             var scheduledDeparture = ConvertToDateTime(safeDispatchPackage, "planned_offblock_at")
                                      ?? ConvertToDateTime(safeDispatchPackage, "planned_engine_start_at")
                                      ?? ConvertToDateTime(reservationRow, "scheduled_departure");
@@ -2953,6 +2986,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 ScheduledBlockMinutes   = scheduledBlock,
                 ExpectedBlockP50Minutes = blockP50,
                 ExpectedBlockP80Minutes = blockP80,
+                PlannedDistanceNm = plannedDistanceNm,
+                PlannedDistanceSource = plannedDistanceSource,
             };
         }
 
@@ -3476,7 +3511,9 @@ namespace PatagoniaWings.Acars.Core.Services
                 zeroFuelWeightKg = dispatch.ZeroFuelWeightKg,
                 scheduledBlockMinutes = dispatch.ScheduledBlockMinutes,
                 expectedBlockP50Minutes = dispatch.ExpectedBlockP50Minutes,
-                expectedBlockP80Minutes = dispatch.ExpectedBlockP80Minutes
+                expectedBlockP80Minutes = dispatch.ExpectedBlockP80Minutes,
+                plannedDistanceNm = dispatch.PlannedDistanceNm,
+                plannedDistanceSource = dispatch.PlannedDistanceSource
             };
         }
 

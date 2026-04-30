@@ -25,6 +25,7 @@ namespace PatagoniaWings.Acars.SimConnect
     /// </summary>
     public sealed class SimConnectService : IDisposable
     {
+        private const bool EnableLvarReadBridge = false;
         private const int WM_USER_SIMCONNECT = 0x0402;
 
         private Microsoft.FlightSimulator.SimConnect.SimConnect? _simConnect;
@@ -47,8 +48,9 @@ namespace PatagoniaWings.Acars.SimConnect
         public bool IsMobiFlightAvailable => _mobiFlight != null && _mobiFlight.IsAvailable;
         public bool IsPmdgSdkAvailable => _pmdgSdk != null && _pmdgSdk.IsAvailable;
         public bool IsLvarOverlayActive =>
-            (IsMobiFlightAvailable && ProfileRequiresLvars(_lastProfile))
-            || (IsPmdgSdkAvailable && ProfileRequiresPmdgSdk(_lastProfile != null ? _lastProfile.Code : string.Empty));
+            EnableLvarReadBridge
+            && ((IsMobiFlightAvailable && ProfileRequiresLvars(_lastProfile))
+            || (IsPmdgSdkAvailable && ProfileRequiresPmdgSdk(_lastProfile != null ? _lastProfile.Code : string.Empty)));
 
         public event Action? Connected;
         public event Action? Disconnected;
@@ -108,6 +110,12 @@ namespace PatagoniaWings.Acars.SimConnect
                 {
                     Debug.WriteLine($"[SimConnect] MobiFlight init error: {ex.Message}");
                     _mobiFlight = null;
+                }
+
+                if (!EnableLvarReadBridge)
+                {
+                    _mobiFlight = null;
+                    Debug.WriteLine("[SimConnect] MobiFlight/LVAR bridge deshabilitado por modo read-only.");
                 }
 
                 IsConnected = false;
@@ -317,7 +325,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 _pmdgSdk.RequestSdkData();
                 simData = _pmdgSdk.EnrichWithSdk(simData);
             }
-            else if (profile != null && _mobiFlight?.IsAvailable == true && ProfileRequiresLvars(profile))
+            else if (EnableLvarReadBridge && profile != null && _mobiFlight?.IsAvailable == true && ProfileRequiresLvars(profile))
             {
                 _mobiFlight.RequestLvarsForProfile(profile);
                 simData = _mobiFlight.EnrichWithLvars(simData, profile);
@@ -1659,6 +1667,7 @@ namespace PatagoniaWings.Acars.SimConnect
 
             private void SendDefaultCommand(string command)
             {
+                if (!EnableLvarReadBridge) return;
                 if (_simConnect == null || string.IsNullOrWhiteSpace(command)) return;
                 var payload = new ClientDataString256 { Value = command };
                 _simConnect.SetClientData(ClientDataId.DefaultCommand, ClientDefId.CommandString, SIMCONNECT_CLIENT_DATA_SET_FLAG.DEFAULT, 0, payload);
@@ -1667,6 +1676,7 @@ namespace PatagoniaWings.Acars.SimConnect
 
             private void SendClientCommand(string command)
             {
+                if (!EnableLvarReadBridge) return;
                 if (_simConnect == null || !_clientChannelsMapped || string.IsNullOrWhiteSpace(command)) return;
                 var payload = new ClientDataString256 { Value = command };
                 _simConnect.SetClientData(ClientDataId.ClientCommand, ClientDefId.CommandString, SIMCONNECT_CLIENT_DATA_SET_FLAG.DEFAULT, 0, payload);
