@@ -7,31 +7,54 @@
   <title>Patagonia Wings ACARS HUD</title>
   <link rel="stylesheet" href="./hud.css" />
 </head>
-<body>
+<body class="pos-center mode-compact">
+
+  <!-- Restore pill — visible only when HUD is hidden -->
+  <button id="restore" class="restore" title="Mostrar HUD" onclick="pwHud.show()">
+    <span class="restore-mark">PW</span>
+    <span class="restore-label">▲ HUD</span>
+  </button>
+
+  <!-- Main HUD panel -->
   <main id="hud" class="hud hud--offline">
+
+    <!-- ── Row 1: Brand · Pilot · Flight strip · Controls ── -->
     <section class="brand">
       <div class="brand-mark">PW</div>
-      <div>
+      <div class="brand-info">
         <div class="brand-title">PATAGONIA WINGS</div>
-        <div id="connection" class="brand-subtitle">ACARS offline</div>
+        <div id="status" class="brand-status">ACARS offline</div>
       </div>
     </section>
 
+    <div class="pilot-block">
+      <span id="pilotName" class="pilot-name">—</span>
+      <span id="pilotRank" class="pilot-rank">—</span>
+    </div>
+
     <section class="flight-strip">
-      <div class="cell"><span>VUELO</span><strong id="flightNumber">--</strong></div>
+      <div class="cell"><span>VLO</span><strong id="flightNumber">--</strong></div>
       <div class="cell"><span>DEP</span><strong id="dep">----</strong></div>
       <div class="cell"><span>ARR</span><strong id="arr">----</strong></div>
       <div class="cell"><span>A/C</span><strong id="aircraft">--</strong></div>
-      <div class="cell"><span>ALT</span><strong id="altitude">0 FT</strong></div>
-      <div class="cell"><span>GS</span><strong id="gs">0 KT</strong></div>
+      <div class="cell"><span>ALT ft</span><strong id="altitude">0</strong></div>
+      <div class="cell"><span>GS kt</span><strong id="gs">0</strong></div>
       <div class="cell"><span>HDG</span><strong id="hdg">000°</strong></div>
-      <div class="cell"><span>V/S</span><strong id="vs">0 FPM</strong></div>
-      <div class="cell fuel"><span>FUEL</span><strong id="fuel">0 / N/D KG</strong></div>
-      <div class="cell"><span>QNH</span><strong id="qnh">N/D</strong></div>
+      <div class="cell"><span>V/S fpm</span><strong id="vs">0</strong></div>
+      <div class="cell cell--fuel"><span>FUEL kg</span><strong id="fuel">—</strong></div>
+      <div class="cell"><span>QNH</span><strong id="qnh">—</strong></div>
       <div class="cell"><span>XPDR</span><strong id="xpdr">----</strong></div>
     </section>
 
+    <div class="hud-controls">
+      <button class="ctrl" id="btnPos"  title="Cambiar posición (izq / centro / der)" onclick="pwHud.cyclePosition()">⊕</button>
+      <button class="ctrl" id="btnMode" title="Compacto / Expandido"                  onclick="pwHud.toggleMode()">⊞</button>
+      <button class="ctrl ctrl--close"  title="Ocultar HUD"                            onclick="pwHud.hide()">×</button>
+    </div>
+
+    <!-- ── Row 2 (expanded only): Systems pills ── -->
     <section id="systems" class="systems"></section>
+
   </main>
 
   <script src="./hud.js"></script>

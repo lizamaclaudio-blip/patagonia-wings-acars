@@ -327,6 +327,14 @@ namespace PatagoniaWings.Acars.Master.Services
                 updateRateHz = UpdateRateHz,
                 flightNumber = flight != null ? flight.FlightNumber : string.Empty,
                 callsign = runtime != null && runtime.CurrentPilot != null ? runtime.CurrentPilot.CallSign : string.Empty,
+                pilotName = runtime != null && runtime.CurrentPilot != null ? runtime.CurrentPilot.FullName : string.Empty,
+                pilotRankName = runtime != null && runtime.CurrentPilot != null ? runtime.CurrentPilot.RankName : string.Empty,
+                pilotRankCode = runtime != null && runtime.CurrentPilot != null
+                    ? (string.IsNullOrWhiteSpace(runtime.CurrentPilot.RankCode)
+                        ? runtime.CurrentPilot.Rank.ToString()
+                        : runtime.CurrentPilot.RankCode)
+                    : string.Empty,
+                pilotHours = runtime != null && runtime.CurrentPilot != null ? runtime.CurrentPilot.TotalHours : 0,
                 dep = flight != null ? flight.DepartureIcao : string.Empty,
                 arr = flight != null ? flight.ArrivalIcao : string.Empty,
                 eta = string.Empty,

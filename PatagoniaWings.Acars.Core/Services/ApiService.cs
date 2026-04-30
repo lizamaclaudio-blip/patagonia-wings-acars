@@ -1618,6 +1618,7 @@ namespace PatagoniaWings.Acars.Core.Services
                     ? BuildFlightResultUrl(envelope.Dispatch?.ReservationId ?? string.Empty)
                     : BuildAbsoluteWebUrl(summaryUrl);
                 envelope.Report.ResultStatus = ConvertToString(resultPayload, "resultStatus");
+                envelope.Report.ReservationClosed = ConvertToBool(resultPayload, "reservationClosed", false);
                 envelope.Report.ProcedureScore = ConvertToInt(officialScores, "procedure_score", envelope.Report.ProcedureScore);
                 envelope.Report.PerformanceScore = ConvertToInt(officialScores, "performance_score", envelope.Report.PerformanceScore);
                 envelope.Report.PatagoniaScore = ConvertToInt(officialScores, "final_score", envelope.Report.PatagoniaScore > 0 ? envelope.Report.PatagoniaScore : envelope.Report.Score);

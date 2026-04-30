@@ -85,6 +85,9 @@ namespace PatagoniaWings.Acars.Core.Models
         public string PilotQualifications { get; set; } = string.Empty;
         public string PilotCertifications { get; set; } = string.Empty;
 
+        /// <summary>true si el servidor confirmó que la reserva quedó cerrada en la BD.</summary>
+        public bool ReservationClosed { get; set; }
+
         // Contrato nuevo ACARS -> web
         public int PatagoniaScore { get; set; }
         public string PatagoniaGrade { get; set; } = string.Empty;

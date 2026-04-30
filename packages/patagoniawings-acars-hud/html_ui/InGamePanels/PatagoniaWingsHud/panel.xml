@@ -8,7 +8,7 @@
     <Icon>ToolbarIcon.svg</Icon>
     <Url>index.html</Url>
     <Width>1920</Width>
-    <Height>120</Height>
+    <Height>160</Height>
     <AllowTransparency>true</AllowTransparency>
     <Toolbar>true</Toolbar>
   </InGamePanel>
