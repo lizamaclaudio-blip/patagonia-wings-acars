@@ -1,4 +1,4 @@
-﻿(() => {
+(() => {
   'use strict';
 
   const PORT = 37677;
@@ -13,7 +13,7 @@
   const POSITIONS = ['pos-center', 'pos-left', 'pos-right'];
   const MODES     = ['mode-compact', 'mode-expanded'];
 
-  // â”€â”€ DOM refs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── DOM refs ────────────────────────────────────────────────────────────────
   const body    = document.body;
   const hud     = document.getElementById('hud');
   const restore = document.getElementById('restore');
@@ -50,7 +50,7 @@
     ['xpdr',        'XPDR'],
   ];
 
-  // â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helpers ─────────────────────────────────────────────────────────────────
   function set(el, text, fallback = '--') {
     if (!el) return;
     el.textContent = (text == null || text === '') ? fallback : String(text);
@@ -68,20 +68,20 @@
     try { localStorage.setItem(key, val); } catch {}
   }
 
-  // â”€â”€ Rank badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Rank badge ───────────────────────────────────────────────────────────────
   const RANK_ABBREV = [
-    [/comandante\s+transatl[aÃ¡]ntico/i, 'CMD TLA'],
+    [/comandante\s+transatl[aá]ntico/i, 'CMD TLA'],
     [/comandante\s+primera/i,           'CMD 1RA'],
     [/comandante\s+internacional/i,     'CMD INT'],
     [/comandante\s+regional/i,          'CMD REG'],
-    [/comandante\s+dom[eÃ©]stico/i,      'CMD DOM'],
+    [/comandante\s+dom[eé]stico/i,      'CMD DOM'],
     [/comandante/i,                     'CMD'],
-    [/primer oficial\s+transatl[aÃ¡]ntico/i, 'P/O TLA'],
+    [/primer oficial\s+transatl[aá]ntico/i, 'P/O TLA'],
     [/primer oficial\s+internacional/i, 'P/O INT'],
     [/primer oficial\s+regional/i,      'P/O REG'],
-    [/primer oficial\s+dom[eÃ©]stico/i,  'P/O DOM'],
+    [/primer oficial\s+dom[eé]stico/i,  'P/O DOM'],
     [/primer oficial/i,                 'P/O'],
-    [/segundo oficial\s+dom[eÃ©]stico/i, 'S/O DOM'],
+    [/segundo oficial\s+dom[eé]stico/i, 'S/O DOM'],
     [/segundo oficial/i,                'S/O'],
     [/aspirante/i,                      'ASP'],
   ];
@@ -91,7 +91,7 @@
     for (const [rx, abbr] of RANK_ABBREV) {
       if (rx.test(name)) return abbr;
     }
-    return name.length > 12 ? name.slice(0, 11) + "..." : name;
+    return name.length > 12 ? name.slice(0, 11) + '…' : name;
   }
 
   function rankClass(name, code) {
@@ -106,7 +106,7 @@
     return 'rk-gray';
   }
 
-  // â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Render ──────────────────────────────────────────────────────────────────
   function renderSystems(raw) {
     systems.innerHTML = '';
     const src = (raw && typeof raw === 'object') ? raw : {};
@@ -128,7 +128,7 @@
       applyHidden(false);
     }
 
-    set(els.status, online ? `ACARS LIVE | ${data.phase || ''}` : (healthOnline ? 'ACARS esperando datos' : 'ACARS offline'));
+    set(els.status, online ? `▸ ACARS LIVE · ${data.phase || ''}` : (healthOnline ? 'ACARS esperando datos' : 'ACARS offline'));
     set(els.flightNumber, data?.flightNumber || data?.callsign);
     set(els.dep,      data?.dep,  '----');
     set(els.arr,      data?.arr,  '----');
@@ -141,9 +141,9 @@
 
     const fuelKg  = num(data?.fuelCurrentKg);
     const fuelCap = Number(data?.fuelCapacityKg) > 10 ? num(data?.fuelCapacityKg) : null;
-    set(els.fuel, `${fuelKg ?? '--'} / ${fuelCap ?? 'N/D'}`);
+    set(els.fuel, `${fuelKg ?? '—'} / ${fuelCap ?? 'N/D'}`);
 
-    set(els.qnh,  data?.qnh ? String(data.qnh) : '--');
+    set(els.qnh,  data?.qnh ? String(data.qnh) : '—');
     const xMode = data?.xpdrMode ? ` ${String(data.xpdrMode).toUpperCase()}` : '';
     set(els.xpdr, `${data?.xpdrCode || '----'}${xMode}`);
 
@@ -151,10 +151,10 @@
     const pName = (data?.pilotName || data?.callsign || '').trim();
     const pRankName = data?.pilotRankName || '';
     const pRankCode = data?.pilotRankCode || '';
-    set(els.pilotName, pName || '--');
+    set(els.pilotName, pName || '—');
 
     const abbr = rankAbbrev(pRankName || pRankCode);
-    set(els.pilotRank, abbr || '--');
+    set(els.pilotRank, abbr || '—');
     if (els.pilotRank) {
       els.pilotRank.className = `pilot-rank ${rankClass(pRankName, pRankCode)}`;
     }
@@ -162,7 +162,7 @@
     renderSystems(data?.systems);
   }
 
-  // â”€â”€ Poll â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Poll ─────────────────────────────────────────────────────────────────────
   async function tick() {
     try {
       const [healthRes, stateRes] = await Promise.all([
@@ -183,7 +183,7 @@
     }
   }
 
-  // â”€â”€ State: show / hide / mode / position â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── State: show / hide / mode / position ─────────────────────────────────────
   function applyHidden(hidden) {
     body.classList.toggle('hud-hidden', hidden);
     lsSet(LS_HIDDEN, hidden ? '1' : '0');
@@ -202,7 +202,7 @@
     lsSet(LS_POSITION, pos);
   }
 
-  // â”€â”€ Public API (attached to window for onclick handlers) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Public API (attached to window for onclick handlers) ─────────────────────
   window.pwHud = {
     show() {
       applyHidden(false);
@@ -221,7 +221,7 @@
     },
   };
 
-  // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Init ─────────────────────────────────────────────────────────────────────
   applyHidden(lsGet(LS_HIDDEN, '0') === '1');
   applyMode(lsGet(LS_MODE, 'mode-compact'));
   applyPosition(lsGet(LS_POSITION, 'pos-center'));
@@ -229,4 +229,3 @@
   render(null);
   tick();
 })();
-

@@ -259,7 +259,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public void LoadReport(FlightReport report)
         {
             Report = report;
-            Submitted = IsCloseoutAlreadyResolved(report.ResultStatus);
+            Submitted = IsCloseoutAlreadyResolved(report.ResultStatus) && report.ReservationClosed;
             IsSubmitting = false;
             SendToMaintenance = false;
             CloseoutComments = string.Empty;

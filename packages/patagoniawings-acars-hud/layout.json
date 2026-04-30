@@ -1,34 +1,79 @@
-{
-  "content": [
-    {
-      "path": "html_ui/InGamePanels/PatagoniaWingsHud/ToolbarIcon.svg",
-      "size": 544,
-      "date": 133590624000000000
-    },
-    {
-      "path": "html_ui/InGamePanels/PatagoniaWingsHud/hud.css",
-      "size": 3374,
-      "date": 133590624000000000
-    },
-    {
-      "path": "html_ui/InGamePanels/PatagoniaWingsHud/hud.js",
-      "size": 3230,
-      "date": 133590624000000000
-    },
-    {
-      "path": "html_ui/InGamePanels/PatagoniaWingsHud/index.html",
-      "size": 1624,
-      "date": 133590624000000000
-    },
-    {
-      "path": "html_ui/InGamePanels/PatagoniaWingsHud/panel.xml",
-      "size": 532,
-      "date": 133590624000000000
-    },
-    {
-      "path": "manifest.json",
-      "size": 412,
-      "date": 133590624000000000
-    }
-  ]
+﻿{
+    "content":  [
+                    {
+                        "path":  "manifest.json",
+                        "size":  1164,
+                        "date":  134220392747831254
+                    },
+                    {
+                        "path":  "html_ui\\icons\\toolbar\\ICON_TOOLBAR_SAYINTENTIONSAI.svg",
+                        "size":  544,
+                        "date":  134219748556635135
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\hud.css",
+                        "size":  8745,
+                        "date":  134219939145328812
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\hud.js",
+                        "size":  9405,
+                        "date":  134220317620073325
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\index.html",
+                        "size":  2664,
+                        "date":  134219938467389788
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\panel.xml",
+                        "size":  592,
+                        "date":  134220385159430627
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\ToolbarIcon.png",
+                        "size":  574,
+                        "date":  134220385328071097
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\PatagoniaWingsHud\\ToolbarIcon.svg",
+                        "size":  544,
+                        "date":  134219748556635135
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\hud.css",
+                        "size":  8745,
+                        "date":  134219939145328812
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\hud.js",
+                        "size":  9405,
+                        "date":  134220317620073325
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\SayIntentionsPanel.css",
+                        "size":  8745,
+                        "date":  134219939145328812
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\SayIntentionsPanel.html",
+                        "size":  2664,
+                        "date":  134219938467389788
+                    },
+                    {
+                        "path":  "html_ui\\InGamePanels\\SayIntentionsPanel\\SayIntentionsPanel.js",
+                        "size":  9405,
+                        "date":  134220317620073325
+                    },
+                    {
+                        "path":  "html_ui\\Textures\\Menu\\toolbar\\ICON_TOOLBAR_SAYINTENTIONSAI.svg",
+                        "size":  544,
+                        "date":  134219748556635135
+                    },
+                    {
+                        "path":  "InGamePanels\\panel-sayintentionsai.spb",
+                        "size":  704,
+                        "date":  133523274880000000
+                    }
+                ]
 }

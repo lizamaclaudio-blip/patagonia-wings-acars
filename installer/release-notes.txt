@@ -1,1 +1,2 @@
-- ACARS 7.0.11 consolidado: HUD MSFS, fuel, finalize manual PIREP y soporte operativo.`n- Integracion SayIntentions y persistencia de eventos closeout estabilizada.`n- Publicacion de installer real 7.0.11 con autoupdate y manifests sincronizados.
+﻿- ACARS 7.0.12 consolidado: HUD MSFS, fuel, finalize manual PIREP y soporte operativo.`n- Integracion SayIntentions y persistencia de eventos closeout estabilizada.`n- Publicacion de installer real 7.0.12 con autoupdate y manifests sincronizados.
+

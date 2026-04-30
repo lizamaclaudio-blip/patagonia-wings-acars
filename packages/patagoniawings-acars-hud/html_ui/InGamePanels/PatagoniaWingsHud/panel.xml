@@ -1,15 +1,18 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <SimBase.Document Type="AceXML" version="1,0">
   <Descr>Patagonia Wings ACARS HUD In-Game Panel</Descr>
   <Filename>panel.xml</Filename>
-  <InGamePanel id="PATAGONIA_WINGS_ACARS_HUD">
-    <Name>Patagonia Wings ACARS HUD</Name>
-    <Title>Patagonia Wings ACARS HUD</Title>
-    <Icon>ToolbarIcon.svg</Icon>
-    <Url>index.html</Url>
-    <Width>1920</Width>
-    <Height>160</Height>
-    <AllowTransparency>true</AllowTransparency>
-    <Toolbar>true</Toolbar>
-  </InGamePanel>
+  <InGamePanels>
+    <InGamePanel id="PATAGONIA_WINGS_ACARS_HUD">
+      <Name>Patagonia Wings ACARS HUD</Name>
+      <Title>Patagonia Wings ACARS HUD</Title>
+      <Icon>ToolbarIcon.png</Icon>
+      <Url>index.html</Url>
+      <Width>1920</Width>
+      <Height>160</Height>
+      <AllowTransparency>true</AllowTransparency>
+      <Toolbar>true</Toolbar>
+    </InGamePanel>
+  </InGamePanels>
 </SimBase.Document>
+
