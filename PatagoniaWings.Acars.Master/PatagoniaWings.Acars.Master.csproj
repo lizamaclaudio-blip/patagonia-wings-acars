@@ -226,6 +226,7 @@
     <Compile Include="Helpers\WeatherPresetInstallService.cs" />
     <Compile Include="Services\RankInsigniaResolver.cs" />
     <Compile Include="Services\HudBridgeService.cs" />
+    <Compile Include="Services\SayIntentionsFlightJsonService.cs" />
     <Compile Include="Preview\AcarsPreviewData.cs" />
     <Compile Include="ViewModels\AcarsShellViewModel.cs" />
     <Compile Include="ViewModels\CommunityViewModel.cs" />

@@ -4,11 +4,11 @@
   "title": "Patagonia Wings ACARS HUD",
   "manufacturer": "Patagonia Wings",
   "creator": "Patagonia Wings",
-  "package_version": "7.0.5",
+  "package_version": "7.0.7",
   "minimum_game_version": "1.37.0",
   "release_notes": {
     "neutral": {
-      "LastUpdate": "2026-04-29",
+      "LastUpdate": "2026-04-30",
       "OlderHistory": "In-game MSFS HUD panel consuming Patagonia Wings ACARS localhost bridge."
     }
   }

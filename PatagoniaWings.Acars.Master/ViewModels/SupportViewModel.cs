@@ -52,6 +52,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             CopyHudBridgeUrlCommand = new RelayCommand(CopyHudBridgeUrl);
             InstallHudToCommunityCommand = new RelayCommand(InstallHudToCommunity);
             ProbeHudBridgeCommand = new RelayCommand(ProbeHudBridge);
+            OpenSayIntentionsFolderCommand = new RelayCommand(OpenSayIntentionsFolder);
             CheckUpdateCommand = new AsyncRelayCommand(async _ => await CheckUpdateAsync());
             DownloadUpdateCommand = new AsyncRelayCommand(async _ => await DownloadUpdateAsync());
             OpenUpdateLogsCommand = new RelayCommand(OpenUpdateLogs);
@@ -87,6 +88,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand CopyHudBridgeUrlCommand { get; }
         public ICommand InstallHudToCommunityCommand { get; }
         public ICommand ProbeHudBridgeCommand { get; }
+        public ICommand OpenSayIntentionsFolderCommand { get; }
         public ICommand CheckUpdateCommand { get; }
         public ICommand DownloadUpdateCommand { get; }
         public ICommand OpenUpdateLogsCommand { get; }
@@ -134,6 +136,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 var paths = bridge.DetectCommunityFolders();
                 if (paths.Length == 0) return "Community: no detectada";
                 return "Community: " + string.Join(" | ", paths);
+            }
+        }
+        public string SayIntentionsStatus
+        {
+            get
+            {
+                if (AcarsContext.SayIntentionsFlightJson == null) return "SayIntentions: no disponible";
+                return AcarsContext.SayIntentionsFlightJson.GetStatusText();
             }
         }
 
@@ -338,11 +348,28 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             try
             {
-                StatusMessage = HudBridgeStatus + " | " + HudCommunityStatus;
+                StatusMessage = HudBridgeStatus + " | " + HudCommunityStatus + " | " + SayIntentionsStatus;
+                OnPropertyChanged(nameof(SayIntentionsStatus));
             }
             catch (Exception ex)
             {
                 StatusMessage = "No pude probar HUD bridge: " + ex.Message;
+            }
+        }
+
+        private void OpenSayIntentionsFolder()
+        {
+            try
+            {
+                var path = AcarsContext.SayIntentionsFlightJson != null
+                    ? AcarsContext.SayIntentionsFlightJson.GetFlightJsonFolderPath()
+                    : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SayIntentionsAI");
+                OpenFolder(path);
+                StatusMessage = "Carpeta SayIntentions abierta: " + path;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude abrir carpeta SayIntentions: " + ex.Message;
             }
         }
 

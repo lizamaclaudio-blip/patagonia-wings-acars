@@ -132,6 +132,9 @@
                     <TextBlock Text="{Binding HudCommunityStatus}"
                                Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
                                TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding SayIntentionsStatus}"
+                               Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
+                               TextWrapping="Wrap" Margin="0,0,0,5"/>
                     <UniformGrid Columns="2" Margin="0,0,0,4">
                         <Button Command="{Binding InstallHudToCommunityCommand}" Height="26" Margin="0,0,3,0">
                             <TextBlock Text="Instalar HUD" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
@@ -148,6 +151,9 @@
                             <TextBlock Text="Probar bridge" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
                     </UniformGrid>
+                    <Button Command="{Binding OpenSayIntentionsFolderCommand}" Height="26" Margin="0,5,0,0">
+                        <TextBlock Text="Abrir carpeta flight.json" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    </Button>
                     <Separator Margin="0,7,0,7"/>
                     <TextBlock Text="AUTOUPDATE"
                                Foreground="#1565C0" FontSize="7.5" FontWeight="Bold"
