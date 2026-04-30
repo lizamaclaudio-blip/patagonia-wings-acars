@@ -6,6 +6,9 @@
         <Binding Path="DataContext.SupportVM" RelativeSource="{RelativeSource AncestorType=Window}"/>
     </UserControl.DataContext>
 
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled"
+                  CanContentScroll="True">
     <Grid x:Name="PageRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -68,11 +71,11 @@
 
         <!-- OPCIONES + IP en fila -->
         <Grid Grid.Row="2" Margin="0,0,0,7">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="8"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="8"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
             <!-- Opciones -->
             <Border Background="#FFFFFF" BorderBrush="#B8D0EA" BorderThickness="1.5"
@@ -138,26 +141,26 @@
                     <TextBlock Text="{Binding SayIntentionsStatus}"
                                Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
                                TextWrapping="Wrap" Margin="0,0,0,5"/>
-                    <UniformGrid Columns="2" Margin="0,0,0,4">
-                        <Button Command="{Binding InstallHudToCommunityCommand}" Height="26" Margin="0,0,3,0">
+                    <UniformGrid Columns="1" Margin="0,0,0,4">
+                        <Button Command="{Binding InstallHudToCommunityCommand}" Height="28" Margin="0,0,0,4">
                             <TextBlock Text="Instalar HUD" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
-                        <Button Command="{Binding OpenHudPackageFolderCommand}" Height="26" Margin="3,0,0,0">
+                        <Button Command="{Binding OpenHudPackageFolderCommand}" Height="28" Margin="0,0,0,0">
                             <TextBlock Text="Paquete HUD" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
                     </UniformGrid>
-                    <UniformGrid Columns="2">
-                        <Button Command="{Binding CopyHudBridgeUrlCommand}" Height="26" Margin="0,0,3,0">
+                    <UniformGrid Columns="1">
+                        <Button Command="{Binding CopyHudBridgeUrlCommand}" Height="28" Margin="0,0,0,4">
                             <TextBlock Text="Copiar URL" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
-                        <Button Command="{Binding ProbeHudBridgeCommand}" Height="26" Margin="3,0,0,0">
+                        <Button Command="{Binding ProbeHudBridgeCommand}" Height="28">
                             <TextBlock Text="Probar bridge" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
                     </UniformGrid>
-                    <Button Command="{Binding OpenSayIntentionsFolderCommand}" Height="26" Margin="0,5,0,0">
+                    <Button Command="{Binding OpenSayIntentionsFolderCommand}" Height="28" Margin="0,5,0,0">
                         <TextBlock Text="Abrir carpeta flight.json" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </Button>
-                    <Button Command="{Binding ProbeSayIntentionsCommand}" Height="26" Margin="0,5,0,0">
+                    <Button Command="{Binding ProbeSayIntentionsCommand}" Height="28" Margin="0,5,0,0">
                         <TextBlock Text="Probar SayIntentions" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </Button>
                     <Separator Margin="0,7,0,7"/>
@@ -171,19 +174,19 @@
                     <TextBlock Text="{Binding UpdateManifestUrl, StringFormat=Manifest: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding UpdateDownloadUrl, StringFormat=Descarga: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding UpdateLastError, StringFormat=Error: {0}}" Foreground="#B91C1C" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap"/>
-                    <UniformGrid Columns="2" Margin="0,4,0,4">
-                        <Button Command="{Binding CheckUpdateCommand}" Height="26" Margin="0,0,3,0">
+                    <UniformGrid Columns="1" Margin="0,4,0,4">
+                        <Button Command="{Binding CheckUpdateCommand}" Height="28" Margin="0,0,0,4">
                             <TextBlock Text="Buscar actualizacion" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
-                        <Button Command="{Binding DownloadUpdateCommand}" Height="26" Margin="3,0,0,0">
+                        <Button Command="{Binding DownloadUpdateCommand}" Height="28">
                             <TextBlock Text="Descargar actualizacion" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
                     </UniformGrid>
-                    <UniformGrid Columns="2">
-                        <Button Command="{Binding OpenUpdateLogsCommand}" Height="26" Margin="0,0,3,0">
+                    <UniformGrid Columns="1">
+                        <Button Command="{Binding OpenUpdateLogsCommand}" Height="28" Margin="0,0,0,4">
                             <TextBlock Text="Abrir logs update" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
-                        <Button Command="{Binding CopyUpdateDiagnosticCommand}" Height="26" Margin="3,0,0,0">
+                        <Button Command="{Binding CopyUpdateDiagnosticCommand}" Height="28">
                             <TextBlock Text="Copiar diagnostico" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                         </Button>
                     </UniformGrid>
@@ -191,7 +194,7 @@
             </Border>
 
             <!-- IP Simulador -->
-            <Border Grid.Column="2"
+            <Border Grid.Row="2"
                     Background="#FFFFFF" BorderBrush="#B8D0EA" BorderThickness="1.5"
                     CornerRadius="10" Padding="10,8" Effect="{StaticResource PanelShadow}">
                 <StackPanel>
@@ -375,4 +378,5 @@
             </Button.Template>
         </Button>
     </Grid>
+    </ScrollViewer>
 </UserControl>

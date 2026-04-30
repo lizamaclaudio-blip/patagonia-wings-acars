@@ -38,8 +38,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 ? "127.0.0.1"
                 : _preferences.SimulatorIp.Trim();
             _enableInSimHud = _preferences.EnableInSimHud;
-            _localHudPort = _preferences.LocalHudPort;
-            _hudUpdateRateHz = _preferences.HudUpdateRateHz;
+            _localHudPort = SanitizeHudPort(_preferences.LocalHudPort);
+            _hudUpdateRateHz = SanitizeHudRate(_preferences.HudUpdateRateHz);
             _hudOnlyInFlight = _preferences.HudOnlyInFlight;
 
             LogoutCommand = new RelayCommand(() => RequestLogout?.Invoke());
@@ -71,6 +71,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 UpdateLastError = message;
                 StatusMessage = message;
             };
+            SavePreferences();
             _ = CheckUpdateAsync();
         }
 
@@ -234,7 +235,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             get => _localHudPort;
             set
             {
-                var sanitized = value < 1024 || value > 65535 ? 37677 : value;
+                var sanitized = SanitizeHudPort(value);
                 if (SetField(ref _localHudPort, sanitized))
                 {
                     SavePreferences();
@@ -249,12 +250,24 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             get => _hudUpdateRateHz;
             set
             {
-                var sanitized = value < 1 ? 1 : (value > 5 ? 5 : value);
+                var sanitized = SanitizeHudRate(value);
                 if (SetField(ref _hudUpdateRateHz, sanitized))
                 {
                     SavePreferences();
                 }
             }
+        }
+
+        private static int SanitizeHudPort(int value)
+        {
+            return value < 1024 || value > 65535 ? 37677 : value;
+        }
+
+        private static int SanitizeHudRate(int value)
+        {
+            if (value < 1) return 1;
+            if (value > 10) return 10;
+            return value;
         }
 
         public bool HudOnlyInFlight

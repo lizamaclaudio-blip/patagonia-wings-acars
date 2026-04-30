@@ -2,7 +2,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $manifestUrl = "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/acars-update.json"
-$latestTarget = "7.0.8"
+$latestTarget = "7.0.9"
 
 function Normalize-Version {
     param([string]$Value)
@@ -70,7 +70,8 @@ $matrix = @(
     @{ Installed = "7.0.4"; Expected = $true },
     @{ Installed = "7.0.5"; Expected = $true },
     @{ Installed = "7.0.7"; Expected = $true },
-    @{ Installed = "7.0.8"; Expected = $false },
+    @{ Installed = "7.0.8"; Expected = $true },
+    @{ Installed = "7.0.9"; Expected = $false },
     @{ Installed = "ACARS 6.0 listo"; Expected = $true }
 )
 
