@@ -1,14 +1,12 @@
 ﻿(() => {
   'use strict';
 
-  const PORT = 37677;
-  const STATE_URL = `http://127.0.0.1:${PORT}/api/hud/state`;
-  const HEALTH_URL = `http://127.0.0.1:${PORT}/api/hud/health`;
   const POLL_MS = 1000;
-
   const LS_HIDDEN = 'pw-hud-hidden';
   const LS_MODE = 'pw-hud-mode';
+  const LS_LAST_PORT = 'pw-hud-last-port';
   const MODES = ['mode-compact', 'mode-expanded'];
+  const FALLBACK_PORTS = [37677, 37555, 37777, 38080];
 
   const body = document.body;
   const hud = document.getElementById('hud');
@@ -33,16 +31,11 @@
   };
 
   const SYSTEM_LABELS = [
-    ['nav', 'NAV'],
-    ['beaconStrobe', 'BCN/STB'],
-    ['taxi', 'TAXI'],
-    ['landing', 'LAND'],
-    ['gear', 'GEAR'],
-    ['apMaster', 'AP'],
-    ['doors', 'DOORS'],
-    ['parkingBrake', 'BRAKE'],
-    ['xpdr', 'XPDR'],
+    ['nav', 'NAV'], ['beaconStrobe', 'BCN/STB'], ['taxi', 'TAXI'], ['landing', 'LAND'],
+    ['gear', 'GEAR'], ['apMaster', 'AP'], ['doors', 'DOORS'], ['parkingBrake', 'BRAKE'], ['xpdr', 'XPDR']
   ];
+
+  let activePort = 37677;
 
   function set(el, text, fallback = '--') {
     if (!el) return;
@@ -51,14 +44,36 @@
 
   function num(val, dec = 0) {
     const n = Number(val);
-    return Number.isFinite(n) ? n.toLocaleString('en-US', { maximumFractionDigits: dec, minimumFractionDigits: 0 }) : null;
+    return Number.isFinite(n)
+      ? n.toLocaleString('en-US', { maximumFractionDigits: dec, minimumFractionDigits: 0 })
+      : null;
   }
 
-  function lsGet(key, def) {
-    try { const v = localStorage.getItem(key); return v !== null ? v : def; } catch { return def; }
+  function lsGet(key, def) { try { const v = localStorage.getItem(key); return v !== null ? v : def; } catch { return def; } }
+  function lsSet(key, val) { try { localStorage.setItem(key, val); } catch {} }
+
+  function baseUrl(port) { return `http://127.0.0.1:${port}`; }
+
+  async function probePort(port) {
+    try {
+      const res = await fetch(`${baseUrl(port)}/api/hud/health?t=${Date.now()}`, { cache: 'no-store' });
+      return res.ok;
+    } catch {
+      return false;
+    }
   }
-  function lsSet(key, val) {
-    try { localStorage.setItem(key, val); } catch {}
+
+  async function discoverPort() {
+    const remembered = Number(lsGet(LS_LAST_PORT, '37677'));
+    const ports = [remembered, ...FALLBACK_PORTS].filter((v, i, a) => Number.isFinite(v) && a.indexOf(v) === i);
+    for (const p of ports) {
+      if (await probePort(p)) {
+        activePort = p;
+        lsSet(LS_LAST_PORT, String(p));
+        return true;
+      }
+    }
+    return false;
   }
 
   function renderSystems(raw) {
@@ -81,13 +96,11 @@
     const online = simConnected || hasTelemetry;
 
     hud.classList.toggle('hud--offline', !online);
-    if (online) {
-      applyHidden(false);
-    }
+    if (online) applyHidden(false);
 
-    let status = 'ACARS OFFLINE';
-    if (online) status = `ACARS LIVE${data?.phase ? ' | ' + data.phase : ''}`;
-    else if (bridgeOnline) status = 'BRIDGE OK | ESPERANDO SIM';
+    let status = `ACARS OFFLINE | ${activePort}`;
+    if (online) status = `ACARS LIVE${data?.phase ? ' | ' + data.phase : ''} | ${activePort}`;
+    else if (bridgeOnline) status = `BRIDGE OK | ESPERANDO SIM | ${activePort}`;
     set(els.status, status);
 
     set(els.flightNumber, data?.flightNumber || data?.callsign);
@@ -110,22 +123,22 @@
 
     set(els.pilotName, (data?.pilotName || data?.callsign || '').trim() || '--');
     set(els.pilotRank, (data?.pilotRankCode || data?.pilotRankName || '--'));
-
     renderSystems(data?.systems);
   }
 
   async function tick() {
     try {
-      const [healthRes, stateRes] = await Promise.all([
-        fetch(`${HEALTH_URL}?t=${Date.now()}`, { cache: 'no-store' }),
-        fetch(`${STATE_URL}?t=${Date.now()}`, { cache: 'no-store' }),
-      ]);
+      const found = await discoverPort();
+      if (!found) {
+        render(null, false);
+        return;
+      }
 
-      const bridgeOnline = healthRes.ok;
+      const stateRes = await fetch(`${baseUrl(activePort)}/api/hud/state?t=${Date.now()}`, { cache: 'no-store' });
       if (!stateRes.ok) {
-        render(null, bridgeOnline);
+        render(null, true);
       } else {
-        render(await stateRes.json(), bridgeOnline);
+        render(await stateRes.json(), true);
       }
     } catch {
       render(null, false);
@@ -134,11 +147,7 @@
     }
   }
 
-  function applyHidden(hidden) {
-    body.classList.toggle('hud-hidden', hidden);
-    lsSet(LS_HIDDEN, hidden ? '1' : '0');
-  }
-
+  function applyHidden(hidden) { body.classList.toggle('hud-hidden', hidden); lsSet(LS_HIDDEN, hidden ? '1' : '0'); }
   function applyMode(mode) {
     body.classList.remove(...MODES);
     body.classList.add(mode);
