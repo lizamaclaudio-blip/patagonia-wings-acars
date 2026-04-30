@@ -2,6 +2,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Net.Http;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -24,6 +25,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _updateLatestVersion = string.Empty;
         private string _updateChannel = string.Empty;
         private string _updateManifestUrl = string.Empty;
+        private string _updateDownloadUrl = string.Empty;
         private string _updateLastError = string.Empty;
         private string _updateState = "Sin diagnostico";
 
@@ -51,8 +53,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OpenHudPackageFolderCommand = new RelayCommand(OpenHudPackageFolder);
             CopyHudBridgeUrlCommand = new RelayCommand(CopyHudBridgeUrl);
             InstallHudToCommunityCommand = new RelayCommand(InstallHudToCommunity);
-            ProbeHudBridgeCommand = new RelayCommand(ProbeHudBridge);
+            ProbeHudBridgeCommand = new AsyncRelayCommand(async _ => await ProbeHudBridgeAsync());
             OpenSayIntentionsFolderCommand = new RelayCommand(OpenSayIntentionsFolder);
+            ProbeSayIntentionsCommand = new RelayCommand(ProbeSayIntentions);
             CheckUpdateCommand = new AsyncRelayCommand(async _ => await CheckUpdateAsync());
             DownloadUpdateCommand = new AsyncRelayCommand(async _ => await DownloadUpdateAsync());
             OpenUpdateLogsCommand = new RelayCommand(OpenUpdateLogs);
@@ -89,6 +92,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand InstallHudToCommunityCommand { get; }
         public ICommand ProbeHudBridgeCommand { get; }
         public ICommand OpenSayIntentionsFolderCommand { get; }
+        public ICommand ProbeSayIntentionsCommand { get; }
         public ICommand CheckUpdateCommand { get; }
         public ICommand DownloadUpdateCommand { get; }
         public ICommand OpenUpdateLogsCommand { get; }
@@ -97,6 +101,21 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string AcarsVersion => "v" + UpdateService.CurrentVersion;
         public string FsuipcVersion => ResolveFsuipcVersion();
         public string HudBridgeStatus => AcarsContext.HudBridge != null ? AcarsContext.HudBridge.GetHealthText() : "HUD bridge no disponible";
+        public string SimulatorConnectionStatus
+        {
+            get
+            {
+                var runtime = AcarsContext.Runtime;
+                if (runtime == null)
+                {
+                    return "SimConnect: no disponible | Backend: N/D";
+                }
+
+                var simStatus = runtime.IsSimulatorConnected ? "conectado" : "no conectado";
+                var backend = string.IsNullOrWhiteSpace(runtime.SimulatorBackend) ? "N/D" : runtime.SimulatorBackend.Trim();
+                return "SimConnect: " + simStatus + " | Backend: " + backend;
+            }
+        }
         public string UpdateInstalledVersion
         {
             get => _updateInstalledVersion;
@@ -116,6 +135,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             get => _updateManifestUrl;
             set => SetField(ref _updateManifestUrl, value);
+        }
+        public string UpdateDownloadUrl
+        {
+            get => _updateDownloadUrl;
+            set => SetField(ref _updateDownloadUrl, value);
         }
         public string UpdateLastError
         {
@@ -344,16 +368,66 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
-        private void ProbeHudBridge()
+        private async Task ProbeHudBridgeAsync()
         {
             try
             {
-                StatusMessage = HudBridgeStatus + " | " + HudCommunityStatus + " | " + SayIntentionsStatus;
+                var bridge = AcarsContext.HudBridge;
+                if (bridge == null)
+                {
+                    StatusMessage = "HUD bridge no disponible.";
+                    return;
+                }
+
+                var stateUrl = bridge.GetStateUrl();
+                var healthUrl = stateUrl.Replace("/api/hud/state", "/api/hud/health");
+                var timeout = TimeSpan.FromSeconds(6);
+
+                using (var http = new HttpClient { Timeout = timeout })
+                {
+                    var healthRes = await http.GetAsync(healthUrl).ConfigureAwait(false);
+                    var stateRes = await http.GetAsync(stateUrl).ConfigureAwait(false);
+                    var healthOk = healthRes.IsSuccessStatusCode ? "OK" : ("HTTP " + (int)healthRes.StatusCode);
+                    var stateOk = stateRes.IsSuccessStatusCode ? "OK" : ("HTTP " + (int)stateRes.StatusCode);
+
+                    StatusMessage = "HUD health: " + healthOk +
+                                    " | HUD state: " + stateOk +
+                                    " | " + HudCommunityStatus +
+                                    " | " + SayIntentionsStatus;
+                }
+
+                OnPropertyChanged(nameof(HudBridgeStatus));
+                OnPropertyChanged(nameof(HudCommunityStatus));
                 OnPropertyChanged(nameof(SayIntentionsStatus));
             }
             catch (Exception ex)
             {
                 StatusMessage = "No pude probar HUD bridge: " + ex.Message;
+            }
+        }
+
+        private void ProbeSayIntentions()
+        {
+            try
+            {
+                var service = AcarsContext.SayIntentionsFlightJson;
+                if (service == null)
+                {
+                    StatusMessage = "SayIntentions no disponible.";
+                    return;
+                }
+
+                var folder = service.GetFlightJsonFolderPath();
+                var file = Path.Combine(folder, "flight.json");
+                var exists = File.Exists(file);
+                StatusMessage = exists
+                    ? "SayIntentions detectado: " + service.GetStatusText()
+                    : "SayIntentions no detectado: falta flight.json en " + folder;
+                OnPropertyChanged(nameof(SayIntentionsStatus));
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude probar SayIntentions: " + ex.Message;
             }
         }
 
@@ -382,6 +456,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 UpdateLatestVersion = diagnostic.LatestVersion;
                 UpdateChannel = diagnostic.Channel;
                 UpdateManifestUrl = diagnostic.ManifestUrl;
+                UpdateDownloadUrl = diagnostic.DownloadUrl;
                 UpdateLastError = diagnostic.LastError;
                 UpdateState = diagnostic.UpdateAvailable
                     ? "Actualizacion disponible"
@@ -404,6 +479,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 UpdateLatestVersion = check.LatestVersion;
                 UpdateChannel = check.Channel;
                 UpdateManifestUrl = string.IsNullOrWhiteSpace(check.ManifestUrl) ? "manifest legado" : check.ManifestUrl;
+                UpdateDownloadUrl = check.DownloadUrl;
 
                 if (!check.Success)
                 {
@@ -443,8 +519,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     $"latestVersion={UpdateLatestVersion}\n" +
                     $"channel={UpdateChannel}\n" +
                     $"manifestUrl={UpdateManifestUrl}\n" +
+                    $"downloadUrl={UpdateDownloadUrl}\n" +
                     $"state={UpdateState}\n" +
-                    $"lastError={UpdateLastError}";
+                    $"lastError={UpdateLastError}\n" +
+                    $"simulatorStatus={SimulatorConnectionStatus}\n" +
+                    $"hudStatus={HudBridgeStatus}\n" +
+                    $"sayIntentions={SayIntentionsStatus}";
                 System.Windows.Clipboard.SetText(payload);
                 StatusMessage = "Diagnostico de update copiado.";
             }

@@ -132,6 +132,9 @@
                     <TextBlock Text="{Binding HudCommunityStatus}"
                                Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
                                TextWrapping="Wrap" Margin="0,0,0,5"/>
+                    <TextBlock Text="{Binding SimulatorConnectionStatus}"
+                               Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
+                               TextWrapping="Wrap" Margin="0,0,0,5"/>
                     <TextBlock Text="{Binding SayIntentionsStatus}"
                                Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"
                                TextWrapping="Wrap" Margin="0,0,0,5"/>
@@ -154,6 +157,9 @@
                     <Button Command="{Binding OpenSayIntentionsFolderCommand}" Height="26" Margin="0,5,0,0">
                         <TextBlock Text="Abrir carpeta flight.json" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                     </Button>
+                    <Button Command="{Binding ProbeSayIntentionsCommand}" Height="26" Margin="0,5,0,0">
+                        <TextBlock Text="Probar SayIntentions" Foreground="#1565C0" FontSize="8.5" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                    </Button>
                     <Separator Margin="0,7,0,7"/>
                     <TextBlock Text="AUTOUPDATE"
                                Foreground="#1565C0" FontSize="7.5" FontWeight="Bold"
@@ -163,6 +169,7 @@
                     <TextBlock Text="{Binding UpdateLatestVersion, StringFormat=Disponible: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"/>
                     <TextBlock Text="{Binding UpdateChannel, StringFormat=Canal: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI"/>
                     <TextBlock Text="{Binding UpdateManifestUrl, StringFormat=Manifest: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding UpdateDownloadUrl, StringFormat=Descarga: {0}}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap"/>
                     <TextBlock Text="{Binding UpdateLastError, StringFormat=Error: {0}}" Foreground="#B91C1C" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap"/>
                     <UniformGrid Columns="2" Margin="0,4,0,4">
                         <Button Command="{Binding CheckUpdateCommand}" Height="26" Margin="0,0,3,0">
