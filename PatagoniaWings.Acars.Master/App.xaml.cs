@@ -53,6 +53,7 @@ namespace PatagoniaWings.Acars.Master
 
             // Senal para el relanzado post-update: la UI principal ya quedo operativa.
             UpdateService.NotifyStartupComplete();
+            UpdateService.StartBackgroundPolling();
             AcarsContext.ScheduleStartupBackgroundWork();
         }
 
@@ -119,6 +120,7 @@ namespace PatagoniaWings.Acars.Master
                 // best-effort
             }
 
+            UpdateService.StopBackgroundPolling();
             AcarsContext.Shutdown();
             base.OnExit(e);
         }

@@ -73,6 +73,9 @@ namespace PatagoniaWings.Acars.Master.Helpers
         private static string UpdateChannelUrl =>
             ReadSetting("UpdateChannelUrl", "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/channel.json");
 
+        private static string UpdateChannelFallbackUrl =>
+            ReadSetting("UpdateChannelFallbackUrl", "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/channel.json");
+
         private static string PackagesIndexUrl =>
             ReadSetting("PackagesIndexUrl", "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/packages/index.json");
 
@@ -93,6 +96,8 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private static DateTime _lastCheckUtc = DateTime.MinValue;
         private static readonly TimeSpan CheckCooldown = TimeSpan.FromMinutes(5);
+        private static System.Threading.Timer? _backgroundTimer;
+        private static readonly TimeSpan BackgroundCheckInterval = TimeSpan.FromMinutes(30);
         private const long MinimumInstallerSizeBytes = 1024 * 1024;
         private static bool _updateInProgress;
         private static string _lastDownloadStatus = string.Empty;
@@ -106,6 +111,45 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public static event Action<bool>? UpdateCompleted;
 
         public static bool IsInstallerTakingControl { get; private set; }
+
+        /// <summary>
+        /// Inicia el polling periodico en background. Llama una sola vez al arrancar la app.
+        /// Verifica actualizaciones cada 30 min sin bloquear el hilo UI.
+        /// </summary>
+        public static void StartBackgroundPolling()
+        {
+            if (_backgroundTimer != null) return;
+            _backgroundTimer = new System.Threading.Timer(
+                callback: _ => _ = BackgroundTickAsync(),
+                state: null,
+                dueTime: BackgroundCheckInterval,
+                period: BackgroundCheckInterval);
+            WriteLog("Background update polling started (interval=30min).");
+        }
+
+        public static void StopBackgroundPolling()
+        {
+            _backgroundTimer?.Dispose();
+            _backgroundTimer = null;
+        }
+
+        private static async Task BackgroundTickAsync()
+        {
+            if (_updateInProgress || IsInstallerTakingControl) return;
+            try
+            {
+                var check = await CheckForUpdatesAsync(force: false).ConfigureAwait(false);
+                if (check.Success && check.IsUpdateAvailable)
+                {
+                    WriteLog("Background tick: update detected => " + check.LatestVersion + "/" + check.LatestRevision);
+                    Application.Current?.Dispatcher?.Invoke(() => StartImmediateUpdate(check));
+                }
+            }
+            catch (Exception ex)
+            {
+                WriteLog("Background tick error: " + ex.Message);
+            }
+        }
 
         public sealed class UpdateDiagnostics
         {
@@ -355,7 +399,21 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         private static async Task<UpdateCheckResult> CheckDifferentialFeedAsync()
         {
-            var channelRaw = await DownloadStringAsync(UpdateChannelUrl).ConfigureAwait(false);
+            // Intenta el endpoint primario (web API con Supabase DB). Si falla, usa el channel.json
+            // estatico en Supabase Storage como fallback. El endpoint web incluye ?v=&rev= para
+            // que el servidor ya calcule updateAvailable sin necesitar una segunda peticion.
+            var primaryUrl = UpdateChannelUrl + $"?v={Uri.EscapeDataString(CurrentVersion)}&rev={Uri.EscapeDataString(CurrentRevision)}";
+            string channelRaw;
+            try
+            {
+                channelRaw = await DownloadStringAsync(primaryUrl).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                WriteLog($"Primary channel URL failed ({ex.Message}), trying fallback...");
+                channelRaw = await DownloadStringAsync(UpdateChannelFallbackUrl).ConfigureAwait(false);
+            }
+
             if (string.IsNullOrWhiteSpace(channelRaw))
             {
                 return new UpdateCheckResult
