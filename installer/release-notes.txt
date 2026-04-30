@@ -1,3 +1,1 @@
-- ACARS 7.0.9 hotfix de Soporte operativo: botones funcionales, layout sin recortes y estados claros.
-- HUD MSFS Community instalable/probable desde Soporte con validacion real health/state.
-- Autoupdate universal reforzado para actualizar cualquier version legacy hacia 7.0.9.
+- ACARS 7.0.10 hotfix de Soporte: DataContext corregido para comandos activos.`n- Soporte sin recortes, botones y toggles operativos con persistencia saneada.`n- Autoupdate reforzado hacia 7.0.10.
