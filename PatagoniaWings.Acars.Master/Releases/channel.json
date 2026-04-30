@@ -1,10 +1,10 @@
 ﻿{
     "channel":  "stable",
-    "version":  "7.0.3",
-    "latestVersion":  "7.0.3",
-    "currentVersion":  "7.0.3",
-    "revision":  "2026.4.29.5",
-    "latestRevision":  "2026.4.29.5",
+    "version":  "7.0.4",
+    "latestVersion":  "7.0.4",
+    "currentVersion":  "7.0.4",
+    "revision":  "2026.4.30.1",
+    "latestRevision":  "2026.4.30.1",
     "releaseDate":  "2026-04-29",
     "manifestUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/acars-update.json",
     "installerUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
@@ -17,7 +17,8 @@
     "required":  true,
     "minimumVersion":  "1.0.0",
     "minSupportedVersion":  "1.0.0",
-    "forceUpdateBelow":  "7.0.3",
-    "notes":  "ACARS 7.0.3 - HUD MSFS in-game, bridge local seguro, finalize confirmado por servidor y apertura de resumen web.",
-    "releaseNotes":  "ACARS 7.0.3 - HUD MSFS in-game, bridge local seguro, finalize confirmado por servidor y apertura de resumen web."
+    "forceUpdateBelow":  "7.0.4",
+    "notes":  "ACARS 7.0.4 - HUD MSFS in-game, bridge local seguro, finalize confirmado por servidor y apertura de resumen web.",
+    "releaseNotes":  "ACARS 7.0.4 - HUD MSFS in-game, bridge local seguro, finalize confirmado por servidor y apertura de resumen web."
 }
+
