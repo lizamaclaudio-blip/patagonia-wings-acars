@@ -1284,9 +1284,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             AcarsContext.FlightService.TelemetryUpdated += OnTelemetry;
             AcarsContext.FlightService.PhaseChanged += OnPhaseChanged;
+            AcarsContext.FlightService.FlightOfficiallyStarted += OnFlightOfficiallyStarted;
             AcarsContext.Runtime.Changed += OnRuntimeChanged;
             ApplyRuntimeState();
             RefreshRouteSnapshot();
+        }
+
+        private void OnFlightOfficiallyStarted()
+        {
+            System.Windows.Application.Current?.Dispatcher?.Invoke(() => StartElapsedTimer());
         }
 
         public void StartElapsedTimer()

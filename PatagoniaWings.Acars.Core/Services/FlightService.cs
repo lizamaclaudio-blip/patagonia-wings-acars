@@ -52,6 +52,7 @@ namespace PatagoniaWings.Acars.Core.Services
         public event Action<SimData>? TelemetryUpdated;
         public event Action<bool>? FlightLockChanged;
         public event Action<string>? CrashDetected;
+        public event Action? FlightOfficiallyStarted;
 
         public void StartFlight(Flight flight, double initialFuel)
         {
@@ -81,6 +82,7 @@ namespace PatagoniaWings.Acars.Core.Services
 
             SetFlightLock(true);
             SetPhase(FlightPhase.PreFlight);
+            FlightOfficiallyStarted?.Invoke();
         }
 
         public void UpdateSimData(SimData data)
