@@ -74,7 +74,7 @@ $matrix = @(
     @{ Installed = "7.0.10"; Expected = $true },
     @{ Installed = "7.0.11"; Expected = $true },
     @{ Installed = "7.0.12"; Expected = $true },
-    @{ Installed = "7.0.13"; Expected = $false },
+    @{ Installed = "7.0.13"; Expected = $true },
     @{ Installed = "ACARS 6.0 listo"; Expected = $true }
 )
 
