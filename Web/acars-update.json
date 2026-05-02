@@ -3,11 +3,12 @@
   "webVersion": "2.0",
   "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
   "mandatory": true,
-  "notes": "- Release ACARS 7.0.15 hotfix closeout oficial\n- Vuelos sin evidencia minima quedan no_evaluable/pending_server_closeout\n- Sin devengos ni ledger en cierres no evaluables",
+  "notes": "- ACARS 7.0.15 - PIREP Perfect: evidencia XML por fases, timeline operacional, capabilities por aeronave, no-autocierre por falso crash y cierre oficial Web/Supabase.",
   "releaseDate": "2026-04-29",
   "minVersion": "1.0.0",
   "fileSize": "24.7 MB",
   "storageProvider": "supabase"
 }
+
 
 

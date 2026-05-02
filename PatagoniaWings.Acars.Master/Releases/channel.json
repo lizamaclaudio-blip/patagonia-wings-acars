@@ -18,7 +18,8 @@
     "minimumVersion":  "1.0.0",
     "minSupportedVersion":  "1.0.0",
     "forceUpdateBelow":  "7.0.15",
-    "notes":  "ACARS 7.0.15 - hotfix de closeout oficial: vuelos sin evidencia minima quedan no_evaluable/pending_server_closeout y no generan devengo ni asientos de economia.",
-    "releaseNotes":  "ACARS 7.0.15 - hotfix de closeout oficial: vuelos sin evidencia minima quedan no_evaluable/pending_server_closeout y no generan devengo ni asientos de economia."
+    "notes":  "ACARS 7.0.15 - PIREP Perfect: evidencia XML por fases, timeline operacional, capabilities por aeronave, no-autocierre por falso crash y cierre oficial Web/Supabase.",
+    "releaseNotes":  "ACARS 7.0.15 - PIREP Perfect: evidencia XML por fases, timeline operacional, capabilities por aeronave, no-autocierre por falso crash y cierre oficial Web/Supabase."
 }
+
 
