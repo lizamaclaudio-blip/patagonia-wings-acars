@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -214,7 +214,12 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT WING LEVELER",    "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 51
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT DISENGAGED",      "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 52
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER AVAILABLE",     "Bool",   SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 53
-            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "COM ACTIVE FREQUENCY:2",   "MHz",    SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 54
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "COM ACTIVE FREQUENCY:1",   "Frequency BCD16", SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 54
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "COM STANDBY FREQUENCY:1",  "Frequency BCD16", SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 55
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "COM ACTIVE FREQUENCY:2",   "Frequency BCD16", SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 56
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "COM STANDBY FREQUENCY:2",  "Frequency BCD16", SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 57
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "G FORCE",                  "GForce", SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 58
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "ELECTRICAL MAIN BUS VOLTAGE", "Volts", SIMCONNECT_DATATYPE.FLOAT64, 0, sc); // 59
 
             _simConnect.RegisterDataDefineStruct<AircraftDataStruct>(DataDefineId.AircraftData);
 
@@ -421,10 +426,25 @@ namespace PatagoniaWings.Acars.SimConnect
                 if (groundSpeed < 3.0) groundSpeed = 0.0;
             }
 
+            var electricalMainBusVoltage = NormalizeVoltage(r.ElectricalMainBusVoltage);
+            var batteryMasterOn = r.BatteryMaster != 0;
+            var avionicsMasterOn = r.AvionicsMaster != 0;
+
+            // Black Square C208: el simvar nativo ELECTRICAL MASTER BATTERY y algunos buses
+            // pueden quedar activos por HOT BATTERY BUS aun con BATTERY MASTER OFF.
+            // Se excluye bateria/bus de Cold & Dark y se conserva avionica como senal confiable.
+            if (ProfileIsBlackSquareC208(profileCode))
+            {
+                // Black Square C208 deja buses/simvars nativos vivos aunque la cabina este apagada.
+                // No alimentar Cold & Dark con estas banderas; se evalua por motores + luces.
+                batteryMasterOn = false;
+                avionicsMasterOn = false;
+            }
+
             Debug.WriteLine($"[SimConnect] Fuel={fuelTotal:F0} lbs / {fuelKg:F0} kg  N1={n1Eng1:F1}/{n1Eng2:F1} Squawk={squawk} " +
                 $"Profile={profile?.DisplayName ?? "MSFS Native"} Code={profileCode} " +
                 $"Lights: Nav={navOn} Beacon={beaconOn} Landing={landingOn} Taxi={taxiOn} Strobe={strobeOn} " +
-                $"Eng1={r.EngineOneCombustion != 0} Batt={r.BatteryMaster != 0} Avionics={r.AvionicsMaster != 0} Door={r.DoorPercent:F0}%");
+                $"Eng1={r.EngineOneCombustion != 0} BattRaw={r.BatteryMaster != 0} Batt={batteryMasterOn} AvionicsRaw={r.AvionicsMaster != 0} Avionics={avionicsMasterOn} MainBusV={electricalMainBusVoltage:F1} Door={r.DoorPercent:F0}%");
 
             if (ProfileIsMaddog(profileCode))
             {
@@ -432,6 +452,7 @@ namespace PatagoniaWings.Acars.SimConnect
             }
 
             var simconnectXpdrRaw = NormalizeTransponderState(r.TransponderAvailable != 0, Convert.ToInt32(Math.Round(r.TransponderState)));
+            var gForce = Math.Abs(r.GForce) > 0.01 ? r.GForce : 1.0;
             var detection = BuildDetectionMetadata(r.Title ?? string.Empty, profile);
 
             return new SimData
@@ -473,7 +494,8 @@ namespace PatagoniaWings.Acars.SimConnect
                 EmptyWeightKg      = emptyWeightKg,
 
                 LandingVS          = r.VerticalSpeed,
-                LandingG           = 0,
+                LandingG           = gForce,
+                GForce             = gForce,
 
                 OnGround           = r.OnGround != 0,
                 ParkingBrake       = r.ParkingBrake != 0,
@@ -517,8 +539,9 @@ namespace PatagoniaWings.Acars.SimConnect
                 // ── Campos extendidos (arquitectura SUR Air) ──
                 EngineOneRunning   = r.EngineOneCombustion != 0,
                 EngineTwoRunning   = r.EngineTwoCombustion != 0,
-                BatteryMasterOn    = r.BatteryMaster       != 0,
-                AvionicsMasterOn   = r.AvionicsMaster      != 0,
+                BatteryMasterOn    = batteryMasterOn,
+                AvionicsMasterOn   = avionicsMasterOn,
+                ElectricalMainBusVoltage = electricalMainBusVoltage,
                 DoorOpen           = r.DoorPercent > 5.0,   // umbral 5% (igual que SUR Air)
                 DetectedProfileCode = profileCode,
                 AircraftTypeCode   = detection.AircraftTypeCode,
@@ -532,7 +555,10 @@ namespace PatagoniaWings.Acars.SimConnect
                 MatchedPattern     = detection.MatchedPattern,
                 FallbackUsed       = detection.FallbackUsed,
                 ProfileStatus      = detection.ProfileStatus,
-                Com2FrequencyMhz   = r.Com2FrequencyMhz > 100 ? r.Com2FrequencyMhz : 0,
+                Com1FrequencyMhz        = NormalizeComFrequency(r.Com1FrequencyMhz),
+                Com1StandbyFrequencyMhz = NormalizeComFrequency(r.Com1StandbyFrequencyMhz),
+                Com2FrequencyMhz        = NormalizeComFrequency(r.Com2FrequencyMhz),
+                Com2StandbyFrequencyMhz = NormalizeComFrequency(r.Com2StandbyFrequencyMhz),
             };
         }
 
@@ -917,6 +943,16 @@ namespace PatagoniaWings.Acars.SimConnect
             profileCode == "MD82_MADDOG"
             || profileCode == "MD83_MADDOG"
             || profileCode == "MD88_MADDOG";
+
+        private static bool ProfileIsBlackSquareC208(string profileCode) =>
+            string.Equals(profileCode, "C208_BLACKSQUARE", StringComparison.OrdinalIgnoreCase);
+
+        private static double NormalizeVoltage(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value)) return 0.0;
+            if (value < 0.0 || value > 80.0) return 0.0;
+            return value;
+        }
 
         private static bool ProfileHasBridgeExpressions(AircraftProfile profile)
         {
@@ -2116,6 +2152,43 @@ namespace PatagoniaWings.Acars.SimConnect
                 _simConnect = null;
                 _disposed = true;
             }
+        }
+
+
+        private static double NormalizeComFrequency(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0d) return 0d;
+
+            // Ya viene en MHz normal: 121.700
+            if (value >= 100d && value <= 150d) return Math.Round(value, 3);
+
+            // Algunos bridges/addons devuelven Hz: 121700000
+            if (value >= 100000000d && value <= 150000000d)
+                return Math.Round(value / 1000000d, 3);
+
+            // Algunos devuelven kHz o MHz*100 / MHz*1000: 12170 o 121700
+            if (value >= 100000d && value <= 150000d)
+                return Math.Round(value / 1000d, 3);
+
+            if (value >= 10000d && value <= 15000d)
+                return Math.Round(value / 100d, 3);
+
+            // SimConnect clásico con Frequency BCD16 puede entregar decimal del hex BCD.
+            // Ej.: COM2 121.700 => 0x2170, que llega como 8560 decimal.
+            var raw = Convert.ToInt32(Math.Round(value));
+            var hex = raw.ToString("X").PadLeft(4, '0');
+            if (hex.Length >= 4 && hex.All(char.IsDigit))
+            {
+                var d1 = hex[0] - '0';
+                var d2 = hex[1] - '0';
+                var d3 = hex[2] - '0';
+                var d4 = hex[3] - '0';
+                var mhz = 100d + (d1 * 10d) + d2 + (d3 / 10d) + (d4 / 100d);
+                if (mhz >= 100d && mhz <= 150d)
+                    return Math.Round(mhz, 3);
+            }
+
+            return 0d;
         }
 
         private static int NormalizeTransponderState(bool available, int rawState)

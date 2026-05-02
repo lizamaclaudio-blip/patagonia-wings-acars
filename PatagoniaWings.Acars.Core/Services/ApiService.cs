@@ -34,6 +34,18 @@ namespace PatagoniaWings.Acars.Core.Services
                                            || string.Equals(DetectionConfidence, "unknown", StringComparison.OrdinalIgnoreCase);
         }
 
+        private sealed class OfficialScoreSnapshot
+        {
+            public bool HasTotalScore { get; set; }
+            public int TotalScore { get; set; }
+            public int ProcedureScore { get; set; }
+            public int PerformanceScore { get; set; }
+            public int MissionScore { get; set; }
+            public string Grade { get; set; } = string.Empty;
+            public string ProcedureGrade { get; set; } = string.Empty;
+            public string PerformanceGrade { get; set; } = string.Empty;
+        }
+
         private readonly HttpClient _http;
         private readonly JavaScriptSerializer _json;
         private readonly string _baseUrl;
@@ -1541,8 +1553,42 @@ namespace PatagoniaWings.Acars.Core.Services
                     ["max_altitude_indicated_ft"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.IndicatedAltitudeFeet > 0 ? s.IndicatedAltitudeFeet : s.AltitudeFeet),
                     ["max_altitude_true_ft"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.TrueAltitudeFeet),
                     ["max_ias_kt"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.IndicatedAirspeed),
+                    ["max_ground_speed_kt"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.GroundSpeed),
+                    ["max_vertical_speed_fpm"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Max(s => s.VerticalSpeed),
+                    ["min_vertical_speed_fpm"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog.Min(s => s.VerticalSpeed),
+                    ["landing_vs_fpm"] = report.LandingVS,
+                    ["landing_g_force"] = report.LandingG,
+                    ["max_g_force"] = telemetryLog == null || telemetryLog.Count == 0 ? report.LandingG : telemetryLog.Max(s => Math.Abs(Math.Abs(s.GForce) > 0.01d ? s.GForce : s.LandingG)),
+                    ["min_g_force"] = telemetryLog == null || telemetryLog.Count == 0 ? report.LandingG : telemetryLog.Min(s => Math.Abs(s.GForce) > 0.01d ? s.GForce : s.LandingG),
+                    ["fuel_start_kg"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : (telemetryLog[0].FuelKg > 0 ? telemetryLog[0].FuelKg : telemetryLog[0].FuelTotalLbs * 0.45359237d),
+                    ["fuel_end_kg"] = lastSample == null ? 0 : (lastSample.FuelKg > 0 ? lastSample.FuelKg : lastSample.FuelTotalLbs * 0.45359237d),
+                    ["fuel_used_kg"] = Math.Max(0, report.FuelUsed) * 0.45359237d,
+                    ["takeoff_weight_kg"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : (telemetryLog.FirstOrDefault(s => !s.OnGround && s.TotalWeightKg > 0) ?? telemetryLog[0]).TotalWeightKg,
+                    ["landing_weight_kg"] = lastSample == null ? 0 : lastSample.TotalWeightKg,
+                    ["zero_fuel_weight_kg"] = lastSample == null ? 0 : lastSample.ZeroFuelWeightKg,
+                    ["payload_kg"] = lastSample == null ? 0 : lastSample.PayloadKg,
+                    ["departure_wind_speed_kt"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog[0].WindSpeed,
+                    ["departure_wind_direction_deg"] = telemetryLog == null || telemetryLog.Count == 0 ? 0 : telemetryLog[0].WindDirection,
+                    ["arrival_wind_speed_kt"] = lastSample == null ? 0 : lastSample.WindSpeed,
+                    ["arrival_wind_direction_deg"] = lastSample == null ? 0 : lastSample.WindDirection,
+                    ["overspeed_samples"] = telemetryLog == null ? 0 : telemetryLog.Count(s => s.IndicatedAirspeed > 380d || (s.AltitudeFeet < 10000d && s.IndicatedAirspeed > 265d)),
+                    ["stall_samples"] = telemetryLog == null ? 0 : telemetryLog.Count(s => !s.OnGround && s.IndicatedAirspeed > 0d && s.IndicatedAirspeed < 55d),
+                    ["pause_samples"] = telemetryLog == null ? 0 : telemetryLog.Count(s => s.Pause),
+                    ["elapsed_seconds"] = telemetryLog == null || telemetryLog.Count < 2 ? 0 : Math.Max(0, (telemetryLog[telemetryLog.Count - 1].CapturedAtUtc - telemetryLog[0].CapturedAtUtc).TotalSeconds),
+                    ["airborne_samples"] = telemetryLog == null ? 0 : telemetryLog.Count(s => !s.OnGround),
+                    ["on_ground_samples"] = telemetryLog == null ? 0 : telemetryLog.Count(s => s.OnGround),
                     ["xpdr_last_state_raw"] = lastSample == null ? 0 : lastSample.TransponderStateRaw,
                     ["xpdr_last_code"] = lastSample == null ? 0 : lastSample.TransponderCode,
+                    ["com1_last_frequency_mhz"] = lastSample == null ? 0 : lastSample.Com1FrequencyMhz,
+                    ["com1_last_standby_frequency_mhz"] = lastSample == null ? 0 : lastSample.Com1StandbyFrequencyMhz,
+                    ["com2_last_frequency_mhz"] = lastSample == null ? 0 : lastSample.Com2FrequencyMhz,
+                    ["com2_last_standby_frequency_mhz"] = lastSample == null ? 0 : lastSample.Com2StandbyFrequencyMhz,
+                    ["pic_checks_total"] = report.PicChecksTotal,
+                    ["pic_checks_completed"] = report.PicChecksCompleted,
+                    ["pic_checks_succeeded"] = report.PicChecksSucceeded,
+                    ["pic_checks_failed"] = report.PicChecksFailed,
+                    ["pic_last_required_frequency_mhz"] = report.LastPicRequiredFrequencyMhz,
+                    ["pic_radio_source"] = report.PicRadioSource ?? string.Empty,
                     ["aircraft_type_code"] = detection.AircraftTypeCode,
                     ["aircraft_variant_code"] = detection.AircraftVariantCode,
                     ["addon_source"] = detection.AddonSource,
@@ -1646,7 +1692,7 @@ namespace PatagoniaWings.Acars.Core.Services
 
                 if (!successFlag || !persisted || !reservationClosed || string.IsNullOrWhiteSpace(reservationIdConfirmed) || !summaryUrlIsValid)
                 {
-                    return ApiResult<FlightReport>.Fail("Finalize sin confirmación real del servidor.");
+                    return ApiResult<FlightReport>.Fail("Finalize sin confirmación real del servidor. " + _lastFinalizeDiagnostic);
                 }
 
                 if (!string.IsNullOrWhiteSpace(envelope.ReservationId)
@@ -1655,19 +1701,34 @@ namespace PatagoniaWings.Acars.Core.Services
                     return ApiResult<FlightReport>.Fail("Finalize inconsistente: reservationId no coincide.");
                 }
 
-                var officialScores = GetNestedDictionary(resultPayload, "officialScores");
+                var resultStatus = FirstNonEmpty(resultPayload, "resultStatus", "status", "finalStatus", "closeout_status");
+                var officialScores = ExtractOfficialScoreSnapshot(resultPayload);
+                var statusRequiresScore = IsOfficialScoredStatus(resultStatus);
+                if (statusRequiresScore && !officialScores.HasTotalScore)
+                {
+                    return ApiResult<FlightReport>.Fail("Finalize cerrado, pero la web no devolvió puntaje oficial. ACARS no acepta score local/provisional. " + _lastFinalizeDiagnostic);
+                }
+
                 envelope.Report.ResultUrl = resolvedSummaryUrl;
-                envelope.Report.ResultStatus = ConvertToString(resultPayload, "resultStatus");
+                envelope.Report.ResultStatus = string.IsNullOrWhiteSpace(resultStatus) ? "completed" : resultStatus;
                 envelope.Report.ReservationClosed = reservationClosed;
-                envelope.Report.ProcedureScore = ConvertToInt(officialScores, "procedure_score", envelope.Report.ProcedureScore);
-                envelope.Report.PerformanceScore = ConvertToInt(officialScores, "performance_score", envelope.Report.PerformanceScore);
-                envelope.Report.PatagoniaScore = ConvertToInt(officialScores, "final_score", envelope.Report.PatagoniaScore > 0 ? envelope.Report.PatagoniaScore : envelope.Report.Score);
-                envelope.Report.MissionScore = ConvertToInt(officialScores, "mission_score", envelope.Report.PatagoniaScore);
+
+                // Fuente única de verdad: Web/Supabase. Nunca se reutiliza score calculado por ACARS.
+                envelope.Report.PatagoniaScore = officialScores.HasTotalScore ? officialScores.TotalScore : 0;
                 envelope.Report.Score = envelope.Report.PatagoniaScore;
+                envelope.Report.MissionScore = officialScores.MissionScore > 0 ? officialScores.MissionScore : envelope.Report.PatagoniaScore;
+                envelope.Report.ProcedureScore = officialScores.ProcedureScore;
+                envelope.Report.PerformanceScore = officialScores.PerformanceScore;
                 envelope.Report.PointsEarned = envelope.Report.PatagoniaScore;
-                envelope.Report.Status = envelope.Report.ResultStatus == "completed"
-                    ? FlightStatus.Approved
-                    : FlightStatus.Rejected;
+                envelope.Report.PatagoniaGrade = string.IsNullOrWhiteSpace(officialScores.Grade)
+                    ? ScoreToGrade(envelope.Report.PatagoniaScore)
+                    : officialScores.Grade;
+                envelope.Report.Grade = envelope.Report.PatagoniaGrade;
+                envelope.Report.ProcedureGrade = officialScores.ProcedureGrade;
+                envelope.Report.PerformanceGrade = officialScores.PerformanceGrade;
+                envelope.Report.Status = IsCloseoutReviewRequiredStatus(envelope.Report.ResultStatus)
+                    ? FlightStatus.Rejected
+                    : FlightStatus.Approved;
                 return ApiResult<FlightReport>.Ok(envelope.Report);
             }
 
@@ -2690,20 +2751,37 @@ namespace PatagoniaWings.Acars.Core.Services
             var createdAt = ConvertToDateTime(row, "created_at") ?? DateTime.UtcNow;
             var completedAt = ConvertToDateTime(row, "completed_at") ?? createdAt;
             var durationMinutes = ConvertToInt(row, "actual_block_minutes", 0);
-            var scorePayload = row.ContainsKey("score_payload") ? row["score_payload"] as Dictionary<string, object> : null;
-            var officialPirep = scorePayload != null && scorePayload.ContainsKey("official_pirep")
-                ? scorePayload["official_pirep"] as Dictionary<string, object>
-                : null;
+            var scorePayload = GetNestedDictionary(row, "score_payload");
+            var officialScores = ExtractOfficialScoreDictionary(scorePayload);
 
-            var patagoniaScore = scorePayload == null ? 0 : ConvertToInt(scorePayload, "final_score", 0);
-            if (patagoniaScore <= 0 && officialPirep != null) patagoniaScore = ConvertToInt(officialPirep, "final_score", 0);
-            if (patagoniaScore <= 0) patagoniaScore = ConvertToInt(row, "performance_score", 0);
-            if (patagoniaScore <= 0) patagoniaScore = ConvertToInt(row, "mission_score", 0);
-            if (patagoniaScore <= 0) patagoniaScore = ConvertToInt(row, "procedure_score", 0);
+            var patagoniaScore = ReadOfficialScoreValue(
+                officialScores,
+                scorePayload,
+                row,
+                0,
+                "final_score", "finalScore", "total_score", "totalScore", "score", "patagoniaScore", "patagonia_score");
+            var procedureScore = ReadOfficialScoreValue(
+                officialScores,
+                scorePayload,
+                row,
+                0,
+                "procedure_score", "procedureScore");
+            var performanceScore = ReadOfficialScoreValue(
+                officialScores,
+                scorePayload,
+                row,
+                0,
+                "performance_score", "performanceScore");
 
-            var procedureScore = ConvertToInt(row, "procedure_score", 0);
-            var performanceScore = ConvertToInt(row, "performance_score", 0);
-            var patagoniaGrade = FirstNonEmpty(row, "grade");
+            var patagoniaGrade = FirstNonEmpty(officialScores, "grade", "patagoniaGrade", "patagonia_grade");
+            if (string.IsNullOrWhiteSpace(patagoniaGrade))
+            {
+                patagoniaGrade = FirstNonEmpty(scorePayload, "grade", "patagoniaGrade", "patagonia_grade");
+            }
+            if (string.IsNullOrWhiteSpace(patagoniaGrade))
+            {
+                patagoniaGrade = FirstNonEmpty(row, "grade");
+            }
             if (string.IsNullOrWhiteSpace(patagoniaGrade))
             {
                 patagoniaGrade = ScoreToGrade(patagoniaScore);
@@ -2728,8 +2806,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 MissionScore = ConvertToInt(row, "mission_score", patagoniaScore),
                 ProcedureScore = procedureScore,
                 PerformanceScore = performanceScore,
-                ProcedureGrade = FirstNonEmpty(row, "procedure_grade"),
-                PerformanceGrade = FirstNonEmpty(row, "performance_grade"),
+                ProcedureGrade = FirstNonEmpty(officialScores, "procedureGrade", "procedure_grade"),
+                PerformanceGrade = FirstNonEmpty(officialScores, "performanceGrade", "performance_grade"),
                 PointsEarned = ConvertToInt(row, "legado_credits", 0),
                 ResultStatus = FirstNonEmpty(row, "status"),
                 Status = ParseFlightStatus(FirstNonEmpty(row, "status"))
@@ -3573,6 +3651,8 @@ namespace PatagoniaWings.Acars.Core.Services
 
         private object SerializeFlightReport(FlightReport report)
         {
+            // ACARS no envía score ni evaluación provisional. Solo evidencia RAW/operacional.
+            // La web/Supabase es la única autoridad para calcular y devolver el puntaje oficial.
             return new
             {
                 reservationId = report.ReservationId,
@@ -3586,15 +3666,18 @@ namespace PatagoniaWings.Acars.Core.Services
                 fuelUsed = report.FuelUsed,
                 landingVS = report.LandingVS,
                 landingG = report.LandingG,
+                picChecksTotal = report.PicChecksTotal,
+                picChecksCompleted = report.PicChecksCompleted,
+                picChecksSucceeded = report.PicChecksSucceeded,
+                picChecksFailed = report.PicChecksFailed,
+                lastPicRequiredFrequencyMhz = report.LastPicRequiredFrequencyMhz,
+                picRadioSource = report.PicRadioSource,
                 remarks = report.Remarks,
                 maxAltitudeFeet = report.MaxAltitudeFeet,
                 maxSpeedKts = report.MaxSpeedKts,
                 approachQnhHpa = report.ApproachQnhHpa,
-                patagoniaScore = report.PatagoniaScore,
-                patagoniaGrade = report.PatagoniaGrade,
-                procedureScore = report.ProcedureScore,
-                performanceScore = report.PerformanceScore,
-                evaluation = SerializePatagoniaEvaluation(report.Evaluation)
+                scoreAuthority = "WEB_SUPABASE_ONLY",
+                clientScoreSuppressed = true
             };
         }
 
@@ -3804,12 +3887,16 @@ namespace PatagoniaWings.Acars.Core.Services
                 },
                 scores = new
                 {
-                    patagoniaScore = payload.Scores.PatagoniaScore,
-                    procedureScore = payload.Scores.ProcedureScore,
-                    performanceScore = payload.Scores.PerformanceScore,
-                    flightValid = payload.Scores.FlightValid
+                    authority = "WEB_SUPABASE_ONLY",
+                    clientScoreSuppressed = true,
+                    officialScoreRequired = true
                 },
-                evaluation = compact ? new { } : SerializePatagoniaEvaluation(payload.Evaluation),
+                evaluation = new
+                {
+                    authority = "WEB_SUPABASE_ONLY",
+                    clientEvaluationSuppressed = true,
+                    status = "server_evaluation_required"
+                },
                 blackboxSummary = payload.BlackboxSummary ?? new Dictionary<string, object>(),
                 eventSummary = payload.EventSummary ?? new Dictionary<string, object>(),
                 criticalEvents = compact
@@ -3905,10 +3992,27 @@ namespace PatagoniaWings.Acars.Core.Services
                 fuelTotalLbs = data.FuelTotalLbs,
                 fuelKg = data.FuelKg,
                 fuelFlowLbsHour = data.FuelFlowLbsHour,
+                fuelTotalCapacityLbs = data.FuelTotalCapacityLbs,
+                fuelLeftTankLbs = data.FuelLeftTankLbs,
+                fuelRightTankLbs = data.FuelRightTankLbs,
+                fuelCenterTankLbs = data.FuelCenterTankLbs,
+                totalWeightLbs = data.TotalWeightLbs,
+                totalWeightKg = data.TotalWeightKg,
+                zeroFuelWeightKg = data.ZeroFuelWeightKg,
+                payloadKg = data.PayloadKg,
+                emptyWeightLbs = data.EmptyWeightLbs,
+                emptyWeightKg = data.EmptyWeightKg,
                 engine1N1 = data.Engine1N1,
                 engine2N1 = data.Engine2N1,
+                engine3N1 = data.Engine3N1,
+                engine4N1 = data.Engine4N1,
+                engineOneRunning = data.EngineOneRunning,
+                engineTwoRunning = data.EngineTwoRunning,
+                engineThreeRunning = data.EngineThreeRunning,
+                engineFourRunning = data.EngineFourRunning,
                 landingVS = data.LandingVS,
                 landingG = data.LandingG,
+                gForce = data.GForce,
                 onGround = data.OnGround,
                 strobeLightsOn = data.StrobeLightsOn,
                 beaconLightsOn = data.BeaconLightsOn,
@@ -3917,6 +4021,10 @@ namespace PatagoniaWings.Acars.Core.Services
                 navLightsOn = data.NavLightsOn,
                 parkingBrake = data.ParkingBrake,
                 autopilotActive = data.AutopilotActive,
+                batteryMasterOn = data.BatteryMasterOn,
+                avionicsMasterOn = data.AvionicsMasterOn,
+                electricalMainBusVoltage = data.ElectricalMainBusVoltage,
+                doorOpen = data.DoorOpen,
                 pause = data.Pause,
                 seatBeltSign = data.SeatBeltSign,
                 noSmokingSign = data.NoSmokingSign,
@@ -3927,7 +4035,14 @@ namespace PatagoniaWings.Acars.Core.Services
                 spoilersArmed = data.SpoilersArmed,
                 reverserActive = data.ReverserActive,
                 transponderCharlieMode = data.TransponderCharlieMode,
+                transponderCode = data.TransponderCode,
+                transponderStateRaw = data.TransponderStateRaw,
+                com1FrequencyMhz = data.Com1FrequencyMhz,
+                com1StandbyFrequencyMhz = data.Com1StandbyFrequencyMhz,
+                com2FrequencyMhz = data.Com2FrequencyMhz,
+                com2StandbyFrequencyMhz = data.Com2StandbyFrequencyMhz,
                 apuRunning = data.ApuRunning,
+                apuAvailable = data.ApuAvailable,
                 bleedAirOn = data.BleedAirOn,
                 cabinAltitudeFeet = data.CabinAltitudeFeet,
                 pressureDiffPsi = data.PressureDiffPsi,
@@ -3935,6 +4050,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 windDirection = data.WindDirection,
                 qnh = data.QNH,
                 qnhInHg = data.QnhInHg,
+                outsideTemperature = data.OutsideTemperature,
                 isRaining = data.IsRaining,
                 simulatorType = data.SimulatorType.ToString(),
                 detectedProfileCode = data.DetectedProfileCode,
@@ -3951,6 +4067,200 @@ namespace PatagoniaWings.Acars.Core.Services
                 profileStatus = data.ProfileStatus
             };
         }
+        private OfficialScoreSnapshot ExtractOfficialScoreSnapshot(Dictionary<string, object> resultPayload)
+        {
+            var officialScores = ExtractOfficialScoreDictionary(resultPayload);
+            var snapshot = new OfficialScoreSnapshot();
+
+            int total;
+            if (TryReadOfficialScoreValue(
+                    officialScores,
+                    resultPayload,
+                    out total,
+                    "final_score", "finalScore", "total_score", "totalScore", "score", "patagoniaScore", "patagonia_score"))
+            {
+                snapshot.HasTotalScore = true;
+                snapshot.TotalScore = total;
+            }
+
+            int procedure;
+            if (TryReadOfficialScoreValue(officialScores, resultPayload, out procedure, "procedure_score", "procedureScore"))
+            {
+                snapshot.ProcedureScore = procedure;
+            }
+
+            int performance;
+            if (TryReadOfficialScoreValue(officialScores, resultPayload, out performance, "performance_score", "performanceScore"))
+            {
+                snapshot.PerformanceScore = performance;
+            }
+
+            int mission;
+            if (TryReadOfficialScoreValue(officialScores, resultPayload, out mission, "mission_score", "missionScore"))
+            {
+                snapshot.MissionScore = mission;
+            }
+
+            snapshot.Grade = FirstNonEmpty(officialScores, "grade", "patagoniaGrade", "patagonia_grade");
+            if (string.IsNullOrWhiteSpace(snapshot.Grade))
+            {
+                snapshot.Grade = FirstNonEmpty(resultPayload, "grade", "patagoniaGrade", "patagonia_grade");
+            }
+            snapshot.ProcedureGrade = FirstNonEmpty(officialScores, "procedureGrade", "procedure_grade");
+            snapshot.PerformanceGrade = FirstNonEmpty(officialScores, "performanceGrade", "performance_grade");
+            return snapshot;
+        }
+
+        private Dictionary<string, object> ExtractOfficialScoreDictionary(Dictionary<string, object> root)
+        {
+            var direct = FirstNestedDictionary(
+                root,
+                "officialScores", "official_scores", "officialScore", "official_score",
+                "scorePayload", "score_payload", "officialPirep", "official_pirep", "scores");
+            if (direct.Count > 0)
+            {
+                var nestedInsideDirect = FirstNestedDictionary(
+                    direct,
+                    "officialScores", "official_scores", "officialScore", "official_score",
+                    "officialPirep", "official_pirep", "scores");
+                return nestedInsideDirect.Count > 0 ? nestedInsideDirect : direct;
+            }
+
+            var nestedRoot = FirstNestedDictionary(root, "data", "result", "payload", "summary");
+            if (nestedRoot.Count == 0)
+            {
+                return new Dictionary<string, object>();
+            }
+
+            return FirstNestedDictionary(
+                nestedRoot,
+                "officialScores", "official_scores", "officialScore", "official_score",
+                "scorePayload", "score_payload", "officialPirep", "official_pirep", "scores");
+        }
+
+        private Dictionary<string, object> FirstNestedDictionary(Dictionary<string, object> row, params string[] keys)
+        {
+            if (row == null || keys == null)
+            {
+                return new Dictionary<string, object>();
+            }
+
+            foreach (var key in keys)
+            {
+                var nested = GetNestedDictionary(row, key);
+                if (nested.Count > 0)
+                {
+                    return nested;
+                }
+            }
+
+            return new Dictionary<string, object>();
+        }
+
+        private int ReadOfficialScoreValue(
+            Dictionary<string, object> primary,
+            Dictionary<string, object> secondary,
+            Dictionary<string, object> tertiary,
+            int defaultValue,
+            params string[] keys)
+        {
+            int value;
+            if (TryReadOfficialScoreValue(primary, secondary, out value, keys))
+            {
+                return value;
+            }
+
+            if (TryReadOfficialScoreValue(tertiary, null, out value, keys))
+            {
+                return value;
+            }
+
+            return defaultValue;
+        }
+
+        private bool TryReadOfficialScoreValue(
+            Dictionary<string, object> primary,
+            Dictionary<string, object>? secondary,
+            out int value,
+            params string[] keys)
+        {
+            value = 0;
+            if (keys == null)
+            {
+                return false;
+            }
+
+            foreach (var key in keys)
+            {
+                if (TryConvertToInt(primary, key, out value))
+                {
+                    return true;
+                }
+            }
+
+            if (secondary != null)
+            {
+                foreach (var key in keys)
+                {
+                    if (TryConvertToInt(secondary, key, out value))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryConvertToInt(Dictionary<string, object> row, string key, out int value)
+        {
+            value = 0;
+            if (row == null || string.IsNullOrWhiteSpace(key) || !row.ContainsKey(key) || row[key] == null)
+            {
+                return false;
+            }
+
+            var raw = Convert.ToString(row[key], CultureInfo.InvariantCulture);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return false;
+            }
+
+            int i;
+            if (int.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out i))
+            {
+                value = i;
+                return true;
+            }
+
+            double d;
+            if (double.TryParse(raw, NumberStyles.Any, CultureInfo.InvariantCulture, out d))
+            {
+                value = (int)Math.Round(d);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool IsOfficialScoredStatus(string status)
+        {
+            var normalized = (status ?? string.Empty).Trim().ToLowerInvariant();
+            return normalized == "scored"
+                   || normalized == "approved"
+                   || normalized == "finalized"
+                   || normalized == "completed";
+        }
+
+        private static bool IsCloseoutReviewRequiredStatus(string status)
+        {
+            var normalized = (status ?? string.Empty).Trim().ToLowerInvariant();
+            return normalized == "pending_server_closeout"
+                   || normalized == "incomplete_closeout"
+                   || normalized == "no_evaluable"
+                   || normalized == "manual_review";
+        }
+
         private Dictionary<string, object> GetNestedDictionary(Dictionary<string, object> row, string key)
         {
             if (row == null || string.IsNullOrWhiteSpace(key) || !row.ContainsKey(key) || row[key] == null)

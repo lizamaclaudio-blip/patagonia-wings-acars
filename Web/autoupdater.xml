@@ -1,7 +1,9 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>7.0.3.0</version>
+  <version>7.0.15.0</version>
   <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>v7.0.3: HUD MSFS in-game, bridge local y finalize confirmado con summaryUrl.</changelog>
+  <changelog>v7.0.15: hotfix closeout oficial con evidencia minima y bloqueo economico en no evaluables.</changelog>
   <mandatory>true</mandatory>
 </item>
+
+

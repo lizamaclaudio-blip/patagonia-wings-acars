@@ -1,23 +1,23 @@
 ﻿{
-    "version":  "7.0.13",
-    "latestVersion":  "7.0.13",
-    "currentVersion":  "7.0.13",
-    "revision":  "2026.4.30.1",
-    "latestRevision":  "2026.4.30.1",
+    "version":  "7.0.15",
+    "latestVersion":  "7.0.15",
+    "currentVersion":  "7.0.15",
+    "revision":  "2026.4.30.4",
+    "latestRevision":  "2026.4.30.4",
     "channel":  "stable",
     "releaseDate":  "2026-04-29",
     "mandatory":  true,
     "required":  true,
     "minimumVersion":  "1.0.0",
     "minSupportedVersion":  "1.0.0",
-    "forceUpdateBelow":  "7.0.13",
+    "forceUpdateBelow":  "7.0.15",
     "downloadUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "url":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "installerUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "packageUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "directDownloadUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
-    "notes":  "ACARS 7.0.13 - finalize confirmado (success+persisted+reservationClosed+summaryUrl), reintento seguro y HUD MSFS2020 estable.",
-    "releaseNotes":  "ACARS 7.0.13 - finalize confirmado (success+persisted+reservationClosed+summaryUrl), reintento seguro y HUD MSFS2020 estable.",
+    "notes":  "ACARS 7.0.15 - hotfix de closeout oficial: vuelos sin evidencia minima quedan no_evaluable/pending_server_closeout y no generan devengo ni asientos de economia.",
+    "releaseNotes":  "ACARS 7.0.15 - hotfix de closeout oficial: vuelos sin evidencia minima quedan no_evaluable/pending_server_closeout y no generan devengo ni asientos de economia.",
     "files":  [
 
               ],
@@ -25,4 +25,5 @@
 
                 ]
 }
+
 

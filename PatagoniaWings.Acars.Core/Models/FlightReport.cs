@@ -88,6 +88,22 @@ namespace PatagoniaWings.Acars.Core.Models
         /// <summary>true si el servidor confirmó que la reserva quedó cerrada en la BD.</summary>
         public bool ReservationClosed { get; set; }
 
+        /// <summary>
+        /// Bloque 10: guard de seguridad local. Un vuelo completado solo puede abrir
+        /// la pantalla de cierre si el piloto presiono manualmente FINALIZAR EN GATE.
+        /// Evita que una transición automática por aterrizaje genere PIREP prematuro.
+        /// </summary>
+        public bool ManualCloseoutConfirmed { get; set; }
+
+        // Bloque 10 hotfix: métricas PIC/Radio requeridas por ApiService y PirepXmlBuilder.
+        // Se mantienen en FlightReport para no romper el contrato ACARS -> XML/JSON -> Web.
+        public int PicChecksTotal { get; set; }
+        public int PicChecksCompleted { get; set; }
+        public int PicChecksSucceeded { get; set; }
+        public int PicChecksFailed { get; set; }
+        public double LastPicRequiredFrequencyMhz { get; set; }
+        public string PicRadioSource { get; set; } = string.Empty;
+
         // Contrato nuevo ACARS -> web
         public int PatagoniaScore { get; set; }
         public string PatagoniaGrade { get; set; } = string.Empty;

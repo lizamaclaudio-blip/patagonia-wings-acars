@@ -1,11 +1,13 @@
 ﻿{
-  "version": "7.0.3",
+  "version": "7.0.15",
   "webVersion": "2.0",
   "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
   "mandatory": true,
-  "notes": "- Release ACARS 7.0.3 con HUD MSFS in-game\n- Finalize confirmado por servidor y summary web\n- Upgrade universal desde versiones legacy",
+  "notes": "- Release ACARS 7.0.15 hotfix closeout oficial\n- Vuelos sin evidencia minima quedan no_evaluable/pending_server_closeout\n- Sin devengos ni ledger en cierres no evaluables",
   "releaseDate": "2026-04-29",
-  "minVersion": "6.0.0",
+  "minVersion": "1.0.0",
   "fileSize": "24.7 MB",
   "storageProvider": "supabase"
 }
+
+

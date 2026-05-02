@@ -54,8 +54,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             CopyHudBridgeUrlCommand = new RelayCommand(CopyHudBridgeUrl);
             InstallHudToCommunityCommand = new RelayCommand(InstallHudToCommunity);
             ProbeHudBridgeCommand = new AsyncRelayCommand(async _ => await ProbeHudBridgeAsync());
-            OpenSayIntentionsFolderCommand = new RelayCommand(OpenSayIntentionsFolder);
-            ProbeSayIntentionsCommand = new RelayCommand(ProbeSayIntentions);
             CheckUpdateCommand = new AsyncRelayCommand(async _ => await CheckUpdateAsync());
             DownloadUpdateCommand = new AsyncRelayCommand(async _ => await DownloadUpdateAsync());
             OpenUpdateLogsCommand = new RelayCommand(OpenUpdateLogs);
@@ -92,8 +90,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand CopyHudBridgeUrlCommand { get; }
         public ICommand InstallHudToCommunityCommand { get; }
         public ICommand ProbeHudBridgeCommand { get; }
-        public ICommand OpenSayIntentionsFolderCommand { get; }
-        public ICommand ProbeSayIntentionsCommand { get; }
         public ICommand CheckUpdateCommand { get; }
         public ICommand DownloadUpdateCommand { get; }
         public ICommand OpenUpdateLogsCommand { get; }
@@ -102,6 +98,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string AcarsVersion => "v" + UpdateService.CurrentVersion;
         public string FsuipcVersion => ResolveFsuipcVersion();
         public string HudBridgeStatus => AcarsContext.HudBridge != null ? AcarsContext.HudBridge.GetHealthText() : "HUD bridge no disponible";
+        public string HudIndependenceStatus => "HUD Patagonia Wings independiente: usa solo el bridge local ACARS/MSFS, sin integraciones externas.";
         public string SimulatorConnectionStatus
         {
             get
@@ -163,15 +160,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return "Community: " + string.Join(" | ", paths);
             }
         }
-        public string SayIntentionsStatus
-        {
-            get
-            {
-                if (AcarsContext.SayIntentionsFlightJson == null) return "SayIntentions: no disponible";
-                return AcarsContext.SayIntentionsFlightJson.GetStatusText();
-            }
-        }
-
         public bool AlwaysVisible
         {
             get => _alwaysVisible;
@@ -223,7 +211,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 if (SetField(ref _enableInSimHud, value))
                 {
-                SavePreferences();
+                    SavePreferences();
                     OnPropertyChanged(nameof(HudBridgeStatus));
                     OnPropertyChanged(nameof(HudCommunityStatus));
                 }
@@ -284,23 +272,32 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private async Task RetryLastPirepAsync()
         {
-            var before = AcarsContext.Api != null ? AcarsContext.Api.GetPendingCloseoutCount() : 0;
+            var api = AcarsContext.Api;
+            var before = api != null ? api.GetPendingCloseoutCount() : 0;
+
+            if (api == null)
+            {
+                StatusMessage = "No hay servicio API ACARS disponible para reenviar a Patagonia Wings Web/Supabase.";
+                return;
+            }
+
             StatusMessage = before > 0
-                ? string.Format("Reenviando {0} PIREP pendiente(s)...", before)
-                : "No hay PIREPs pendientes; igualmente se fuerza una verificación.";
+                ? string.Format("Sincronizando {0} PIREP pendiente(s) con Patagonia Wings Web/Supabase...", before)
+                : "No hay PIREPs pendientes locales; se fuerza verificacion con Web/Supabase.";
 
             try
             {
-                AcarsContext.TriggerPendingCloseoutRetry("support_manual_retry", 0);
-                await Task.Delay(400).ConfigureAwait(false);
-                var after = AcarsContext.Api != null ? AcarsContext.Api.GetPendingCloseoutCount() : 0;
+                await api.TryProcessPendingCloseoutsAsync("support_manual_retry").ConfigureAwait(false);
+
+                var after = api.GetPendingCloseoutCount();
+                var diag = api.GetLastFinalizeDiagnostic();
                 StatusMessage = after == 0
-                    ? "Reintento lanzado. No quedan pendientes locales."
-                    : string.Format("Reintento lanzado. Pendientes restantes: {0}.", after);
+                    ? "Sincronizacion completada: no quedan PIREPs pendientes locales. " + diag
+                    : string.Format("Web/Supabase procesado, pero quedan {0} PIREP pendiente(s). {1}", after, diag);
             }
             catch (Exception ex)
             {
-                StatusMessage = "No pude lanzar el reintento: " + ex.Message;
+                StatusMessage = "No pude sincronizar con Patagonia Wings Web/Supabase: " + ex.Message;
             }
         }
 
@@ -416,13 +413,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                     StatusMessage = "HUD health: " + healthOk +
                                     " | HUD state: " + stateOk +
-                                    " | " + HudCommunityStatus +
-                                    " | " + SayIntentionsStatus;
+                                    " | " + HudCommunityStatus;
                 }
 
                 OnPropertyChanged(nameof(HudBridgeStatus));
                 OnPropertyChanged(nameof(HudCommunityStatus));
-                OnPropertyChanged(nameof(SayIntentionsStatus));
             }
             catch (TaskCanceledException)
             {
@@ -434,48 +429,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 StatusMessage = "No pude probar HUD bridge: " + ex.Message;
             }
         }
-
-        private void ProbeSayIntentions()
-        {
-            try
-            {
-                var service = AcarsContext.SayIntentionsFlightJson;
-                if (service == null)
-                {
-                    StatusMessage = "SayIntentions no disponible.";
-                    return;
-                }
-
-                var folder = service.GetFlightJsonFolderPath();
-                var file = Path.Combine(folder, "flight.json");
-                var exists = File.Exists(file);
-                StatusMessage = exists
-                    ? "SayIntentions detectado: " + service.GetStatusText()
-                    : "SayIntentions no detectado: falta flight.json en " + folder;
-                OnPropertyChanged(nameof(SayIntentionsStatus));
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = "No pude probar SayIntentions: " + ex.Message;
-            }
-        }
-
-        private void OpenSayIntentionsFolder()
-        {
-            try
-            {
-                var path = AcarsContext.SayIntentionsFlightJson != null
-                    ? AcarsContext.SayIntentionsFlightJson.GetFlightJsonFolderPath()
-                    : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SayIntentionsAI");
-                OpenFolder(path);
-                StatusMessage = "Carpeta SayIntentions abierta: " + path;
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = "No pude abrir carpeta SayIntentions: " + ex.Message;
-            }
-        }
-
         private async Task CheckUpdateAsync()
         {
             try
@@ -554,8 +507,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     $"pendingCloseouts={AcarsContext.Api.GetPendingCloseoutCount()}\n" +
                     $"lastFinalize={AcarsContext.Api.GetLastFinalizeDiagnostic()}\n" +
                     $"simulatorStatus={SimulatorConnectionStatus}\n" +
-                    $"hudStatus={HudBridgeStatus}\n" +
-                    $"sayIntentions={SayIntentionsStatus}";
+                    $"hudStatus={HudBridgeStatus}";
                 System.Windows.Clipboard.SetText(payload);
                 StatusMessage = "Diagnostico de update copiado.";
             }

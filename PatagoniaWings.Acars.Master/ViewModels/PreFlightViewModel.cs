@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -201,8 +201,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         }
 
         public bool IsDispatchReady { get { return PreparedDispatch != null && PreparedDispatch.IsDispatchReady; } }
-        public bool StartGateAllowsStart { get { return _startGateResult != null && _startGateResult.CanStart; } }
-        public string StartGateSummary { get { return _startGateResult == null ? "Gate previo pendiente." : _startGateResult.Summary; } }
+        public bool StartGateAllowsStart { get { return _startGateResult != null && (_startGateResult.CanStart || CanStartWithColdAndDarkOverride()); } }
+        public string StartGateSummary
+        {
+            get
+            {
+                if (_startGateResult == null) return "Gate previo pendiente.";
+                if (!_startGateResult.CanStart && CanStartWithColdAndDarkOverride())
+                    return "Gate previo OK: C208 Black Square validado con regla operacional Patagonia Wings.";
+                return _startGateResult.Summary;
+            }
+        }
         public bool CanStartFlight { get { return PreparedDispatch != null && PreparedDispatch.IsDispatchReady && !IsLoadingDispatch && !FlightStarted && StartGateAllowsStart; } }
 
         public string DispatchStatusLabel
@@ -508,8 +517,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
         public bool StartGateParkingBrakeOk { get { return IsGateRulePassing("START_PARKING_BRAKE_ON"); } }
-        public bool StartGateColdAndDarkOk { get { return IsGateRulePassing("START_COLD_AND_DARK"); } }
-        public bool StartGateAircraftTypeOk { get { return IsGateRulePassing("START_AIRCRAFT_MATCH"); } }
+        public bool StartGateColdAndDarkOk { get { return IsStartGateColdAndDarkOk(); } }
+        public bool StartGateAircraftTypeOk { get { return IsStartGateAircraftMatchOk(); } }
         public bool StartGateAirportOk { get { return IsGateRulePassing("START_AIRPORT_MATCH"); } }
         public string StartGateParkingBrakeState => GetGateRuleVisualState("START_PARKING_BRAKE_ON");
         public string StartGateColdAndDarkState => GetGateRuleVisualState("START_COLD_AND_DARK");
@@ -1085,6 +1094,267 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
+        private bool IsStartGateColdAndDarkOk()
+        {
+            if (IsGateRulePassing("START_COLD_AND_DARK"))
+            {
+                return true;
+            }
+
+            var sample = AcarsContext.Runtime.LastTelemetry;
+            if (sample == null || !AcarsContext.Runtime.IsTelemetryFresh())
+            {
+                return false;
+            }
+
+            return IsOperationalColdAndDarkForC208(sample);
+        }
+
+        private bool CanStartWithColdAndDarkOverride()
+        {
+            if (_startGateResult == null || _startGateResult.CanStart)
+            {
+                return _startGateResult != null && _startGateResult.CanStart;
+            }
+
+            if (!IsOperationalColdAndDarkForC208(AcarsContext.Runtime.LastTelemetry))
+            {
+                return false;
+            }
+
+            return IsGateRulePassing("START_PARKING_BRAKE_ON")
+                && IsStartGateAircraftMatchOk()
+                && IsGateRulePassing("START_AIRPORT_MATCH");
+        }
+
+        private static bool IsOperationalColdAndDarkForC208(SimData? sample)
+        {
+            if (sample == null) return false;
+            if (!IsC208BlackSquareOrCaravanSample(sample)) return false;
+
+            // Black Square C208 / Caravan puede entregar Engine N1 con valores no aeronáuticos
+            // (ej.: 28672) aunque la turbina esté detenida. Por eso, para el gate previo
+            // usamos primero combustión/running; N1 solo se usa si viene en rango razonable.
+            var enginesStopped = !sample.EngineOneRunning
+                && !sample.EngineTwoRunning
+                && !sample.EngineThreeRunning
+                && !sample.EngineFourRunning;
+
+            if (IsReasonablePercent(sample.Engine1N1)) enginesStopped = enginesStopped && sample.Engine1N1 < 5;
+            if (IsReasonablePercent(sample.Engine2N1)) enginesStopped = enginesStopped && sample.Engine2N1 < 5;
+            if (IsReasonablePercent(sample.Engine3N1)) enginesStopped = enginesStopped && sample.Engine3N1 < 5;
+            if (IsReasonablePercent(sample.Engine4N1)) enginesStopped = enginesStopped && sample.Engine4N1 < 5;
+
+            var lightsOff = !sample.NavLightsOn
+                && !sample.BeaconLightsOn
+                && !sample.StrobeLightsOn
+                && !sample.LandingLightsOn
+                && !sample.TaxiLightsOn;
+
+            Debug.WriteLine("[PreFlight] C208 Black Square C&D override => "
+                + "enginesStopped=" + enginesStopped
+                + " lightsOff=" + lightsOff
+                + " title=" + (sample.AircraftTitle ?? string.Empty)
+                + " profile=" + (sample.ProfileCode ?? sample.DetectedProfileCode ?? string.Empty)
+                + " batt=" + sample.BatteryMasterOn
+                + " avionics=" + sample.AvionicsMasterOn
+                + " busV=" + sample.ElectricalMainBusVoltage.ToString("F1")
+                + " n1=" + sample.Engine1N1.ToString("F1") + "/" + sample.Engine2N1.ToString("F1"));
+
+            // En Black Square C208 no se usan BatteryMaster/Avionics/MainBus para C&D por HOT BATTERY BUS.
+            return enginesStopped && lightsOff;
+        }
+
+        private static bool IsC208BlackSquareOrCaravanSample(SimData sample)
+        {
+            var text = (Safe(sample.ProfileCode) + " "
+                + Safe(sample.DetectedProfileCode) + " "
+                + Safe(sample.AircraftTypeCode) + " "
+                + Safe(sample.AircraftVariantCode) + " "
+                + Safe(sample.AircraftTitle) + " "
+                + Safe(sample.MatchedTitle) + " "
+                + Safe(sample.MatchedPattern)).ToUpperInvariant();
+
+            var isC208 = text.Contains("C208")
+                || text.Contains("C208B")
+                || text.Contains("208")
+                || text.Contains("CARAVAN")
+                || text.Contains("GRAND CARAVAN");
+
+            var isBlackSquare = text.Contains("BLACK SQUARE")
+                || text.Contains("BLACKSQUARE")
+                || text.Contains("GRAND CARAVAN EX ANALOG")
+                || text.Contains("CARAVAN PROFESSIONAL");
+
+            return isC208 && isBlackSquare;
+        }
+
+        private static bool IsReasonablePercent(double value)
+        {
+            return value >= 0 && value <= 120;
+        }
+        private bool IsStartGateAircraftMatchOk()
+        {
+            if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady)
+            {
+                return false;
+            }
+
+            var sample = AcarsContext.Runtime.LastTelemetry;
+            if (sample == null || !AcarsContext.Runtime.IsTelemetryFresh())
+            {
+                return false;
+            }
+
+            // Validación explícita ACARS: el LED AVION no debe depender solo del rule engine.
+            // Debe confirmar que el avión real cargado en el simulador coincide con el tipo despachado en Web.
+            var expectedTokens = BuildExpectedAircraftTokens(PreparedDispatch);
+            if (expectedTokens.Count == 0)
+            {
+                return false;
+            }
+
+            var actualTokens = BuildActualAircraftTokens(sample);
+            if (actualTokens.Count == 0)
+            {
+                return false;
+            }
+
+            foreach (var expected in expectedTokens)
+            {
+                foreach (var actual in actualTokens)
+                {
+                    if (AircraftTokenMatches(expected, actual))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            Debug.WriteLine("[PreFlight] Aircraft gate mismatch expected="
+                + string.Join("|", expectedTokens.ToArray())
+                + " actual="
+                + string.Join("|", actualTokens.ToArray()));
+
+            return false;
+        }
+
+        private static HashSet<string> BuildExpectedAircraftTokens(PreparedDispatch dispatch)
+        {
+            var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AddAircraftToken(tokens, dispatch.AircraftIcao);
+            AddAircraftToken(tokens, dispatch.AircraftVariantCode);
+            AddAircraftToken(tokens, dispatch.AircraftDisplayName);
+
+            var display = Safe(dispatch.AircraftDisplayName).ToUpperInvariant();
+            var icao = Safe(dispatch.AircraftIcao).ToUpperInvariant();
+            var variant = Safe(dispatch.AircraftVariantCode).ToUpperInvariant();
+
+            if (icao.Contains("C208") || variant.Contains("C208") || display.Contains("CARAVAN") || display.Contains("208"))
+            {
+                tokens.Add("C208");
+                tokens.Add("C208B");
+                tokens.Add("CARAVAN");
+                tokens.Add("GRANDCARAVAN");
+                tokens.Add("GRANDCARAVANEX");
+            }
+
+            if (icao.Contains("BE58") || variant.Contains("BE58") || display.Contains("BARON") || display.Contains("58"))
+            {
+                tokens.Add("BE58");
+                tokens.Add("BARON58");
+                tokens.Add("BARON");
+            }
+
+            return tokens;
+        }
+
+        private static HashSet<string> BuildActualAircraftTokens(SimData sample)
+        {
+            var tokens = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AddAircraftToken(tokens, sample.AircraftTypeCode);
+            AddAircraftToken(tokens, sample.AircraftVariantCode);
+            AddAircraftToken(tokens, sample.ProfileCode);
+            AddAircraftToken(tokens, sample.DetectedProfileCode);
+            AddAircraftToken(tokens, sample.AircraftTitle);
+            AddAircraftToken(tokens, sample.MatchedTitle);
+            AddAircraftToken(tokens, sample.MatchedPattern);
+
+            var title = Safe(sample.AircraftTitle + " " + sample.MatchedTitle + " " + sample.ProfileCode + " " + sample.DetectedProfileCode).ToUpperInvariant();
+
+            if (title.Contains("C208") || title.Contains("208") || title.Contains("CARAVAN"))
+            {
+                tokens.Add("C208");
+                tokens.Add("C208B");
+                tokens.Add("CARAVAN");
+                tokens.Add("GRANDCARAVAN");
+                tokens.Add("GRANDCARAVANEX");
+            }
+
+            if (title.Contains("BE58") || title.Contains("BARON") || title.Contains("58TC"))
+            {
+                tokens.Add("BE58");
+                tokens.Add("BARON58");
+                tokens.Add("BARON");
+            }
+
+            return tokens;
+        }
+
+        private static void AddAircraftToken(HashSet<string> tokens, string? value)
+        {
+            var token = NormalizeAircraftToken(value);
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                tokens.Add(token);
+            }
+        }
+
+        private static string NormalizeAircraftToken(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return string.Empty;
+
+            var raw = value.Trim().ToUpperInvariant();
+            var chars = raw.Where(char.IsLetterOrDigit).ToArray();
+            var compact = new string(chars);
+
+            if (compact.Contains("C208B") || compact.Contains("C208")) return compact.Contains("C208B") ? "C208B" : "C208";
+            if (compact.Contains("GRANDCARAVANEX")) return "GRANDCARAVANEX";
+            if (compact.Contains("GRANDCARAVAN")) return "GRANDCARAVAN";
+            if (compact.Contains("CARAVAN")) return "CARAVAN";
+            if (compact.Contains("BE58")) return "BE58";
+            if (compact.Contains("BARON58")) return "BARON58";
+            if (compact.Contains("BARON")) return "BARON";
+
+            return compact;
+        }
+
+        private static bool AircraftTokenMatches(string expected, string actual)
+        {
+            expected = NormalizeAircraftToken(expected);
+            actual = NormalizeAircraftToken(actual);
+            if (string.IsNullOrWhiteSpace(expected) || string.IsNullOrWhiteSpace(actual)) return false;
+            if (string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase)) return true;
+
+            if (IsC208Token(expected) && IsC208Token(actual)) return true;
+            if (IsBe58Token(expected) && IsBe58Token(actual)) return true;
+
+            return false;
+        }
+
+        private static bool IsC208Token(string token)
+        {
+            token = NormalizeAircraftToken(token);
+            return token == "C208" || token == "C208B" || token == "CARAVAN" || token == "GRANDCARAVAN" || token == "GRANDCARAVANEX";
+        }
+
+        private static bool IsBe58Token(string token)
+        {
+            token = NormalizeAircraftToken(token);
+            return token == "BE58" || token == "BARON" || token == "BARON58";
+        }
+
+
         private bool IsGateRulePassing(string ruleId)
         {
             if (PreparedDispatch == null || !PreparedDispatch.IsDispatchReady || _startGateResult == null || _startGateResult.Evaluation == null)
@@ -1129,6 +1399,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             if (AcarsContext.Runtime.LastTelemetry == null || !AcarsContext.Runtime.IsTelemetryFresh())
             {
                 return "PENDING";
+            }
+
+            if (string.Equals(ruleId, "START_COLD_AND_DARK", StringComparison.OrdinalIgnoreCase) && IsStartGateColdAndDarkOk())
+            {
+                return "PASS";
+            }
+
+            if (string.Equals(ruleId, "START_AIRCRAFT_MATCH", StringComparison.OrdinalIgnoreCase))
+            {
+                return IsStartGateAircraftMatchOk() ? "PASS" : "FAIL";
             }
 
             var audit = GetGateRuleAudit(ruleId);

@@ -102,8 +102,17 @@ namespace PatagoniaWings.Acars.SimConnect
         public double AutopilotDisengaged;
         public double TransponderAvailable;
 
-        // Radios (campo 54 — al final del struct)
-        public double Com2FrequencyMhz; // COM ACTIVE FREQUENCY:2
+        // Radios (campos 54-57 — agregados al final para no alterar orden legacy previo)
+        public double Com1FrequencyMhz;        // COM ACTIVE FREQUENCY:1
+        public double Com1StandbyFrequencyMhz; // COM STANDBY FREQUENCY:1
+        public double Com2FrequencyMhz;        // COM ACTIVE FREQUENCY:2
+        public double Com2StandbyFrequencyMhz; // COM STANDBY FREQUENCY:2
+
+        // Carga estructural instantanea (campo 58 — agregado al final para no alterar orden legacy)
+        public double GForce; // G FORCE
+
+        // Energia electrica real por bus (campo 59 — agregado al final para no alterar orden legacy)
+        public double ElectricalMainBusVoltage; // ELECTRICAL MAIN BUS VOLTAGE
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]

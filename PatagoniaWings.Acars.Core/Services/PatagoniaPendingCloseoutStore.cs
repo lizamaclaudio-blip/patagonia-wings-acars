@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,6 +15,7 @@ namespace PatagoniaWings.Acars.Core.Services
     {
         private readonly JavaScriptSerializer _serializer;
         private readonly string _folderPath;
+        private readonly string _processedFolderPath;
 
         public PatagoniaPendingCloseoutStore(string folderPath = "")
         {
@@ -33,9 +34,16 @@ namespace PatagoniaWings.Acars.Core.Services
                 : folderPath;
 
             Directory.CreateDirectory(_folderPath);
+
+            _processedFolderPath = Path.Combine(
+                Path.GetDirectoryName(_folderPath) ?? _folderPath,
+                "processed-pireps");
+            Directory.CreateDirectory(_processedFolderPath);
         }
 
         public string FolderPath => _folderPath;
+
+        public string ProcessedFolderPath => _processedFolderPath;
 
         public void Save(PatagoniaPendingCloseoutEnvelope envelope)
         {
@@ -113,6 +121,31 @@ namespace PatagoniaWings.Acars.Core.Services
 
             return LoadAll().Any(item =>
                 string.Equals(item.ReservationId, reservationId.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
+
+        public void ArchiveProcessed(PatagoniaPendingCloseoutEnvelope envelope, string reason = "processed")
+        {
+            if (envelope == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(envelope.Id))
+            {
+                envelope.Id = Guid.NewGuid().ToString("N");
+            }
+
+            envelope.LastAttemptUtc = DateTime.UtcNow;
+            envelope.LastError = string.IsNullOrWhiteSpace(reason) ? "processed" : reason.Trim();
+
+            Directory.CreateDirectory(_processedFolderPath);
+
+            var stamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+            var fileName = stamp + "-" + envelope.Id.Trim() + ".json";
+            var archivePath = Path.Combine(_processedFolderPath, fileName);
+            File.WriteAllText(archivePath, _serializer.Serialize(envelope));
+
+            Delete(envelope.Id);
         }
 
         public void Delete(string id)

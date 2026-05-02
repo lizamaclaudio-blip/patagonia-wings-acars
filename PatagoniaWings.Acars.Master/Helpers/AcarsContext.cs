@@ -18,7 +18,6 @@ namespace PatagoniaWings.Acars.Master.Helpers
         public static AcarsSoundPlayer Sound { get; private set; } = null!;
         public static AcarsRuntimeState Runtime { get; private set; } = null!;
         public static HudBridgeService HudBridge { get; private set; } = null!;
-        public static SayIntentionsFlightJsonService SayIntentionsFlightJson { get; private set; } = null!;
         private static bool _startupRetryScheduled;
 
         public static void Initialize()
@@ -49,8 +48,6 @@ namespace PatagoniaWings.Acars.Master.Helpers
             Sound = new AcarsSoundPlayer();
             HudBridge = new HudBridgeService();
             HudBridge.Initialize();
-            SayIntentionsFlightJson = new SayIntentionsFlightJsonService();
-            SayIntentionsFlightJson.Initialize();
 
             if (Auth.TryRestoreSession() && Auth.CurrentPilot != null)
             {
@@ -106,7 +103,6 @@ namespace PatagoniaWings.Acars.Master.Helpers
 
         public static void Shutdown()
         {
-            SayIntentionsFlightJson?.Shutdown();
             HudBridge?.Shutdown();
             Sound?.Dispose();
         }

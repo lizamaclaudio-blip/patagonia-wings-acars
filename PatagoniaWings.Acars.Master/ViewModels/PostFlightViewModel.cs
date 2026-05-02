@@ -332,6 +332,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
                 // Solo marcar como enviado si el servidor confirmo persistencia real.
                 var serverConfirmed = IsCloseoutServerConfirmed(Report.ResultStatus);
+                var reviewRequired = IsCloseoutReviewRequired(Report.ResultStatus);
                 var isQueued = IsCloseoutPendingRetry(Report.ResultStatus);
 
                 var hasSummaryUrl = Uri.TryCreate(Report?.ResultUrl, UriKind.Absolute, out var resultUri)
@@ -341,6 +342,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 {
                     Submitted = true;
                     SubmitMessage = "PIREP enviado y consolidado correctamente.";
+                }
+                else if (reviewRequired && reservationClosed && hasSummaryUrl)
+                {
+                    Submitted = true;
+                    SubmitMessage = "PIREP recibido. Cierre no evaluable: requiere revision en servidor.";
                 }
                 else if (serverConfirmed && reservationClosed && !hasSummaryUrl)
                 {
@@ -437,6 +443,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 || normalized == "finalized";
         }
 
+        private static bool IsCloseoutReviewRequired(string? status)
+        {
+            var normalized = (status ?? string.Empty).Trim().ToLowerInvariant();
+            return normalized == "pending_server_closeout"
+                || normalized == "incomplete_closeout"
+                || normalized == "no_evaluable"
+                || normalized == "manual_review";
+        }
+
         private void ApplyCloseoutInputs()
         {
             if (Report == null)
@@ -466,7 +481,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private static bool IsCloseoutAlreadyResolved(string? status)
         {
-            return IsCloseoutServerConfirmed(status);
+            return IsCloseoutServerConfirmed(status) || IsCloseoutReviewRequired(status);
         }
 
         private static bool IsCloseoutPendingRetry(string? status)

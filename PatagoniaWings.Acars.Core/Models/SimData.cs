@@ -55,6 +55,8 @@ namespace PatagoniaWings.Acars.Core.Models
         // Aterrizaje
         public double LandingVS { get; set; }
         public double LandingG { get; set; }
+        /// <summary>G instantanea leida desde el simulador (SimConnect G FORCE). Normal en vuelo estable ≈ 1.0.</summary>
+        public double GForce { get; set; }
         public bool OnGround { get; set; }
 
         // Luces / Sistemas
@@ -106,13 +108,18 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool EngineFourRunning { get; set; }
         public bool BatteryMasterOn { get; set; }
         public bool AvionicsMasterOn { get; set; }
+        /// <summary>Voltaje real del bus electrico principal. En algunos addons Black Square el switch de bateria nativo puede quedar en 1 aunque el avion este sin energia; este valor permite inferir Cold & Dark con mas confianza.</summary>
+        public double ElectricalMainBusVoltage { get; set; }
         public bool DoorOpen { get; set; }
         public bool InertialSeparatorOn { get; set; }
         public double EmptyWeightLbs { get; set; }
         public double EmptyWeightKg { get; set; }
 
         // Radios
+        public double Com1FrequencyMhz { get; set; }
+        public double Com1StandbyFrequencyMhz { get; set; }
         public double Com2FrequencyMhz { get; set; }
+        public double Com2StandbyFrequencyMhz { get; set; }
 
         // Perfil de aeronave normalizado (código estable Patagonia Wings)
         // Ejemplos: C208_MSFS, C208_BLACKSQUARE, B738_PMDG, A320_FENIX, A20N_FBW

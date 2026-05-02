@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -17,6 +17,7 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Assets\patagonia-logo.ico</ApplicationIcon>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -29,7 +30,6 @@
     <MapFileExtensions>true</MapFileExtensions>
     <ApplicationRevision>0</ApplicationRevision>
     <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
-    <IsWebBootstrapper>false</IsWebBootstrapper>
     <UseApplicationTrust>false</UseApplicationTrust>
     <BootstrapperEnabled>true</BootstrapperEnabled>
   </PropertyGroup>
@@ -58,7 +58,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>bin\x64\Release\</OutputPath>
@@ -68,7 +68,7 @@
     <PlatformTarget>x64</PlatformTarget>
     <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
@@ -226,7 +226,6 @@
     <Compile Include="Helpers\WeatherPresetInstallService.cs" />
     <Compile Include="Services\RankInsigniaResolver.cs" />
     <Compile Include="Services\HudBridgeService.cs" />
-    <Compile Include="Services\SayIntentionsFlightJsonService.cs" />
     <Compile Include="Preview\AcarsPreviewData.cs" />
     <Compile Include="ViewModels\AcarsShellViewModel.cs" />
     <Compile Include="ViewModels\CommunityViewModel.cs" />
@@ -382,7 +381,6 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-
   <ItemGroup>
     <Content Include="AircraftProfiles\*.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -391,6 +389,27 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\packages\patagoniawings-acars-hud\**\*.*">
+      <Link>packages\patagoniawings-acars-hud\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\WinFX\v3.0\Microsoft.WinFX.targets" Condition="Exists('$(MSBuildExtensionsPath32)\Microsoft\WinFX\v3.0\Microsoft.WinFX.targets')" />
+  <Target Name="CopyPatagoniaRuntimeDependencyDlls" AfterTargets="Build">
+    <ItemGroup>
+      <PatagoniaRuntimeDependencyDlls Include="$(MSBuildProjectDirectory)\..\libs\Microsoft.FlightSimulator.SimConnect.dll" />
+      <PatagoniaRuntimeDependencyDlls Include="$(MSBuildProjectDirectory)\..\libs\SimConnect.dll" />
+      <PatagoniaRuntimeDependencyDlls Include="$(MSBuildProjectDirectory)\..\libs\fsuipcClient.dll" />
+      <PatagoniaRuntimeDependencyDlls Include="$(MSBuildProjectDirectory)\..\libs\AutoUpdater.NET.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PatagoniaRuntimeDependencyDlls)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="Exists('%(PatagoniaRuntimeDependencyDlls.Identity)')" />
+  </Target>
+  <ItemGroup>
+    <Reference Include="Microsoft.FlightSimulator.SimConnect">
+      <HintPath>..\libs\Microsoft.FlightSimulator.SimConnect.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+  </ItemGroup>
 </Project>

@@ -17,6 +17,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _simStatusText = "Sin simulador";
         private string _utcTime = string.Empty;
         private FlightPhase _flightPhase = FlightPhase.Disconnected;
+        private bool _manualPostFlightNavigationArmed;
 
         public string CurrentPageName { get => _currentPageName; set => SetField(ref _currentPageName, value); }
         public bool FlightLocked
@@ -61,9 +62,18 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public PostFlightViewModel PostFlightVM { get; } = new PostFlightViewModel();
         public ProfileViewModel ProfileVM { get; } = new ProfileViewModel();
         public CommunityViewModel CommunityVM { get; } = new CommunityViewModel();
+        public SupportViewModel SupportVM { get; } = new SupportViewModel();
 
         public MainViewModel()
         {
+            SupportVM.RequestBack = () => NavigateTo("Dashboard");
+            SupportVM.RequestLogout = DoLogout;
+            SupportVM.AlwaysVisibleChanged += value =>
+            {
+                var window = Application.Current == null ? null : Application.Current.MainWindow;
+                if (window != null) window.Topmost = value;
+            };
+
             InFlightVM = new InFlightViewModel(this);
             PostFlightVM.CloseoutCompleted += () =>
             {
@@ -194,9 +204,28 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 DashboardVM.LoadAsync();
             }
         }
+        public void ArmManualCloseoutNavigation()
+        {
+            _manualPostFlightNavigationArmed = true;
+        }
 
         public void ShowPostFlightReport(FlightReport report)
         {
+            if (report == null)
+            {
+                return;
+            }
+
+            // Patagonia Wings 7.0.14 cierre consolidado:
+            // ninguna ruta legacy puede abrir PostFlight por aterrizaje/touchdown.
+            // El único origen válido es FinishFlight() en InFlightViewModel, que arma
+            // el cierre manual una sola vez y marca report.ManualCloseoutConfirmed.
+            if (!_manualPostFlightNavigationArmed || !report.ManualCloseoutConfirmed)
+            {
+                return;
+            }
+
+            _manualPostFlightNavigationArmed = false;
             PostFlightVM.LoadReport(report);
             NavigateTo("PostFlight");
         }

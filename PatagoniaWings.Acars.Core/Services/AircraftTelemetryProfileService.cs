@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using PatagoniaWings.Acars.Core.Models;
@@ -338,12 +338,25 @@ namespace PatagoniaWings.Acars.Core.Services
                 return false;
             }
 
-            if (profile.SupportsBatteryRead && sample.BatteryMasterOn)
+            var profileCode = (profile?.Code ?? string.Empty).ToUpperInvariant();
+            var title = (sample.AircraftTitle ?? string.Empty).ToUpperInvariant();
+            var variant = (sample.AircraftVariantCode ?? sample.DetectedProfileCode ?? sample.ProfileCode ?? string.Empty).ToUpperInvariant();
+            var c208Text = (profileCode + " " + title + " " + variant).ToUpperInvariant();
+            var isBlackSquareC208 = profileCode.Contains("C208_BLACKSQUARE")
+                || (profileCode.Contains("C208") && title.Contains("BLACK SQUARE"))
+                || (title.Contains("BLACK SQUARE") && (title.Contains("208") || title.Contains("CARAVAN")))
+                || (c208Text.Contains("CARAVAN PROFESSIONAL") && c208Text.Contains("BLACK SQUARE"))
+                || c208Text.Contains("GRAND CARAVAN EX ANALOG");
+
+            // C208 Black Square: no usar ELECTRICAL MASTER BATTERY ni AVIONICS MASTER como bloqueo de Cold & Dark.
+            // Este addon mantiene buses/variables nativas vivas por HOT BATTERY BUS aunque el cockpit este apagado.
+            // Para gate operacional PWG se exige: motores detenidos + luces exteriores OFF + sin APU/bleed si aplica.
+            if (!isBlackSquareC208 && profile.SupportsBatteryRead && sample.BatteryMasterOn)
             {
                 return false;
             }
 
-            if (profile.SupportsAvionicsRead && sample.AvionicsMasterOn)
+            if (!isBlackSquareC208 && profile.SupportsAvionicsRead && sample.AvionicsMasterOn)
             {
                 return false;
             }
@@ -366,10 +379,37 @@ namespace PatagoniaWings.Acars.Core.Services
                     && !sample.EngineFourRunning;
             }
 
+            var text = ((profile?.Code ?? string.Empty) + " "
+                + (sample.AircraftTitle ?? string.Empty) + " "
+                + (sample.AircraftVariantCode ?? string.Empty) + " "
+                + (sample.ProfileCode ?? string.Empty) + " "
+                + (sample.DetectedProfileCode ?? string.Empty)).ToUpperInvariant();
+            var isBlackSquareCaravan = (text.Contains("BLACK SQUARE") || text.Contains("BLACKSQUARE") || text.Contains("CARAVAN PROFESSIONAL"))
+                && (text.Contains("C208") || text.Contains("208") || text.Contains("CARAVAN"));
+
+            if (isBlackSquareCaravan)
+            {
+                var stopped = !sample.EngineOneRunning
+                    && !sample.EngineTwoRunning
+                    && !sample.EngineThreeRunning
+                    && !sample.EngineFourRunning;
+
+                if (IsReasonablePercent(sample.Engine1N1)) stopped = stopped && sample.Engine1N1 < 5;
+                if (IsReasonablePercent(sample.Engine2N1)) stopped = stopped && sample.Engine2N1 < 5;
+                if (IsReasonablePercent(sample.Engine3N1)) stopped = stopped && sample.Engine3N1 < 5;
+                if (IsReasonablePercent(sample.Engine4N1)) stopped = stopped && sample.Engine4N1 < 5;
+                return stopped;
+            }
+
             return sample.Engine1N1 < 5
                    && sample.Engine2N1 < 5
                    && sample.Engine3N1 < 5
                    && sample.Engine4N1 < 5;
+        }
+
+        private static bool IsReasonablePercent(double value)
+        {
+            return value >= 0 && value <= 120;
         }
 
         private static CapabilityDescriptor Create(
