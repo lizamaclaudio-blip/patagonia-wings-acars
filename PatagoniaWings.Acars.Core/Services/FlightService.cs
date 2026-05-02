@@ -32,6 +32,13 @@ namespace PatagoniaWings.Acars.Core.Services
         private DateTime _crashMarkedAtUtc = default(DateTime);
         private string _crashReason = string.Empty;
 
+        // Patagonia Wings 7.0.14 hotfix:
+        // Un vuelo activo no debe resetearse ni quedar en Disconnected por cortes
+        // breves de SimConnect/FSUIPC o por triggers legacy. El reset solo se
+        // permite cuando el piloto confirma cierre/cancelacion, o en auto-closeout
+        // critico autorizado.
+        private bool _closeoutResetAuthorized;
+
         public FlightPhase CurrentPhase { get; private set; } = FlightPhase.Disconnected;
         public bool IsFlightActive => _currentFlight != null;
         public Flight? CurrentFlight => _currentFlight;
@@ -70,6 +77,7 @@ namespace PatagoniaWings.Acars.Core.Services
             _lastSimData = new SimData();
             _hasPosition = false;
             _crashMarked = false;
+            _closeoutResetAuthorized = false;
             _finalDamageEvents.Clear();
 
             var profile = DamageRuleMapper.CreateProfile(
@@ -119,13 +127,24 @@ namespace PatagoniaWings.Acars.Core.Services
 
                 if (_hasPosition)
                 {
-                    _totalDistanceNm += CalculateDistanceNm(
+                    var legDistanceNm = CalculateDistanceNm(
                         _lastLatitude, _lastLongitude, data.Latitude, data.Longitude);
+
+                    // PIREP Perfect A1:
+                    // No sumar saltos imposibles de GPS/SimConnect. Un salto corrupto
+                    // descuadra distancia, combustible por NM y puede contaminar el score web.
+                    if (IsValidPosition(_lastLatitude, _lastLongitude) &&
+                        IsValidPosition(data.Latitude, data.Longitude) &&
+                        legDistanceNm >= 0d && legDistanceNm <= 20d)
+                    {
+                        _totalDistanceNm += legDistanceNm;
+                    }
                 }
 
                 if (data.AltitudeFeet > _maxAltitude) _maxAltitude = data.AltitudeFeet;
                 if (data.IndicatedAirspeed > _maxSpeed) _maxSpeed = data.IndicatedAirspeed;
 
+                SanitizeSampleForPirep(data);
                 _telemetryLog.Add(data);
             }
 
@@ -221,8 +240,12 @@ namespace PatagoniaWings.Acars.Core.Services
                     break;
 
                 case FlightPhase.Taxi:
-                    if (data.OnGround && data.ParkingBrake && data.GroundSpeed < 1 && maxEngineN1 < 25)
-                        newPhase = FlightPhase.Arrived;
+                    // Bloque 10: no pasar a ARRIVED automáticamente.
+                    // El cierre oficial de Patagonia Wings es manual: el piloto debe
+                    // llegar a gate, detenerse, apagar motores, dejar Cold & Dark y
+                    // presionar FINALIZAR EN GATE desde ACARS.
+                    // Mantener fase Taxi evita que cualquier navegación/PIREP legacy
+                    // se dispare solo por aterrizaje + parking brake.
                     break;
             }
 
@@ -284,8 +307,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 TouchdownTimeUtc = _touchdownTime,
                 Distance = Math.Round(_totalDistanceNm, 1),
                 FuelUsed = Math.Round(fuelUsed, 0),
-                LandingVS = _lastLandingVS,
-                LandingG = Math.Round(_lastLandingG, 2),
+                LandingVS = IsOperationalVerticalSpeed(_lastLandingVS) ? _lastLandingVS : 0d,
+                LandingG = Math.Round(IsOperationalGForce(_lastLandingG) ? _lastLandingG : 0d, 2),
                 PatagoniaScore = eval.PatagoniaScore,
                 PatagoniaGrade = eval.PatagoniaGrade,
 
@@ -415,9 +438,9 @@ namespace PatagoniaWings.Acars.Core.Services
                 return;
             }
 
-            var landingG = Math.Abs(data.LandingG);
-            var landingVs = Math.Abs(data.LandingVS);
-            var verticalSpeed = Math.Abs(data.VerticalSpeed);
+            var landingG = Math.Abs(IsOperationalGForce(data.LandingG) ? data.LandingG : 0d);
+            var landingVs = Math.Abs(IsOperationalVerticalSpeed(data.LandingVS) ? data.LandingVS : 0d);
+            var verticalSpeed = Math.Abs(IsOperationalVerticalSpeed(data.VerticalSpeed) ? data.VerticalSpeed : 0d);
             var bank = Math.Abs(data.Bank);
             var pitch = Math.Abs(data.Pitch);
             var highEnergyGroundContact = data.OnGround && (data.GroundSpeed > 115 || data.IndicatedAirspeed > 120);
@@ -447,8 +470,59 @@ namespace PatagoniaWings.Acars.Core.Services
                 data.Pitch,
                 data.Bank);
 
+            // PIREP Perfect A1:
+            // No cerrar ni enviar PIREP automáticamente por crash_like_impact. Se marca
+            // como evidencia/daño, pero el cierre oficial queda siempre bajo control del
+            // piloto en FINALIZAR EN GATE o CANCELAR VUELO. Esto evita falsos cierres por
+            // lecturas corruptas de GForce/LandingG.
             MarkCrash(reason);
-            CrashDetected?.Invoke(reason);
+            Debug.WriteLine("[FlightService] Crash-like impact recorded as evidence only: " + reason);
+        }
+
+        private static void SanitizeSampleForPirep(SimData data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            if (!IsOperationalGForce(data.GForce))
+            {
+                data.GForce = 0d;
+            }
+
+            if (!IsOperationalGForce(data.LandingG))
+            {
+                data.LandingG = 0d;
+            }
+
+            if (!IsOperationalVerticalSpeed(data.LandingVS))
+            {
+                data.LandingVS = 0d;
+            }
+
+            if (!IsOperationalVerticalSpeed(data.VerticalSpeed))
+            {
+                data.VerticalSpeed = 0d;
+            }
+        }
+
+        private static bool IsOperationalGForce(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value) && value >= -3.0d && value <= 8.0d;
+        }
+
+        private static bool IsOperationalVerticalSpeed(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value) && Math.Abs(value) <= 8000d;
+        }
+
+        private static bool IsValidPosition(double latitude, double longitude)
+        {
+            return !double.IsNaN(latitude) && !double.IsNaN(longitude) &&
+                   !double.IsInfinity(latitude) && !double.IsInfinity(longitude) &&
+                   Math.Abs(latitude) <= 90d && Math.Abs(longitude) <= 180d &&
+                   !(Math.Abs(latitude) < 0.000001d && Math.Abs(longitude) < 0.000001d);
         }
 
         public IReadOnlyList<AircraftDamageEvent> GetDamageEventsSnapshot()
@@ -467,8 +541,20 @@ namespace PatagoniaWings.Acars.Core.Services
         public string CrashReason => _crashReason;
         public DateTime CrashMarkedAtUtc => _crashMarkedAtUtc;
 
-        public void Reset()
+        public void ArmCloseoutReset()
         {
+            _closeoutResetAuthorized = true;
+        }
+
+        public void Reset(bool force = false)
+        {
+            if (!force && _currentFlight != null && !_closeoutResetAuthorized)
+            {
+                Debug.WriteLine("[FlightService] Reset ignored: active flight is not authorized for closeout reset.");
+                return;
+            }
+
+            _closeoutResetAuthorized = false;
             _currentFlight = null;
             _lastSimData = new SimData();
             _telemetryLog.Clear();

@@ -1,0 +1,133 @@
+{
+  "schema": "PIREP_PERFECT_A2_MEASUREMENT_PLAN",
+  "authority": "WEB_SUPABASE_ONLY",
+  "clientPolicy": "ACARS sends raw evidence only; no provisional or official score",
+  "unsupportedPolicy": "unsupported/unconfirmed metrics must be N/D and penaltyEligible=false",
+  "phases": [
+    {
+      "phase": "PREFLIGHT",
+      "measure": [
+        "aircraft_profile",
+        "registration",
+        "origin",
+        "destination",
+        "parking_brake",
+        "fuel_start",
+        "qnh_start",
+        "battery",
+        "avionics",
+        "doors_if_supported"
+      ]
+    },
+    {
+      "phase": "TAXI_OUT",
+      "measure": [
+        "parking_brake_off",
+        "taxi_speed",
+        "taxi_lights_if_supported",
+        "beacon",
+        "nav_lights",
+        "flaps",
+        "xpdr_if_supported",
+        "pic_radio"
+      ]
+    },
+    {
+      "phase": "TAKEOFF",
+      "measure": [
+        "takeoff_roll",
+        "airborne",
+        "ias",
+        "flaps",
+        "lights",
+        "wind",
+        "qnh"
+      ]
+    },
+    {
+      "phase": "CLIMB",
+      "measure": [
+        "max_vs",
+        "max_ias",
+        "max_bank",
+        "overspeed",
+        "stall",
+        "fuel",
+        "pic_radio"
+      ]
+    },
+    {
+      "phase": "CRUISE",
+      "measure": [
+        "altitude",
+        "ias",
+        "gs",
+        "route_distance",
+        "fuel",
+        "pause",
+        "sim_rate_if_available"
+      ]
+    },
+    {
+      "phase": "DESCENT_APPROACH",
+      "measure": [
+        "vs",
+        "ias_below_10000",
+        "landing_lights_if_supported",
+        "gear_if_supported",
+        "flaps",
+        "qnh_dest",
+        "stabilized_approach_input"
+      ]
+    },
+    {
+      "phase": "LANDING",
+      "measure": [
+        "touchdown_on_ground_transition",
+        "landing_vs",
+        "landing_g",
+        "ias",
+        "pitch",
+        "bank",
+        "wind",
+        "lat_lon"
+      ]
+    },
+    {
+      "phase": "TAXI_IN_GATE",
+      "measure": [
+        "runway_exit_inferred",
+        "taxi_speed",
+        "lights",
+        "xpdr_standby_if_supported",
+        "parking_brake_on",
+        "engines_off",
+        "doors_if_supported",
+        "fuel_end"
+      ]
+    }
+  ],
+  "knownOverrides": [
+    {
+      "aircraft": "C208_BLACKSQUARE",
+      "metric": "XPDR",
+      "supported": false,
+      "penaltyEligible": false,
+      "reason": "Black Square Caravan XPDR readback unconfirmed; do not penalize"
+    },
+    {
+      "aircraft": "C208_BLACKSQUARE",
+      "metric": "Doors",
+      "supported": false,
+      "penaltyEligible": false,
+      "reason": "Door readback unconfirmed; do not penalize"
+    },
+    {
+      "aircraft": "C208_BLACKSQUARE",
+      "metric": "Gear",
+      "supported": false,
+      "penaltyEligible": false,
+      "reason": "Fixed/unsupported gear readback; do not penalize"
+    }
+  ]
+}

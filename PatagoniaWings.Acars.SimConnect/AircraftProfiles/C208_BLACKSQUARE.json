@@ -16,7 +16,10 @@
                     "Grand Caravan EX Analog",
                     "C208B Grand Caravan EX - Black Square",
                     "C208 Black Square",
-                    "C208 BlackSquare"
+                    "C208 BlackSquare",
+                    "Black Square Grand Caravan",
+                    "Black Square C208",
+                    "Cessna 208B Grand Caravan Black Square"
                 ],
     "LightMode":  "individual",
     "RequiresLvars":  false,
@@ -39,7 +42,7 @@
     "SupportsLightsRead":  true,
     "SupportsGearRead":  true,
     "SupportsDoorRead":  false,
-    "SupportsBatteryRead":  true,
+    "SupportsBatteryRead":  false,
     "SupportsAvionicsRead":  false,
     "SupportsEngineRunRead":  true,
     "HasInertialSeparator":  true,

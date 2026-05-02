@@ -152,73 +152,19 @@ namespace PatagoniaWings.Acars.Master.Views
 
             try
             {
+                // PIREP Perfect A1:
+                // Un crash/evento severo se registra como evidencia, pero ACARS NO debe
+                // generar ni enviar el PIREP automáticamente. El piloto debe conservar el
+                // control del cierre: FINALIZAR EN GATE o CANCELAR VUELO. Esto evita que
+                // una lectura corrupta cierre el vuelo antes de taxi-in/gate.
                 AcarsContext.FlightService.MarkCrash(reason);
-
-                var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
-                if (!AcarsContext.FlightService.IsFlightActive)
-                {
-                    if (!string.IsNullOrWhiteSpace(reservationId))
-                    {
-                        await AcarsContext.Api!.CloseReservationAsync(reservationId!, "crashed").ConfigureAwait(false);
-                    }
-                    return;
-                }
-
-                var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
-                if (pilot == null || AcarsContext.Api == null)
-                {
-                    if (AcarsContext.Api != null && !string.IsNullOrWhiteSpace(reservationId))
-                    {
-                        await AcarsContext.Api.CloseReservationAsync(reservationId!, "crashed").ConfigureAwait(false);
-                    }
-                    return;
-                }
-
-                var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
-                report.ResultStatus = "crashed";
-                report.Status = PatagoniaWings.Acars.Core.Models.FlightStatus.Rejected;
-                report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
-                    ? "AUTO_CLOSEOUT_CRASH: " + reason
-                    : report.Remarks + " | AUTO_CLOSEOUT_CRASH: " + reason;
-
-                var closeoutResult = await AcarsContext.Api.SubmitFlightReportAsync(
-                    report,
-                    AcarsContext.FlightService.CurrentFlight,
-                    AcarsContext.FlightService.GetTelemetrySnapshot(),
-                    AcarsContext.FlightService.LastSimData,
-                    AcarsContext.FlightService.GetDamageEventsSnapshot()).ConfigureAwait(false);
-
-                await Dispatcher.InvokeAsync(() =>
-                {
-                    if (closeoutResult.Success && closeoutResult.Data != null)
-                    {
-                        _shellVm.MainVM.ShowPostFlightReport(closeoutResult.Data);
-                        AcarsContext.FlightService.Reset();
-                    }
-                    else
-                    {
-                        _shellVm.MainVM.ShowPostFlightReport(report);
-                    }
-
-                    AcarsContext.Sound.PlayDing();
-                });
+                System.Diagnostics.Debug.WriteLine("[ACARS CRASH EVENT] Registrado como evidencia, sin autocierre: " + reason);
+                AcarsContext.Sound.PlayDing();
+                await Task.CompletedTask.ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                try
-                {
-                    var reservationId = AcarsContext.Api?.ActiveDispatch?.ReservationId;
-                    if (!string.IsNullOrWhiteSpace(reservationId))
-                    {
-                        await AcarsContext.Api!.CloseReservationAsync(reservationId!, "crashed").ConfigureAwait(false);
-                    }
-                }
-                catch
-                {
-                    // No bloquear la app si falla el fallback de cierre.
-                }
-
-                System.Diagnostics.Debug.WriteLine("[ACARS CRASH CLOSEOUT] " + ex);
+                System.Diagnostics.Debug.WriteLine("[ACARS CRASH EVENT] " + ex);
             }
             finally
             {
