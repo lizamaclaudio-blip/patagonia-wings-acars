@@ -136,6 +136,9 @@
                 <TextBlock Text="{Binding PhasePrevalidationDisplay, FallbackValue='C6 prevalidación: pendiente'}"
                            Foreground="#C084FC" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
                            TextWrapping="Wrap" MaxHeight="42"/>
+                <TextBlock Text="{Binding SurfaceContextDisplay, FallbackValue='C9 superficie: pendiente'}"
+                           Foreground="#38BDF8" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
+                           TextWrapping="Wrap" MaxHeight="30"/>
 
             </StackPanel>
         </Border>

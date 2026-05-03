@@ -9,8 +9,8 @@ using System.Windows;
 [assembly: AssemblyCopyright("Copyright 2026 Patagonia Wings")]
 [assembly: ComVisible(false)]
 [assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]
-[assembly: AssemblyVersion("7.0.16.0")]
-[assembly: AssemblyFileVersion("7.0.16.0")]
+[assembly: AssemblyVersion("7.0.17.0")]
+[assembly: AssemblyFileVersion("7.0.17.0")]
 
 
 

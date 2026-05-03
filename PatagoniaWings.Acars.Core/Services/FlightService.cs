@@ -233,11 +233,18 @@ namespace PatagoniaWings.Acars.Core.Services
 
             var onGround = ResolveOperationalOnGround(data, agl, gs, ias, vs);
             var previousOnGround = previous == null ? onGround : ResolveOperationalOnGround(previous, ResolveAgl(previous), SafeNumber(previous.GroundSpeed), SafeNumber(previous.IndicatedAirspeed), SafeNumber(previous.VerticalSpeed));
-            var previousAirborne = previous != null && (previous.IsAirborneSample || (!previousOnGround && ResolveAgl(previous) > 20d));
+            var previousAirborne = previous != null && (previous.IsAirborneSample || (!previousOnGround && (ResolveAgl(previous) > 20d || SafeNumber(previous.GroundSpeed) > 55d || SafeNumber(previous.IndicatedAirspeed) > 55d)));
+
+            var highEnergyAirborneCandidate = !onGround
+                && (gs >= 60d || ias >= 55d)
+                && !data.ParkingBrake
+                && (Math.Abs(vs) > 80d || agl > 20d || msl > 300d);
 
             var takeoffRollCandidate = onGround && !_takeoffDetected && gs >= 35d && (ias >= 30d || gs >= 45d);
             var taxiOutCandidate = onGround && !_hasBeenAirborne && gs > 3d && gs <= 35d && !data.ParkingBrake;
-            var airborneCandidate = !onGround && (agl > 20d || (_lastAirborneMsl > 0d && msl > _lastAirborneMsl + 50d)) && (gs > 40d || ias > 40d);
+            var airborneCandidate = !onGround
+                && (agl > 20d || (_lastAirborneMsl > 0d && msl > _lastAirborneMsl + 50d) || highEnergyAirborneCandidate)
+                && (gs > 40d || ias > 40d);
             var touchdownCandidate = _hasBeenAirborne && !_touchdownDetected && (previousAirborne || !previousOnGround) && onGround;
 
             UpdateAltitudeTrend(msl, onGround);
@@ -542,6 +549,16 @@ namespace PatagoniaWings.Acars.Core.Services
             data.PhaseDecisionConfidence = string.IsNullOrWhiteSpace(confidence) ? "confirmed" : confidence;
             data.PhaseMatrixVersion = "C3";
 
+            var surface = BuildSurfaceContext(data, phase, onGround);
+            data.SurfaceContextCode = surface.Code;
+            data.SurfaceContextName = surface.Name;
+            data.SurfaceContextReason = surface.Reason;
+            data.RunwayCandidate = surface.RunwayCandidate;
+            data.TaxiwayCandidate = surface.TaxiwayCandidate;
+            data.GateAreaCandidate = surface.GateAreaCandidate;
+            data.SurfaceContextReliable = surface.Reliable;
+            data.SurfaceContextVersion = "C9";
+
             var checklist = BuildPhaseChecklist(data, phase, onGround);
             data.PhaseChecklistStatus = checklist.Status;
             data.PhaseChecklistSummary = checklist.Summary;
@@ -568,6 +585,92 @@ namespace PatagoniaWings.Acars.Core.Services
             data.PhasePrevalidationSummary = prevalidation.Summary;
             data.PhasePrevalidationFlags = prevalidation.Flags;
             data.PhasePrevalidationVersion = "C6";
+        }
+
+        private sealed class SurfaceContextEvidence
+        {
+            public string Code { get; set; } = "UNKNOWN";
+            public string Name { get; set; } = string.Empty;
+            public string Reason { get; set; } = string.Empty;
+            public bool RunwayCandidate { get; set; }
+            public bool TaxiwayCandidate { get; set; }
+            public bool GateAreaCandidate { get; set; }
+            public bool Reliable { get; set; }
+        }
+
+        private static SurfaceContextEvidence BuildSurfaceContext(SimData data, FlightPhase phase, bool onGround)
+        {
+            var gs = SafeNumber(data.GroundSpeed);
+            var ias = SafeNumber(data.IndicatedAirspeed);
+            var agl = ResolveAgl(data);
+            var touchdown = data.TouchdownDetected || data.HasBeenAirborne;
+
+            var evidence = new SurfaceContextEvidence
+            {
+                Code = "UNKNOWN",
+                Name = "Superficie no determinada",
+                Reason = "Sin geometria aeroportuaria; inferencia por fase/velocidad/telemetria",
+                Reliable = false
+            };
+
+            if (!onGround)
+            {
+                evidence.Code = "AIRBORNE";
+                evidence.Name = "En vuelo";
+                evidence.Reason = "onGround=false o energia de vuelo; no aplica pista/rodaje";
+                evidence.Reliable = true;
+                return evidence;
+            }
+
+            if (gs <= 3d && data.ParkingBrake)
+            {
+                evidence.Code = phase == FlightPhase.Arrived || touchdown ? "GATE_AREA" : "PARKING_GATE";
+                evidence.Name = phase == FlightPhase.Arrived || touchdown ? "Gate/plataforma llegada" : "Parking/gate salida";
+                evidence.Reason = "onGround, GS<=3 y parking brake ON";
+                evidence.GateAreaCandidate = true;
+                evidence.Reliable = true;
+                return evidence;
+            }
+
+            if (phase == FlightPhase.Takeoff || (!touchdown && (gs >= 35d || ias >= 35d)))
+            {
+                evidence.Code = "RUNWAY_TAKEOFF_ROLL";
+                evidence.Name = "Pista / carrera de despegue probable";
+                evidence.Reason = "fase TO o energia de carrera en tierra; sin mapa de pista exacto";
+                evidence.RunwayCandidate = true;
+                evidence.Reliable = gs >= 35d || ias >= 35d;
+                return evidence;
+            }
+
+            if (phase == FlightPhase.Landing || (touchdown && gs > 35d))
+            {
+                evidence.Code = "RUNWAY_LANDING_ROLL";
+                evidence.Name = "Pista / carrera de aterrizaje probable";
+                evidence.Reason = "touchdown/landing roll con velocidad alta; sin mapa de pista exacto";
+                evidence.RunwayCandidate = true;
+                evidence.Reliable = true;
+                return evidence;
+            }
+
+            if (phase == FlightPhase.PushbackTaxi || phase == FlightPhase.Taxi || (gs > 3d && gs <= 35d))
+            {
+                evidence.Code = touchdown ? "TAXIWAY_IN" : "TAXIWAY_OUT";
+                evidence.Name = touchdown ? "Rodaje llegada probable" : "Rodaje salida probable";
+                evidence.Reason = "onGround y GS 3-35 kt; taxiway inferido sin geometria aeroportuaria";
+                evidence.TaxiwayCandidate = true;
+                evidence.Reliable = true;
+                return evidence;
+            }
+
+            if (agl <= 15d)
+            {
+                evidence.Code = "GROUND_STOPPED";
+                evidence.Name = "Suelo detenido/intermedio";
+                evidence.Reason = "onGround/AGL bajo sin condicion suficiente para runway/taxi/gate";
+                evidence.Reliable = true;
+            }
+
+            return evidence;
         }
 
         private sealed class PhasePrevalidationEvidence
@@ -775,6 +878,21 @@ namespace PatagoniaWings.Acars.Core.Services
             if (data == null)
             {
                 return true;
+            }
+
+            var msl = ResolveMsl(data);
+            var ground = SafeNumber(data.GroundElevationFeet);
+            var mslAboveGround = ground > 0d ? Math.Max(0d, msl - ground) : 0d;
+            var highEnergyAirborne = (gs >= 60d || ias >= 55d)
+                && !data.ParkingBrake
+                && (agl > 20d || mslAboveGround > 80d || Math.Abs(vs) > 120d || gs >= 80d || ias >= 70d);
+
+            // Some MSFS/addon combinations keep SIM ON GROUND=true or AGL=0 while the
+            // aircraft is clearly flying. Do not let that stale WOW/AGL sample freeze
+            // the phase in PRE or block the later gate closeout.
+            if (highEnergyAirborne)
+            {
+                return false;
             }
 
             if (data.OnGround)

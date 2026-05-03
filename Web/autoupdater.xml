@@ -1,11 +1,5 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>7.0.16.0</version>
+  <version>7.0.17.0</version>
   <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe</url>
-  <changelog>v7.0.16: ACARS 7.0.16 - PIREP Perfect C0-C8: altitud MSL/AGL/FL, máquina de fases, auditoría operacional, prevalidación, matriz de aceptación y cierre oficial Web/Supabase.</changelog>
-  <mandatory>true</mandatory>
-</item>
-
-
-
-
+  <changelog>v7.0.17: ACARS 7.0.17 - ACARS 7.0.17 - Hotfix C9: cierre en gate robusto, auditoria de superficie, deteccion de pista/rodaje/gate probable y correccion de BuildSurfaceContextDisplay.

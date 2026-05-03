@@ -94,6 +94,18 @@ namespace PatagoniaWings.Acars.Core.Models
         public string PhasePrevalidationFlags { get; set; } = string.Empty;
         public string PhasePrevalidationVersion { get; set; } = "C6";
 
+        // C9 Surface/Gate audit: inference only. ACARS does not know exact airport
+        // taxiway/runway geometry here; these fields describe operational surface
+        // candidates based on phase, speed, touchdown and gate evidence.
+        public string SurfaceContextCode { get; set; } = "UNKNOWN";
+        public string SurfaceContextName { get; set; } = string.Empty;
+        public string SurfaceContextReason { get; set; } = string.Empty;
+        public bool RunwayCandidate { get; set; }
+        public bool TaxiwayCandidate { get; set; }
+        public bool GateAreaCandidate { get; set; }
+        public bool SurfaceContextReliable { get; set; }
+        public string SurfaceContextVersion { get; set; } = "C9";
+
         // Velocidad
         public double IndicatedAirspeed { get; set; }
         public double GroundSpeed { get; set; }

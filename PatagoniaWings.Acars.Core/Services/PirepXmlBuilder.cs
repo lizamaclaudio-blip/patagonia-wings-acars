@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -725,6 +725,14 @@ namespace PatagoniaWings.Acars.Core.Services
                 Element("PhasePrevalidationSummary", sample == null ? string.Empty : sample.PhasePrevalidationSummary),
                 Element("PhasePrevalidationFlags", sample == null ? string.Empty : sample.PhasePrevalidationFlags),
                 Element("PhasePrevalidationVersion", sample == null ? string.Empty : sample.PhasePrevalidationVersion),
+                Element("SurfaceContextCode", sample == null ? string.Empty : sample.SurfaceContextCode),
+                Element("SurfaceContextName", sample == null ? string.Empty : sample.SurfaceContextName),
+                Element("SurfaceContextReason", sample == null ? string.Empty : sample.SurfaceContextReason),
+                Element("RunwayCandidate", Bool(sample != null && sample.RunwayCandidate)),
+                Element("TaxiwayCandidate", Bool(sample != null && sample.TaxiwayCandidate)),
+                Element("GateAreaCandidate", Bool(sample != null && sample.GateAreaCandidate)),
+                Element("SurfaceContextReliable", Bool(sample != null && sample.SurfaceContextReliable)),
+                Element("SurfaceContextVersion", sample == null ? string.Empty : sample.SurfaceContextVersion),
                 Element("Lat", FormatDecimal(sample == null ? 0d : sample.Latitude, 5)),
                 Element("Lon", FormatDecimal(sample == null ? 0d : sample.Longitude, 5)),
                 Element("AGL", ToIntString(sample == null ? 0d : ResolveAgl(sample))),
@@ -1428,6 +1436,14 @@ namespace PatagoniaWings.Acars.Core.Services
                 Element("PhasePrevalidationSummary", sample == null ? string.Empty : sample.PhasePrevalidationSummary),
                 Element("PhasePrevalidationFlags", sample == null ? string.Empty : sample.PhasePrevalidationFlags),
                 Element("PhasePrevalidationVersion", sample == null ? string.Empty : sample.PhasePrevalidationVersion),
+                Element("SurfaceContextCode", sample == null ? string.Empty : sample.SurfaceContextCode),
+                Element("SurfaceContextName", sample == null ? string.Empty : sample.SurfaceContextName),
+                Element("SurfaceContextReason", sample == null ? string.Empty : sample.SurfaceContextReason),
+                Element("RunwayCandidate", Bool(sample != null && sample.RunwayCandidate)),
+                Element("TaxiwayCandidate", Bool(sample != null && sample.TaxiwayCandidate)),
+                Element("GateAreaCandidate", Bool(sample != null && sample.GateAreaCandidate)),
+                Element("SurfaceContextReliable", Bool(sample != null && sample.SurfaceContextReliable)),
+                Element("SurfaceContextVersion", sample == null ? string.Empty : sample.SurfaceContextVersion),
                 Element("Lat", FormatDecimal(sample == null ? 0d : sample.Latitude, 5)),
                 Element("Lon", FormatDecimal(sample == null ? 0d : sample.Longitude, 5)),
                 Element("Altitude", ToIntString(sample == null ? 0d : ResolveMsl(sample))),

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -25,6 +26,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _displayAltitudeText = string.Empty;
         private bool _isAltitudeReliable;
         private string _altitudeSource = string.Empty;
+        private string _surfaceContextDisplay = "Superficie: pendiente";
+        private string _surfaceContextCode = "UNKNOWN";
+        private bool _runwayCandidate;
+        private bool _taxiwayCandidate;
+        private bool _gateAreaCandidate;
         private double _ias;
         private double _gs;
         private double _vs;
@@ -819,6 +825,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
                 return $"C6 {status}: {summary}";
             }
+        }
+
+        public string SurfaceContextCode { get => _surfaceContextCode; set => SetField(ref _surfaceContextCode, value); }
+        public bool RunwayCandidate { get => _runwayCandidate; set => SetField(ref _runwayCandidate, value); }
+        public bool TaxiwayCandidate { get => _taxiwayCandidate; set => SetField(ref _taxiwayCandidate, value); }
+        public bool GateAreaCandidate { get => _gateAreaCandidate; set => SetField(ref _gateAreaCandidate, value); }
+        public string SurfaceContextDisplay
+        {
+            get => _surfaceContextDisplay;
+            set => SetField(ref _surfaceContextDisplay, string.IsNullOrWhiteSpace(value) ? "Superficie: N/D" : value);
         }
 
         public string RouteStatusLabel
@@ -1669,6 +1685,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(RoutePlaneLeft));
             OnPropertyChanged(nameof(RouteDistanceDisplay));
             OnPropertyChanged(nameof(RouteDistanceSourceDisplay));
+            OnPropertyChanged(nameof(SurfaceContextDisplay));
 
             UpdatePirepPreview();
             RefreshRouteSnapshot();
@@ -1726,6 +1743,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 PhasePrevalidationStatus = data.PhasePrevalidationStatus;
                 PhasePrevalidationSummary = data.PhasePrevalidationSummary;
                 PhasePrevalidationFlags = data.PhasePrevalidationFlags;
+                SurfaceContextCode = data.SurfaceContextCode;
+                RunwayCandidate = data.RunwayCandidate;
+                TaxiwayCandidate = data.TaxiwayCandidate;
+                GateAreaCandidate = data.GateAreaCandidate;
+                SurfaceContextDisplay = BuildSurfaceContextDisplay(data);
                 IAS = data.IndicatedAirspeed;
                 GS = data.GroundSpeed;
                 VS = data.VerticalSpeed;
@@ -2172,9 +2194,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return false;
             }
 
-            if (Phase != FlightPhase.Taxi && Phase != FlightPhase.Arrived)
+            var hasFlightOrLandingEvidence = HasFlightOrLandingEvidence(liveSample);
+            var phaseLooksStale = Phase != FlightPhase.Taxi && Phase != FlightPhase.Arrived;
+            if (phaseLooksStale && !hasFlightOrLandingEvidence)
             {
-                reason = $"Cierre bloqueado: fase actual {PhaseLabel}. Solo disponible en taxi-in/gate despues de aterrizar.";
+                reason = $"Cierre bloqueado: fase actual {PhaseLabel} y aun no hay evidencia de vuelo/aterrizaje suficiente.";
                 return false;
             }
 
@@ -2197,12 +2221,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return false;
             }
 
-            if (Phase == FlightPhase.Takeoff || Phase == FlightPhase.Climb || Phase == FlightPhase.Cruise ||
-                Phase == FlightPhase.Descent || Phase == FlightPhase.Approach || Phase == FlightPhase.Landing)
-            {
-                reason = $"Cierre bloqueado: fase {PhaseLabel}. Debe aterrizar, taxear a gate y apagar la aeronave.";
-                return false;
-            }
+            // C9: no bloquear el cierre solo por fase visual stale. La autorizacion
+            // final se decide por telemetria viva: suelo, GS, freno, motores, cold&dark
+            // y evidencia de que el vuelo ya ocurrio. Web/Supabase revisara el XML.
 
             if (GS > 3)
             {
@@ -2229,13 +2250,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return false;
             }
 
-            if (!IsAtDestinationOrGateArea())
+            if (!IsAtDestinationOrGateArea() && !CanUseTelemetryGateCloseoutOverride(liveSample))
             {
                 reason = $"Cierre bloqueado: aun no esta en destino/gate. Restan {ComputeDistanceToDestinationNm():F1} NM.";
                 return false;
             }
 
-            reason = "Listo para cierre manual en gate.";
+            reason = phaseLooksStale
+                ? "Listo para cierre manual en gate. Nota: fase visual stale, cierre autorizado por telemetria viva C9."
+                : "Listo para cierre manual en gate.";
             return true;
         }
 
@@ -2263,6 +2286,27 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             return profileLooksC208 || titleLooksC208 || genericCaravanTitle;
         }
+        private bool HasFlightOrLandingEvidence(SimData liveSample)
+        {
+            if (liveSample == null) return false;
+            if (_hasBeenAirborne || liveSample.HasBeenAirborne || liveSample.TouchdownDetected) return true;
+            if (AcarsContext.FlightService.TouchdownTimeUtc != default(DateTime)) return true;
+            if (AcarsContext.FlightService.TotalDistanceNm > 5.0) return true;
+            if (_startTime != default(DateTime) && (DateTime.UtcNow - _startTime).TotalMinutes >= 8.0) return true;
+            return false;
+        }
+
+        private bool CanUseTelemetryGateCloseoutOverride(SimData liveSample)
+        {
+            if (liveSample == null) return false;
+            var liveAgl = liveSample.AltitudeAglFeet >= 0 ? liveSample.AltitudeAglFeet : liveSample.AltitudeAGL;
+            return HasFlightOrLandingEvidence(liveSample)
+                && (liveSample.OnGround || liveAgl <= 5)
+                && liveAgl <= 15
+                && liveSample.GroundSpeed <= 3
+                && liveSample.ParkingBrake;
+        }
+
         private bool IsColdAndDarkForCloseout()
         {
             var profileCode = (_detectedProfileCode ?? string.Empty).ToUpperInvariant();
@@ -2505,6 +2549,38 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(PicButtonLabel));
             CommandManager.InvalidateRequerySuggested();
             UpdatePirepPreview();
+        }
+
+        private static string BuildSurfaceContextDisplay(SimData data)
+        {
+            if (data == null)
+            {
+                return "C9 superficie: N/D";
+            }
+
+            var code = string.IsNullOrWhiteSpace(data.SurfaceContextCode)
+                ? "UNKNOWN"
+                : data.SurfaceContextCode.Trim();
+
+            var name = string.IsNullOrWhiteSpace(data.SurfaceContextName)
+                ? "Superficie no determinada"
+                : data.SurfaceContextName.Trim();
+
+            var reason = string.IsNullOrWhiteSpace(data.SurfaceContextReason)
+                ? "sin evidencia suficiente"
+                : data.SurfaceContextReason.Trim();
+
+            var candidates = new List<string>();
+            if (data.RunwayCandidate) candidates.Add("pista probable");
+            if (data.TaxiwayCandidate) candidates.Add("rodaje probable");
+            if (data.GateAreaCandidate) candidates.Add("gate probable");
+            if (data.SurfaceContextReliable) candidates.Add("confiable");
+
+            var suffix = candidates.Count > 0
+                ? " · " + string.Join(" · ", candidates)
+                : string.Empty;
+
+            return $"C9 superficie: {code} · {name}{suffix} · {reason}";
         }
 
         private static string GetPhaseLabel(FlightPhase phase)
