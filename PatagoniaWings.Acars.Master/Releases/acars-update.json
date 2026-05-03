@@ -1,23 +1,23 @@
 ﻿{
-    "version":  "7.0.15",
-    "latestVersion":  "7.0.15",
-    "currentVersion":  "7.0.15",
-    "revision":  "2026.4.30.4",
-    "latestRevision":  "2026.4.30.4",
+    "version":  "7.0.16",
+    "latestVersion":  "7.0.16",
+    "currentVersion":  "7.0.16",
+    "revision":  "2026.5.3.2",
+    "latestRevision":  "2026.5.3.2",
     "channel":  "stable",
     "releaseDate":  "2026-04-29",
     "mandatory":  true,
     "required":  true,
     "minimumVersion":  "1.0.0",
     "minSupportedVersion":  "1.0.0",
-    "forceUpdateBelow":  "7.0.15",
+    "forceUpdateBelow":  "7.0.16",
     "downloadUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "url":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "installerUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "packageUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "directDownloadUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
-    "notes":  "ACARS 7.0.15 - PIREP Perfect: evidencia XML por fases, timeline operacional, capabilities por aeronave, no-autocierre por falso crash y cierre oficial Web/Supabase.",
-    "releaseNotes":  "ACARS 7.0.15 - PIREP Perfect: evidencia XML por fases, timeline operacional, capabilities por aeronave, no-autocierre por falso crash y cierre oficial Web/Supabase.",
+    "notes":  "ACARS 7.0.16 - PIREP Perfect C0-C8: altitud MSL/AGL/FL, máquina de fases, auditoría operacional, prevalidación, matriz de aceptación y cierre oficial Web/Supabase.",
+    "releaseNotes":  "ACARS 7.0.16 - PIREP Perfect C0-C8: altitud MSL/AGL/FL, máquina de fases, auditoría operacional, prevalidación, matriz de aceptación y cierre oficial Web/Supabase.",
     "files":  [
 
               ],
@@ -25,6 +25,3 @@
 
                 ]
 }
-
-
-
