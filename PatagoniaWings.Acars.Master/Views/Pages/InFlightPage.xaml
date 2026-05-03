@@ -1,4 +1,4 @@
-<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
+﻿<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:preview="clr-namespace:PatagoniaWings.Acars.Master.Preview"
@@ -121,6 +121,21 @@
                 </Grid>
                 <TextBlock Text="{Binding RouteDistanceSourceDisplay, FallbackValue='Fuente distancia: N/D'}"
                            Foreground="#6AAAD6" FontSize="10" FontWeight="SemiBold" Margin="0,4,0,0"/>
+                <TextBlock Text="{Binding PhaseChecklistDisplay, FallbackValue='Checklist fase: pendiente'}"
+                           Foreground="#8FD5FF" FontSize="9" FontWeight="SemiBold" Margin="0,2,0,0"
+                           TextWrapping="Wrap" MaxHeight="28"/>
+                <TextBlock Text="{Binding PhaseTransitionDisplay, FallbackValue='Transición fase: pendiente'}"
+                           Foreground="#8FB8D9" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
+                           TextWrapping="Wrap" MaxHeight="28"/>
+                <TextBlock Text="{Binding PhaseAuditDisplay, FallbackValue='Auditoría fase: pendiente'}"
+                           Foreground="#22C55E" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
+                           TextWrapping="Wrap" MaxHeight="34"/>
+                <TextBlock Text="{Binding PhaseReviewDisplay, FallbackValue='Revisión fase: pendiente'}"
+                           Foreground="#F59E0B" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
+                           TextWrapping="Wrap" MaxHeight="42"/>
+                <TextBlock Text="{Binding PhasePrevalidationDisplay, FallbackValue='C6 prevalidación: pendiente'}"
+                           Foreground="#C084FC" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
+                           TextWrapping="Wrap" MaxHeight="42"/>
 
             </StackPanel>
         </Border>
@@ -300,12 +315,12 @@
                 <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0">
                         <StackPanel HorizontalAlignment="Center">
-                            <TextBlock Text="AGL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding AltitudeAglDisplay, FallbackValue='â€”'}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="ALT/FL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding AltitudeDisplay, FallbackValue='â€”'}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="RUMBO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding HeadingDisplay}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AGL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding AltitudeAglDisplay}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0">
@@ -322,12 +337,8 @@
                             <TextBlock Text="{Binding VsDisplay}" Foreground="#1065D4" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="VIENTO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                <TextBlock Text="{Binding WindDir, StringFormat={}{0:000}}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold"/>
-                                <TextBlock Text="/" Foreground="#8AAAC8" FontSize="10" Margin="1,1,1,0"/>
-                                <TextBlock Text="{Binding WindSpeed, StringFormat={}{0:F0}}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold"/>
-                            </StackPanel>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="RUMBO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding HeadingDisplay}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0">
@@ -340,11 +351,11 @@
 
                 <!-- â”€â”€ TELEMETRÃA PREVIEW â”€â”€ -->
                 <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AGL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="0 ft" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="RUMBO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="{x:Static preview:AcarsPreviewData.LiveHeading}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="ALT/FL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="---" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AGL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="0 ft" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="GS" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="{x:Static preview:AcarsPreviewData.LiveGs}" Foreground="#1065D4" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="V/S" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="{x:Static preview:AcarsPreviewData.LiveVs}" Foreground="#1065D4" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
-                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="VIENTO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="{x:Static preview:AcarsPreviewData.LiveWind}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
+                    <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="RUMBO" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="{x:Static preview:AcarsPreviewData.LiveHeading}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="QNH" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="1013" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
                 </UniformGrid>
 

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -18,6 +18,13 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private readonly MainViewModel _main;
         private double _altitude;
         private double _altitudeAgl;
+        private double _groundElevation;
+        private double _pressureAltitude;
+        private string _flightLevel = string.Empty;
+        private string _displayAltitudeMode = "MSL";
+        private string _displayAltitudeText = string.Empty;
+        private bool _isAltitudeReliable;
+        private string _altitudeSource = string.Empty;
         private double _ias;
         private double _gs;
         private double _vs;
@@ -108,6 +115,18 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _routeOrigin = "----";
         private string _routeDestination = "----";
         private string _officialPhaseCode = "PRE";
+        private string _phaseChecklistStatus = "PENDING";
+        private string _phaseChecklistSummary = string.Empty;
+        private string _phaseChecklistMissing = string.Empty;
+        private string _phaseTransitionDisplay = string.Empty;
+        private string _phaseAuditStatus = "PENDING";
+        private string _phaseAuditSummary = string.Empty;
+        private string _phaseAuditFlags = string.Empty;
+        private string _phaseReviewQuestion = string.Empty;
+        private string _phaseMeasuredMetrics = string.Empty;
+        private string _phasePrevalidationStatus = "PENDING";
+        private string _phasePrevalidationSummary = string.Empty;
+        private string _phasePrevalidationFlags = string.Empty;
         private string _routeStatusLabel = "Esperando inicio oficial";
         private double _routeProgressPercent;
         private const double RouteCanvasWidth = 320;
@@ -145,8 +164,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _eng4Started;
         private const double EngineN1StartThreshold = 15.0;
 
-        public double Altitude    { get => _altitude;    set { if (SetField(ref _altitude,    value)) OnPropertyChanged(nameof(AltitudeDisplay)); } }
+        public double Altitude    { get => _altitude;    set { if (SetField(ref _altitude,    value)) { OnPropertyChanged(nameof(AltitudeDisplay)); OnPropertyChanged(nameof(AltitudeMslDisplay)); } } }
         public double AltitudeAGL { get => _altitudeAgl; set { if (SetField(ref _altitudeAgl, value)) { OnPropertyChanged(nameof(AglDisplay)); OnPropertyChanged(nameof(AltitudeAglDisplay)); RefreshManualCloseoutState(); } } }
+        public double GroundElevation { get => _groundElevation; set { if (SetField(ref _groundElevation, value)) OnPropertyChanged(nameof(GroundElevationDisplay)); } }
+        public double PressureAltitude { get => _pressureAltitude; set { if (SetField(ref _pressureAltitude, value)) OnPropertyChanged(nameof(PressureAltitudeDisplay)); } }
+        public string FlightLevel { get => _flightLevel; set { if (SetField(ref _flightLevel, value ?? string.Empty)) OnPropertyChanged(nameof(FlightLevelDisplay)); } }
+        public string DisplayAltitudeMode { get => _displayAltitudeMode; set { if (SetField(ref _displayAltitudeMode, value ?? "MSL")) OnPropertyChanged(nameof(AltitudeDisplay)); } }
+        public string DisplayAltitudeText { get => _displayAltitudeText; set { if (SetField(ref _displayAltitudeText, value ?? string.Empty)) OnPropertyChanged(nameof(AltitudeDisplay)); } }
+        public bool IsAltitudeReliable { get => _isAltitudeReliable; set { if (SetField(ref _isAltitudeReliable, value)) OnPropertyChanged(nameof(AltitudeReliabilityDisplay)); } }
+        public string AltitudeSource { get => _altitudeSource; set { if (SetField(ref _altitudeSource, value ?? string.Empty)) OnPropertyChanged(nameof(AltitudeReliabilityDisplay)); } }
         public double IAS { get => _ias; set { if (SetField(ref _ias, value)) { OnPropertyChanged(nameof(IasDisplay)); OnPropertyChanged(nameof(IASDisplay)); } } }
         public double GS { get => _gs; set { if (SetField(ref _gs, value)) { OnPropertyChanged(nameof(GsDisplay)); OnPropertyChanged(nameof(GSDisplay)); RefreshManualCloseoutState(); } } }
         public double VS { get => _vs; set { if (SetField(ref _vs, value)) { OnPropertyChanged(nameof(VsDisplay)); OnPropertyChanged(nameof(VSDisplay)); } } }
@@ -605,7 +631,196 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
             }
         }
-        public string OfficialPhaseDisplay => $"{OfficialPhaseCode} Â· {PhaseLabel}";
+        public string OfficialPhaseDisplay => $"{OfficialPhaseCode} · {PhaseLabel}";
+        public string PhaseChecklistStatus
+        {
+            get => _phaseChecklistStatus;
+            private set
+            {
+                if (SetField(ref _phaseChecklistStatus, value ?? "PENDING"))
+                {
+                    OnPropertyChanged(nameof(PhaseChecklistDisplay));
+                }
+            }
+        }
+        public string PhaseChecklistSummary
+        {
+            get => _phaseChecklistSummary;
+            private set
+            {
+                if (SetField(ref _phaseChecklistSummary, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(PhaseChecklistDisplay));
+                }
+            }
+        }
+        public string PhaseChecklistMissing
+        {
+            get => _phaseChecklistMissing;
+            private set
+            {
+                if (SetField(ref _phaseChecklistMissing, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(PhaseChecklistDisplay));
+                }
+            }
+        }
+        public string PhaseChecklistDisplay
+        {
+            get
+            {
+                var status = string.IsNullOrWhiteSpace(PhaseChecklistStatus) ? "PENDING" : PhaseChecklistStatus;
+                var summary = string.IsNullOrWhiteSpace(PhaseChecklistSummary) ? "Checklist de fase pendiente" : PhaseChecklistSummary;
+                if (!string.IsNullOrWhiteSpace(PhaseChecklistMissing))
+                {
+                    return $"{status}: {summary} · Falta: {PhaseChecklistMissing}";
+                }
+                return $"{status}: {summary}";
+            }
+        }
+        public string PhaseTransitionDisplay
+        {
+            get => _phaseTransitionDisplay;
+            private set => SetField(ref _phaseTransitionDisplay, value ?? string.Empty);
+        }
+
+        public string PhaseAuditStatus
+        {
+            get => _phaseAuditStatus;
+            private set
+            {
+                if (SetField(ref _phaseAuditStatus, value ?? "PENDING"))
+                {
+                    OnPropertyChanged(nameof(PhaseAuditDisplay));
+                }
+            }
+        }
+
+        public string PhaseAuditSummary
+        {
+            get => _phaseAuditSummary;
+            private set
+            {
+                if (SetField(ref _phaseAuditSummary, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(PhaseAuditDisplay));
+                }
+            }
+        }
+
+        public string PhaseAuditFlags
+        {
+            get => _phaseAuditFlags;
+            private set
+            {
+                if (SetField(ref _phaseAuditFlags, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(PhaseAuditDisplay));
+                }
+            }
+        }
+
+        public string PhaseAuditDisplay
+        {
+            get
+            {
+                var status = string.IsNullOrWhiteSpace(PhaseAuditStatus) ? "PENDING" : PhaseAuditStatus;
+                var summary = string.IsNullOrWhiteSpace(PhaseAuditSummary) ? "Auditoria de fase pendiente" : PhaseAuditSummary;
+                if (!string.IsNullOrWhiteSpace(PhaseAuditFlags))
+                {
+                    return $"{status}: {summary} · Flags: {PhaseAuditFlags}";
+                }
+                return $"{status}: {summary}";
+            }
+        }
+
+        public string PhaseReviewQuestion
+        {
+            get => _phaseReviewQuestion;
+            private set
+            {
+                if (SetField(ref _phaseReviewQuestion, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(PhaseReviewDisplay));
+                }
+            }
+        }
+
+        public string PhaseMeasuredMetrics
+        {
+            get => _phaseMeasuredMetrics;
+            private set
+            {
+                if (SetField(ref _phaseMeasuredMetrics, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(PhaseReviewDisplay));
+                }
+            }
+        }
+
+        public string PhaseReviewDisplay
+        {
+            get
+            {
+                var question = string.IsNullOrWhiteSpace(PhaseReviewQuestion) ? "Pregunta de revision de fase pendiente" : PhaseReviewQuestion;
+                if (!string.IsNullOrWhiteSpace(PhaseMeasuredMetrics))
+                {
+                    return $"REVISION: {question} · Mide: {PhaseMeasuredMetrics}";
+                }
+                return $"REVISION: {question}";
+            }
+        }
+
+        public string PhasePrevalidationStatus
+        {
+            get => _phasePrevalidationStatus;
+            private set
+            {
+                if (SetField(ref _phasePrevalidationStatus, value ?? "PENDING"))
+                {
+                    OnPropertyChanged(nameof(PhasePrevalidationDisplay));
+                }
+            }
+        }
+
+        public string PhasePrevalidationSummary
+        {
+            get => _phasePrevalidationSummary;
+            private set
+            {
+                if (SetField(ref _phasePrevalidationSummary, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(PhasePrevalidationDisplay));
+                }
+            }
+        }
+
+        public string PhasePrevalidationFlags
+        {
+            get => _phasePrevalidationFlags;
+            private set
+            {
+                if (SetField(ref _phasePrevalidationFlags, value ?? string.Empty))
+                {
+                    OnPropertyChanged(nameof(PhasePrevalidationDisplay));
+                }
+            }
+        }
+
+        public string PhasePrevalidationDisplay
+        {
+            get
+            {
+                var status = string.IsNullOrWhiteSpace(PhasePrevalidationStatus) ? "PENDING" : PhasePrevalidationStatus;
+                var summary = string.IsNullOrWhiteSpace(PhasePrevalidationSummary) ? "Prevalidacion C6 pendiente" : PhasePrevalidationSummary;
+                if (!string.IsNullOrWhiteSpace(PhasePrevalidationFlags))
+                {
+                    return $"C6 {status}: {summary} · Flags: {PhasePrevalidationFlags}";
+                }
+                return $"C6 {status}: {summary}";
+            }
+        }
+
         public string RouteStatusLabel
         {
             get => _routeStatusLabel;
@@ -1166,7 +1381,20 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public string IASDisplay => IasDisplay;
         public string GsDisplay => HasLiveTelemetry ? Math.Round(GS, 0).ToString("F0") : "---";
         public string GSDisplay => GsDisplay;
-        public string AltitudeDisplay => HasLiveTelemetry ? Math.Round(Altitude, 0).ToString("F0") : "---";
+        public string AltitudeDisplay
+        {
+            get
+            {
+                if (!HasLiveTelemetry) return "---";
+                if (!string.IsNullOrWhiteSpace(DisplayAltitudeText)) return DisplayAltitudeText;
+                return Math.Round(Altitude, 0).ToString("F0");
+            }
+        }
+        public string AltitudeMslDisplay => HasLiveTelemetry ? Math.Round(Altitude, 0).ToString("F0") : "---";
+        public string FlightLevelDisplay => HasLiveTelemetry && !string.IsNullOrWhiteSpace(FlightLevel) ? FlightLevel : "---";
+        public string GroundElevationDisplay => HasLiveTelemetry ? Math.Round(GroundElevation, 0).ToString("F0") : "---";
+        public string PressureAltitudeDisplay => HasLiveTelemetry ? Math.Round(PressureAltitude, 0).ToString("F0") : "---";
+        public string AltitudeReliabilityDisplay => HasLiveTelemetry ? (IsAltitudeReliable ? "ALT OK" : "ALT N/D") : "---";
         public string AglDisplay
         {
             get
@@ -1477,8 +1705,27 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(DetectedDisplayName));
                 }
                 AircraftTitle = data.AircraftTitle;
-                Altitude    = data.AltitudeFeet;
-                AltitudeAGL = data.AltitudeAGL;
+                Altitude    = data.AltitudeMslFeet > 0 ? data.AltitudeMslFeet : data.AltitudeFeet;
+                AltitudeAGL = data.AltitudeAglFeet >= 0 ? data.AltitudeAglFeet : data.AltitudeAGL;
+                GroundElevation = data.GroundElevationFeet;
+                PressureAltitude = data.PressureAltitudeFeet;
+                FlightLevel = data.FlightLevel;
+                DisplayAltitudeMode = data.DisplayAltitudeMode;
+                DisplayAltitudeText = data.DisplayAltitudeText;
+                IsAltitudeReliable = data.IsAltitudeReliable;
+                AltitudeSource = data.AltitudeSource;
+                PhaseChecklistStatus = data.PhaseChecklistStatus;
+                PhaseChecklistSummary = data.PhaseChecklistSummary;
+                PhaseChecklistMissing = data.PhaseChecklistMissing;
+                PhaseTransitionDisplay = BuildPhaseTransitionDisplay(data);
+                PhaseAuditStatus = data.PhaseAuditStatus;
+                PhaseAuditSummary = data.PhaseAuditSummary;
+                PhaseAuditFlags = data.PhaseAuditFlags;
+                PhaseReviewQuestion = data.PhaseReviewQuestion;
+                PhaseMeasuredMetrics = data.PhaseMeasuredMetrics;
+                PhasePrevalidationStatus = data.PhasePrevalidationStatus;
+                PhasePrevalidationSummary = data.PhasePrevalidationSummary;
+                PhasePrevalidationFlags = data.PhasePrevalidationFlags;
                 IAS = data.IndicatedAirspeed;
                 GS = data.GroundSpeed;
                 VS = data.VerticalSpeed;
@@ -1709,6 +1956,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 OnPropertyChanged(nameof(GsDisplay));
                 OnPropertyChanged(nameof(GSDisplay));
                 OnPropertyChanged(nameof(AltitudeDisplay));
+                OnPropertyChanged(nameof(AltitudeMslDisplay));
+                OnPropertyChanged(nameof(AltitudeAglDisplay));
+                OnPropertyChanged(nameof(FlightLevelDisplay));
                 OnPropertyChanged(nameof(VsDisplay));
                 OnPropertyChanged(nameof(VSDisplay));
                 OnPropertyChanged(nameof(HeadingDisplay));
@@ -1756,10 +2006,25 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             if (data == null)
                 return _lastValidActivePhase == FlightPhase.Disconnected ? FlightPhase.PreFlight : _lastValidActivePhase;
 
+            if (!string.IsNullOrWhiteSpace(data.OperationalPhaseCode))
+            {
+                var phaseFromSample = ResolvePhaseFromOperationalCode(data.OperationalPhaseCode);
+                if (phaseFromSample != FlightPhase.Disconnected)
+                    return phaseFromSample;
+            }
+
+            var agl = data.AltitudeAglFeet >= 0 ? data.AltitudeAglFeet : data.AltitudeAGL;
+            agl = Math.Max(0, agl);
+
             if (data.OnGround)
             {
-                if (_hasBeenAirborne || AcarsContext.FlightService.TouchdownTimeUtc != default(DateTime))
+                if (_hasBeenAirborne || data.HasBeenAirborne || data.TouchdownDetected || AcarsContext.FlightService.TouchdownTimeUtc != default(DateTime))
+                {
+                    if (data.GroundSpeed <= 3 && data.ParkingBrake)
+                        return FlightPhase.Arrived;
+
                     return data.GroundSpeed <= 40 ? FlightPhase.Taxi : FlightPhase.Landing;
+                }
 
                 if (!data.ParkingBrake && data.GroundSpeed > 2)
                     return FlightPhase.PushbackTaxi;
@@ -1769,19 +2034,52 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             _hasBeenAirborne = true;
 
-            if (data.AltitudeAGL < 800 && data.VerticalSpeed < -300)
+            if (agl < 3000 && data.VerticalSpeed < -200)
                 return FlightPhase.Approach;
-
-            if (data.AltitudeAGL < 4000 && data.VerticalSpeed < -100)
-                return FlightPhase.Approach;
-
-            if (data.VerticalSpeed > 700 || data.AltitudeAGL < 2500)
-                return FlightPhase.Climb;
 
             if (data.VerticalSpeed < -500)
                 return FlightPhase.Descent;
 
+            if (data.VerticalSpeed > 450 || agl < 2500)
+                return FlightPhase.Climb;
+
             return FlightPhase.Cruise;
+        }
+
+        private static FlightPhase ResolvePhaseFromOperationalCode(string? code)
+        {
+            switch ((code ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "PRE": return FlightPhase.PreFlight;
+                case "BRD": return FlightPhase.Boarding;
+                case "TAX_OUT": return FlightPhase.PushbackTaxi;
+                case "TO": return FlightPhase.Takeoff;
+                case "CLB": return FlightPhase.Climb;
+                case "CRZ": return FlightPhase.Cruise;
+                case "DES": return FlightPhase.Descent;
+                case "APP": return FlightPhase.Approach;
+                case "LDG": return FlightPhase.Landing;
+                case "TAX_IN": return FlightPhase.Taxi;
+                case "GATE": return FlightPhase.Arrived;
+                case "DEB": return FlightPhase.Deboarding;
+                default: return FlightPhase.Disconnected;
+            }
+        }
+
+        private static string BuildPhaseTransitionDisplay(SimData data)
+        {
+            if (data == null)
+            {
+                return string.Empty;
+            }
+
+            var changed = data.PhaseTransitionChanged ? "CAMBIO" : "ESTABLE";
+            var from = string.IsNullOrWhiteSpace(data.PhaseTransitionFromCode) ? "—" : data.PhaseTransitionFromCode;
+            var to = string.IsNullOrWhiteSpace(data.OperationalPhaseCode) ? data.PhaseTransitionToCode : data.OperationalPhaseCode;
+            var confidence = string.IsNullOrWhiteSpace(data.PhaseDecisionConfidence) ? "confirmed" : data.PhaseDecisionConfidence;
+            var dwell = data.PhaseDwellSeconds > 0 ? $" · {data.PhaseDwellSeconds}s" : string.Empty;
+            var reason = string.IsNullOrWhiteSpace(data.OperationalPhaseReason) ? string.Empty : $" · {data.OperationalPhaseReason}";
+            return $"{changed}: {from} → {to} · {confidence}{dwell}{reason}";
         }
 
         private void OnPhaseChanged(FlightPhase newPhase)
@@ -1880,9 +2178,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return false;
             }
 
-            if (!liveSample.OnGround || liveSample.AltitudeAGL > 15)
+            var liveAgl = liveSample.AltitudeAglFeet >= 0 ? liveSample.AltitudeAglFeet : liveSample.AltitudeAGL;
+            if (!liveSample.OnGround || liveAgl > 15)
             {
-                reason = $"Cierre bloqueado: aeronave no confirmada en plataforma/suelo. AGL {liveSample.AltitudeAGL:F0} ft.";
+                reason = $"Cierre bloqueado: aeronave no confirmada en plataforma/suelo. AGL {liveAgl:F0} ft.";
                 return false;
             }
 

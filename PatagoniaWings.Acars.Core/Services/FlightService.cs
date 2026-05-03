@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -31,6 +31,34 @@ namespace PatagoniaWings.Acars.Core.Services
         private bool _crashMarked;
         private DateTime _crashMarkedAtUtc = default(DateTime);
         private string _crashReason = string.Empty;
+
+        // C1 Phase Resolver: persistent operational state for a robust state machine.
+        // The simulator may momentarily report stale or contradictory altitude/ground data;
+        // these counters prevent jumping between phases from a single noisy sample.
+        private bool _hasBeenAirborne;
+        private bool _takeoffDetected;
+        private bool _touchdownDetected;
+        private int _airborneConfirmSamples;
+        private int _groundConfirmSamples;
+        private int _descentConfirmSamples;
+        private int _approachConfirmSamples;
+        private int _cruiseStableSamples;
+        private DateTime _lastPhaseChangeUtc = default(DateTime);
+
+        // C3 Phase transition matrix: debounced candidates, dwell time and trend counters.
+        // These values are RAW evidence only; Web/Supabase remains the scoring authority.
+        private FlightPhase _candidatePhase = FlightPhase.Disconnected;
+        private int _candidatePhaseSamples;
+        private int _phaseStabilitySamples;
+        private int _phaseTransitionIndex;
+        private DateTime _phaseEnteredAtUtc = default(DateTime);
+        private double _lastAirborneMsl;
+        private int _mslIncreasingSamples;
+        private int _mslDecreasingSamples;
+        private int _taxiOutConfirmSamples;
+        private int _takeoffRollConfirmSamples;
+        private int _landingRollConfirmSamples;
+        private int _gateReadyConfirmSamples;
 
         // Patagonia Wings 7.0.14 hotfix:
         // Un vuelo activo no debe resetearse ni quedar en Disconnected por cortes
@@ -77,6 +105,27 @@ namespace PatagoniaWings.Acars.Core.Services
             _lastSimData = new SimData();
             _hasPosition = false;
             _crashMarked = false;
+            _hasBeenAirborne = false;
+            _takeoffDetected = false;
+            _touchdownDetected = false;
+            _airborneConfirmSamples = 0;
+            _groundConfirmSamples = 0;
+            _descentConfirmSamples = 0;
+            _approachConfirmSamples = 0;
+            _cruiseStableSamples = 0;
+            _lastPhaseChangeUtc = default(DateTime);
+            _candidatePhase = FlightPhase.Disconnected;
+            _candidatePhaseSamples = 0;
+            _phaseStabilitySamples = 0;
+            _phaseTransitionIndex = 0;
+            _phaseEnteredAtUtc = default(DateTime);
+            _lastAirborneMsl = 0d;
+            _mslIncreasingSamples = 0;
+            _mslDecreasingSamples = 0;
+            _taxiOutConfirmSamples = 0;
+            _takeoffRollConfirmSamples = 0;
+            _landingRollConfirmSamples = 0;
+            _gateReadyConfirmSamples = 0;
             _closeoutResetAuthorized = false;
             _finalDamageEvents.Clear();
 
@@ -141,7 +190,8 @@ namespace PatagoniaWings.Acars.Core.Services
                     }
                 }
 
-                if (data.AltitudeFeet > _maxAltitude) _maxAltitude = data.AltitudeFeet;
+                if (data.AltitudeMslFeet > _maxAltitude) _maxAltitude = data.AltitudeMslFeet;
+            else if (data.AltitudeFeet > _maxAltitude) _maxAltitude = data.AltitudeFeet;
                 if (data.IndicatedAirspeed > _maxSpeed) _maxSpeed = data.IndicatedAirspeed;
 
                 SanitizeSampleForPirep(data);
@@ -166,91 +216,937 @@ namespace PatagoniaWings.Acars.Core.Services
 
         private void UpdatePhase(SimData data)
         {
-            if (_currentFlight == null) return;
+            if (_currentFlight == null || data == null)
+            {
+                return;
+            }
 
-            var newPhase = CurrentPhase;
             var sampleTime = data.CapturedAtUtc == default(DateTime) ? DateTime.UtcNow : data.CapturedAtUtc;
-            var maxEngineN1 = Math.Max(data.Engine1N1, data.Engine2N1);
-            var plannedCruiseAltitude = _currentFlight.PlannedAltitude > 0 ? _currentFlight.PlannedAltitude : 30000;
+            var previous = _telemetryLog.Count >= 2 ? _telemetryLog[_telemetryLog.Count - 2] : null;
 
-            switch (CurrentPhase)
+            var agl = ResolveAgl(data);
+            var msl = ResolveMsl(data);
+            var gs = SafeNumber(data.GroundSpeed);
+            var ias = SafeNumber(data.IndicatedAirspeed);
+            var vs = SafeNumber(data.VerticalSpeed);
+            var plannedCruiseAltitude = _currentFlight.PlannedAltitude > 0 ? _currentFlight.PlannedAltitude : 0d;
+
+            var onGround = ResolveOperationalOnGround(data, agl, gs, ias, vs);
+            var previousOnGround = previous == null ? onGround : ResolveOperationalOnGround(previous, ResolveAgl(previous), SafeNumber(previous.GroundSpeed), SafeNumber(previous.IndicatedAirspeed), SafeNumber(previous.VerticalSpeed));
+            var previousAirborne = previous != null && (previous.IsAirborneSample || (!previousOnGround && ResolveAgl(previous) > 20d));
+
+            var takeoffRollCandidate = onGround && !_takeoffDetected && gs >= 35d && (ias >= 30d || gs >= 45d);
+            var taxiOutCandidate = onGround && !_hasBeenAirborne && gs > 3d && gs <= 35d && !data.ParkingBrake;
+            var airborneCandidate = !onGround && (agl > 20d || (_lastAirborneMsl > 0d && msl > _lastAirborneMsl + 50d)) && (gs > 40d || ias > 40d);
+            var touchdownCandidate = _hasBeenAirborne && !_touchdownDetected && (previousAirborne || !previousOnGround) && onGround;
+
+            UpdateAltitudeTrend(msl, onGround);
+
+            if (airborneCandidate)
+            {
+                _airborneConfirmSamples++;
+            }
+            else if (onGround && !_hasBeenAirborne)
+            {
+                _airborneConfirmSamples = 0;
+            }
+
+            if (takeoffRollCandidate)
+            {
+                _takeoffRollConfirmSamples++;
+            }
+            else if (!_takeoffDetected)
+            {
+                _takeoffRollConfirmSamples = 0;
+            }
+
+            if (taxiOutCandidate)
+            {
+                _taxiOutConfirmSamples++;
+            }
+            else if (!_hasBeenAirborne)
+            {
+                _taxiOutConfirmSamples = 0;
+            }
+
+            if (onGround && _hasBeenAirborne)
+            {
+                _groundConfirmSamples++;
+            }
+            else if (!onGround)
+            {
+                _groundConfirmSamples = 0;
+                _landingRollConfirmSamples = 0;
+                _gateReadyConfirmSamples = 0;
+            }
+
+            if (touchdownCandidate || (_hasBeenAirborne && !_touchdownDetected && onGround && _groundConfirmSamples >= 2))
+            {
+                MarkTouchdown(data, previous, sampleTime);
+                _landingRollConfirmSamples = 1;
+                ApplyPhaseDecision(data, FlightPhase.Landing, "touchdown_transition_air_to_ground", onGround, false, sampleTime, 1, true);
+                return;
+            }
+
+            if (!_takeoffDetected && _airborneConfirmSamples >= 2)
+            {
+                _takeoffDetected = true;
+                _hasBeenAirborne = true;
+                if (_takeoffTime == default(DateTime))
+                {
+                    _takeoffTime = sampleTime;
+                }
+
+                ApplyPhaseDecision(data, FlightPhase.Takeoff, "airborne_confirmed_two_samples", onGround, true, sampleTime, 1, true);
+                return;
+            }
+
+            if (!_hasBeenAirborne)
+            {
+                if (_takeoffRollConfirmSamples >= 2)
+                {
+                    ApplyPhaseDecision(data, FlightPhase.Takeoff, "takeoff_roll_confirmed_gs_ias", onGround, false, sampleTime, 2, false);
+                    return;
+                }
+
+                if (_taxiOutConfirmSamples >= 2)
+                {
+                    ApplyPhaseDecision(data, FlightPhase.PushbackTaxi, "taxi_out_confirmed_ground_moving_parking_off", onGround, false, sampleTime, 2, false);
+                    return;
+                }
+
+                ApplyPhaseDecision(data, FlightPhase.PreFlight, onGround ? "preflight_ground_stationary" : "preflight_waiting_airborne_confirmation", onGround, false, sampleTime, 1, false);
+                return;
+            }
+
+            if (onGround)
+            {
+                if (gs <= 3d && data.ParkingBrake)
+                {
+                    _gateReadyConfirmSamples++;
+                }
+                else
+                {
+                    _gateReadyConfirmSamples = 0;
+                }
+
+                if (gs > 40d)
+                {
+                    _landingRollConfirmSamples++;
+                    ApplyPhaseDecision(data, FlightPhase.Landing, "landing_roll_high_speed_after_touchdown", onGround, false, sampleTime, 1, _landingRollConfirmSamples <= 2);
+                    return;
+                }
+
+                if (_gateReadyConfirmSamples >= 2)
+                {
+                    ApplyPhaseDecision(data, FlightPhase.Arrived, "gate_ready_confirmed_stopped_parking_brake", onGround, false, sampleTime, 2, false);
+                    return;
+                }
+
+                if (gs > 3d)
+                {
+                    ApplyPhaseDecision(data, FlightPhase.Taxi, "taxi_in_after_touchdown", onGround, false, sampleTime, 2, false);
+                    return;
+                }
+
+                ApplyPhaseDecision(data, FlightPhase.Landing, "landing_roll_or_stopped_before_gate_confirmation", onGround, false, sampleTime, 1, false);
+                return;
+            }
+
+            // Airborne matrix. AGL controls low-altitude boundaries; MSL/pressure altitude
+            // controls max altitude and cruise profile. Counters provide hysteresis.
+            var nearApproachLayer = agl > 0d && agl < 3000d;
+            var approachCandidate = nearApproachLayer && (_mslDecreasingSamples >= 2 || vs < -150d || CurrentPhase == FlightPhase.Approach);
+            var descentCandidate = agl >= 2500d && (_mslDecreasingSamples >= 2 || vs < -500d);
+            var cruiseCandidate = agl >= 2500d && (Math.Abs(vs) <= 350d || (plannedCruiseAltitude > 0d && msl >= plannedCruiseAltitude - 2000d && Math.Abs(vs) <= 500d));
+            var climbCandidate = _mslIncreasingSamples >= 2 || vs > 450d || agl < 2500d;
+
+            if (approachCandidate)
+            {
+                _approachConfirmSamples++;
+            }
+            else
+            {
+                _approachConfirmSamples = 0;
+            }
+
+            if (descentCandidate)
+            {
+                _descentConfirmSamples++;
+            }
+            else if (vs > -200d && _mslDecreasingSamples == 0)
+            {
+                _descentConfirmSamples = 0;
+            }
+
+            if (cruiseCandidate)
+            {
+                _cruiseStableSamples++;
+            }
+            else
+            {
+                _cruiseStableSamples = 0;
+            }
+
+            if (_approachConfirmSamples >= 2)
+            {
+                ApplyPhaseDecision(data, FlightPhase.Approach, "approach_confirmed_agl_descent", onGround, true, sampleTime, 2, false);
+                return;
+            }
+
+            if (_descentConfirmSamples >= 2 || (CurrentPhase == FlightPhase.Cruise && descentCandidate))
+            {
+                ApplyPhaseDecision(data, FlightPhase.Descent, "descent_confirmed_msl_trend_or_vs", onGround, true, sampleTime, 2, false);
+                return;
+            }
+
+            if (CurrentPhase == FlightPhase.Takeoff && (agl < 800d || SecondsSince(_takeoffTime, sampleTime) < 90d))
+            {
+                ApplyPhaseDecision(data, FlightPhase.Takeoff, "initial_climb_takeoff_window", onGround, true, sampleTime, 1, false);
+                return;
+            }
+
+            if (_cruiseStableSamples >= 5)
+            {
+                ApplyPhaseDecision(data, FlightPhase.Cruise, "cruise_stable_five_samples", onGround, true, sampleTime, 3, false);
+                return;
+            }
+
+            if (climbCandidate)
+            {
+                ApplyPhaseDecision(data, FlightPhase.Climb, "climb_confirmed_msl_trend_vs_or_low_agl", onGround, true, sampleTime, 2, false);
+                return;
+            }
+
+            var preserved = CurrentPhase == FlightPhase.Disconnected || CurrentPhase == FlightPhase.PreFlight || CurrentPhase == FlightPhase.PushbackTaxi
+                ? FlightPhase.Climb
+                : CurrentPhase;
+            ApplyPhaseDecision(data, preserved, "preserve_airborne_phase_no_matrix_change", onGround, true, sampleTime, 1, false);
+        }
+
+        private void MarkTouchdown(SimData data, SimData? previous, DateTime sampleTime)
+        {
+            if (_touchdownDetected)
+            {
+                return;
+            }
+
+            _touchdownDetected = true;
+            _touchdownTime = sampleTime;
+
+            var touchdownVs = data.LandingVS;
+            if (!IsOperationalVerticalSpeed(touchdownVs) || Math.Abs(touchdownVs) < 1d)
+            {
+                touchdownVs = previous != null && IsOperationalVerticalSpeed(previous.VerticalSpeed)
+                    ? previous.VerticalSpeed
+                    : data.VerticalSpeed;
+            }
+
+            _lastLandingVS = IsOperationalVerticalSpeed(touchdownVs) ? touchdownVs : 0d;
+
+            var touchdownG = data.LandingG;
+            if (!IsOperationalGForce(touchdownG) || Math.Abs(touchdownG) < 0.01d)
+            {
+                touchdownG = IsOperationalGForce(data.GForce) ? data.GForce : 0d;
+            }
+
+            _lastLandingG = IsOperationalGForce(touchdownG) ? touchdownG : 0d;
+            data.TouchdownDetected = true;
+        }
+
+        private void ApplyPhaseDecision(SimData data, FlightPhase candidatePhase, string reason, bool onGround, bool isAirborneSample, DateTime sampleTime, int requiredSamples, bool force)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            if (requiredSamples < 1) requiredSamples = 1;
+
+            var targetPhase = candidatePhase;
+            var confidence = force ? "forced" : "confirmed";
+            var fromPhase = CurrentPhase;
+
+            if (!force && candidatePhase != CurrentPhase)
+            {
+                if (_candidatePhase == candidatePhase)
+                {
+                    _candidatePhaseSamples++;
+                }
+                else
+                {
+                    _candidatePhase = candidatePhase;
+                    _candidatePhaseSamples = 1;
+                }
+
+                if (_candidatePhaseSamples < requiredSamples)
+                {
+                    targetPhase = CurrentPhase == FlightPhase.Disconnected ? candidatePhase : CurrentPhase;
+                    confidence = "pending";
+                    reason = string.Format(
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        "pending_{0}_{1}_of_{2}:{3}",
+                        ToOperationalPhaseCode(candidatePhase),
+                        _candidatePhaseSamples,
+                        requiredSamples,
+                        reason ?? string.Empty);
+                    AnnotatePhase(data, targetPhase, reason, onGround, isAirborneSample, fromPhase, candidatePhase, false, confidence);
+                    return;
+                }
+            }
+            else
+            {
+                _candidatePhase = candidatePhase;
+                _candidatePhaseSamples = requiredSamples;
+            }
+
+            var changed = targetPhase != CurrentPhase;
+            if (changed)
+            {
+                _lastPhaseChangeUtc = sampleTime;
+                _phaseEnteredAtUtc = sampleTime;
+                _phaseTransitionIndex++;
+                _phaseStabilitySamples = 0;
+                _candidatePhaseSamples = 0;
+                SetPhase(targetPhase);
+            }
+            else
+            {
+                _phaseStabilitySamples++;
+                if (_phaseEnteredAtUtc == default(DateTime))
+                {
+                    _phaseEnteredAtUtc = sampleTime;
+                }
+            }
+
+            AnnotatePhase(data, targetPhase, reason, onGround, isAirborneSample, fromPhase, candidatePhase, changed, confidence);
+        }
+
+        private void AnnotatePhase(SimData data, FlightPhase phase, string reason, bool onGround, bool isAirborneSample, FlightPhase fromPhase, FlightPhase candidatePhase, bool changed, string confidence)
+        {
+            data.OperationalPhaseCode = ToOperationalPhaseCode(phase);
+            data.OperationalPhaseName = ToOperationalPhaseName(phase);
+            data.OperationalPhaseReason = reason ?? string.Empty;
+            data.HasBeenAirborne = _hasBeenAirborne;
+            data.IsAirborneSample = isAirborneSample && !onGround;
+            data.TouchdownDetected = _touchdownDetected && _touchdownTime != default(DateTime) && data.CapturedAtUtc >= _touchdownTime;
+            data.GateReadyCandidate = phase == FlightPhase.Arrived || (_touchdownDetected && onGround && data.GroundSpeed <= 3d && data.ParkingBrake);
+            data.PhaseTransitionFromCode = ToOperationalPhaseCode(fromPhase);
+            data.PhaseTransitionToCode = ToOperationalPhaseCode(candidatePhase);
+            data.PhaseTransitionReason = reason ?? string.Empty;
+            data.PhaseTransitionChanged = changed;
+            data.PhaseTransitionIndex = _phaseTransitionIndex;
+            data.PhaseStabilitySamples = _phaseStabilitySamples;
+            data.PhaseCandidateSamples = _candidatePhaseSamples;
+            data.PhaseDwellSeconds = (int)Math.Max(0d, SecondsSince(_phaseEnteredAtUtc, data.CapturedAtUtc == default(DateTime) ? DateTime.UtcNow : data.CapturedAtUtc));
+            data.PhaseDecisionConfidence = string.IsNullOrWhiteSpace(confidence) ? "confirmed" : confidence;
+            data.PhaseMatrixVersion = "C3";
+
+            var checklist = BuildPhaseChecklist(data, phase, onGround);
+            data.PhaseChecklistStatus = checklist.Status;
+            data.PhaseChecklistSummary = checklist.Summary;
+            data.PhaseChecklistRequired = checklist.Required;
+            data.PhaseChecklistSatisfied = checklist.Satisfied;
+            data.PhaseChecklistMissing = checklist.Missing;
+            data.PhaseChecklistWarnings = checklist.Warnings;
+
+            var audit = BuildPhaseAudit(data, phase, onGround, isAirborneSample, changed, confidence);
+            data.PhaseAuditStatus = audit.Status;
+            data.PhaseAuditSummary = audit.Summary;
+            data.PhaseAuditFlags = audit.Flags;
+            data.PhaseAuditVersion = "C4";
+
+            var review = BuildPhaseReviewContract(phase);
+            data.PhaseExpectedActions = review.ExpectedActions;
+            data.PhaseMeasuredMetrics = review.MeasuredMetrics;
+            data.PhaseScoringHints = review.ScoringHints;
+            data.PhaseReviewQuestion = review.ReviewQuestion;
+            data.PhaseReviewVersion = "C5";
+
+            var prevalidation = BuildPhasePrevalidation(data, phase, onGround, isAirborneSample, changed, confidence);
+            data.PhasePrevalidationStatus = prevalidation.Status;
+            data.PhasePrevalidationSummary = prevalidation.Summary;
+            data.PhasePrevalidationFlags = prevalidation.Flags;
+            data.PhasePrevalidationVersion = "C6";
+        }
+
+        private sealed class PhasePrevalidationEvidence
+        {
+            public string Status { get; set; } = "PENDING";
+            public string Summary { get; set; } = string.Empty;
+            public string Flags { get; set; } = string.Empty;
+        }
+
+        private static PhasePrevalidationEvidence BuildPhasePrevalidation(SimData data, FlightPhase phase, bool onGround, bool isAirborneSample, bool changed, string confidence)
+        {
+            var flags = new List<string>();
+            var agl = ResolveAgl(data);
+            var msl = ResolveMsl(data);
+            var gs = SafeNumber(data.GroundSpeed);
+            var vs = SafeNumber(data.VerticalSpeed);
+            var code = ToOperationalPhaseCode(phase);
+
+            if (data.CapturedAtUtc == default(DateTime))
+            {
+                flags.Add("MissingTimestamp");
+            }
+
+            if (!data.IsAltitudeReliable)
+            {
+                flags.Add("AltitudeUnreliable");
+            }
+
+            if (onGround && agl > 15d)
+            {
+                flags.Add("GroundAglAboveZero");
+            }
+
+            if (!onGround && IsGroundOperationalCode(code))
+            {
+                flags.Add("AirborneButGroundPhase");
+            }
+
+            if (onGround && IsAirborneOperationalCode(code))
+            {
+                flags.Add("OnGroundButAirbornePhase");
+            }
+
+            if (!onGround && isAirborneSample && agl <= 20d && phase != FlightPhase.Landing)
+            {
+                flags.Add("AirborneLowAglReview");
+            }
+
+            if (phase == FlightPhase.Arrived)
+            {
+                if (gs > 3d) flags.Add("GateGsTooHigh");
+                if (!data.ParkingBrake) flags.Add("GateParkingBrakeOff");
+                if (!data.HasBeenAirborne && !data.TouchdownDetected) flags.Add("GateWithoutAirborneEvidence");
+            }
+
+            if (string.Equals(confidence, "pending", StringComparison.OrdinalIgnoreCase))
+            {
+                flags.Add("PendingPhaseTransition");
+            }
+
+            if (!string.IsNullOrWhiteSpace(data.PhaseChecklistMissing))
+            {
+                flags.Add("ChecklistMissing");
+            }
+
+            if (Math.Abs(vs) > 7000d)
+            {
+                flags.Add("VerticalSpeedExtreme");
+            }
+
+            if (msl < -1500d || msl > 70000d)
+            {
+                flags.Add("MslOutOfRange");
+            }
+
+            var hasBlock = flags.Any(flag =>
+                string.Equals(flag, "OnGroundButAirbornePhase", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(flag, "AirborneButGroundPhase", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(flag, "GateWithoutAirborneEvidence", StringComparison.OrdinalIgnoreCase));
+            var hasWait = flags.Any(flag => flag.StartsWith("Gate", StringComparison.OrdinalIgnoreCase) || string.Equals(flag, "PendingPhaseTransition", StringComparison.OrdinalIgnoreCase));
+            var hasWarn = flags.Count > 0;
+
+            var status = hasBlock ? "BLOCK" : hasWait ? "WAIT" : hasWarn ? "WARN" : "READY";
+            var summary = status == "READY"
+                ? "C6 listo para prueba: fase, altitud y checklist coherentes"
+                : status == "WAIT"
+                    ? "C6 esperando condiciones de fase/gate"
+                    : status == "WARN"
+                        ? "C6 con advertencias: revisar antes de Web/Supabase"
+                        : "C6 bloqueante: fase contradice telemetria";
+
+            return new PhasePrevalidationEvidence
+            {
+                Status = status,
+                Summary = summary,
+                Flags = string.Join(",", flags.Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(flag => flag))
+            };
+        }
+
+        private sealed class PhaseReviewContract
+        {
+            public string ExpectedActions { get; set; } = string.Empty;
+            public string MeasuredMetrics { get; set; } = string.Empty;
+            public string ScoringHints { get; set; } = string.Empty;
+            public string ReviewQuestion { get; set; } = string.Empty;
+        }
+
+        private static PhaseReviewContract BuildPhaseReviewContract(FlightPhase phase)
+        {
+            switch (phase)
             {
                 case FlightPhase.PreFlight:
-                    if (!data.OnGround && data.IndicatedAirspeed > 80)
+                    return new PhaseReviewContract
                     {
-                        _takeoffTime = sampleTime;
-                        newPhase = FlightPhase.Takeoff;
-                    }
-                    else if (!data.ParkingBrake && data.OnGround && data.GroundSpeed > 2)
-                        newPhase = FlightPhase.PushbackTaxi;
-                    break;
-
-                case FlightPhase.Boarding:
-                    if (!data.ParkingBrake && data.OnGround && data.GroundSpeed > 2)
-                        newPhase = FlightPhase.PushbackTaxi;
-                    break;
-
+                        ExpectedActions = "Despacho cargado; avion/matricula/origen correctos; parking brake ON; motores OFF o condicion cold&dark segun perfil; combustible/payload/OFP disponibles.",
+                        MeasuredMetrics = "dispatch, aircraft_match, airport_match, parking_brake, engines, battery/avionics si confiables, fuel_start, payload, qnh, lights capability-aware.",
+                        ScoringHints = "Reglas PRE/gate; unsupported=N/D sin penalizacion; score oficial solo Web/Supabase.",
+                        ReviewQuestion = "¿El prevuelo reconoce aeropuerto, avion, matricula, freno, combustible y cold&dark sin exigir variables unsupported?"
+                    };
                 case FlightPhase.PushbackTaxi:
-                    if (!data.OnGround && data.IndicatedAirspeed > 80)
+                    return new PhaseReviewContract
                     {
-                        _takeoffTime = sampleTime;
-                        newPhase = FlightPhase.Takeoff;
-                    }
-                    break;
-
+                        ExpectedActions = "Soltar parking brake; iniciar rodaje bajo control; mantener velocidad taxi razonable; usar luces segun perfil; XPDR solo si soportado.",
+                        MeasuredMetrics = "block_off, gs_taxi, parking_brake_off, taxi_light, beacon/nav/strobe, flaps, com/pic, xpdr capability-aware.",
+                        ScoringHints = "Taxi se evalua por OnGround+GS+freno; XPDR/puertas/luces solo con capability=true.",
+                        ReviewQuestion = "¿Taxi out aparece despues de soltar freno y antes de takeoff roll, con AGL=0 y MSL real?"
+                    };
                 case FlightPhase.Takeoff:
-                    if (!data.OnGround && (data.AltitudeAGL > 800 || data.AltitudeFeet > 1500 || data.VerticalSpeed > 700))
+                    return new PhaseReviewContract
                     {
-                        newPhase = FlightPhase.Climb;
-                    }
-                    break;
-
+                        ExpectedActions = "Entrar pista; acelerar; rotar; confirmar aire por transicion OnGround true→false; mantener configuracion de despegue.",
+                        MeasuredMetrics = "takeoff_roll, airborne, gs/ias, agl>20, vs, flaps, lights, fuel_at_takeoff, heading/runway aproximado.",
+                        ScoringHints = "TO no se confirma solo por MSL; requiere energia + WOW/AGL; Web evalua configuracion de despegue con capabilities.",
+                        ReviewQuestion = "¿El XML registra TAKEOFF_ROLL y AIRBORNE en orden correcto?"
+                    };
                 case FlightPhase.Climb:
-                    if (data.VerticalSpeed < -500 && data.AltitudeAGL > 4000)
+                    return new PhaseReviewContract
                     {
-                        newPhase = FlightPhase.Descent;
-                    }
-                    else if (data.AltitudeFeet >= plannedCruiseAltitude - 2000 && Math.Abs(data.VerticalSpeed) < 500)
-                        newPhase = FlightPhase.Cruise;
-                    break;
-
+                        ExpectedActions = "Ascender estabilizado; limpiar configuracion; mantener IAS/VS coherente; seguir ruta inicial.",
+                        MeasuredMetrics = "altitude_msl_trend, agl, vs_positive, ias/max_speed, fuel_flow, lights/ap si soportado, eventos de overspeed/stall.",
+                        ScoringHints = "Climb usa MSL para perfil vertical y AGL solo como contexto; si OnGround vuelve true debe salir de CLB.",
+                        ReviewQuestion = "¿CLB termina al estabilizar crucero, iniciar descenso o tocar tierra, sin quedar pegado?"
+                    };
                 case FlightPhase.Cruise:
-                    if (data.VerticalSpeed < -500)
-                        newPhase = FlightPhase.Descent;
-                    break;
-
-                case FlightPhase.Descent:
-                    if ((data.AltitudeAGL > 0 && data.AltitudeAGL < 4000) || data.AltitudeFeet < 3000)
-                        newPhase = FlightPhase.Approach;
-                    break;
-
-                case FlightPhase.Approach:
-                    if (data.OnGround)
+                    return new PhaseReviewContract
                     {
-                        _lastLandingVS = data.LandingVS;
-                        _lastLandingG = data.LandingG;
-                        _touchdownTime = sampleTime;
-                        newPhase = FlightPhase.Landing;
+                        ExpectedActions = "Mantener nivel/FL; controlar combustible, velocidad, ruta y PIC checks.",
+                        MeasuredMetrics = "msl/pressure_altitude/flight_level, stable_vs, cruise_ias/gs, fuel, route_distance, sim_rate/pause, pic_com2.",
+                        ScoringHints = "Sobre transicion mostrar FL; MSL se conserva para max_altitude; AGL no define altitud maxima.",
+                        ReviewQuestion = "¿CRZ solo aparece con VS estable y altura suficiente, no durante taxi/approach?"
+                    };
+                case FlightPhase.Descent:
+                    return new PhaseReviewContract
+                    {
+                        ExpectedActions = "Iniciar descenso sostenido hacia destino; preparar aproximacion; controlar velocidad y luces.",
+                        MeasuredMetrics = "negative_vs, decreasing_msl, distance_to_destination, speed_below_limits, qnh, landing_lights/flaps/gear if supported.",
+                        ScoringHints = "DES requiere tendencia MSL o VS negativa confirmada; no penalizar gear/lights si unsupported.",
+                        ReviewQuestion = "¿DES aparece antes de APP y cuando la altitud MSL baja de forma sostenida?"
+                    };
+                case FlightPhase.Approach:
+                    return new PhaseReviewContract
+                    {
+                        ExpectedActions = "Configurar aproximacion; reducir velocidad; flaps/gear/landing lights segun aeronave; estabilizar antes de final.",
+                        MeasuredMetrics = "agl<3000, distance_to_destination, vs, ias, flaps, gear, landing_lights, qnh_destino, stabilized_approach evidence.",
+                        ScoringHints = "APP usa AGL+distancia+VS; MSL no reemplaza AGL; variables unsupported quedan N/D.",
+                        ReviewQuestion = "¿APP aparece en final/terminal y no durante crucero alto o rodaje?"
+                    };
+                case FlightPhase.Landing:
+                    return new PhaseReviewContract
+                    {
+                        ExpectedActions = "Touchdown; mantener control direccional; desacelerar; salir de pista.",
+                        MeasuredMetrics = "touchdown false→true, landing_vs, landing_g, ias/gs_touchdown, pitch/bank, reverser/spoilers si soportado, runway_exit.",
+                        ScoringHints = "LDG se confirma por transicion aire→tierra; G absurda se descarta; hard landing lo evalua Web/Supabase.",
+                        ReviewQuestion = "¿LDG se registra por touchdown real y no por AGL=0 en gate?"
+                    };
+                case FlightPhase.Taxi:
+                    return new PhaseReviewContract
+                    {
+                        ExpectedActions = "Rodaje post-aterrizaje; abandonar pista; apagar luces segun perfil; dirigirse a gate.",
+                        MeasuredMetrics = "on_ground_after_touchdown, gs_taxi_in, runway_vacated, taxi_light, landing/strobe off, fuel_remaining, xpdr standby si soportado.",
+                        ScoringHints = "Taxi in ocurre solo despues de touchdown; XPDR standby no penaliza si capability=false.",
+                        ReviewQuestion = "¿TAX_IN aparece despues de LDG y antes de GATE?"
+                    };
+                case FlightPhase.Arrived:
+                    return new PhaseReviewContract
+                    {
+                        ExpectedActions = "Detener en gate; parking brake ON; motores OFF/cold&dark segun perfil; finalizar manualmente en ACARS.",
+                        MeasuredMetrics = "on_ground, gs<=3, parking_brake_on, engines_off/cold_dark, final_fuel, doors if supported, manual_gate_closeout.",
+                        ScoringHints = "GATE habilita cierre manual; no depende de XPDR; Web/Supabase decide score oficial.",
+                        ReviewQuestion = "¿GATE se habilita solo detenido, en tierra, con freno y despues de touchdown?"
+                    };
+                default:
+                    return new PhaseReviewContract
+                    {
+                        ExpectedActions = "Recolectar telemetria base y mantener vuelo activo hasta decision manual.",
+                        MeasuredMetrics = "connection, position, altitude_msl, agl, gs, vs, fuel, systems capability-aware.",
+                        ScoringHints = "Sin score en ACARS; evidencia RAW para Web/Supabase.",
+                        ReviewQuestion = "¿La fase desconocida tiene suficiente evidencia para clasificarla despues?"
+                    };
+            }
+        }
+
+        private bool ResolveOperationalOnGround(SimData data, double agl, double gs, double ias, double vs)
+        {
+            if (data == null)
+            {
+                return true;
+            }
+
+            if (data.OnGround)
+            {
+                return true;
+            }
+
+            // Before first airborne, allow conservative ground fallback for unsupported WOW.
+            if (!_hasBeenAirborne)
+            {
+                return agl <= 5d && gs < 35d && ias < 45d;
+            }
+
+            // After airborne, do not let one bad AGL=0/disconnect sample pull CLB/CRZ/DES into ground.
+            // Require live connection, low energy and no vertical movement unless SIM ON GROUND is true.
+            if (!data.IsConnected)
+            {
+                return false;
+            }
+
+            return agl <= 5d && gs < 45d && ias < 55d && Math.Abs(vs) < 800d;
+        }
+
+        private void UpdateAltitudeTrend(double msl, bool onGround)
+        {
+            if (onGround)
+            {
+                _lastAirborneMsl = 0d;
+                _mslIncreasingSamples = 0;
+                _mslDecreasingSamples = 0;
+                return;
+            }
+
+            if (_lastAirborneMsl <= 0d)
+            {
+                _lastAirborneMsl = msl;
+                return;
+            }
+
+            var delta = msl - _lastAirborneMsl;
+            if (delta > 80d)
+            {
+                _mslIncreasingSamples++;
+                _mslDecreasingSamples = 0;
+            }
+            else if (delta < -80d)
+            {
+                _mslDecreasingSamples++;
+                _mslIncreasingSamples = 0;
+            }
+            else
+            {
+                if (_mslIncreasingSamples > 0) _mslIncreasingSamples--;
+                if (_mslDecreasingSamples > 0) _mslDecreasingSamples--;
+            }
+
+            _lastAirborneMsl = msl;
+        }
+
+        private sealed class PhaseAuditEvidence
+        {
+            public string Status { get; set; } = "PENDING";
+            public string Summary { get; set; } = string.Empty;
+            public string Flags { get; set; } = string.Empty;
+        }
+
+        private static PhaseAuditEvidence BuildPhaseAudit(SimData data, FlightPhase phase, bool onGround, bool isAirborneSample, bool changed, string confidence)
+        {
+            var flags = new List<string>();
+            var agl = ResolveAgl(data);
+            var msl = ResolveMsl(data);
+            var gs = SafeNumber(data.GroundSpeed);
+            var vs = SafeNumber(data.VerticalSpeed);
+            var code = ToOperationalPhaseCode(phase);
+
+            if (!data.IsAltitudeReliable)
+            {
+                flags.Add("AltitudeUnreliable");
+            }
+
+            if (onGround && agl > 10d)
+            {
+                flags.Add("GroundAglNotZero");
+            }
+
+            if (!onGround && agl <= 5d && gs > 45d)
+            {
+                flags.Add("AirborneLowAglCheck");
+            }
+
+            if (onGround && (phase == FlightPhase.Climb || phase == FlightPhase.Cruise || phase == FlightPhase.Descent || phase == FlightPhase.Approach))
+            {
+                flags.Add("AirbornePhaseButOnGround");
+            }
+
+            if (!onGround && (phase == FlightPhase.PreFlight || phase == FlightPhase.PushbackTaxi || phase == FlightPhase.Taxi || phase == FlightPhase.Arrived))
+            {
+                flags.Add("GroundPhaseButAirborne");
+            }
+
+            if (phase == FlightPhase.Arrived && !data.GateReadyCandidate)
+            {
+                flags.Add("GateNotReadyYet");
+            }
+
+            if (string.Equals(confidence, "pending", StringComparison.OrdinalIgnoreCase))
+            {
+                flags.Add("PendingTransition");
+            }
+
+            if (changed)
+            {
+                flags.Add("PhaseChanged");
+            }
+
+            if (msl <= -1500d || msl >= 70000d)
+            {
+                flags.Add("MslOutOfRange");
+            }
+
+            if (Math.Abs(vs) > 7000d)
+            {
+                flags.Add("VerticalSpeedExtreme");
+            }
+
+            var status = flags.Any(f => f == "AirbornePhaseButOnGround" || f == "GroundPhaseButAirborne" || f == "MslOutOfRange")
+                ? "ERROR"
+                : flags.Count == 0 ? "OK" : "WARN";
+
+            var summary = status == "OK"
+                ? "Auditoria C4 OK: fase y altitud coherentes"
+                : status == "WARN"
+                    ? "Auditoria C4 con advertencias: revisar flags"
+                    : "Auditoria C4 critica: fase/altitud contradictoria";
+
+            return new PhaseAuditEvidence
+            {
+                Status = status,
+                Summary = string.Format(System.Globalization.CultureInfo.InvariantCulture,
+                    "{0} ({1}) · AGL {2:F0} ft · MSL {3:F0} ft · GS {4:F0} kt",
+                    summary,
+                    code,
+                    agl,
+                    msl,
+                    gs),
+                Flags = string.Join(",", flags.Distinct(StringComparer.OrdinalIgnoreCase))
+            };
+        }
+
+        private sealed class PhaseChecklistEvidence
+        {
+            public string Status { get; set; } = "PENDING";
+            public string Summary { get; set; } = string.Empty;
+            public string Required { get; set; } = string.Empty;
+            public string Satisfied { get; set; } = string.Empty;
+            public string Missing { get; set; } = string.Empty;
+            public string Warnings { get; set; } = string.Empty;
+        }
+
+        private static PhaseChecklistEvidence BuildPhaseChecklist(SimData data, FlightPhase phase, bool onGround)
+        {
+            var required = new List<string>();
+            var satisfied = new List<string>();
+            var missing = new List<string>();
+            var warnings = new List<string>();
+
+            var gs = SafeNumber(data.GroundSpeed);
+            var ias = SafeNumber(data.IndicatedAirspeed);
+            var agl = ResolveAgl(data);
+            var vs = SafeNumber(data.VerticalSpeed);
+            var enginesRunning = data.EngineOneRunning || data.EngineTwoRunning || data.EngineThreeRunning || data.EngineFourRunning
+                                 || data.Engine1N1 > 15d || data.Engine2N1 > 15d || data.Engine3N1 > 15d || data.Engine4N1 > 15d;
+
+            switch (phase)
+            {
+                case FlightPhase.PreFlight:
+                    AddChecklistCheck(required, satisfied, missing, "OnGround", onGround);
+                    AddChecklistCheck(required, satisfied, missing, "GS<=3", gs <= 3d);
+                    AddChecklistCheck(required, satisfied, missing, "ParkingBrakeON", data.ParkingBrake);
+                    AddChecklistWarning(warnings, "EnginesRunning", enginesRunning);
+                    break;
+                case FlightPhase.PushbackTaxi:
+                    AddChecklistCheck(required, satisfied, missing, "OnGround", onGround);
+                    AddChecklistCheck(required, satisfied, missing, "GS>3", gs > 3d);
+                    AddChecklistCheck(required, satisfied, missing, "ParkingBrakeOFF", !data.ParkingBrake);
+                    break;
+                case FlightPhase.Takeoff:
+                    if (onGround)
+                    {
+                        AddChecklistCheck(required, satisfied, missing, "TakeoffRollGS>=35", gs >= 35d);
+                        AddChecklistCheck(required, satisfied, missing, "IAS>=30", ias >= 30d);
+                    }
+                    else
+                    {
+                        AddChecklistCheck(required, satisfied, missing, "Airborne", !onGround);
+                        AddChecklistCheck(required, satisfied, missing, "AGL>20", agl > 20d);
+                        AddChecklistCheck(required, satisfied, missing, "GS/IAS>40", gs > 40d || ias > 40d);
                     }
                     break;
-
-                case FlightPhase.Landing:
-                    if (data.OnGround && data.GroundSpeed < 40)
-                        newPhase = FlightPhase.Taxi;
+                case FlightPhase.Climb:
+                    AddChecklistCheck(required, satisfied, missing, "Airborne", !onGround);
+                    AddChecklistCheck(required, satisfied, missing, "PositiveVS/LowAGL", vs > 250d || agl < 2500d);
                     break;
-
+                case FlightPhase.Cruise:
+                    AddChecklistCheck(required, satisfied, missing, "Airborne", !onGround);
+                    AddChecklistCheck(required, satisfied, missing, "StableVS", Math.Abs(vs) <= 500d);
+                    AddChecklistCheck(required, satisfied, missing, "AGL>=2500", agl >= 2500d);
+                    break;
+                case FlightPhase.Descent:
+                    AddChecklistCheck(required, satisfied, missing, "Airborne", !onGround);
+                    AddChecklistCheck(required, satisfied, missing, "VS<-500", vs < -500d);
+                    break;
+                case FlightPhase.Approach:
+                    AddChecklistCheck(required, satisfied, missing, "Airborne", !onGround);
+                    AddChecklistCheck(required, satisfied, missing, "AGL<3000", agl < 3000d);
+                    AddChecklistCheck(required, satisfied, missing, "DescentOrEstablished", vs < -150d || Math.Abs(vs) <= 700d);
+                    break;
+                case FlightPhase.Landing:
+                    AddChecklistCheck(required, satisfied, missing, "OnGroundAfterAirborne", onGround && data.HasBeenAirborne);
+                    AddChecklistCheck(required, satisfied, missing, "TouchdownEvidence", data.TouchdownDetected || data.HasBeenAirborne);
+                    break;
                 case FlightPhase.Taxi:
-                    // Bloque 10: no pasar a ARRIVED automáticamente.
-                    // El cierre oficial de Patagonia Wings es manual: el piloto debe
-                    // llegar a gate, detenerse, apagar motores, dejar Cold & Dark y
-                    // presionar FINALIZAR EN GATE desde ACARS.
-                    // Mantener fase Taxi evita que cualquier navegación/PIREP legacy
-                    // se dispare solo por aterrizaje + parking brake.
+                    AddChecklistCheck(required, satisfied, missing, "OnGroundAfterLanding", onGround && data.HasBeenAirborne);
+                    AddChecklistCheck(required, satisfied, missing, "TaxiSpeed", gs > 3d && gs <= 40d);
+                    break;
+                case FlightPhase.Arrived:
+                    AddChecklistCheck(required, satisfied, missing, "OnGround", onGround);
+                    AddChecklistCheck(required, satisfied, missing, "GS<=3", gs <= 3d);
+                    AddChecklistCheck(required, satisfied, missing, "ParkingBrakeON", data.ParkingBrake);
+                    AddChecklistCheck(required, satisfied, missing, "AfterAirborne", data.HasBeenAirborne || data.TouchdownDetected);
+                    AddChecklistWarning(warnings, "EnginesRunning", enginesRunning);
+                    break;
+                default:
+                    AddChecklistCheck(required, satisfied, missing, "TelemetryPresent", data.CapturedAtUtc != default(DateTime));
                     break;
             }
 
-            if (newPhase != CurrentPhase)
-                SetPhase(newPhase);
+            var status = missing.Count == 0 ? (warnings.Count == 0 ? "OK" : "WARN") : "INCOMPLETE";
+            var summary = status == "OK"
+                ? "Fase coherente"
+                : status == "WARN"
+                    ? "Fase coherente con advertencias"
+                    : "Fase con evidencia incompleta";
+
+            return new PhaseChecklistEvidence
+            {
+                Status = status,
+                Summary = summary,
+                Required = string.Join(",", required),
+                Satisfied = string.Join(",", satisfied),
+                Missing = string.Join(",", missing),
+                Warnings = string.Join(",", warnings)
+            };
+        }
+
+        private static void AddChecklistCheck(List<string> required, List<string> satisfied, List<string> missing, string name, bool condition)
+        {
+            required.Add(name);
+            if (condition)
+            {
+                satisfied.Add(name);
+            }
+            else
+            {
+                missing.Add(name);
+            }
+        }
+
+        private static void AddChecklistWarning(List<string> warnings, string name, bool condition)
+        {
+            if (condition)
+            {
+                warnings.Add(name);
+            }
+        }
+
+        private static string ToOperationalPhaseCode(FlightPhase phase)
+        {
+            switch (phase)
+            {
+                case FlightPhase.PreFlight: return "PRE";
+                case FlightPhase.Boarding: return "BRD";
+                case FlightPhase.PushbackTaxi: return "TAX_OUT";
+                case FlightPhase.Takeoff: return "TO";
+                case FlightPhase.Climb: return "CLB";
+                case FlightPhase.Cruise: return "CRZ";
+                case FlightPhase.Descent: return "DES";
+                case FlightPhase.Approach: return "APP";
+                case FlightPhase.Landing: return "LDG";
+                case FlightPhase.Taxi: return "TAX_IN";
+                case FlightPhase.Arrived: return "GATE";
+                case FlightPhase.Deboarding: return "DEB";
+                default: return "PRE";
+            }
+        }
+
+        private static string ToOperationalPhaseName(FlightPhase phase)
+        {
+            switch (phase)
+            {
+                case FlightPhase.PreFlight: return "Preflight";
+                case FlightPhase.Boarding: return "Boarding";
+                case FlightPhase.PushbackTaxi: return "Taxi out";
+                case FlightPhase.Takeoff: return "Takeoff roll / initial airborne";
+                case FlightPhase.Climb: return "Climb";
+                case FlightPhase.Cruise: return "Cruise";
+                case FlightPhase.Descent: return "Descent";
+                case FlightPhase.Approach: return "Approach";
+                case FlightPhase.Landing: return "Landing roll";
+                case FlightPhase.Taxi: return "Taxi in";
+                case FlightPhase.Arrived: return "Gate ready";
+                case FlightPhase.Deboarding: return "Deboarding";
+                default: return "Preflight";
+            }
+        }
+
+        private static bool IsAirborneOperationalCode(string code)
+        {
+            switch ((code ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "TO":
+                case "CLB":
+                case "CRZ":
+                case "DES":
+                case "APP":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsGroundOperationalCode(string code)
+        {
+            switch ((code ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "PRE":
+                case "BRD":
+                case "TAX_OUT":
+                case "TAX_IN":
+                case "GATE":
+                case "DEB":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static double ResolveAgl(SimData data)
+        {
+            if (data == null) return 0d;
+            var agl = data.AltitudeAglFeet >= 0d ? data.AltitudeAglFeet : data.AltitudeAGL;
+            if (double.IsNaN(agl) || double.IsInfinity(agl)) return 0d;
+            return Math.Max(0d, agl);
+        }
+
+        private static double ResolveMsl(SimData data)
+        {
+            if (data == null) return 0d;
+            var msl = data.AltitudeMslFeet > 0d ? data.AltitudeMslFeet : data.AltitudeFeet;
+            if (double.IsNaN(msl) || double.IsInfinity(msl)) return 0d;
+            return msl;
+        }
+
+        private static double SafeNumber(double value)
+        {
+            return double.IsNaN(value) || double.IsInfinity(value) ? 0d : value;
+        }
+
+        private static double SecondsSince(DateTime startUtc, DateTime nowUtc)
+        {
+            if (startUtc == default(DateTime) || nowUtc < startUtc) return 0d;
+            return (nowUtc - startUtc).TotalSeconds;
         }
 
         private void SetFlightLock(bool value)
@@ -573,6 +1469,27 @@ namespace PatagoniaWings.Acars.Core.Services
             _crashMarked = false;
             _crashMarkedAtUtc = default(DateTime);
             _crashReason = string.Empty;
+            _hasBeenAirborne = false;
+            _takeoffDetected = false;
+            _touchdownDetected = false;
+            _airborneConfirmSamples = 0;
+            _groundConfirmSamples = 0;
+            _descentConfirmSamples = 0;
+            _approachConfirmSamples = 0;
+            _cruiseStableSamples = 0;
+            _lastPhaseChangeUtc = default(DateTime);
+            _candidatePhase = FlightPhase.Disconnected;
+            _candidatePhaseSamples = 0;
+            _phaseStabilitySamples = 0;
+            _phaseTransitionIndex = 0;
+            _phaseEnteredAtUtc = default(DateTime);
+            _lastAirborneMsl = 0d;
+            _mslIncreasingSamples = 0;
+            _mslDecreasingSamples = 0;
+            _taxiOutConfirmSamples = 0;
+            _takeoffRollConfirmSamples = 0;
+            _landingRollConfirmSamples = 0;
+            _gateReadyConfirmSamples = 0;
             _damageCollector = null;
             _finalDamageEvents.Clear();
             SetFlightLock(false);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using PatagoniaWings.Acars.Core.Enums;
 
 namespace PatagoniaWings.Acars.Core.Models
@@ -14,13 +14,85 @@ namespace PatagoniaWings.Acars.Core.Models
         // Posicion
         public double Latitude { get; set; }
         public double Longitude { get; set; }
+        /// <summary>
+        /// Altitud operacional principal normalizada. Desde C0 corresponde a MSL real
+        /// (PLANE ALTITUDE / fallback indicado), no a AGL. Se mantiene el nombre legacy
+        /// para compatibilidad con UI, FlightService y PIREP.
+        /// </summary>
         public double AltitudeFeet { get; set; }
+        /// <summary>Altura sobre terreno normalizada. En tierra debe ser 0.</summary>
         public double AltitudeAGL { get; set; }
+        /// <summary>Alias explícito de AltitudeFeet para consumidores nuevos.</summary>
+        public double AltitudeMslFeet { get; set; }
+        /// <summary>Alias explícito de AltitudeAGL para consumidores nuevos.</summary>
+        public double AltitudeAglFeet { get; set; }
         public double IndicatedAltitudeFeet { get; set; }
         public double TrueAltitudeFeet { get; set; }
         public double PressureAltitudeFeet { get; set; }
         public double RadioAltitudeFeet { get; set; }
         public double GroundAltitudeFeet { get; set; }
+        public double GroundElevationFeet { get; set; }
+        public string FlightLevel { get; set; } = string.Empty;
+        public string DisplayAltitudeMode { get; set; } = "MSL";
+        public string DisplayAltitudeText { get; set; } = string.Empty;
+        public string AltitudeSource { get; set; } = "unknown";
+        public bool IsAltitudeReliable { get; set; }
+        public double TransitionAltitudeFeet { get; set; } = 10000d;
+
+        // C1 Phase Resolver evidence. ACARS stores this as RAW operational evidence;
+        // Web/Supabase remains the official scoring authority.
+        public string OperationalPhaseCode { get; set; } = "PRE";
+        public string OperationalPhaseName { get; set; } = "Preflight";
+        public string OperationalPhaseReason { get; set; } = string.Empty;
+        public bool HasBeenAirborne { get; set; }
+        public bool IsAirborneSample { get; set; }
+        public bool TouchdownDetected { get; set; }
+        public bool GateReadyCandidate { get; set; }
+
+        // C2 Phase checklist evidence: raw operational checklist for UI, XML and later Web/Supabase scoring.
+        // This is not official scoring; it only explains what each phase is measuring.
+        public string PhaseChecklistStatus { get; set; } = "PENDING";
+        public string PhaseChecklistSummary { get; set; } = string.Empty;
+        public string PhaseChecklistRequired { get; set; } = string.Empty;
+        public string PhaseChecklistSatisfied { get; set; } = string.Empty;
+        public string PhaseChecklistMissing { get; set; } = string.Empty;
+        public string PhaseChecklistWarnings { get; set; } = string.Empty;
+
+        // C3 Phase transition matrix evidence. These fields make phase changes auditable
+        // and help Web/Supabase evaluate by phase without trusting client-side score.
+        public string PhaseTransitionFromCode { get; set; } = string.Empty;
+        public string PhaseTransitionToCode { get; set; } = string.Empty;
+        public string PhaseTransitionReason { get; set; } = string.Empty;
+        public bool PhaseTransitionChanged { get; set; }
+        public int PhaseTransitionIndex { get; set; }
+        public int PhaseStabilitySamples { get; set; }
+        public int PhaseCandidateSamples { get; set; }
+        public int PhaseDwellSeconds { get; set; }
+        public string PhaseDecisionConfidence { get; set; } = "initial";
+        public string PhaseMatrixVersion { get; set; } = "C3";
+
+        // C4 Phase audit: read-only QA evidence for validating phase detection before Web/Supabase scoring.
+        public string PhaseAuditStatus { get; set; } = "PENDING";
+        public string PhaseAuditSummary { get; set; } = string.Empty;
+        public string PhaseAuditFlags { get; set; } = string.Empty;
+        public string PhaseAuditVersion { get; set; } = "C4";
+
+        // C5 Phase review contract: explains what ACARS expects the pilot/system to do,
+        // what metrics are measured in the current phase and what Web/Supabase may evaluate.
+        // It is audit evidence only; it is not client-side scoring.
+        public string PhaseExpectedActions { get; set; } = string.Empty;
+        public string PhaseMeasuredMetrics { get; set; } = string.Empty;
+        public string PhaseScoringHints { get; set; } = string.Empty;
+        public string PhaseReviewQuestion { get; set; } = string.Empty;
+        public string PhaseReviewVersion { get; set; } = "C5";
+
+        // C6 Phase prevalidation: compact readiness contract for the final simulator test.
+        // This is still RAW evidence only. It tells us whether the current phase sample is
+        // ready for later Web/Supabase review, without calculating official score in ACARS.
+        public string PhasePrevalidationStatus { get; set; } = "PENDING";
+        public string PhasePrevalidationSummary { get; set; } = string.Empty;
+        public string PhasePrevalidationFlags { get; set; } = string.Empty;
+        public string PhasePrevalidationVersion { get; set; } = "C6";
 
         // Velocidad
         public double IndicatedAirspeed { get; set; }

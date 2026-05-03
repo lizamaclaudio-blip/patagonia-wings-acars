@@ -75,7 +75,13 @@ namespace PatagoniaWings.Acars.Core.Services
                     BuildDespacho(dispatch, report),
                     BuildCapabilities(dispatch, activeFlight, firstSample, lastSample),
                     BuildOperationalChecks(telemetry, dispatch, activeFlight),
+                    BuildAltitudeEvidence(telemetry, firstSample, lastSample),
                     BuildFlightPhaseSummary(telemetry, report),
+                    BuildPhaseOperationalChecklist(telemetry),
+                    BuildPhaseAuditReport(telemetry),
+                    BuildPhasePrevalidationPackage(telemetry),
+                    BuildPhaseAcceptanceMatrix(telemetry),
+                    BuildPhaseTestRunManifest(telemetry, dispatch, report),
                     BuildEventTimeline(telemetry, dispatch, activeFlight, report),
                     BuildVuelo(telemetry, report, generatedAtUtc),
                     BuildResumen(dispatch, report, telemetry, firstSample, lastSample, firstAirborne, touchdown, blockMinutes, flightMinutes, distanceNm, fuelStartKg, fuelEndKg, fuelUsedKg, fuelPerHour, fuelPer100Nm),
@@ -588,7 +594,8 @@ namespace PatagoniaWings.Acars.Core.Services
             var gateStop = list.LastOrDefault(sample => sample.OnGround && sample.ParkingBrake && sample.GroundSpeed < 3d);
 
             var phases = new XElement("FlightPhaseSummary",
-                Element("SchemaVersion", "PIREP_PERFECT_A2"),
+                Element("SchemaVersion", "PIREP_PERFECT_A2_C1"),
+                Element("PhaseResolver", "C1_STATE_MACHINE"),
                 Element("MeasurementPolicy", "phase_based_raw_evidence_no_client_score"),
                 Element("Samples", list.Count),
                 Element("TakeoffDetected", Bool(takeoff != null)),
@@ -596,14 +603,30 @@ namespace PatagoniaWings.Acars.Core.Services
                 Element("ManualGateCloseoutRequired", "True"),
                 Element("AutoCloseoutAllowed", "False"));
 
-            phases.Add(PhaseNode("Preflight", list.Where(sample => first != null && (blockOff == null || sample.CapturedAtUtc <= blockOff.CapturedAtUtc)).ToList()));
-            phases.Add(PhaseNode("TaxiOut", list.Where(sample => blockOff != null && takeoff != null && sample.CapturedAtUtc >= blockOff.CapturedAtUtc && sample.CapturedAtUtc <= takeoff.CapturedAtUtc).ToList()));
-            phases.Add(PhaseNode("Takeoff", list.Where(sample => takeoff != null && sample.CapturedAtUtc >= takeoff.CapturedAtUtc.AddSeconds(-30) && sample.CapturedAtUtc <= takeoff.CapturedAtUtc.AddMinutes(2)).ToList()));
-            phases.Add(PhaseNode("Climb", list.Where(sample => takeoff != null && sample.CapturedAtUtc > takeoff.CapturedAtUtc && (touchdown == null || sample.CapturedAtUtc < touchdown.CapturedAtUtc) && sample.VerticalSpeed > 300d).ToList()));
-            phases.Add(PhaseNode("Cruise", list.Where(sample => takeoff != null && !sample.OnGround && Math.Abs(sample.VerticalSpeed) <= 300d && sample.AltitudeAGL > 1500d).ToList()));
-            phases.Add(PhaseNode("DescentApproach", list.Where(sample => takeoff != null && sample.CapturedAtUtc > takeoff.CapturedAtUtc && (touchdown == null || sample.CapturedAtUtc < touchdown.CapturedAtUtc) && (sample.VerticalSpeed < -300d || sample.AltitudeAGL <= 1500d)).ToList()));
-            phases.Add(PhaseNode("Landing", touchdown == null ? new List<SimData>() : list.Where(sample => sample.CapturedAtUtc >= touchdown.CapturedAtUtc.AddSeconds(-20) && sample.CapturedAtUtc <= touchdown.CapturedAtUtc.AddSeconds(30)).ToList()));
-            phases.Add(PhaseNode("TaxiInGate", list.Where(sample => touchdown != null && sample.CapturedAtUtc >= touchdown.CapturedAtUtc).ToList()));
+            var hasOperationalPhases = list.Any(sample => !string.IsNullOrWhiteSpace(sample.OperationalPhaseCode));
+            if (hasOperationalPhases)
+            {
+                phases.Add(PhaseNode("Preflight", list.Where(sample => IsOperationalPhase(sample, "PRE", "BRD")).ToList()));
+                phases.Add(PhaseNode("TaxiOut", list.Where(sample => IsOperationalPhase(sample, "TAX_OUT")).ToList()));
+                phases.Add(PhaseNode("Takeoff", list.Where(sample => IsOperationalPhase(sample, "TO")).ToList()));
+                phases.Add(PhaseNode("Climb", list.Where(sample => IsOperationalPhase(sample, "CLB")).ToList()));
+                phases.Add(PhaseNode("Cruise", list.Where(sample => IsOperationalPhase(sample, "CRZ")).ToList()));
+                phases.Add(PhaseNode("Descent", list.Where(sample => IsOperationalPhase(sample, "DES")).ToList()));
+                phases.Add(PhaseNode("Approach", list.Where(sample => IsOperationalPhase(sample, "APP")).ToList()));
+                phases.Add(PhaseNode("Landing", list.Where(sample => IsOperationalPhase(sample, "LDG")).ToList()));
+                phases.Add(PhaseNode("TaxiInGate", list.Where(sample => IsOperationalPhase(sample, "TAX_IN", "GATE", "DEB")).ToList()));
+            }
+            else
+            {
+                phases.Add(PhaseNode("Preflight", list.Where(sample => first != null && (blockOff == null || sample.CapturedAtUtc <= blockOff.CapturedAtUtc)).ToList()));
+                phases.Add(PhaseNode("TaxiOut", list.Where(sample => blockOff != null && takeoff != null && sample.CapturedAtUtc >= blockOff.CapturedAtUtc && sample.CapturedAtUtc <= takeoff.CapturedAtUtc).ToList()));
+                phases.Add(PhaseNode("Takeoff", list.Where(sample => takeoff != null && sample.CapturedAtUtc >= takeoff.CapturedAtUtc.AddSeconds(-30) && sample.CapturedAtUtc <= takeoff.CapturedAtUtc.AddMinutes(2)).ToList()));
+                phases.Add(PhaseNode("Climb", list.Where(sample => takeoff != null && sample.CapturedAtUtc > takeoff.CapturedAtUtc && (touchdown == null || sample.CapturedAtUtc < touchdown.CapturedAtUtc) && sample.VerticalSpeed > 300d).ToList()));
+                phases.Add(PhaseNode("Cruise", list.Where(sample => takeoff != null && !sample.OnGround && Math.Abs(sample.VerticalSpeed) <= 300d && ResolveAgl(sample) > 1500d).ToList()));
+                phases.Add(PhaseNode("DescentApproach", list.Where(sample => takeoff != null && sample.CapturedAtUtc > takeoff.CapturedAtUtc && (touchdown == null || sample.CapturedAtUtc < touchdown.CapturedAtUtc) && (sample.VerticalSpeed < -300d || ResolveAgl(sample) <= 1500d)).ToList()));
+                phases.Add(PhaseNode("Landing", touchdown == null ? new List<SimData>() : list.Where(sample => sample.CapturedAtUtc >= touchdown.CapturedAtUtc.AddSeconds(-20) && sample.CapturedAtUtc <= touchdown.CapturedAtUtc.AddSeconds(30)).ToList()));
+                phases.Add(PhaseNode("TaxiInGate", list.Where(sample => touchdown != null && sample.CapturedAtUtc >= touchdown.CapturedAtUtc).ToList()));
+            }
 
             phases.Add(new XElement("KeyInstants",
                 InstantNode("FirstSample", first),
@@ -628,6 +651,13 @@ namespace PatagoniaWings.Acars.Core.Services
             return phases;
         }
 
+        private static bool IsOperationalPhase(SimData sample, params string[] codes)
+        {
+            if (sample == null || codes == null || codes.Length == 0) return false;
+            var code = (sample.OperationalPhaseCode ?? string.Empty).Trim().ToUpperInvariant();
+            return codes.Any(expected => string.Equals(code, expected, StringComparison.OrdinalIgnoreCase));
+        }
+
         private static XElement PhaseNode(string name, IReadOnlyList<SimData> samples)
         {
             var list = samples == null ? new List<SimData>() : samples.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
@@ -642,8 +672,10 @@ namespace PatagoniaWings.Acars.Core.Services
                 Element("Duration", FormatDuration(duration)),
                 Element("MaxIAS", ToIntString(list.Count == 0 ? 0d : list.Max(sample => sample.IndicatedAirspeed))),
                 Element("MaxGS", ToIntString(list.Count == 0 ? 0d : list.Max(sample => sample.GroundSpeed))),
-                Element("MaxAltitude", ToIntString(list.Count == 0 ? 0d : list.Max(sample => sample.AltitudeFeet))),
-                Element("MinAGL", ToIntString(list.Count == 0 ? 0d : list.Min(sample => sample.AltitudeAGL))),
+                Element("MaxAltitude", ToIntString(list.Count == 0 ? 0d : list.Max(sample => ResolveMsl(sample)))),
+                Element("MaxAltitudeMslFt", ToIntString(list.Count == 0 ? 0d : list.Max(sample => ResolveMsl(sample)))),
+                Element("MaxAglFt", ToIntString(list.Count == 0 ? 0d : list.Max(sample => ResolveAgl(sample)))),
+                Element("MinAGL", ToIntString(list.Count == 0 ? 0d : list.Min(sample => ResolveAgl(sample)))),
                 Element("MaxVS", ToIntString(list.Count == 0 ? 0d : list.Max(sample => sample.VerticalSpeed))),
                 Element("MinVS", ToIntString(list.Count == 0 ? 0d : list.Min(sample => sample.VerticalSpeed))),
                 Element("MaxBank", ToIntString(list.Count == 0 ? 0d : list.Select(sample => Math.Abs(sample.Bank)).DefaultIfEmpty(0d).Max())),
@@ -651,7 +683,12 @@ namespace PatagoniaWings.Acars.Core.Services
                 Element("MinG", FormatDecimal(list.Count == 0 ? 0d : list.Select(sample => ResolveGForce(sample, 0d)).DefaultIfEmpty(0d).Min(), 3)),
                 Element("FuelStartKg", ToIntString(first == null ? 0d : ResolveFuelKg(first, 0d))),
                 Element("FuelEndKg", ToIntString(last == null ? 0d : ResolveFuelKg(last, 0d))),
-                Element("DistanceNm", FormatDecimal(ResolveDistanceNm(new FlightReport(), list), 1)));
+                Element("DistanceNm", FormatDecimal(ResolveDistanceNm(new FlightReport(), list), 1)),
+                Element("PhaseExpectedActions", first == null ? string.Empty : first.PhaseExpectedActions),
+                Element("PhaseMeasuredMetrics", first == null ? string.Empty : first.PhaseMeasuredMetrics),
+                Element("PhaseScoringHints", first == null ? string.Empty : first.PhaseScoringHints),
+                Element("PhaseReviewQuestion", first == null ? string.Empty : first.PhaseReviewQuestion),
+                Element("PhaseReviewVersion", first == null ? string.Empty : first.PhaseReviewVersion));
         }
 
         private static XElement InstantNode(string name, SimData? sample)
@@ -660,12 +697,604 @@ namespace PatagoniaWings.Acars.Core.Services
                 new XAttribute("name", name),
                 Element("Detected", Bool(sample != null)),
                 Element("TimeUtc", sample == null ? string.Empty : FormatClock(sample.CapturedAtUtc)),
+                Element("OperationalPhaseCode", sample == null ? string.Empty : sample.OperationalPhaseCode),
+                Element("OperationalPhaseName", sample == null ? string.Empty : sample.OperationalPhaseName),
+                Element("OperationalPhaseReason", sample == null ? string.Empty : sample.OperationalPhaseReason),
+                Element("PhaseChecklistStatus", sample == null ? string.Empty : sample.PhaseChecklistStatus),
+                Element("PhaseChecklistMissing", sample == null ? string.Empty : sample.PhaseChecklistMissing),
+                Element("PhaseTransitionFromCode", sample == null ? string.Empty : sample.PhaseTransitionFromCode),
+                Element("PhaseTransitionToCode", sample == null ? string.Empty : sample.PhaseTransitionToCode),
+                Element("PhaseTransitionChanged", Bool(sample != null && sample.PhaseTransitionChanged)),
+                Element("PhaseTransitionReason", sample == null ? string.Empty : sample.PhaseTransitionReason),
+                Element("PhaseTransitionIndex", sample == null ? "0" : sample.PhaseTransitionIndex.ToString(CultureInfo.InvariantCulture)),
+                Element("PhaseStabilitySamples", sample == null ? "0" : sample.PhaseStabilitySamples.ToString(CultureInfo.InvariantCulture)),
+                Element("PhaseCandidateSamples", sample == null ? "0" : sample.PhaseCandidateSamples.ToString(CultureInfo.InvariantCulture)),
+                Element("PhaseDwellSeconds", sample == null ? "0" : sample.PhaseDwellSeconds.ToString(CultureInfo.InvariantCulture)),
+                Element("PhaseDecisionConfidence", sample == null ? string.Empty : sample.PhaseDecisionConfidence),
+                Element("PhaseMatrixVersion", sample == null ? string.Empty : sample.PhaseMatrixVersion),
+                Element("PhaseAuditStatus", sample == null ? string.Empty : sample.PhaseAuditStatus),
+                Element("PhaseAuditSummary", sample == null ? string.Empty : sample.PhaseAuditSummary),
+                Element("PhaseAuditFlags", sample == null ? string.Empty : sample.PhaseAuditFlags),
+                Element("PhaseAuditVersion", sample == null ? string.Empty : sample.PhaseAuditVersion),
+                Element("PhaseExpectedActions", sample == null ? string.Empty : sample.PhaseExpectedActions),
+                Element("PhaseMeasuredMetrics", sample == null ? string.Empty : sample.PhaseMeasuredMetrics),
+                Element("PhaseScoringHints", sample == null ? string.Empty : sample.PhaseScoringHints),
+                Element("PhaseReviewQuestion", sample == null ? string.Empty : sample.PhaseReviewQuestion),
+                Element("PhaseReviewVersion", sample == null ? string.Empty : sample.PhaseReviewVersion),
+                Element("PhasePrevalidationStatus", sample == null ? string.Empty : sample.PhasePrevalidationStatus),
+                Element("PhasePrevalidationSummary", sample == null ? string.Empty : sample.PhasePrevalidationSummary),
+                Element("PhasePrevalidationFlags", sample == null ? string.Empty : sample.PhasePrevalidationFlags),
+                Element("PhasePrevalidationVersion", sample == null ? string.Empty : sample.PhasePrevalidationVersion),
                 Element("Lat", FormatDecimal(sample == null ? 0d : sample.Latitude, 5)),
                 Element("Lon", FormatDecimal(sample == null ? 0d : sample.Longitude, 5)),
-                Element("AGL", ToIntString(sample == null ? 0d : sample.AltitudeAGL)),
-                Element("Altitude", ToIntString(sample == null ? 0d : sample.AltitudeFeet)),
+                Element("AGL", ToIntString(sample == null ? 0d : ResolveAgl(sample))),
+                Element("Altitude", ToIntString(sample == null ? 0d : ResolveMsl(sample))),
+                Element("AltitudeMslFt", ToIntString(sample == null ? 0d : ResolveMsl(sample))),
+                Element("AltitudeAglFt", ToIntString(sample == null ? 0d : ResolveAgl(sample))),
                 Element("IAS", ToIntString(sample == null ? 0d : sample.IndicatedAirspeed)),
                 Element("GS", ToIntString(sample == null ? 0d : sample.GroundSpeed)));
+        }
+
+        private static XElement BuildPhaseOperationalChecklist(IReadOnlyList<SimData> telemetry)
+        {
+            var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var root = new XElement("PhaseOperationalChecklist",
+                Element("SchemaVersion", "PIREP_PERFECT_C3"),
+                Element("Policy", "raw_phase_checklist_no_client_score"),
+                Element("Samples", list.Count));
+
+            root.Add(ExpectedPhaseNode("PRE", "Preflight", "OnGround, GS<=3, parking brake ON; registra avión, matrícula, origen, combustible inicial y QNH."));
+            root.Add(ExpectedPhaseNode("TAX_OUT", "Taxi out", "OnGround, GS 3-35 kt, parking brake OFF; registra taxi speed, luces y configuración previa al despegue."));
+            root.Add(ExpectedPhaseNode("TO", "Takeoff", "Takeoff roll y airborne; registra velocidad, flaps, luces, combustible al despegue y transición OnGround false."));
+            root.Add(ExpectedPhaseNode("CLB", "Climb", "Airborne con VS positiva o baja altura AGL; registra ascenso, velocidad y combustible."));
+            root.Add(ExpectedPhaseNode("CRZ", "Cruise", "Airborne estable; registra altitud MSL/FL, velocidad, combustible, pausas y PIC checks."));
+            root.Add(ExpectedPhaseNode("DES", "Descent", "Airborne con descenso sostenido; registra VS, velocidad y perfil vertical."));
+            root.Add(ExpectedPhaseNode("APP", "Approach", "AGL < 3000 ft y descenso/establecido; registra luces, flaps, gear si aplica y aproximación estabilizada."));
+            root.Add(ExpectedPhaseNode("LDG", "Landing", "Transición aire a tierra; registra touchdown VS/G/IAS/bank/pitch."));
+            root.Add(ExpectedPhaseNode("TAX_IN", "Taxi in", "OnGround después de touchdown, GS 3-40 kt; registra salida de pista y taxi al gate."));
+            root.Add(ExpectedPhaseNode("GATE", "Gate ready", "OnGround, GS<=3, parking brake ON y cierre manual; registra combustible final y estado de motores/cold-dark."));
+
+            var groups = list
+                .GroupBy(sample => string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? "UNKNOWN" : sample.OperationalPhaseCode.Trim().ToUpperInvariant())
+                .OrderBy(group => PhaseOrder(group.Key))
+                .ThenBy(group => group.Key);
+
+            foreach (var group in groups)
+            {
+                var samples = group.OrderBy(sample => sample.CapturedAtUtc).ToList();
+                var first = samples.Count == 0 ? null : samples[0];
+                var last = samples.Count == 0 ? null : samples[samples.Count - 1];
+                var missing = samples.SelectMany(sample => SplitChecklist(sample.PhaseChecklistMissing)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+                var warnings = samples.SelectMany(sample => SplitChecklist(sample.PhaseChecklistWarnings)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+                var satisfied = samples.SelectMany(sample => SplitChecklist(sample.PhaseChecklistSatisfied)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+                var status = missing.Count == 0 ? (warnings.Count == 0 ? "OK" : "WARN") : "INCOMPLETE";
+
+                root.Add(new XElement("ObservedPhase",
+                    new XAttribute("code", group.Key),
+                    new XAttribute("name", first == null ? group.Key : FirstNonEmpty(first.OperationalPhaseName, group.Key)),
+                    new XAttribute("status", status),
+                    Element("Samples", samples.Count),
+                    Element("StartUtc", first == null ? string.Empty : FormatClock(first.CapturedAtUtc)),
+                    Element("EndUtc", last == null ? string.Empty : FormatClock(last.CapturedAtUtc)),
+                    Element("FirstReason", first == null ? string.Empty : first.OperationalPhaseReason),
+                    Element("LastReason", last == null ? string.Empty : last.OperationalPhaseReason),
+                    Element("TransitionCount", samples.Count(sample => sample.PhaseTransitionChanged).ToString(CultureInfo.InvariantCulture)),
+                    Element("FirstTransitionIndex", first == null ? "0" : first.PhaseTransitionIndex.ToString(CultureInfo.InvariantCulture)),
+                    Element("LastTransitionIndex", last == null ? "0" : last.PhaseTransitionIndex.ToString(CultureInfo.InvariantCulture)),
+                    Element("LastDecisionConfidence", last == null ? string.Empty : last.PhaseDecisionConfidence),
+                    Element("LastDwellSeconds", last == null ? "0" : last.PhaseDwellSeconds.ToString(CultureInfo.InvariantCulture)),
+                    Element("Required", first == null ? string.Empty : first.PhaseChecklistRequired),
+                    Element("Satisfied", string.Join(",", satisfied)),
+                    Element("Missing", string.Join(",", missing)),
+                    Element("Warnings", string.Join(",", warnings)),
+                    Element("AuditStatus", ResolveAuditStatus(samples)),
+                    Element("AuditFlags", ResolveAuditFlags(samples)),
+                    Element("MaxMslFt", ToIntString(samples.Count == 0 ? 0d : samples.Max(sample => ResolveMsl(sample)))),
+                    Element("MaxAglFt", ToIntString(samples.Count == 0 ? 0d : samples.Max(sample => ResolveAgl(sample)))),
+                    Element("MaxGS", ToIntString(samples.Count == 0 ? 0d : samples.Max(sample => sample.GroundSpeed))),
+                    Element("MinVS", ToIntString(samples.Count == 0 ? 0d : samples.Min(sample => sample.VerticalSpeed))),
+                    Element("MaxVS", ToIntString(samples.Count == 0 ? 0d : samples.Max(sample => sample.VerticalSpeed)))));
+            }
+
+            return root;
+        }
+
+        private static XElement BuildPhaseAuditReport(IReadOnlyList<SimData> telemetry)
+        {
+            var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var root = new XElement("PhaseAuditReport",
+                Element("SchemaVersion", "PIREP_PERFECT_C4"),
+                Element("Policy", "audit_only_no_client_score"),
+                Element("Samples", list.Count.ToString(CultureInfo.InvariantCulture)));
+
+            if (list.Count == 0)
+            {
+                root.Add(new XElement("Overall",
+                    new XAttribute("status", "ERROR"),
+                    Element("Summary", "No hay muestras de telemetria para auditar fases.")));
+                return root;
+            }
+
+            var sequence = list
+                .Select(sample => string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? "UNKNOWN" : sample.OperationalPhaseCode.Trim().ToUpperInvariant())
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .Aggregate(new List<string>(), (acc, code) => { if (acc.Count == 0 || acc[acc.Count - 1] != code) acc.Add(code); return acc; });
+
+            var transitions = list.Where(sample => sample.PhaseTransitionChanged).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var flags = list.SelectMany(sample => SplitChecklist(sample.PhaseAuditFlags)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+            var errors = list.Count(sample => string.Equals(sample.PhaseAuditStatus, "ERROR", StringComparison.OrdinalIgnoreCase));
+            var warnings = list.Count(sample => string.Equals(sample.PhaseAuditStatus, "WARN", StringComparison.OrdinalIgnoreCase));
+            var ok = list.Count(sample => string.Equals(sample.PhaseAuditStatus, "OK", StringComparison.OrdinalIgnoreCase));
+            var touchdownCount = list.Count(sample => sample.TouchdownDetected);
+            var gateCount = list.Count(sample => string.Equals(sample.OperationalPhaseCode, "GATE", StringComparison.OrdinalIgnoreCase));
+            var onGroundAirborneContradictions = list.Count(sample => sample.OnGround && IsAirborneOperationalCode(sample.OperationalPhaseCode));
+            var airborneGroundContradictions = list.Count(sample => !sample.OnGround && IsGroundOperationalCode(sample.OperationalPhaseCode));
+
+            var overallStatus = errors > 0 || onGroundAirborneContradictions > 0 || airborneGroundContradictions > 0
+                ? "ERROR"
+                : warnings > 0 || flags.Count > 0 ? "WARN" : "OK";
+
+            root.Add(new XElement("Overall",
+                new XAttribute("status", overallStatus),
+                Element("Summary", overallStatus == "OK" ? "Secuencia de fases coherente para auditoria." : "Secuencia de fases requiere revision."),
+                Element("ObservedSequence", string.Join(" > ", sequence)),
+                Element("TransitionCount", transitions.Count.ToString(CultureInfo.InvariantCulture)),
+                Element("OkSamples", ok.ToString(CultureInfo.InvariantCulture)),
+                Element("WarnSamples", warnings.ToString(CultureInfo.InvariantCulture)),
+                Element("ErrorSamples", errors.ToString(CultureInfo.InvariantCulture)),
+                Element("TouchdownSamples", touchdownCount.ToString(CultureInfo.InvariantCulture)),
+                Element("GateSamples", gateCount.ToString(CultureInfo.InvariantCulture)),
+                Element("OnGroundAirbornePhaseContradictions", onGroundAirborneContradictions.ToString(CultureInfo.InvariantCulture)),
+                Element("AirborneGroundPhaseContradictions", airborneGroundContradictions.ToString(CultureInfo.InvariantCulture)),
+                Element("Flags", string.Join(",", flags))));
+
+            var transitionsNode = new XElement("Transitions");
+            foreach (var sample in transitions)
+            {
+                transitionsNode.Add(new XElement("Transition",
+                    new XAttribute("index", sample.PhaseTransitionIndex.ToString(CultureInfo.InvariantCulture)),
+                    new XAttribute("timeUtc", FormatClock(sample.CapturedAtUtc)),
+                    new XAttribute("from", string.IsNullOrWhiteSpace(sample.PhaseTransitionFromCode) ? "UNKNOWN" : sample.PhaseTransitionFromCode),
+                    new XAttribute("to", string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? sample.PhaseTransitionToCode : sample.OperationalPhaseCode),
+                    new XAttribute("confidence", string.IsNullOrWhiteSpace(sample.PhaseDecisionConfidence) ? "confirmed" : sample.PhaseDecisionConfidence),
+                    Element("Reason", sample.PhaseTransitionReason),
+                    Element("AuditStatus", sample.PhaseAuditStatus),
+                    Element("AuditFlags", sample.PhaseAuditFlags),
+                    Element("AltitudeMslFt", ToIntString(ResolveMsl(sample))),
+                    Element("AltitudeAglFt", ToIntString(ResolveAgl(sample))),
+                    Element("GroundSpeedKt", ToIntString(sample.GroundSpeed)),
+                    Element("VerticalSpeedFpm", ToIntString(sample.VerticalSpeed)),
+                    Element("OnGround", Bool(sample.OnGround))));
+            }
+            root.Add(transitionsNode);
+
+            var phaseContracts = new XElement("PhaseReviewContracts");
+            foreach (var group in list
+                .Where(sample => !string.IsNullOrWhiteSpace(sample.OperationalPhaseCode))
+                .GroupBy(sample => sample.OperationalPhaseCode.Trim().ToUpperInvariant())
+                .OrderBy(group => group.Key))
+            {
+                var sample = group.FirstOrDefault();
+                phaseContracts.Add(new XElement("PhaseContract",
+                    new XAttribute("code", group.Key),
+                    Element("Samples", group.Count().ToString(CultureInfo.InvariantCulture)),
+                    Element("ExpectedActions", sample == null ? string.Empty : sample.PhaseExpectedActions),
+                    Element("MeasuredMetrics", sample == null ? string.Empty : sample.PhaseMeasuredMetrics),
+                    Element("ScoringHints", sample == null ? string.Empty : sample.PhaseScoringHints),
+                    Element("ReviewQuestion", sample == null ? string.Empty : sample.PhaseReviewQuestion),
+                    Element("Version", sample == null ? string.Empty : sample.PhaseReviewVersion)));
+            }
+            root.Add(phaseContracts);
+
+            var questions = new XElement("ValidationQuestions",
+                Element("Question", "¿PRE aparece antes de TAX_OUT/TO?"),
+                Element("Question", "¿TO aparece antes de CLB/CRZ/DES/APP?"),
+                Element("Question", "¿LDG aparece por transicion aire→tierra y no solo por AGL=0?"),
+                Element("Question", "¿TAX_IN/GATE aparecen despues de LDG?"),
+                Element("Question", "¿No hay CLB/CRZ/DES/APP con OnGround=true?"),
+                Element("Question", "¿AGL=0 en tierra y MSL conserva elevacion real?"));
+            root.Add(questions);
+
+            return root;
+        }
+
+        private static XElement BuildPhasePrevalidationPackage(IReadOnlyList<SimData> telemetry)
+        {
+            var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var root = new XElement("PhasePrevalidationPackage",
+                Element("SchemaVersion", "PIREP_PERFECT_C6"),
+                Element("Policy", "preflight_phase_review_only_no_client_score"),
+                Element("Samples", list.Count.ToString(CultureInfo.InvariantCulture)),
+                Element("OfficialScoringAuthority", "WEB_SUPABASE"));
+
+            if (list.Count == 0)
+            {
+                root.Add(new XElement("Overall",
+                    new XAttribute("status", "BLOCK"),
+                    Element("Summary", "Sin telemetria para prevalidar fases."),
+                    Element("Flags", "NoTelemetry")));
+                return root;
+            }
+
+            var sequence = BuildObservedPhaseSequence(list);
+            var required = new[] { "PRE", "TAX_OUT", "TO", "CLB", "LDG", "TAX_IN", "GATE" };
+            var observed = new HashSet<string>(list.Select(sample => (sample.OperationalPhaseCode ?? string.Empty).Trim().ToUpperInvariant()).Where(code => !string.IsNullOrWhiteSpace(code)));
+            var missingRequired = required.Where(code => !observed.Contains(code)).ToList();
+            var statusCounts = list
+                .GroupBy(sample => string.IsNullOrWhiteSpace(sample.PhasePrevalidationStatus) ? "PENDING" : sample.PhasePrevalidationStatus.Trim().ToUpperInvariant())
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+            var flags = list
+                .SelectMany(sample => SplitChecklist(sample.PhasePrevalidationFlags))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(flag => flag)
+                .ToList();
+
+            var hasBlock = statusCounts.ContainsKey("BLOCK") || flags.Any(flag => flag.EndsWith("ButAirbornePhase", StringComparison.OrdinalIgnoreCase) || flag.EndsWith("ButGroundPhase", StringComparison.OrdinalIgnoreCase));
+            var hasWait = statusCounts.ContainsKey("WAIT");
+            var hasWarn = statusCounts.ContainsKey("WARN") || flags.Count > 0;
+            var overall = hasBlock ? "BLOCK" : hasWait ? "WAIT" : hasWarn ? "WARN" : "READY";
+
+            root.Add(new XElement("Overall",
+                new XAttribute("status", overall),
+                Element("Summary", overall == "READY" ? "C6 listo para prueba de vuelo completa." : "C6 requiere revision durante la prueba de vuelo."),
+                Element("ObservedSequence", string.Join(" > ", sequence)),
+                Element("MissingRecommendedPhases", string.Join(",", missingRequired)),
+                Element("ReadySamples", CountStatus(statusCounts, "READY")),
+                Element("WarnSamples", CountStatus(statusCounts, "WARN")),
+                Element("WaitSamples", CountStatus(statusCounts, "WAIT")),
+                Element("BlockSamples", CountStatus(statusCounts, "BLOCK")),
+                Element("Flags", string.Join(",", flags)),
+                Element("ReadyForWebSupabaseScoringReview", Bool(overall != "BLOCK"))));
+
+            var byPhase = new XElement("PhaseReadinessByPhase");
+            foreach (var group in list
+                .GroupBy(sample => string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? "UNKNOWN" : sample.OperationalPhaseCode.Trim().ToUpperInvariant())
+                .OrderBy(group => PhaseOrder(group.Key))
+                .ThenBy(group => group.Key))
+            {
+                var samples = group.ToList();
+                var sampleFlags = samples.SelectMany(sample => SplitChecklist(sample.PhasePrevalidationFlags)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(flag => flag).ToList();
+                var phaseStatus = samples.Any(sample => string.Equals(sample.PhasePrevalidationStatus, "BLOCK", StringComparison.OrdinalIgnoreCase))
+                    ? "BLOCK"
+                    : samples.Any(sample => string.Equals(sample.PhasePrevalidationStatus, "WAIT", StringComparison.OrdinalIgnoreCase))
+                        ? "WAIT"
+                        : samples.Any(sample => string.Equals(sample.PhasePrevalidationStatus, "WARN", StringComparison.OrdinalIgnoreCase))
+                            ? "WARN"
+                            : "READY";
+                var first = samples.OrderBy(sample => sample.CapturedAtUtc).FirstOrDefault();
+                var last = samples.OrderBy(sample => sample.CapturedAtUtc).LastOrDefault();
+                byPhase.Add(new XElement("PhaseReadiness",
+                    new XAttribute("code", group.Key),
+                    new XAttribute("status", phaseStatus),
+                    Element("Samples", samples.Count.ToString(CultureInfo.InvariantCulture)),
+                    Element("StartUtc", first == null ? string.Empty : FormatClock(first.CapturedAtUtc)),
+                    Element("EndUtc", last == null ? string.Empty : FormatClock(last.CapturedAtUtc)),
+                    Element("Summary", last == null ? string.Empty : last.PhasePrevalidationSummary),
+                    Element("Flags", string.Join(",", sampleFlags)),
+                    Element("LastChecklist", last == null ? string.Empty : last.PhaseChecklistStatus),
+                    Element("LastAudit", last == null ? string.Empty : last.PhaseAuditStatus),
+                    Element("LastReviewQuestion", last == null ? string.Empty : last.PhaseReviewQuestion)));
+            }
+            root.Add(byPhase);
+
+            root.Add(new XElement("FlightTestInstructions",
+                Element("Step", "Validar PRE en parking: AGL=0, MSL=elevacion real, freno ON."),
+                Element("Step", "Validar TAX_OUT: GS 3-35 kt, freno OFF, OnGround=true."),
+                Element("Step", "Validar TO/CLB: transicion OnGround true->false, AGL/MSL suben."),
+                Element("Step", "Validar DES/APP: descenso sostenido y AGL < 3000 ft en aproximacion."),
+                Element("Step", "Validar LDG: touchdown por aire->tierra, no por AGL=0 en gate."),
+                Element("Step", "Validar TAX_IN/GATE: OnGround=true, GS bajo, parking brake ON, cierre manual.")));
+
+            return root;
+        }
+
+
+        private static XElement BuildPhaseAcceptanceMatrix(IReadOnlyList<SimData> telemetry)
+        {
+            var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var root = new XElement("PhaseAcceptanceMatrix",
+                Element("SchemaVersion", "PIREP_PERFECT_C7"),
+                Element("Policy", "final_manual_review_pack_no_client_score"),
+                Element("OfficialScoringAuthority", "WEB_SUPABASE"),
+                Element("Samples", list.Count.ToString(CultureInfo.InvariantCulture)));
+
+            var sequence = BuildObservedPhaseSequence(list);
+            var observed = new HashSet<string>(sequence, StringComparer.OrdinalIgnoreCase);
+            var expected = new[]
+            {
+                new { Code = "PRE", Name = "Preflight / Gate", Required = "OnGround=true, AGL=0, GS<=3, parking brake ON, despacho presente", Critical = "AirportMatch, AircraftMatch, ColdDark, ParkingBrake, FuelStart" },
+                new { Code = "TAX_OUT", Name = "Taxi out", Required = "OnGround=true, GS 3-35 kt, parking brake OFF, antes de airborne", Critical = "TaxiSpeed, LightsCapability, XPDRCapability, BrakeReleased" },
+                new { Code = "TO", Name = "Takeoff roll / Airborne inicial", Required = "OnGround true->false o GS>35 kt en pista y luego AGL>20 ft", Critical = "TakeoffRoll, AirborneTransition, Flaps, Lights" },
+                new { Code = "CLB", Name = "Climb", Required = "Airborne=true, AGL>500 ft, VS positiva/promedio, MSL subiendo", Critical = "MSLTrend, AGLTrend, VS, MaxIAS" },
+                new { Code = "CRZ", Name = "Cruise", Required = "Airborne=true, VS estabilizada, altitud mantenida o FL sobre transicion", Critical = "MSL, PressureAltitude, FlightLevel, FuelBurn" },
+                new { Code = "DES", Name = "Descent", Required = "Airborne=true, VS negativa sostenida, MSL descendiendo", Critical = "DescentStart, VS, SpeedBelow10000" },
+                new { Code = "APP", Name = "Approach", Required = "Airborne=true, AGL<3000 ft, distancia destino decreciendo, configuracion landing", Critical = "AGL, LandingLights, Flaps, GearCapability" },
+                new { Code = "LDG", Name = "Landing", Required = "Transicion OnGround false->true, touchdown capturado", Critical = "TouchdownVS, TouchdownG, TouchdownIAS, TouchdownAgl" },
+                new { Code = "TAX_IN", Name = "Taxi in", Required = "Post-touchdown, OnGround=true, GS 3-35 kt, sin finalizar", Critical = "TaxiSpeed, RunwayVacated, LightsAfterLanding" },
+                new { Code = "GATE", Name = "Gate ready", Required = "Post-touchdown, OnGround=true, GS<=3, parking brake ON, motores/cold dark si aplica", Critical = "ParkingBrake, EnginesOff, AGL0, ManualFinalizeReady" }
+            };
+
+            root.Add(new XElement("Overall",
+                Element("ObservedSequence", string.Join(" > ", sequence)),
+                Element("HasPreflight", Bool(observed.Contains("PRE"))),
+                Element("HasTakeoff", Bool(observed.Contains("TO") || observed.Contains("CLB"))),
+                Element("HasLanding", Bool(observed.Contains("LDG"))),
+                Element("HasGate", Bool(observed.Contains("GATE"))),
+                Element("ReadyForFinalFlightTest", Bool(list.Count > 0)),
+                Element("ManualReviewRequired", "True")));
+
+            var expectedNode = new XElement("ExpectedPhaseAcceptance");
+            foreach (var item in expected)
+            {
+                var samples = list.Where(sample => string.Equals((sample.OperationalPhaseCode ?? string.Empty).Trim(), item.Code, StringComparison.OrdinalIgnoreCase)).OrderBy(sample => sample.CapturedAtUtc).ToList();
+                var first = samples.FirstOrDefault();
+                var last = samples.LastOrDefault();
+                var missing = samples.SelectMany(sample => SplitChecklist(sample.PhaseChecklistMissing)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+                var warnings = samples.SelectMany(sample => SplitChecklist(sample.PhaseChecklistWarnings)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+                var auditFlags = samples.SelectMany(sample => SplitChecklist(sample.PhaseAuditFlags)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+                var prevalidationFlags = samples.SelectMany(sample => SplitChecklist(sample.PhasePrevalidationFlags)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x).ToList();
+                var status = samples.Count == 0
+                    ? "NOT_OBSERVED"
+                    : samples.Any(sample => string.Equals(sample.PhasePrevalidationStatus, "BLOCK", StringComparison.OrdinalIgnoreCase) || string.Equals(sample.PhaseAuditStatus, "ERROR", StringComparison.OrdinalIgnoreCase))
+                        ? "BLOCK"
+                        : missing.Count > 0 || warnings.Count > 0 || auditFlags.Count > 0 || prevalidationFlags.Count > 0
+                            ? "REVIEW"
+                            : "OK";
+
+                expectedNode.Add(new XElement("PhaseAcceptance",
+                    new XAttribute("code", item.Code),
+                    new XAttribute("name", item.Name),
+                    new XAttribute("status", status),
+                    Element("Samples", samples.Count.ToString(CultureInfo.InvariantCulture)),
+                    Element("FirstUtc", first == null ? string.Empty : FormatClock(first.CapturedAtUtc)),
+                    Element("LastUtc", last == null ? string.Empty : FormatClock(last.CapturedAtUtc)),
+                    Element("RequiredEvidence", item.Required),
+                    Element("CriticalSignals", item.Critical),
+                    Element("FirstReason", first == null ? string.Empty : first.OperationalPhaseReason),
+                    Element("LastReason", last == null ? string.Empty : last.OperationalPhaseReason),
+                    Element("MaxMslFt", samples.Count == 0 ? "0" : ToIntString(samples.Max(sample => ResolveMsl(sample)))),
+                    Element("MaxAglFt", samples.Count == 0 ? "0" : ToIntString(samples.Max(sample => ResolveAgl(sample)))),
+                    Element("MaxGroundSpeedKt", samples.Count == 0 ? "0" : ToIntString(samples.Max(sample => sample.GroundSpeed))),
+                    Element("MinVerticalSpeedFpm", samples.Count == 0 ? "0" : ToIntString(samples.Min(sample => sample.VerticalSpeed))),
+                    Element("MaxVerticalSpeedFpm", samples.Count == 0 ? "0" : ToIntString(samples.Max(sample => sample.VerticalSpeed))),
+                    Element("MissingChecklist", string.Join(",", missing)),
+                    Element("Warnings", string.Join(",", warnings)),
+                    Element("AuditFlags", string.Join(",", auditFlags)),
+                    Element("PrevalidationFlags", string.Join(",", prevalidationFlags)),
+                    Element("ReviewQuestion", BuildAcceptanceQuestion(item.Code))));
+            }
+            root.Add(expectedNode);
+
+            root.Add(new XElement("FinalFlightTestProtocol",
+                Element("Instruction", "No publicar scoring nuevo hasta revisar este bloque contra capturas y XML real."),
+                Element("Instruction", "Confirmar que ALT MSL conserva elevacion real y AGL queda 0 en tierra."),
+                Element("Instruction", "Confirmar que CLB/CRZ/DES/APP nunca permanecen activos con OnGround=true."),
+                Element("Instruction", "Confirmar LDG por transicion aire-tierra y GATE por GS<=3 + parking brake."),
+                Element("Instruction", "Confirmar que XPDR/Doors/Gear unsupported quedan N/D y sin penalizacion.")));
+
+            return root;
+        }
+
+
+        private static XElement BuildPhaseTestRunManifest(IReadOnlyList<SimData> telemetry, PreparedDispatch dispatch, FlightReport report)
+        {
+            var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var sequence = BuildObservedPhaseSequence(list);
+            var observed = new HashSet<string>(sequence, StringComparer.OrdinalIgnoreCase);
+            var groundSamples = list.Where(sample => sample.OnGround).ToList();
+            var airborneSamples = list.Where(sample => !sample.OnGround).ToList();
+            var hasAltitudeResolver = list.Any(sample => !string.IsNullOrWhiteSpace(sample.DisplayAltitudeText)
+                || Math.Abs(sample.AltitudeMslFeet) > 0.01d
+                || Math.Abs(sample.AltitudeAglFeet) > 0.01d
+                || Math.Abs(sample.PressureAltitudeFeet) > 0.01d);
+            var hasPhaseStateMachine = list.Any(sample => !string.IsNullOrWhiteSpace(sample.OperationalPhaseCode));
+            var hasChecklist = list.Any(sample => !string.IsNullOrWhiteSpace(sample.PhaseChecklistSummary)
+                || !string.IsNullOrWhiteSpace(sample.PhaseChecklistRequired)
+                || !string.IsNullOrWhiteSpace(sample.PhaseChecklistSatisfied));
+            var hasTransitionEvidence = list.Any(sample => !string.IsNullOrWhiteSpace(sample.PhaseTransitionReason)
+                || sample.PhaseTransitionChanged
+                || sample.PhaseTransitionIndex > 0);
+            var hasAuditEvidence = list.Any(sample => !string.IsNullOrWhiteSpace(sample.PhaseAuditSummary)
+                || !string.IsNullOrWhiteSpace(sample.PhaseAuditFlags));
+            var hasReviewContract = list.Any(sample => !string.IsNullOrWhiteSpace(sample.PhaseExpectedActions)
+                || !string.IsNullOrWhiteSpace(sample.PhaseReviewQuestion));
+            var hasPrevalidation = list.Any(sample => !string.IsNullOrWhiteSpace(sample.PhasePrevalidationSummary)
+                || !string.IsNullOrWhiteSpace(sample.PhasePrevalidationFlags));
+            var touchdownSamples = list.Count(sample => sample.TouchdownDetected);
+            var gateSamples = list.Count(sample => sample.GateReadyCandidate);
+            var groundAglOk = groundSamples.Count == 0 || groundSamples.All(sample => ResolveAgl(sample) <= 25d);
+            var airborneMslOk = airborneSamples.Count == 0 || airborneSamples.Any(sample => ResolveMsl(sample) > 100d || ResolveAgl(sample) > 30d);
+            var readyForFullTest = hasAltitudeResolver && hasPhaseStateMachine && hasChecklist && hasTransitionEvidence && hasAuditEvidence && hasReviewContract && hasPrevalidation;
+
+            var root = new XElement("PhaseTestRunManifest",
+                Element("SchemaVersion", "PIREP_PERFECT_C8"),
+                Element("Policy", "final_acars_pretest_manifest_no_client_score"),
+                Element("OfficialScoringAuthority", "WEB_SUPABASE"),
+                Element("FlightNumber", FirstNonEmpty(dispatch.FlightNumber, report.FlightNumber)),
+                Element("Origin", FirstNonEmpty(dispatch.DepartureIcao, report.DepartureIcao)),
+                Element("Destination", FirstNonEmpty(dispatch.ArrivalIcao, report.ArrivalIcao)),
+                Element("Samples", list.Count.ToString(CultureInfo.InvariantCulture)),
+                Element("ObservedSequence", string.Join(" > ", sequence)),
+                Element("ReadyForFullSimulatorValidation", Bool(readyForFullTest)));
+
+            root.Add(new XElement("EvidenceInventory",
+                Element("AltitudeResolver", Bool(hasAltitudeResolver)),
+                Element("PhaseStateMachine", Bool(hasPhaseStateMachine)),
+                Element("PhaseOperationalChecklist", Bool(hasChecklist)),
+                Element("PhaseTransitionMatrix", Bool(hasTransitionEvidence)),
+                Element("PhaseAuditReport", Bool(hasAuditEvidence)),
+                Element("PhaseReviewContract", Bool(hasReviewContract)),
+                Element("PhasePrevalidationPackage", Bool(hasPrevalidation)),
+                Element("PhaseAcceptanceMatrix", "True"),
+                Element("TouchdownSamples", touchdownSamples.ToString(CultureInfo.InvariantCulture)),
+                Element("GateReadySamples", gateSamples.ToString(CultureInfo.InvariantCulture)),
+                Element("GroundAglNormalized", Bool(groundAglOk)),
+                Element("AirborneAltitudeEvidence", Bool(airborneMslOk))));
+
+            root.Add(new XElement("PretestBlockingRules",
+                Element("Rule", "No publicar instalador publico hasta hacer vuelo completo y revisar XML C8."),
+                Element("Rule", "No tocar Web/Supabase scoring hasta validar secuencia PRE>TAX_OUT>TO>CLB>CRZ/DES/APP>LDG>TAX_IN>GATE."),
+                Element("Rule", "Si una capability viene unsupported o penaltyEligible=false, Web/Supabase debe saltar penalizacion."),
+                Element("Rule", "ACARS sigue siendo caja negra: no calcula score oficial.")));
+
+            var plan = new XElement("ManualCapturePlan");
+            AddCaptureStep(plan, "01", "PRE", "Parking antes de iniciar", "ALT MSL real/elevacion, AGL=0, GS=0, parking brake ON", "Captura UI + XML con Phase=PRE y Altitude separado MSL/AGL");
+            AddCaptureStep(plan, "02", "TAX_OUT", "Rodaje salida", "OnGround=true, AGL=0, GS 3-35, parking brake OFF", "Captura UI + EventTimeline TAX_OUT");
+            AddCaptureStep(plan, "03", "TO", "Carrera/despegue", "GS>35 y luego OnGround true->false", "Captura si es posible + XML con TO/AIRBORNE");
+            AddCaptureStep(plan, "04", "CLB", "Ascenso", "Airborne=true, MSL/AGL subiendo, VS positiva", "Captura UI CLB con MSL y AGL correctos");
+            AddCaptureStep(plan, "05", "CRZ", "Crucero si aplica", "VS estable y FL si sobre transicion", "Captura UI FL/MSL/AGL o confirmar NOT_OBSERVED si vuelo corto");
+            AddCaptureStep(plan, "06", "DES", "Descenso", "VS negativa sostenida, MSL bajando", "Captura UI DES o XML con PhaseTransitionReason");
+            AddCaptureStep(plan, "07", "APP", "Aproximacion", "AGL<3000, distancia destino decreciendo", "Captura APP antes del touchdown");
+            AddCaptureStep(plan, "08", "LDG", "Touchdown/landing roll", "Transicion OnGround false->true, TouchdownDetected=true", "XML con touchdown_vs/g/ias y LDG");
+            AddCaptureStep(plan, "09", "TAX_IN", "Rodaje llegada", "Post-touchdown, OnGround=true, GS 3-35", "Captura TAX_IN");
+            AddCaptureStep(plan, "10", "GATE", "Gate listo", "OnGround=true, AGL=0, GS<=3, parking brake ON, cierre manual", "Captura GATE antes de Finalizar en Gate");
+            root.Add(plan);
+
+            var gates = new XElement("AcceptanceGates");
+            AddAcceptanceGate(gates, "Altitude", groundAglOk && airborneMslOk, "AGL debe ser 0 en tierra y MSL debe conservar altitud real; en vuelo MSL/AGL deben subir separadas.");
+            AddAcceptanceGate(gates, "PhaseSequence", observed.Contains("PRE") || observed.Contains("TAX_OUT") || observed.Contains("TO") || observed.Contains("CLB") || observed.Contains("LDG") || observed.Contains("GATE"), "La prueba final debe observar fases principales o marcarlas como NOT_OBSERVED justificadas.");
+            AddAcceptanceGate(gates, "Touchdown", touchdownSamples > 0 || !observed.Contains("LDG"), "Si hay aterrizaje real, touchdown debe venir por aire->tierra, no solo por AGL=0.");
+            AddAcceptanceGate(gates, "GateReady", gateSamples > 0 || !observed.Contains("GATE"), "GATE debe requerir post-touchdown, OnGround, GS bajo y parking brake.");
+            AddAcceptanceGate(gates, "NoClientScore", true, "ACARS no calcula puntaje oficial; Web/Supabase es autoridad.");
+            root.Add(gates);
+
+            root.Add(new XElement("CommitReadinessChecklist",
+                Element("BuildReleaseRequired", "MSBuild Release x64 0 errores antes de commit."),
+                Element("GitAddPolicy", "Agregar solo archivos C0-C8; no usar git add . si hay bin/obj/zip/backups/installer."),
+                Element("ExpectedGitStatus", "Solo archivos fuente ACARS modificados y changelogs C0-C8."),
+                Element("AfterTestNextBlock", "C9 solo si XML/capturas muestran fase incorrecta; Web/Supabase se toca despues de validar ACARS.")));
+
+            return root;
+        }
+
+        private static void AddCaptureStep(XElement parent, string order, string phase, string name, string expectedUi, string evidence)
+        {
+            parent.Add(new XElement("CaptureStep",
+                new XAttribute("order", order),
+                new XAttribute("phase", phase),
+                Element("Name", name),
+                Element("ExpectedUi", expectedUi),
+                Element("EvidenceToCollect", evidence)));
+        }
+
+        private static void AddAcceptanceGate(XElement parent, string name, bool pass, string criteria)
+        {
+            parent.Add(new XElement("Gate",
+                new XAttribute("name", name),
+                new XAttribute("status", pass ? "READY" : "REVIEW"),
+                Element("Criteria", criteria)));
+        }
+
+        private static string BuildAcceptanceQuestion(string code)
+        {
+            switch ((code ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "PRE": return "¿PRE aparece en parking con AGL=0, MSL real, freno ON y despacho correcto?";
+                case "TAX_OUT": return "¿TAX_OUT aparece al soltar freno y rodar antes de despegar?";
+                case "TO": return "¿TO aparece durante carrera/despegue y no se confunde con taxi?";
+                case "CLB": return "¿CLB aparece solo airborne con MSL/AGL subiendo y sale al estabilizar o descender?";
+                case "CRZ": return "¿CRZ aparece al estabilizar altitud o FL sobre transicion?";
+                case "DES": return "¿DES aparece con descenso sostenido y distancia al destino decreciendo?";
+                case "APP": return "¿APP aparece bajo 3000 ft AGL o cerca de destino, antes del touchdown?";
+                case "LDG": return "¿LDG aparece por transicion aire→tierra y captura VS/G/IAS?";
+                case "TAX_IN": return "¿TAX_IN aparece despues de touchdown durante rodaje a gate?";
+                case "GATE": return "¿GATE aparece detenido con parking brake y listo para cierre manual?";
+                default: return "¿La fase observada es coherente con la telemetria?";
+            }
+        }
+
+        private static List<string> BuildObservedPhaseSequence(IReadOnlyList<SimData> list)
+        {
+            return list
+                .Select(sample => string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? "UNKNOWN" : sample.OperationalPhaseCode.Trim().ToUpperInvariant())
+                .Where(code => !string.IsNullOrWhiteSpace(code))
+                .Aggregate(new List<string>(), (acc, code) => { if (acc.Count == 0 || acc[acc.Count - 1] != code) acc.Add(code); return acc; });
+        }
+
+        private static string CountStatus(Dictionary<string, int> counts, string status)
+        {
+            return counts.TryGetValue(status, out var value) ? value.ToString(CultureInfo.InvariantCulture) : "0";
+        }
+
+        private static string ResolveAuditStatus(IReadOnlyList<SimData> samples)
+        {
+            if (samples == null || samples.Count == 0) return "PENDING";
+            if (samples.Any(sample => string.Equals(sample.PhaseAuditStatus, "ERROR", StringComparison.OrdinalIgnoreCase))) return "ERROR";
+            if (samples.Any(sample => string.Equals(sample.PhaseAuditStatus, "WARN", StringComparison.OrdinalIgnoreCase))) return "WARN";
+            if (samples.Any(sample => string.Equals(sample.PhaseAuditStatus, "OK", StringComparison.OrdinalIgnoreCase))) return "OK";
+            return "PENDING";
+        }
+
+        private static string ResolveAuditFlags(IReadOnlyList<SimData> samples)
+        {
+            if (samples == null || samples.Count == 0) return string.Empty;
+            return string.Join(",", samples.SelectMany(sample => SplitChecklist(sample.PhaseAuditFlags)).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(x => x));
+        }
+
+        private static bool IsAirborneOperationalCode(string code)
+        {
+            switch ((code ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "TO":
+                case "CLB":
+                case "CRZ":
+                case "DES":
+                case "APP":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static bool IsGroundOperationalCode(string code)
+        {
+            switch ((code ?? string.Empty).Trim().ToUpperInvariant())
+            {
+                case "PRE":
+                case "BRD":
+                case "TAX_OUT":
+                case "TAX_IN":
+                case "GATE":
+                case "DEB":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        private static XElement ExpectedPhaseNode(string code, string name, string measures)
+        {
+            return new XElement("ExpectedPhase",
+                new XAttribute("code", code),
+                new XAttribute("name", name),
+                Element("Measures", measures),
+                Element("ScoringAuthority", "WEB_SUPABASE"));
+        }
+
+        private static IEnumerable<string> SplitChecklist(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return Enumerable.Empty<string>();
+            return value.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).Select(x => x.Trim()).Where(x => x.Length > 0);
+        }
+
+        private static int PhaseOrder(string code)
+        {
+            switch ((code ?? string.Empty).ToUpperInvariant())
+            {
+                case "PRE": return 10;
+                case "BRD": return 15;
+                case "TAX_OUT": return 20;
+                case "TO": return 30;
+                case "CLB": return 40;
+                case "CRZ": return 50;
+                case "DES": return 60;
+                case "APP": return 70;
+                case "LDG": return 80;
+                case "TAX_IN": return 90;
+                case "GATE": return 100;
+                case "DEB": return 110;
+                default: return 999;
+            }
         }
 
         private static XElement BuildEventTimeline(IReadOnlyList<SimData> telemetry, PreparedDispatch dispatch, Flight? activeFlight, FlightReport report)
@@ -771,10 +1400,42 @@ namespace PatagoniaWings.Acars.Core.Services
                 new XAttribute("penaltyEligible", Bool(penaltyEligible)),
                 new XAttribute("reliability", string.IsNullOrWhiteSpace(reliability) ? "unknown" : reliability),
                 Element("Description", description ?? string.Empty),
+                Element("OperationalPhaseCode", sample == null ? string.Empty : sample.OperationalPhaseCode),
+                Element("OperationalPhaseName", sample == null ? string.Empty : sample.OperationalPhaseName),
+                Element("OperationalPhaseReason", sample == null ? string.Empty : sample.OperationalPhaseReason),
+                Element("PhaseChecklistStatus", sample == null ? string.Empty : sample.PhaseChecklistStatus),
+                Element("PhaseChecklistMissing", sample == null ? string.Empty : sample.PhaseChecklistMissing),
+                Element("PhaseTransitionFromCode", sample == null ? string.Empty : sample.PhaseTransitionFromCode),
+                Element("PhaseTransitionToCode", sample == null ? string.Empty : sample.PhaseTransitionToCode),
+                Element("PhaseTransitionChanged", Bool(sample != null && sample.PhaseTransitionChanged)),
+                Element("PhaseTransitionReason", sample == null ? string.Empty : sample.PhaseTransitionReason),
+                Element("PhaseTransitionIndex", sample == null ? "0" : sample.PhaseTransitionIndex.ToString(CultureInfo.InvariantCulture)),
+                Element("PhaseStabilitySamples", sample == null ? "0" : sample.PhaseStabilitySamples.ToString(CultureInfo.InvariantCulture)),
+                Element("PhaseCandidateSamples", sample == null ? "0" : sample.PhaseCandidateSamples.ToString(CultureInfo.InvariantCulture)),
+                Element("PhaseDwellSeconds", sample == null ? "0" : sample.PhaseDwellSeconds.ToString(CultureInfo.InvariantCulture)),
+                Element("PhaseDecisionConfidence", sample == null ? string.Empty : sample.PhaseDecisionConfidence),
+                Element("PhaseMatrixVersion", sample == null ? string.Empty : sample.PhaseMatrixVersion),
+                Element("PhaseAuditStatus", sample == null ? string.Empty : sample.PhaseAuditStatus),
+                Element("PhaseAuditSummary", sample == null ? string.Empty : sample.PhaseAuditSummary),
+                Element("PhaseAuditFlags", sample == null ? string.Empty : sample.PhaseAuditFlags),
+                Element("PhaseAuditVersion", sample == null ? string.Empty : sample.PhaseAuditVersion),
+                Element("PhaseExpectedActions", sample == null ? string.Empty : sample.PhaseExpectedActions),
+                Element("PhaseMeasuredMetrics", sample == null ? string.Empty : sample.PhaseMeasuredMetrics),
+                Element("PhaseScoringHints", sample == null ? string.Empty : sample.PhaseScoringHints),
+                Element("PhaseReviewQuestion", sample == null ? string.Empty : sample.PhaseReviewQuestion),
+                Element("PhaseReviewVersion", sample == null ? string.Empty : sample.PhaseReviewVersion),
+                Element("PhasePrevalidationStatus", sample == null ? string.Empty : sample.PhasePrevalidationStatus),
+                Element("PhasePrevalidationSummary", sample == null ? string.Empty : sample.PhasePrevalidationSummary),
+                Element("PhasePrevalidationFlags", sample == null ? string.Empty : sample.PhasePrevalidationFlags),
+                Element("PhasePrevalidationVersion", sample == null ? string.Empty : sample.PhasePrevalidationVersion),
                 Element("Lat", FormatDecimal(sample == null ? 0d : sample.Latitude, 5)),
                 Element("Lon", FormatDecimal(sample == null ? 0d : sample.Longitude, 5)),
-                Element("Altitude", ToIntString(sample == null ? 0d : sample.AltitudeFeet)),
-                Element("AGL", ToIntString(sample == null ? 0d : sample.AltitudeAGL)),
+                Element("Altitude", ToIntString(sample == null ? 0d : ResolveMsl(sample))),
+                Element("AltitudeMslFt", ToIntString(sample == null ? 0d : ResolveMsl(sample))),
+                Element("AGL", ToIntString(sample == null ? 0d : ResolveAgl(sample))),
+                Element("AltitudeAglFt", ToIntString(sample == null ? 0d : ResolveAgl(sample))),
+                Element("PressureAltitudeFt", ToIntString(sample == null ? 0d : sample.PressureAltitudeFeet)),
+                Element("FlightLevel", sample == null ? string.Empty : sample.FlightLevel),
                 Element("IAS", ToIntString(sample == null ? 0d : sample.IndicatedAirspeed)),
                 Element("GS", ToIntString(sample == null ? 0d : sample.GroundSpeed)),
                 Element("VS", ToIntString(sample == null ? 0d : sample.VerticalSpeed)),
@@ -784,8 +1445,28 @@ namespace PatagoniaWings.Acars.Core.Services
         private static string ResolveOperationalPhase(SimData sample, IReadOnlyList<SimData> telemetry, FlightReport report)
         {
             if (sample == null) return "UNKNOWN";
+
+            if (!string.IsNullOrWhiteSpace(sample.OperationalPhaseCode))
+            {
+                switch (sample.OperationalPhaseCode.Trim().ToUpperInvariant())
+                {
+                    case "PRE": return "PREFLIGHT";
+                    case "BRD": return "BOARDING";
+                    case "TAX_OUT": return "TAXI_OUT";
+                    case "TO": return "TAKEOFF";
+                    case "CLB": return "CLIMB";
+                    case "CRZ": return "CRUISE";
+                    case "DES": return "DESCENT";
+                    case "APP": return "APPROACH";
+                    case "LDG": return "LANDING";
+                    case "TAX_IN": return "TAXI_IN";
+                    case "GATE": return "GATE";
+                    case "DEB": return "DEBOARDING";
+                }
+            }
+
             var list = telemetry == null ? new List<SimData>() : telemetry.Where(s => s != null).OrderBy(s => s.CapturedAtUtc).ToList();
-            var takeoff = list.FirstOrDefault(s => !s.OnGround && s.AltitudeAGL > 30d);
+            var takeoff = list.FirstOrDefault(s => !s.OnGround && ResolveAgl(s) > 30d);
             var touchdown = FindTouchdownSample(list);
 
             if (takeoff == null || sample.CapturedAtUtc < takeoff.CapturedAtUtc)
@@ -798,11 +1479,47 @@ namespace PatagoniaWings.Acars.Core.Services
                 if (sample.OnGround && sample.GroundSpeed < 3d && sample.ParkingBrake) return "GATE";
                 return "TAXI_IN";
             }
-            if (!sample.OnGround && sample.AltitudeAGL < 1500d && sample.VerticalSpeed < -200d) return "APPROACH";
-            if (!sample.OnGround && sample.AltitudeAGL < 1500d && sample.VerticalSpeed >= -200d) return "TAKEOFF";
+            if (!sample.OnGround && ResolveAgl(sample) < 3000d && sample.VerticalSpeed < -200d) return "APPROACH";
+            if (!sample.OnGround && ResolveAgl(sample) < 1000d && sample.VerticalSpeed >= -200d) return "TAKEOFF";
             if (sample.VerticalSpeed > 300d) return "CLIMB";
             if (sample.VerticalSpeed < -300d) return "DESCENT";
             return "CRUISE";
+        }
+
+        private static XElement BuildAltitudeEvidence(IReadOnlyList<SimData> telemetry, SimData? firstSample, SimData? lastSample)
+        {
+            var list = telemetry == null
+                ? new List<SimData>()
+                : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+
+            var maxMsl = list.Count == 0 ? 0d : list.Max(sample => ResolveMsl(sample));
+            var maxAgl = list.Count == 0 ? 0d : list.Max(sample => ResolveAgl(sample));
+            var minAgl = list.Count == 0 ? 0d : list.Min(sample => ResolveAgl(sample));
+            var maxPressure = list.Count == 0 ? 0d : list.Max(sample => sample.PressureAltitudeFeet);
+            var transition = list.Count == 0 ? 10000d : list.Select(sample => sample.TransitionAltitudeFeet).DefaultIfEmpty(10000d).FirstOrDefault(value => value > 0d);
+            if (transition <= 0d) transition = 10000d;
+
+            return new XElement("Altitude",
+                Element("Schema", "PWG_ALTITUDE_RESOLVER_C0"),
+                Element("TransitionAltitudeFt", ToIntString(transition)),
+                Element("SampleCount", list.Count.ToString(CultureInfo.InvariantCulture)),
+                Element("MaxAltitudeMslFt", ToIntString(maxMsl)),
+                Element("MaxAglFt", ToIntString(maxAgl)),
+                Element("MinAglFt", ToIntString(minAgl)),
+                Element("MaxPressureAltitudeFt", ToIntString(maxPressure)),
+                Element("FirstAltitudeMslFt", ToIntString(firstSample == null ? 0d : ResolveMsl(firstSample))),
+                Element("FirstAltitudeAglFt", ToIntString(firstSample == null ? 0d : ResolveAgl(firstSample))),
+                Element("FirstGroundElevationFt", ToIntString(firstSample == null ? 0d : firstSample.GroundElevationFeet)),
+                Element("LastAltitudeMslFt", ToIntString(lastSample == null ? 0d : ResolveMsl(lastSample))),
+                Element("LastAltitudeAglFt", ToIntString(lastSample == null ? 0d : ResolveAgl(lastSample))),
+                Element("LastGroundElevationFt", ToIntString(lastSample == null ? 0d : lastSample.GroundElevationFeet)),
+                Element("LastPressureAltitudeFt", ToIntString(lastSample == null ? 0d : lastSample.PressureAltitudeFeet)),
+                Element("LastFlightLevel", lastSample == null ? string.Empty : lastSample.FlightLevel),
+                Element("LastDisplayMode", lastSample == null ? string.Empty : lastSample.DisplayAltitudeMode),
+                Element("LastDisplayText", lastSample == null ? string.Empty : lastSample.DisplayAltitudeText),
+                Element("AltitudeSource", lastSample == null ? string.Empty : lastSample.AltitudeSource),
+                Element("IsReliable", Bool(lastSample != null && lastSample.IsAltitudeReliable))
+            );
         }
 
         private static XElement BuildEconomiaPendiente()
@@ -913,15 +1630,30 @@ namespace PatagoniaWings.Acars.Core.Services
 
         private static SimData? FindTouchdownSample(IReadOnlyList<SimData> telemetry)
         {
-            if (telemetry == null || telemetry.Count == 0) return null;
-            for (var index = 1; index < telemetry.Count; index++)
+            if (telemetry == null || telemetry.Count == 0)
             {
-                if (!telemetry[index - 1].OnGround && telemetry[index].OnGround)
-                {
-                    return telemetry[index];
-                }
+                return null;
             }
-            return null;
+
+            var list = telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var explicitTouchdown = list.FirstOrDefault(sample => sample.TouchdownDetected || string.Equals(sample.OperationalPhaseCode, "LDG", StringComparison.OrdinalIgnoreCase));
+            if (explicitTouchdown != null)
+            {
+                return explicitTouchdown;
+            }
+
+            SimData? previous = null;
+            foreach (var sample in list)
+            {
+                if (previous != null && !previous.OnGround && sample.OnGround)
+                {
+                    return sample;
+                }
+
+                previous = sample;
+            }
+
+            return list.FirstOrDefault(sample => sample.OnGround && ResolveAgl(sample) <= 15d && sample.GroundSpeed <= 80d && list.Any(s => !s.OnGround));
         }
 
         private static int ComputeAirborneMinutes(IReadOnlyList<SimData> telemetry, FlightReport report)
@@ -1028,6 +1760,19 @@ namespace PatagoniaWings.Acars.Core.Services
             var values = new[] { sample.Engine1N1, sample.Engine2N1, sample.Engine3N1, sample.Engine4N1 }.Where(v => v > 0d).ToArray();
             if (values.Length == 0) return 0d;
             return Math.Min(100d, values.Average());
+        }
+
+        private static double ResolveMsl(SimData? sample)
+        {
+            if (sample == null) return 0d;
+            return sample.AltitudeMslFeet > 0d ? sample.AltitudeMslFeet : sample.AltitudeFeet;
+        }
+
+        private static double ResolveAgl(SimData? sample)
+        {
+            if (sample == null) return 0d;
+            if (sample.OnGround) return 0d;
+            return sample.AltitudeAglFeet >= 0d ? sample.AltitudeAglFeet : sample.AltitudeAGL;
         }
 
         private static XElement Element(string name, object value)

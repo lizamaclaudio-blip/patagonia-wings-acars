@@ -454,19 +454,29 @@ namespace PatagoniaWings.Acars.SimConnect
             var simconnectXpdrRaw = NormalizeTransponderState(r.TransponderAvailable != 0, Convert.ToInt32(Math.Round(r.TransponderState)));
             var gForce = Math.Abs(r.GForce) > 0.01 ? r.GForce : 1.0;
             var detection = BuildDetectionMetadata(r.Title ?? string.Empty, profile);
+            var resolvedAltitude = ResolveAltitude(r, e);
 
             return new SimData
             {
                 AircraftTitle      = r.Title ?? "Unknown",
                 Latitude           = r.Latitude,
                 Longitude          = r.Longitude,
-                AltitudeFeet       = r.AltitudeFeet,
-                AltitudeAGL        = r.AltitudeAGL,
-                IndicatedAltitudeFeet = r.AltitudeFeet,
-                TrueAltitudeFeet      = r.TrueAltitudeFeet,
-                PressureAltitudeFeet  = r.PressureAltitudeFeet,
-                RadioAltitudeFeet     = r.RadioAltitudeFeet,
-                GroundAltitudeFeet    = r.GroundAltitudeFeet,
+                AltitudeFeet       = resolvedAltitude.AltitudeMslFt,
+                AltitudeAGL        = resolvedAltitude.AltitudeAglFt,
+                AltitudeMslFeet    = resolvedAltitude.AltitudeMslFt,
+                AltitudeAglFeet    = resolvedAltitude.AltitudeAglFt,
+                IndicatedAltitudeFeet = resolvedAltitude.IndicatedAltitudeFt,
+                TrueAltitudeFeet      = resolvedAltitude.TrueAltitudeFt,
+                PressureAltitudeFeet  = resolvedAltitude.PressureAltitudeFt,
+                RadioAltitudeFeet     = resolvedAltitude.RadioAltitudeFt,
+                GroundAltitudeFeet    = resolvedAltitude.GroundElevationFt,
+                GroundElevationFeet   = resolvedAltitude.GroundElevationFt,
+                FlightLevel           = resolvedAltitude.FlightLevel,
+                DisplayAltitudeMode   = resolvedAltitude.DisplayMode,
+                DisplayAltitudeText   = resolvedAltitude.DisplayText,
+                AltitudeSource        = resolvedAltitude.Source,
+                IsAltitudeReliable    = resolvedAltitude.IsReliable,
+                TransitionAltitudeFeet = resolvedAltitude.TransitionAltitudeFt,
                 IndicatedAirspeed  = indicatedAirspeed,
                 GroundSpeed        = groundSpeed,
                 // Clamp VS a 0 en tierra: SIM ON GROUND puede oscilar brevemente
@@ -532,8 +542,8 @@ namespace PatagoniaWings.Acars.SimConnect
                 OutsideTemperature = e.OutsideTemperature,
                 WindSpeed          = e.WindSpeed,
                 WindDirection      = e.WindDirection,
-                QNH                = e.SeaLevelPressure,
-                QnhInHg            = Math.Round(e.SeaLevelPressure * 0.029529983071445d, 2),
+                QNH                = resolvedAltitude.QnhHpa,
+                QnhInHg            = Math.Round(resolvedAltitude.QnhHpa * 0.029529983071445d, 2),
                 IsRaining          = e.PrecipState > 0,
 
                 // ── Campos extendidos (arquitectura SUR Air) ──
@@ -560,6 +570,133 @@ namespace PatagoniaWings.Acars.SimConnect
                 Com2FrequencyMhz        = NormalizeComFrequency(r.Com2FrequencyMhz),
                 Com2StandbyFrequencyMhz = NormalizeComFrequency(r.Com2StandbyFrequencyMhz),
             };
+        }
+
+        private sealed class ResolvedAltitudeData
+        {
+            public double AltitudeMslFt { get; set; }
+            public double AltitudeAglFt { get; set; }
+            public double GroundElevationFt { get; set; }
+            public double IndicatedAltitudeFt { get; set; }
+            public double TrueAltitudeFt { get; set; }
+            public double PressureAltitudeFt { get; set; }
+            public double RadioAltitudeFt { get; set; }
+            public string FlightLevel { get; set; } = string.Empty;
+            public string DisplayMode { get; set; } = "MSL";
+            public string DisplayText { get; set; } = string.Empty;
+            public string Source { get; set; } = "simconnect";
+            public bool IsReliable { get; set; }
+            public double TransitionAltitudeFt { get; set; } = DefaultTransitionAltitudeFeet;
+            public double QnhHpa { get; set; } = 1013.25d;
+        }
+
+        private const double DefaultTransitionAltitudeFeet = 10000d;
+
+        private static ResolvedAltitudeData ResolveAltitude(AircraftDataStruct r, EnvironmentDataStruct e)
+        {
+            var qnhHpa = IsPlausibleQnh(e.SeaLevelPressure) ? e.SeaLevelPressure : 1013.25d;
+            var rawOnGround = r.OnGround != 0;
+            var indicated = IsPlausibleAltitude(r.AltitudeFeet) ? r.AltitudeFeet : 0d;
+            var trueMsl = IsPlausibleAltitude(r.TrueAltitudeFeet) ? r.TrueAltitudeFeet : indicated;
+            var pressure = IsPlausibleAltitude(r.PressureAltitudeFeet)
+                ? r.PressureAltitudeFeet
+                : ComputePressureAltitude(trueMsl, qnhHpa);
+            var radio = IsPlausibleAgl(r.RadioAltitudeFeet) ? r.RadioAltitudeFeet : 0d;
+            var groundElevation = IsPlausibleGroundElevation(r.GroundAltitudeFeet) ? r.GroundAltitudeFeet : 0d;
+
+            var agl = IsPlausibleAgl(r.AltitudeAGL) ? r.AltitudeAGL : 0d;
+            var aglSource = "PLANE ALT ABOVE GROUND";
+
+            if (!IsPlausibleAgl(agl) || agl <= 0d)
+            {
+                if (radio > 0d && radio < 5000d)
+                {
+                    agl = radio;
+                    aglSource = "RADIO HEIGHT";
+                }
+                else if (groundElevation != 0d && IsPlausibleAltitude(trueMsl))
+                {
+                    agl = Math.Max(0d, trueMsl - groundElevation);
+                    aglSource = "MSL_MINUS_GROUND_ALTITUDE";
+                }
+            }
+
+            var inferredOnGround = rawOnGround || (r.GroundSpeed < 3d && r.IndicatedAirspeed < 35d && agl <= 8d);
+            if (inferredOnGround || agl <= 5d)
+            {
+                agl = 0d;
+            }
+
+            if (groundElevation == 0d && IsPlausibleAltitude(trueMsl))
+            {
+                groundElevation = Math.Max(-1500d, trueMsl - agl);
+            }
+
+            var isReliable = IsPlausibleAltitude(trueMsl)
+                && IsPlausibleAgl(agl)
+                && Math.Abs((trueMsl - groundElevation) - agl) < 2500d;
+
+            var mode = "MSL";
+            var display = Math.Round(trueMsl, 0).ToString("F0", CultureInfo.InvariantCulture);
+            var flightLevel = string.Empty;
+
+            if (inferredOnGround)
+            {
+                mode = "GROUND";
+                display = Math.Round(trueMsl, 0).ToString("F0", CultureInfo.InvariantCulture);
+            }
+            else if (pressure >= DefaultTransitionAltitudeFeet)
+            {
+                var fl = Math.Max(0, (int)Math.Round(pressure / 100d, MidpointRounding.AwayFromZero));
+                flightLevel = "FL" + fl.ToString("000", CultureInfo.InvariantCulture);
+                mode = "FL";
+                display = flightLevel;
+            }
+
+            return new ResolvedAltitudeData
+            {
+                AltitudeMslFt = trueMsl,
+                AltitudeAglFt = agl,
+                GroundElevationFt = groundElevation,
+                IndicatedAltitudeFt = indicated,
+                TrueAltitudeFt = trueMsl,
+                PressureAltitudeFt = pressure,
+                RadioAltitudeFt = radio,
+                FlightLevel = flightLevel,
+                DisplayMode = mode,
+                DisplayText = display,
+                Source = "MSL=PLANE ALTITUDE;AGL=" + aglSource,
+                IsReliable = isReliable,
+                TransitionAltitudeFt = DefaultTransitionAltitudeFeet,
+                QnhHpa = qnhHpa
+            };
+        }
+
+        private static double ComputePressureAltitude(double mslFt, double qnhHpa)
+        {
+            if (!IsPlausibleAltitude(mslFt)) return 0d;
+            if (!IsPlausibleQnh(qnhHpa)) return mslFt;
+            return mslFt + ((1013.25d - qnhHpa) * 30d);
+        }
+
+        private static bool IsPlausibleQnh(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value) && value >= 850d && value <= 1100d;
+        }
+
+        private static bool IsPlausibleAltitude(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value) && value >= -1500d && value <= 70000d;
+        }
+
+        private static bool IsPlausibleAgl(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value) && value >= -50d && value <= 60000d;
+        }
+
+        private static bool IsPlausibleGroundElevation(double value)
+        {
+            return !double.IsNaN(value) && !double.IsInfinity(value) && value >= -1500d && value <= 30000d;
         }
 
         private sealed class DetectionMetadata
