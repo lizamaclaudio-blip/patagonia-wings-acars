@@ -1,5 +1,5 @@
 ﻿{
-  "version": "7.0.17",
+  "version": "7.0.20",
   "webVersion": "2.0",
   "downloadUrl": "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
   "mandatory": true,
@@ -9,6 +9,8 @@
   "fileSize": "24.7 MB",
   "storageProvider": "supabase"
 }
+
+
 
 
 

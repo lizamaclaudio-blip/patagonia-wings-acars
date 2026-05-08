@@ -1,16 +1,15 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Windows;
 
 [assembly: AssemblyTitle("Patagonia Wings ACARS")]
-[assembly: AssemblyDescription("Sistema de Registro de Vuelos para Patagonia Wings Virtual Airline")]
-[assembly: AssemblyCompany("Patagonia Wings Virtual Airline")]
+[assembly: AssemblyDescription("Patagonia Wings ACARS")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyCompany("Patagonia Wings")]
 [assembly: AssemblyProduct("Patagonia Wings ACARS")]
-[assembly: AssemblyCopyright("Copyright 2026 Patagonia Wings")]
+[assembly: AssemblyCopyright("Copyright Patagonia Wings")]
+[assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
-[assembly: ThemeInfo(ResourceDictionaryLocation.None, ResourceDictionaryLocation.SourceAssembly)]
-[assembly: AssemblyVersion("7.0.19.0")]
-[assembly: AssemblyFileVersion("7.0.19.0")]
 
-
-
+[assembly: AssemblyVersion("7.0.20.0")]
+[assembly: AssemblyFileVersion("7.0.20.0")]
+[assembly: AssemblyInformationalVersion("7.0.20")]

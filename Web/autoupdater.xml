@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <item>
-  <version>7.0.17.0</version>
+  <version>7.0.20</version>
   <url>https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe</url>
   <changelog>v7.0.17: ACARS 7.0.17 - ACARS 7.0.17 - Hotfix C9: cierre en gate robusto, auditoria de superficie, deteccion de pista/rodaje/gate probable y correccion de BuildSurfaceContextDisplay.
+

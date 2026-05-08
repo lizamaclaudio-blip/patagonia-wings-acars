@@ -412,4 +412,8 @@
       <Private>True</Private>
     </Reference>
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
 </Project>
