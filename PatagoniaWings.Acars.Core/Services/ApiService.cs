@@ -409,6 +409,66 @@ namespace PatagoniaWings.Acars.Core.Services
             catch { /* best-effort, no lanzar */ }
         }
 
+        /// <summary>
+        /// Limpia reservas operativas stale del piloto al relanzar ACARS luego de cierre forzado.
+        /// Solo toca estados de vuelo activo (in_progress / in_flight), nunca "reserved".
+        /// </summary>
+        public async Task<int> CleanupStaleActiveReservationsAsync(string pilotCallsign, string closeoutStatus = "interrupted")
+        {
+            if (string.IsNullOrWhiteSpace(pilotCallsign) || !CanUseSupabaseDirect)
+            {
+                return 0;
+            }
+
+            try
+            {
+                var cs = Uri.EscapeDataString(pilotCallsign.Trim().ToUpperInvariant());
+                var endpoint = "/rest/v1/flight_reservations?select=id,status,updated_at,created_at"
+                    + $"&pilot_callsign=eq.{cs}"
+                    + "&status=in.(in_progress,in_flight)"
+                    + "&order=updated_at.desc.nullslast,created_at.desc.nullslast"
+                    + "&limit=10";
+
+                var ids = new List<string>();
+                using (var req = CreateSupabaseRequest(HttpMethod.Get, endpoint, true))
+                {
+                    var resp = await _http.SendAsync(req).ConfigureAwait(false);
+                    var raw = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    if (!resp.IsSuccessStatusCode) return 0;
+
+                    var rows = _json.DeserializeObject(raw) as object[];
+                    if (rows != null)
+                    {
+                        foreach (var item in rows)
+                        {
+                            var row = item as Dictionary<string, object>;
+                            if (row == null) continue;
+                            var id = FirstNonEmpty(row, "id", "reservation_id");
+                            if (!string.IsNullOrWhiteSpace(id)) ids.Add(id);
+                        }
+                    }
+                }
+
+                if (ids.Count == 0) return 0;
+
+                var closed = 0;
+                foreach (var id in ids.Distinct(StringComparer.OrdinalIgnoreCase))
+                {
+                    await CloseReservationAsync(id, closeoutStatus).ConfigureAwait(false);
+                    closed++;
+                }
+
+                WriteAuthLog("CleanupStaleActiveReservationsAsync => callsign=" + pilotCallsign.Trim().ToUpperInvariant()
+                    + " closed=" + closed + " status=" + closeoutStatus);
+                return closed;
+            }
+            catch (Exception ex)
+            {
+                WriteAuthLog("CleanupStaleActiveReservationsAsync EXCEPTION => " + ex.Message);
+                return 0;
+            }
+        }
+
         public async Task<ApiResult<bool>> StartFlightAsync(Flight flight, PreparedDispatch? preparedDispatch = null)
         {
             if (CanUseSupabaseDirect)
@@ -825,6 +885,7 @@ namespace PatagoniaWings.Acars.Core.Services
                         var rows = _json.DeserializeObject(raw) as object[];
                         if (rows != null)
                         {
+                            var bestScore = int.MinValue;
                             foreach (var item in rows)
                             {
                                 var row = item as Dictionary<string, object>;
@@ -837,10 +898,23 @@ namespace PatagoniaWings.Acars.Core.Services
                                 if (st == "dispatch_ready") st = "dispatched";
                                 if (st == "in_flight") st = "in_progress";
 
-                                // Prioridad: dispatched / in_progress primero; reserved queda válido si tiene package preparado/released.
-                                if (st == "dispatched" || st == "in_progress")
-                                { selectedRow = row; break; }
-                                if (selectedRow == null) selectedRow = row;
+                                // Priorizacion operacional:
+                                // 1) dispatched/reserved (vuelo actual listo para ACARS)
+                                // 2) ready/confirmed/booked/active
+                                // 3) in_progress (solo fallback)
+                                var score = 0;
+                                if (st == "dispatched" || st == "reserved") score = 300;
+                                else if (st == "ready" || st == "confirmed" || st == "booked" || st == "active") score = 200;
+                                else if (st == "in_progress") score = 100;
+                                else score = 10;
+
+                                // Mantiene el orden de updated_at desc de la query;
+                                // solo reemplaza si la prioridad de estado es mejor.
+                                if (selectedRow == null || score > bestScore)
+                                {
+                                    selectedRow = row;
+                                    bestScore = score;
+                                }
                             }
                         }
                     }
@@ -1047,6 +1121,11 @@ namespace PatagoniaWings.Acars.Core.Services
                 }
             }
 
+            if (!string.IsNullOrWhiteSpace(reservationId))
+            {
+                return package;
+            }
+
             if (package != null || string.IsNullOrWhiteSpace(pilotCallsign))
             {
                 return package;
@@ -1093,14 +1172,17 @@ namespace PatagoniaWings.Acars.Core.Services
 
             try
             {
+                var dispatch = _activePreparedDispatch;
                 var pilotResult = await GetCurrentPilotFromSupabaseAsync();
-                if (!pilotResult.Success || pilotResult.Data == null || string.IsNullOrWhiteSpace(pilotResult.Data.CallSign))
+                var pilot = pilotResult.Success ? pilotResult.Data : null;
+                if (pilot == null || string.IsNullOrWhiteSpace(pilot.CallSign))
+                {
+                    pilot = await ResolveCloseoutPilotFallbackAsync(report, dispatch).ConfigureAwait(false);
+                }
+                if (pilot == null || string.IsNullOrWhiteSpace(pilot.CallSign))
                 {
                     return ApiResult<FlightReport>.Fail("No pude resolver el piloto activo para cerrar el vuelo.");
                 }
-
-                var pilot = pilotResult.Data;
-                var dispatch = _activePreparedDispatch;
 
                 if (dispatch == null || string.IsNullOrWhiteSpace(dispatch.ReservationId))
                 {
@@ -1178,6 +1260,73 @@ namespace PatagoniaWings.Acars.Core.Services
             catch (Exception ex)
             {
                 return ApiResult<FlightReport>.Fail(ex.Message);
+            }
+        }
+
+        private async Task<Pilot?> ResolveCloseoutPilotFallbackAsync(FlightReport report, PreparedDispatch? dispatch)
+        {
+            try
+            {
+                var memoryPilot = GetCurrentPilotFromMemory();
+                if (memoryPilot != null && !string.IsNullOrWhiteSpace(memoryPilot.CallSign))
+                {
+                    return memoryPilot;
+                }
+
+                var callsign = (report?.PilotCallSign ?? string.Empty).Trim();
+                if (string.IsNullOrWhiteSpace(callsign))
+                {
+                    var reservationId = !string.IsNullOrWhiteSpace(dispatch?.ReservationId)
+                        ? dispatch.ReservationId
+                        : (report?.ReservationId ?? string.Empty);
+                    callsign = await TryGetReservationPilotCallsignAsync(reservationId).ConfigureAwait(false);
+                }
+
+                if (string.IsNullOrWhiteSpace(callsign))
+                {
+                    return null;
+                }
+
+                var authUser = await GetSupabaseAuthenticatedUserAsync().ConfigureAwait(false);
+                var email = authUser.Success && authUser.Data != null
+                    ? ConvertToString(authUser.Data, "email")
+                    : string.Empty;
+
+                return BuildPilotFromMinimalSession(email, callsign.Trim().ToUpperInvariant());
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private async Task<string> TryGetReservationPilotCallsignAsync(string reservationId)
+        {
+            if (string.IsNullOrWhiteSpace(reservationId)) return string.Empty;
+
+            try
+            {
+                var encodedReservation = Uri.EscapeDataString(reservationId.Trim());
+                var endpoint = "/rest/v1/flight_reservations"
+                    + "?select=pilot_callsign"
+                    + $"&id=eq.{encodedReservation}"
+                    + "&limit=1";
+
+                using (var request = CreateSupabaseRequest(HttpMethod.Get, endpoint, true))
+                {
+                    var response = await _http.SendAsync(request).ConfigureAwait(false);
+                    var raw = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+                    if (!response.IsSuccessStatusCode) return string.Empty;
+
+                    var rows = _json.DeserializeObject(raw) as object[];
+                    if (rows == null || rows.Length == 0) return string.Empty;
+                    if (!(rows[0] is Dictionary<string, object> row)) return string.Empty;
+                    return FirstNonEmpty(row, "pilot_callsign").Trim().ToUpperInvariant();
+                }
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
 
@@ -2940,13 +3089,17 @@ namespace PatagoniaWings.Acars.Core.Services
                 flightDesignator = FirstNonEmpty(safeDispatchPackage, "flight_designator", "flight_number", "route_code",
                     "reservation_code");
             if (string.IsNullOrWhiteSpace(flightDesignator))
+                flightDesignator = FirstNonEmpty(safeDispatchPackage, "flight_code", "callsign");
+            if (string.IsNullOrWhiteSpace(flightDesignator))
                 flightDesignator = FirstNonEmpty(reservationRow, "flight_designator", "flight_number", "route_code",
                     "reservation_code");
 
-            var reservationAircraftRef = FirstNonEmpty(reservationRow, "aircraft_type_code", "aircraft_code");
-            var dispatchAircraftRef = FirstNonEmpty(safeDispatchPackage, "aircraft_type_code", "aircraft_code");
+            var reservationAircraftRef = FirstNonEmpty(reservationRow, "aircraft_type_code", "aircraft_code", "airframe_icao");
+            var dispatchAircraftRef = FirstNonEmpty(safeDispatchPackage, "aircraft_type_code", "aircraft_code", "airframe_icao");
+            // Priorizar SIEMPRE el dispatch package actual (web/oficial) para evitar
+            // que ACARS arrastre aeronave legacy desde una reserva previa.
             var aircraftIcao = ResolveAcarsAircraftIcao(
-                !string.IsNullOrWhiteSpace(reservationAircraftRef) ? reservationAircraftRef : dispatchAircraftRef);
+                !string.IsNullOrWhiteSpace(dispatchAircraftRef) ? dispatchAircraftRef : reservationAircraftRef);
 
             // Extraer simbrief_normalized / simbrief_ofp_json como fuentes adicionales de datos SimBrief.
             object rawSimbriefNormalized;
@@ -3004,13 +3157,13 @@ namespace PatagoniaWings.Acars.Core.Services
             if (cargoKg <= 0) cargoKg = FirstNonEmptyNumber(sbNorm, "cargo_kg");
             if (cargoKg <= 0) cargoKg = FirstNonEmptyNumber(sbOfp, "cargo_kg");
 
-            var fuelPlannedKg = FirstNonEmptyNumber(safeDispatchPackage, "planned_fuel_kg", "fuel_planned_kg", "block_fuel_kg", "fuel_block_kg");
-            if (fuelPlannedKg <= 0) fuelPlannedKg = FirstNonEmptyNumber(sbNorm, "block_fuel_kg", "fuel_planned_kg", "planned_fuel_kg");
-            if (fuelPlannedKg <= 0) fuelPlannedKg = FirstNonEmptyNumber(sbOfp, "block_fuel_kg", "fuel_planned_kg", "planned_fuel_kg");
+            var fuelPlannedKg = FirstNonEmptyNumber(safeDispatchPackage, "planned_fuel_kg", "fuel_planned_kg", "block_fuel_kg", "fuel_block_kg", "fuel_kg", "block_fuel", "comb_bloque_kg", "combustible_bloque_kg");
+            if (fuelPlannedKg <= 0) fuelPlannedKg = FirstNonEmptyNumber(sbNorm, "block_fuel_kg", "fuel_planned_kg", "planned_fuel_kg", "fuel_kg", "fuel_block_kg");
+            if (fuelPlannedKg <= 0) fuelPlannedKg = FirstNonEmptyNumber(sbOfp, "block_fuel_kg", "fuel_planned_kg", "planned_fuel_kg", "fuel_kg", "fuel_block_kg");
 
-            var payloadKg = FirstNonEmptyNumber(safeDispatchPackage, "planned_payload_kg", "payload_kg");
-            if (payloadKg <= 0) payloadKg = FirstNonEmptyNumber(sbNorm, "payload_kg", "planned_payload_kg");
-            if (payloadKg <= 0) payloadKg = FirstNonEmptyNumber(sbOfp, "payload_kg", "planned_payload_kg");
+            var payloadKg = FirstNonEmptyNumber(safeDispatchPackage, "planned_payload_kg", "payload_kg", "payload", "payload_total_kg");
+            if (payloadKg <= 0) payloadKg = FirstNonEmptyNumber(sbNorm, "payload_kg", "planned_payload_kg", "payload", "payload_total_kg");
+            if (payloadKg <= 0) payloadKg = FirstNonEmptyNumber(sbOfp, "payload_kg", "planned_payload_kg", "payload", "payload_total_kg");
 
             var zfwKg = FirstNonEmptyNumber(safeDispatchPackage, "zero_fuel_weight_kg");
             if (zfwKg <= 0) zfwKg = FirstNonEmptyNumber(sbNorm, "zero_fuel_weight_kg", "zfw_kg");
@@ -3083,22 +3236,22 @@ namespace PatagoniaWings.Acars.Core.Services
                                         ? arr
                                         : FirstNonEmpty(safeDispatchPackage, "planned_destination_ident", "destination_ident", "destination_icao"),
                 AlternateIcao      = alternateIcao,
-                AircraftId         = FirstNonEmpty(reservationRow, "aircraft_id") is string aid && !string.IsNullOrWhiteSpace(aid)
-                                        ? aid
-                                        : FirstNonEmpty(safeDispatchPackage, "aircraft_id"),
+                AircraftId         = FirstNonEmpty(safeDispatchPackage, "aircraft_id") is string aidDp && !string.IsNullOrWhiteSpace(aidDp)
+                                        ? aidDp
+                                        : FirstNonEmpty(reservationRow, "aircraft_id"),
                 AircraftIcao       = aircraftIcao,
-                AircraftRegistration  = FirstNonEmpty(reservationRow, "aircraft_registration", "registration") is string reg && !string.IsNullOrWhiteSpace(reg)
-                                        ? reg
-                                        : FirstNonEmpty(safeDispatchPackage, "aircraft_registration", "registration"),
-                AircraftDisplayName   = FirstNonEmpty(reservationRow, "aircraft_display_name", "display_name", "aircraft_name") is string ad && !string.IsNullOrWhiteSpace(ad)
-                                        ? ad
-                                        : FirstNonEmpty(safeDispatchPackage, "aircraft_display_name", "display_name", "aircraft_name"),
-                AircraftVariantCode   = FirstNonEmpty(reservationRow, "aircraft_variant_code", "variant_code") is string av && !string.IsNullOrWhiteSpace(av)
-                                        ? av
-                                        : FirstNonEmpty(safeDispatchPackage, "aircraft_variant_code", "variant_code"),
-                AddonProvider         = FirstNonEmpty(reservationRow, "addon_provider") is string ap && !string.IsNullOrWhiteSpace(ap)
-                                        ? ap
-                                        : FirstNonEmpty(safeDispatchPackage, "addon_provider"),
+                AircraftRegistration  = FirstNonEmpty(safeDispatchPackage, "aircraft_registration", "registration", "tail_number", "aircraft_tail_number") is string regDp && !string.IsNullOrWhiteSpace(regDp)
+                                        ? regDp
+                                        : FirstNonEmpty(reservationRow, "aircraft_registration", "registration", "tail_number", "aircraft_tail_number"),
+                AircraftDisplayName   = FirstNonEmpty(safeDispatchPackage, "aircraft_display_name", "display_name", "aircraft_name", "aircraft_real_name") is string adDp && !string.IsNullOrWhiteSpace(adDp)
+                                        ? adDp
+                                        : FirstNonEmpty(reservationRow, "aircraft_display_name", "display_name", "aircraft_name", "aircraft_real_name"),
+                AircraftVariantCode   = FirstNonEmpty(safeDispatchPackage, "aircraft_variant_code", "variant_code", "aircraft_variant", "variant") is string avDp && !string.IsNullOrWhiteSpace(avDp)
+                                        ? avDp
+                                        : FirstNonEmpty(reservationRow, "aircraft_variant_code", "variant_code", "aircraft_variant", "variant"),
+                AddonProvider         = FirstNonEmpty(safeDispatchPackage, "addon_provider") is string apDp && !string.IsNullOrWhiteSpace(apDp)
+                                        ? apDp
+                                        : FirstNonEmpty(reservationRow, "addon_provider"),
                 RouteText          = routeText.Trim(),
                 FlightMode         = FirstNonEmpty(reservationRow, "flight_mode_code", "flight_mode"),
                 ReservationStatus  = FirstNonEmpty(reservationRow, "status").Trim().ToLowerInvariant(),
@@ -3201,12 +3354,14 @@ namespace PatagoniaWings.Acars.Core.Services
                 return string.Empty;
             }
 
-            if (digits.Length > 3)
+            // Mantener el número completo del vuelo (ej: PWG1339), sin truncar a 3 dígitos.
+            // Solo pad cuando viene muy corto.
+            if (digits.Length < 3)
             {
-                digits = digits.Substring(digits.Length - 3);
+                return digits.PadLeft(3, '0');
             }
 
-            return digits.PadLeft(3, '0');
+            return digits;
         }
 
         private static string ResolveAcarsAircraftIcao(string value)

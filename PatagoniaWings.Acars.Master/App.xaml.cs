@@ -101,6 +101,12 @@ namespace PatagoniaWings.Acars.Master
                 var reservationId = AcarsContext.Api != null && AcarsContext.Api.ActiveDispatch != null
                     ? AcarsContext.Api.ActiveDispatch.ReservationId
                     : null;
+                if (string.IsNullOrWhiteSpace(reservationId)
+                    && AcarsContext.FlightService != null
+                    && AcarsContext.FlightService.CurrentFlight != null)
+                {
+                    reservationId = AcarsContext.FlightService.CurrentFlight.ReservationId;
+                }
 
                 // IMPORTANTE:
                 // Cerrar la app en Oficina/PreFlight NO debe cancelar una reserva despachada desde la web.

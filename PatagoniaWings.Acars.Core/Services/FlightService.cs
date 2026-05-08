@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Globalization;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -59,6 +60,27 @@ namespace PatagoniaWings.Acars.Core.Services
         private int _takeoffRollConfirmSamples;
         private int _landingRollConfirmSamples;
         private int _gateReadyConfirmSamples;
+
+        // C10 Runway/Taxiway/TDZ detector state. Runway heading is captured from
+        // high-confidence takeoff/landing samples and used as an inferred runway axis.
+        // This is geometry-lite evidence only; exact runway/taxiway names require navdata.
+        private double _departureRunwayHeadingDeg = double.NaN;
+        private double _arrivalRunwayHeadingDeg = double.NaN;
+        private bool _wasRunwayCandidate;
+        private bool _runwayExitDetected;
+
+        // C11D8 Flight phase stabilization. These are recorder-side milestones only;
+        // Web/Supabase remains the official scoring authority. They prevent short
+        // flights or traffic pattern tests from jumping PRE/TAKEOFF directly to
+        // APPROACH without exposing climb/cruise/descent evidence.
+        private bool _climbObserved;
+        private bool _cruiseObserved;
+        private bool _descentObserved;
+        private DateTime _airborneAtUtc = default(DateTime);
+        private bool _originAreaExited;
+        private bool _destinationAreaObserved;
+        private int _airborneSamplesSinceTakeoff;
+        private bool _arrivalGateLatched;
 
         // Patagonia Wings 7.0.14 hotfix:
         // Un vuelo activo no debe resetearse ni quedar en Disconnected por cortes
@@ -126,6 +148,18 @@ namespace PatagoniaWings.Acars.Core.Services
             _takeoffRollConfirmSamples = 0;
             _landingRollConfirmSamples = 0;
             _gateReadyConfirmSamples = 0;
+            _departureRunwayHeadingDeg = double.NaN;
+            _arrivalRunwayHeadingDeg = double.NaN;
+            _wasRunwayCandidate = false;
+            _runwayExitDetected = false;
+            _climbObserved = false;
+            _cruiseObserved = false;
+            _descentObserved = false;
+            _airborneAtUtc = default(DateTime);
+            _originAreaExited = false;
+            _destinationAreaObserved = false;
+            _airborneSamplesSinceTakeoff = 0;
+            _arrivalGateLatched = false;
             _closeoutResetAuthorized = false;
             _finalDamageEvents.Clear();
 
@@ -231,23 +265,56 @@ namespace PatagoniaWings.Acars.Core.Services
             var vs = SafeNumber(data.VerticalSpeed);
             var plannedCruiseAltitude = _currentFlight.PlannedAltitude > 0 ? _currentFlight.PlannedAltitude : 0d;
 
-            var onGround = ResolveOperationalOnGround(data, agl, gs, ias, vs);
-            var previousOnGround = previous == null ? onGround : ResolveOperationalOnGround(previous, ResolveAgl(previous), SafeNumber(previous.GroundSpeed), SafeNumber(previous.IndicatedAirspeed), SafeNumber(previous.VerticalSpeed));
+            var onGroundRaw = ResolveOperationalOnGround(data, agl, gs, ias, vs);
+            var previousOnGround = previous == null ? onGroundRaw : ResolveOperationalOnGround(previous, ResolveAgl(previous), SafeNumber(previous.GroundSpeed), SafeNumber(previous.IndicatedAirspeed), SafeNumber(previous.VerticalSpeed));
             var previousAirborne = previous != null && (previous.IsAirborneSample || (!previousOnGround && (ResolveAgl(previous) > 20d || SafeNumber(previous.GroundSpeed) > 55d || SafeNumber(previous.IndicatedAirspeed) > 55d)));
 
-            var highEnergyAirborneCandidate = !onGround
-                && (gs >= 60d || ias >= 55d)
-                && !data.ParkingBrake
-                && (Math.Abs(vs) > 80d || agl > 20d || msl > 300d);
+            var facilityOnRunway = data.FacilityOnRunwayCandidate || data.FacilityRunwayAlignedCandidate || data.FacilityTouchdownZoneCandidate;
+            var facilityTaxiway = data.FacilityTaxiwayCandidate || data.TaxiwayProbable;
+            var facilityGate = data.FacilityGateAreaCandidate || data.GateAreaCandidate || data.GateReadyCandidate;
+            var nearestFacilityIcao = (data.FacilityNearestRunwayAirportIcao ?? string.Empty).Trim().ToUpperInvariant();
+            var departureIcao = _currentFlight == null ? string.Empty : (_currentFlight.DepartureIcao ?? string.Empty).Trim().ToUpperInvariant();
+            var arrivalIcao = _currentFlight == null ? string.Empty : (_currentFlight.ArrivalIcao ?? string.Empty).Trim().ToUpperInvariant();
+            var nearDepartureAirport = !string.IsNullOrWhiteSpace(departureIcao) && string.Equals(nearestFacilityIcao, departureIcao, StringComparison.OrdinalIgnoreCase);
+            var nearArrivalAirport = !string.IsNullOrWhiteSpace(arrivalIcao) && string.Equals(nearestFacilityIcao, arrivalIcao, StringComparison.OrdinalIgnoreCase);
 
-            var takeoffRollCandidate = onGround && !_takeoffDetected && gs >= 35d && (ias >= 30d || gs >= 45d);
-            var taxiOutCandidate = onGround && !_hasBeenAirborne && gs > 3d && gs <= 35d && !data.ParkingBrake;
-            var airborneCandidate = !onGround
-                && (agl > 20d || (_lastAirborneMsl > 0d && msl > _lastAirborneMsl + 50d) || highEnergyAirborneCandidate)
-                && (gs > 40d || ias > 40d);
-            var touchdownCandidate = _hasBeenAirborne && !_touchdownDetected && (previousAirborne || !previousOnGround) && onGround;
+            if (_hasBeenAirborne && !nearDepartureAirport && !string.IsNullOrWhiteSpace(nearestFacilityIcao))
+            {
+                _originAreaExited = true;
+            }
+
+            if (_hasBeenAirborne && nearArrivalAirport)
+            {
+                _destinationAreaObserved = true;
+            }
+
+            // C11F: SIM ON GROUND can flicker during initial climb/low pass. Treat high
+            // runway energy with real AGL as airborne for the phase ladder so the UI and
+            // evidence do not jump to RUNWAY_ARRIVAL immediately after takeoff.
+            var airborneEnergy = (agl > 25d || (!onGroundRaw && agl > 8d) || ias >= 55d || gs >= 65d) && !data.ParkingBrake;
+            var onGround = onGroundRaw && !(agl > 45d && airborneEnergy && _hasBeenAirborne && !_touchdownDetected);
 
             UpdateAltitudeTrend(msl, onGround);
+
+            var airborneCandidate = !onGround
+                && (agl > 20d || (_lastAirborneMsl > 0d && msl > _lastAirborneMsl + 50d) || airborneEnergy)
+                && (gs > 40d || ias > 40d);
+
+            var runwayDepartureCandidate = onGround && !_takeoffDetected
+                && (facilityOnRunway || data.RunwayEntryCandidate || data.TakeoffRollCandidate || gs >= 38d || ias >= 35d)
+                && !data.ParkingBrake
+                && (gs >= 30d || ias >= 30d);
+
+            var readyTaxiOutCandidate = onGround && !_hasBeenAirborne
+                && data.TaxiLightsOn
+                && (!data.ParkingBrake || gs > 1.5d)
+                && gs <= 25d
+                && !facilityOnRunway;
+
+            var taxiOutCandidate = onGround && !_hasBeenAirborne
+                && !facilityOnRunway
+                && !data.ParkingBrake
+                && (readyTaxiOutCandidate || (gs > 2.5d && gs <= 35d) || facilityTaxiway);
 
             if (airborneCandidate)
             {
@@ -258,7 +325,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 _airborneConfirmSamples = 0;
             }
 
-            if (takeoffRollCandidate)
+            if (runwayDepartureCandidate)
             {
                 _takeoffRollConfirmSamples++;
             }
@@ -267,7 +334,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 _takeoffRollConfirmSamples = 0;
             }
 
-            if (taxiOutCandidate)
+            if (taxiOutCandidate || readyTaxiOutCandidate)
             {
                 _taxiOutConfirmSamples++;
             }
@@ -287,11 +354,49 @@ namespace PatagoniaWings.Acars.Core.Services
                 _gateReadyConfirmSamples = 0;
             }
 
-            if (touchdownCandidate || (_hasBeenAirborne && !_touchdownDetected && onGround && _groundConfirmSamples >= 2))
+            var airborneSince = _airborneAtUtc == default(DateTime)
+                ? SecondsSince(_takeoffTime, sampleTime)
+                : SecondsSince(_airborneAtUtc, sampleTime);
+
+            if (_hasBeenAirborne && !_touchdownDetected && !onGround)
+            {
+                _airborneSamplesSinceTakeoff++;
+            }
+
+            // C11F: do not accept touchdown/arrival from single noisy ground samples
+            // during departure, especially in short-leg runway pattern tests. Approach
+            // and touchdown become eligible only after the origin area was exited, the
+            // destination/alternate area is observed, or a conservative airborne time/
+            // distance threshold is reached. This is evidence-side stabilization only.
+            var arrivalContextEligible = _originAreaExited
+                || _destinationAreaObserved
+                || nearArrivalAirport
+                || _totalDistanceNm >= 8d
+                || airborneSince >= 180d
+                || _airborneSamplesSinceTakeoff >= 30;
+
+            if (_hasBeenAirborne && !_touchdownDetected && !arrivalContextEligible && onGround && (agl > 8d || gs >= 35d || ias >= 35d))
+            {
+                onGround = false;
+                _groundConfirmSamples = 0;
+            }
+
+            var touchdownAltitudeOk = agl <= 30d || (data.FacilityTouchdownZoneCandidate && agl <= 80d);
+            var touchdownTimeOk = _takeoffTime == default(DateTime) || SecondsSince(_takeoffTime, sampleTime) >= 90d || nearArrivalAirport || _totalDistanceNm >= 8d;
+            var touchdownEnergyOk = gs >= 35d || ias >= 35d || Math.Abs(vs) >= 80d || data.LandingG > 1.05d;
+            var touchdownCandidate = _hasBeenAirborne && !_touchdownDetected
+                && arrivalContextEligible
+                && touchdownTimeOk
+                && touchdownAltitudeOk
+                && touchdownEnergyOk
+                && (previousAirborne || !previousOnGround || _groundConfirmSamples >= 2)
+                && onGround;
+
+            if (touchdownCandidate)
             {
                 MarkTouchdown(data, previous, sampleTime);
                 _landingRollConfirmSamples = 1;
-                ApplyPhaseDecision(data, FlightPhase.Landing, "touchdown_transition_air_to_ground", onGround, false, sampleTime, 1, true);
+                ApplyPhaseDecision(data, FlightPhase.Landing, "touchdown_confirmed_agl_facility_c11e", onGround, false, sampleTime, 1, true);
                 return;
             }
 
@@ -299,12 +404,16 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 _takeoffDetected = true;
                 _hasBeenAirborne = true;
+                if (_airborneAtUtc == default(DateTime))
+                {
+                    _airborneAtUtc = sampleTime;
+                }
                 if (_takeoffTime == default(DateTime))
                 {
                     _takeoffTime = sampleTime;
                 }
 
-                ApplyPhaseDecision(data, FlightPhase.Takeoff, "airborne_confirmed_two_samples", onGround, true, sampleTime, 1, true);
+                ApplyPhaseDecision(data, FlightPhase.Takeoff, "airborne_confirmed_two_samples_c11e", onGround, true, sampleTime, 1, true);
                 return;
             }
 
@@ -312,23 +421,47 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 if (_takeoffRollConfirmSamples >= 2)
                 {
-                    ApplyPhaseDecision(data, FlightPhase.Takeoff, "takeoff_roll_confirmed_gs_ias", onGround, false, sampleTime, 2, false);
+                    ApplyPhaseDecision(data, FlightPhase.Takeoff, "runway_departure_confirmed_facility_c11e", onGround, false, sampleTime, 2, false);
                     return;
                 }
 
-                if (_taxiOutConfirmSamples >= 2)
+                if (_taxiOutConfirmSamples >= 2 || readyTaxiOutCandidate)
                 {
-                    ApplyPhaseDecision(data, FlightPhase.PushbackTaxi, "taxi_out_confirmed_ground_moving_parking_off", onGround, false, sampleTime, 2, false);
+                    ApplyPhaseDecision(data, FlightPhase.PushbackTaxi, readyTaxiOutCandidate ? "ready_taxi_out_taxi_light_brake_release_c11e" : "taxi_out_confirmed_surface_c11e", onGround, false, sampleTime, readyTaxiOutCandidate ? 1 : 2, false);
                     return;
                 }
 
-                ApplyPhaseDecision(data, FlightPhase.PreFlight, onGround ? "preflight_ground_stationary" : "preflight_waiting_airborne_confirmation", onGround, false, sampleTime, 1, false);
+                // Do not regress to an ambiguous PreFlight visual once the aircraft is
+                // electrically prepared for taxi. The procedure evidence will still show
+                // whether lights/door/parking states are correct.
+                if (data.TaxiLightsOn || (!data.ParkingBrake && gs > 0.5d))
+                {
+                    ApplyPhaseDecision(data, FlightPhase.PushbackTaxi, "taxi_preparation_or_movement_c11f", onGround, false, sampleTime, 1, false);
+                    return;
+                }
+
+                ApplyPhaseDecision(data, FlightPhase.PreFlight, onGround ? "gate_origin_ground_stationary_c11e" : "preflight_waiting_airborne_confirmation_c11e", onGround, false, sampleTime, 1, false);
                 return;
             }
 
             if (onGround)
             {
-                if (gs <= 3d && data.ParkingBrake)
+                if (_arrivalGateLatched && gs <= 12d)
+                {
+                    ApplyPhaseDecision(data, FlightPhase.Arrived, "gate_arrival_latched_hold_c11f", onGround, false, sampleTime, 1, false);
+                    return;
+                }
+
+                var gateArrivalCandidate = _touchdownDetected && gs <= 3d && data.ParkingBrake && (facilityGate || !facilityOnRunway);
+                // C18: taxi-in must mean the aircraft has left the runway environment.
+                // Taxi light alone on the runway is still landing roll / runway occupancy,
+                // not taxi-in.
+                var taxiInCandidate = _touchdownDetected
+                    && !facilityOnRunway
+                    && (facilityTaxiway || data.RunwayExitCandidate || (gs > 3d && gs <= 35d && !data.LandingRollCandidate) || (data.TaxiLightsOn && gs <= 25d && !data.LandingRollCandidate));
+                var landingRollCandidate = _touchdownDetected && (facilityOnRunway || data.LandingRollCandidate || gs > 35d);
+
+                if (gateArrivalCandidate)
                 {
                     _gateReadyConfirmSamples++;
                 }
@@ -337,42 +470,80 @@ namespace PatagoniaWings.Acars.Core.Services
                     _gateReadyConfirmSamples = 0;
                 }
 
-                if (gs > 40d)
-                {
-                    _landingRollConfirmSamples++;
-                    ApplyPhaseDecision(data, FlightPhase.Landing, "landing_roll_high_speed_after_touchdown", onGround, false, sampleTime, 1, _landingRollConfirmSamples <= 2);
-                    return;
-                }
-
                 if (_gateReadyConfirmSamples >= 2)
                 {
-                    ApplyPhaseDecision(data, FlightPhase.Arrived, "gate_ready_confirmed_stopped_parking_brake", onGround, false, sampleTime, 2, false);
+                    _arrivalGateLatched = true;
+                    ApplyPhaseDecision(data, FlightPhase.Arrived, "gate_arrival_confirmed_facility_brake_c11e", onGround, false, sampleTime, 2, false);
                     return;
                 }
 
-                if (gs > 3d)
+                if (taxiInCandidate)
                 {
-                    ApplyPhaseDecision(data, FlightPhase.Taxi, "taxi_in_after_touchdown", onGround, false, sampleTime, 2, false);
+                    ApplyPhaseDecision(data, FlightPhase.Taxi, "taxi_in_confirmed_after_runway_exit_c11e", onGround, false, sampleTime, 1, false);
                     return;
                 }
 
-                ApplyPhaseDecision(data, FlightPhase.Landing, "landing_roll_or_stopped_before_gate_confirmation", onGround, false, sampleTime, 1, false);
+                if (landingRollCandidate)
+                {
+                    _landingRollConfirmSamples++;
+                    ApplyPhaseDecision(data, FlightPhase.Landing, "landing_roll_confirmed_c11e", onGround, false, sampleTime, 1, _landingRollConfirmSamples <= 2);
+                    return;
+                }
+
+                ApplyPhaseDecision(data, _touchdownDetected ? FlightPhase.Taxi : FlightPhase.Landing, "ground_after_touchdown_pending_taxi_gate_c11e", onGround, false, sampleTime, 1, false);
                 return;
             }
 
-            // Airborne matrix. AGL controls low-altitude boundaries; MSL/pressure altitude
-            // controls max altitude and cruise profile. Counters provide hysteresis.
-            var nearApproachLayer = agl > 0d && agl < 3000d;
-            var approachCandidate = nearApproachLayer && (_mslDecreasingSamples >= 2 || vs < -150d || CurrentPhase == FlightPhase.Approach);
-            var descentCandidate = agl >= 2500d && (_mslDecreasingSamples >= 2 || vs < -500d);
-            var cruiseCandidate = agl >= 2500d && (Math.Abs(vs) <= 350d || (plannedCruiseAltitude > 0d && msl >= plannedCruiseAltitude - 2000d && Math.Abs(vs) <= 500d));
-            var climbCandidate = _mslIncreasingSamples >= 2 || vs > 450d || agl < 2500d;
+            // C11E Airborne matrix. It exposes the full operational ladder before
+            // approach: TAKEOFF -> CLIMB -> CRUISE/DESCENT -> APPROACH. Approach is
+            // only allowed with descent + runway/low-altitude evidence.
+            airborneSince = _airborneAtUtc == default(DateTime)
+                ? SecondsSince(_takeoffTime, sampleTime)
+                : SecondsSince(_airborneAtUtc, sampleTime);
+
+            // C16: phase ladder now uses sustained vertical trends and planned cruise
+            // altitude. AGL is relative to airport/terrain elevation, so approach is
+            // evaluated by AGL + sustained descent, not by absolute MSL alone.
+            var cruiseAltitudeKnown = plannedCruiseAltitude > 0d;
+            var cruiseAltitudeReached = cruiseAltitudeKnown && msl >= plannedCruiseAltitude - 1000d;
+            var cruiseBandStable = cruiseAltitudeReached && Math.Abs(msl - plannedCruiseAltitude) <= 2000d;
+            var sustainedClimb = vs > 250d || _mslIncreasingSamples >= 2;
+            var sustainedDescent = vs < -350d || _mslDecreasingSamples >= 3;
+            var nearApproachLayer = agl > 0d && agl <= 3000d;
+            var runwayDistanceNm = data.FacilityNearestRunwayDistanceMeters > 0d
+                ? data.FacilityNearestRunwayDistanceMeters / 1852d
+                : double.MaxValue;
+            var runwayHeadingErrorDeg = data.FacilityRunwayHeadingErrorDeg > 0d
+                ? data.FacilityRunwayHeadingErrorDeg
+                : (data.RunwayHeadingDeltaDeg > 0d ? data.RunwayHeadingDeltaDeg : 180d);
+            var runwayAlignedForApproach = (data.FacilityRunwayGeometryAvailable && runwayHeadingErrorDeg <= 10d)
+                                           || data.FacilityRunwayAlignedCandidate
+                                           || data.RunwayAlignedCandidate;
+            var approachContext = nearArrivalAirport || _destinationAreaObserved || _totalDistanceNm >= 8d || airborneSince >= 180d;
+            var approachCandidate = nearApproachLayer
+                && approachContext
+                && sustainedDescent
+                && runwayDistanceNm <= 7.0d
+                && runwayAlignedForApproach
+                && (_descentObserved || _cruiseObserved || airborneSince >= 180d)
+                && !_touchdownDetected;
+            var descentCandidate = agl >= 900d
+                && approachContext
+                && sustainedDescent
+                && (_cruiseObserved || cruiseAltitudeReached || airborneSince >= 240d || _totalDistanceNm >= 12d);
+            var cruiseCandidate = gs >= 65d
+                && Math.Abs(vs) <= 350d
+                && (!descentCandidate || CurrentPhase == FlightPhase.Cruise)
+                && (cruiseAltitudeKnown ? cruiseBandStable : (agl >= 3500d && airborneSince >= 90d));
+            var climbCandidate = !_descentObserved
+                && (!cruiseCandidate || !cruiseAltitudeReached)
+                && (sustainedClimb || agl < 2500d || !_climbObserved);
 
             if (approachCandidate)
             {
                 _approachConfirmSamples++;
             }
-            else
+            else if (CurrentPhase != FlightPhase.Approach)
             {
                 _approachConfirmSamples = 0;
             }
@@ -381,7 +552,7 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 _descentConfirmSamples++;
             }
-            else if (vs > -200d && _mslDecreasingSamples == 0)
+            else if (vs > -150d && _mslDecreasingSamples == 0)
             {
                 _descentConfirmSamples = 0;
             }
@@ -390,45 +561,51 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 _cruiseStableSamples++;
             }
-            else
+            else if (Math.Abs(vs) > 650d || approachCandidate)
             {
                 _cruiseStableSamples = 0;
             }
 
+            if (CurrentPhase == FlightPhase.Takeoff && (airborneSince < 15d || agl < 250d))
+            {
+                ApplyPhaseDecision(data, FlightPhase.Takeoff, "initial_liftoff_takeoff_window_c11e", onGround, true, sampleTime, 1, false);
+                return;
+            }
+
+            if (!_climbObserved || (CurrentPhase == FlightPhase.Takeoff && airborneSince >= 15d && agl >= 180d))
+            {
+                ApplyPhaseDecision(data, FlightPhase.Climb, "climb_required_before_approach_c11e", onGround, true, sampleTime, 1, false);
+                return;
+            }
+
             if (_approachConfirmSamples >= 2)
             {
-                ApplyPhaseDecision(data, FlightPhase.Approach, "approach_confirmed_agl_descent", onGround, true, sampleTime, 2, false);
+                ApplyPhaseDecision(data, FlightPhase.Approach, "approach_confirmed_sustained_descent_agl_runway_c16", onGround, true, sampleTime, 3, false);
                 return;
             }
 
-            if (_descentConfirmSamples >= 2 || (CurrentPhase == FlightPhase.Cruise && descentCandidate))
+            if (_descentConfirmSamples >= 3 && (_cruiseObserved || airborneSince >= 180d || (plannedCruiseAltitude > 0d && msl >= plannedCruiseAltitude - 2500d)))
             {
-                ApplyPhaseDecision(data, FlightPhase.Descent, "descent_confirmed_msl_trend_or_vs", onGround, true, sampleTime, 2, false);
+                ApplyPhaseDecision(data, FlightPhase.Descent, "descent_confirmed_sustained_after_cruise_c16", onGround, true, sampleTime, 3, false);
                 return;
             }
 
-            if (CurrentPhase == FlightPhase.Takeoff && (agl < 800d || SecondsSince(_takeoffTime, sampleTime) < 90d))
+            if (_cruiseStableSamples >= 4)
             {
-                ApplyPhaseDecision(data, FlightPhase.Takeoff, "initial_climb_takeoff_window", onGround, true, sampleTime, 1, false);
-                return;
-            }
-
-            if (_cruiseStableSamples >= 5)
-            {
-                ApplyPhaseDecision(data, FlightPhase.Cruise, "cruise_stable_five_samples", onGround, true, sampleTime, 3, false);
+                ApplyPhaseDecision(data, FlightPhase.Cruise, "cruise_stable_at_planned_altitude_c16", onGround, true, sampleTime, 4, false);
                 return;
             }
 
             if (climbCandidate)
             {
-                ApplyPhaseDecision(data, FlightPhase.Climb, "climb_confirmed_msl_trend_vs_or_low_agl", onGround, true, sampleTime, 2, false);
+                ApplyPhaseDecision(data, FlightPhase.Climb, "climb_continuing_until_planned_cruise_c16", onGround, true, sampleTime, 2, false);
                 return;
             }
 
             var preserved = CurrentPhase == FlightPhase.Disconnected || CurrentPhase == FlightPhase.PreFlight || CurrentPhase == FlightPhase.PushbackTaxi
                 ? FlightPhase.Climb
                 : CurrentPhase;
-            ApplyPhaseDecision(data, preserved, "preserve_airborne_phase_no_matrix_change", onGround, true, sampleTime, 1, false);
+            ApplyPhaseDecision(data, preserved, "preserve_airborne_phase_c11e", onGround, true, sampleTime, 1, false);
         }
 
         private void MarkTouchdown(SimData data, SimData? previous, DateTime sampleTime)
@@ -526,6 +703,10 @@ namespace PatagoniaWings.Acars.Core.Services
                 }
             }
 
+            if (targetPhase == FlightPhase.Climb) _climbObserved = true;
+            if (targetPhase == FlightPhase.Cruise) _cruiseObserved = true;
+            if (targetPhase == FlightPhase.Descent) _descentObserved = true;
+
             AnnotatePhase(data, targetPhase, reason, onGround, isAirborneSample, fromPhase, candidatePhase, changed, confidence);
         }
 
@@ -547,7 +728,7 @@ namespace PatagoniaWings.Acars.Core.Services
             data.PhaseCandidateSamples = _candidatePhaseSamples;
             data.PhaseDwellSeconds = (int)Math.Max(0d, SecondsSince(_phaseEnteredAtUtc, data.CapturedAtUtc == default(DateTime) ? DateTime.UtcNow : data.CapturedAtUtc));
             data.PhaseDecisionConfidence = string.IsNullOrWhiteSpace(confidence) ? "confirmed" : confidence;
-            data.PhaseMatrixVersion = "C3";
+            data.PhaseMatrixVersion = "C16";
 
             var surface = BuildSurfaceContext(data, phase, onGround);
             data.SurfaceContextCode = surface.Code;
@@ -558,6 +739,39 @@ namespace PatagoniaWings.Acars.Core.Services
             data.GateAreaCandidate = surface.GateAreaCandidate;
             data.SurfaceContextReliable = surface.Reliable;
             data.SurfaceContextVersion = "C9";
+
+            var runway = BuildRunwayTdzContext(data, phase, onGround, surface);
+            data.RunwayContextCode = runway.Code;
+            data.RunwayContextName = runway.Name;
+            data.RunwayContextReason = runway.Reason;
+            data.EstimatedRunwayIdent = runway.EstimatedRunwayIdent;
+            data.EstimatedRunwayReciprocalIdent = runway.EstimatedRunwayReciprocalIdent;
+            data.EstimatedRunwayHeadingDeg = runway.EstimatedRunwayHeadingDeg;
+            data.RunwayHeadingDeltaDeg = runway.HeadingDeltaDeg;
+            data.RunwayAlignedCandidate = runway.AlignedCandidate;
+            data.RunwayEntryCandidate = runway.EntryCandidate;
+            data.RunwayExitCandidate = runway.ExitCandidate;
+            data.TakeoffRollCandidate = runway.TakeoffRollCandidate;
+            data.LandingRollCandidate = runway.LandingRollCandidate;
+            data.TouchdownZoneCandidate = runway.TouchdownZoneCandidate;
+            data.TaxiwayProbable = runway.TaxiwayProbable;
+            data.RunwayGeometryAvailable = runway.GeometryAvailable;
+            data.RunwayContextReliable = runway.Reliable;
+            data.RunwayContextVersion = runway.GeometryAvailable ? "C11C" : "C10";
+
+            var procedure = BuildSurfaceProcedureEvidence(data, phase, onGround, surface, runway);
+            data.SurfaceProcedurePhaseCode = procedure.Code;
+            data.SurfaceProcedurePhaseName = procedure.Name;
+            data.SurfaceProcedureEvidenceStatus = procedure.Status;
+            data.SurfaceProcedureEvidenceSummary = procedure.Summary;
+            data.SurfaceProcedureEvidenceFlags = procedure.Flags;
+            data.SurfaceProcedureTaxiLightExpected = procedure.TaxiLightExpected;
+            data.SurfaceProcedureStrobeExpected = procedure.StrobeExpected;
+            data.SurfaceProcedureLandingLightExpected = procedure.LandingLightExpected;
+            data.SurfaceProcedureXpdrAltExpected = procedure.XpdrAltExpected;
+            data.SurfaceProcedureBeaconExpected = procedure.BeaconExpected;
+            data.SurfaceProcedureNavExpected = procedure.NavExpected;
+            data.SurfaceProcedureEvidenceVersion = "C11F";
 
             var checklist = BuildPhaseChecklist(data, phase, onGround);
             data.PhaseChecklistStatus = checklist.Status;
@@ -603,7 +817,7 @@ namespace PatagoniaWings.Acars.Core.Services
             var gs = SafeNumber(data.GroundSpeed);
             var ias = SafeNumber(data.IndicatedAirspeed);
             var agl = ResolveAgl(data);
-            var touchdown = data.TouchdownDetected || data.HasBeenAirborne;
+            var touchdown = data.TouchdownDetected || (data.HasBeenAirborne && (phase == FlightPhase.Landing || phase == FlightPhase.Arrived));
 
             var evidence = new SurfaceContextEvidence
             {
@@ -671,6 +885,411 @@ namespace PatagoniaWings.Acars.Core.Services
             }
 
             return evidence;
+        }
+
+        private sealed class SurfaceProcedureEvidence
+        {
+            public string Code { get; set; } = "UNKNOWN";
+            public string Name { get; set; } = string.Empty;
+            public string Status { get; set; } = "OBSERVE";
+            public string Summary { get; set; } = string.Empty;
+            public string Flags { get; set; } = string.Empty;
+            public bool TaxiLightExpected { get; set; }
+            public bool StrobeExpected { get; set; }
+            public bool LandingLightExpected { get; set; }
+            public bool XpdrAltExpected { get; set; }
+            public bool BeaconExpected { get; set; }
+            public bool NavExpected { get; set; }
+        }
+
+        private static SurfaceProcedureEvidence BuildSurfaceProcedureEvidence(SimData data, FlightPhase phase, bool onGround, SurfaceContextEvidence surface, RunwayTdzEvidence runway)
+        {
+            var evidence = new SurfaceProcedureEvidence
+            {
+                Code = "UNKNOWN",
+                Name = "Procedimiento operacional no clasificado",
+                Status = "OBSERVE",
+                Summary = "Evidencia C11D5 pendiente",
+                Flags = string.Empty
+            };
+
+            if (data == null)
+            {
+                evidence.Flags = "NO_TELEMETRY";
+                return evidence;
+            }
+
+            var gs = SafeNumber(data.GroundSpeed);
+            var onRunway = data.FacilityOnRunwayCandidate || data.RunwayCandidate || data.RunwayEntryCandidate || data.TakeoffRollCandidate || data.LandingRollCandidate;
+            var onTaxiway = data.FacilityTaxiwayCandidate || data.TaxiwayProbable || (surface != null && surface.TaxiwayCandidate);
+            var atGate = data.FacilityGateAreaCandidate || data.GateAreaCandidate || data.GateReadyCandidate || (surface != null && surface.GateAreaCandidate);
+            var afterTouchdown = data.TouchdownDetected || phase == FlightPhase.Landing || phase == FlightPhase.Arrived || (data.HasBeenAirborne && onGround && phase == FlightPhase.Taxi);
+            var approachLike = !onGround && (phase == FlightPhase.Approach || data.OperationalPhaseCode == "APP" || ResolveAgl(data) <= 3000d);
+            var airborneLike = !onGround && !approachLike;
+
+            if (atGate && !afterTouchdown)
+            {
+                var readyTaxiOut = data.TaxiLightsOn && (!data.ParkingBrake || gs > 1.5d);
+                var startupAtGate = !readyTaxiOut && (data.BeaconLightsOn || data.NavLightsOn || data.EngineOneRunning || data.EngineTwoRunning || data.BatteryMasterOn || data.AvionicsMasterOn);
+                if (readyTaxiOut)
+                {
+                    evidence.Code = "READY_TAXI_OUT";
+                    evidence.Name = "Listo para rodaje salida";
+                    evidence.Summary = "Puertas cerradas/listo para salir: TAXI encendida y freno liberado o movimiento inicial; comienza rodaje hacia pista.";
+                    evidence.TaxiLightExpected = true;
+                    evidence.BeaconExpected = true;
+                    evidence.NavExpected = true;
+                }
+                else if (startupAtGate)
+                {
+                    evidence.Code = "STARTUP_AT_GATE";
+                    evidence.Name = "Preparacion/encendido en gate";
+                    evidence.Summary = "Evidencia de preparacion en gate: BCN/NAV o energia/motores activos; aun no es listo rodaje hasta encender TAXI y soltar freno/iniciar movimiento.";
+                    evidence.BeaconExpected = true;
+                    evidence.NavExpected = true;
+                }
+                else
+                {
+                    evidence.Code = "GATE_ORIGIN";
+                    evidence.Name = "Gate/plataforma salida";
+                    evidence.Summary = "Evidencia salida en gate: avion detenido y parking brake ON; TAXI marcara el inicio real de salida a rodaje.";
+                }
+            }
+            else if (atGate && afterTouchdown)
+            {
+                evidence.Code = "GATE_ARRIVAL";
+                evidence.Name = "Gate/plataforma llegada";
+                evidence.Summary = "Evidencia llegada a gate: taxi/landing/strobe apagadas y parking brake ON antes de finalizar.";
+            }
+            else if (afterTouchdown && onGround && (onTaxiway || data.RunwayExitCandidate || (gs > 3d && gs <= 35d && !data.LandingRollCandidate)))
+            {
+                evidence.Code = "TAXI_IN";
+                evidence.Name = "Rodaje llegada";
+                evidence.Summary = "Evidencia taxi-in post aterrizaje: TAXI esperada ON; STROBE/LANDING esperadas OFF despues de abandonar pista.";
+                evidence.TaxiLightExpected = true;
+                evidence.BeaconExpected = true;
+                evidence.NavExpected = true;
+            }
+            else if (onRunway || phase == FlightPhase.Takeoff || phase == FlightPhase.Landing)
+            {
+                evidence.Code = afterTouchdown ? "RUNWAY_ARRIVAL" : "RUNWAY_DEPARTURE";
+                evidence.Name = afterTouchdown ? "Pista aterrizaje/salida" : "Pista entrada/despegue";
+                evidence.Summary = "Evidencia de pista real/probable: STROBE y LANDING esperadas ON; XPDR ALT esperado antes de carrera/despegue.";
+                evidence.StrobeExpected = true;
+                evidence.LandingLightExpected = true;
+                evidence.XpdrAltExpected = true;
+                evidence.BeaconExpected = true;
+                evidence.NavExpected = true;
+            }
+            else if (onTaxiway || phase == FlightPhase.PushbackTaxi || phase == FlightPhase.Taxi || (onGround && gs > 3d && gs <= 35d))
+            {
+                evidence.Code = afterTouchdown ? "TAXI_IN" : "TAXI_OUT";
+                evidence.Name = afterTouchdown ? "Rodaje llegada" : "Rodaje salida";
+                evidence.Summary = afterTouchdown
+                    ? "Evidencia taxi-in: TAXI esperada ON; STROBE/LANDING esperadas OFF despues de abandonar pista."
+                    : "Evidencia taxi-out: TAXI esperada ON; STROBE/LANDING deben esperar hasta entrada/alineamiento de pista.";
+                evidence.TaxiLightExpected = true;
+                evidence.BeaconExpected = true;
+                evidence.NavExpected = true;
+            }
+            else if (approachLike)
+            {
+                evidence.Code = "APPROACH_FINAL";
+                evidence.Name = "Aproximacion/final";
+                evidence.Summary = "Evidencia aproximacion: LANDING y STROBE esperadas ON antes del aterrizaje; XPDR ALT esperado.";
+                evidence.StrobeExpected = true;
+                evidence.LandingLightExpected = true;
+                evidence.XpdrAltExpected = true;
+                evidence.BeaconExpected = true;
+                evidence.NavExpected = true;
+            }
+            else if (airborneLike)
+            {
+                evidence.Code = "AIRBORNE";
+                evidence.Name = "En vuelo";
+                evidence.Summary = "Evidencia en vuelo: BCN/NAV y XPDR ALT esperados; LANDING segun altitud/procedimiento.";
+                evidence.XpdrAltExpected = true;
+                evidence.BeaconExpected = true;
+                evidence.NavExpected = true;
+            }
+            else
+            {
+                evidence.Code = "GROUND_INTERMEDIATE";
+                evidence.Name = "Suelo intermedio";
+                evidence.Summary = "Evidencia suelo intermedio sin fase operacional suficiente para reglaje automatico.";
+            }
+
+            var flags = new List<string>();
+
+            if (evidence.TaxiLightExpected && !data.TaxiLightsOn) flags.Add("TAXI_EXPECTED_OFF_OR_MISSING");
+            if (!evidence.TaxiLightExpected && data.TaxiLightsOn && (evidence.Code == "GATE_ORIGIN" || evidence.Code == "STARTUP_AT_GATE" || evidence.Code == "GATE_ARRIVAL")) flags.Add("TAXI_ON_AT_GATE");
+
+            if (evidence.StrobeExpected && !data.StrobeLightsOn) flags.Add("STROBE_EXPECTED_OFF_OR_MISSING");
+            if (!evidence.StrobeExpected && data.StrobeLightsOn && (evidence.Code == "TAXI_OUT" || evidence.Code == "TAXI_IN" || evidence.Code == "GATE_ORIGIN" || evidence.Code == "STARTUP_AT_GATE" || evidence.Code == "GATE_ARRIVAL")) flags.Add("STROBE_ON_OUTSIDE_RUNWAY");
+
+            if (evidence.LandingLightExpected && !data.LandingLightsOn) flags.Add("LANDING_EXPECTED_OFF_OR_MISSING");
+            if (!evidence.LandingLightExpected && data.LandingLightsOn && (evidence.Code == "TAXI_OUT" || evidence.Code == "TAXI_IN" || evidence.Code == "GATE_ORIGIN" || evidence.Code == "STARTUP_AT_GATE" || evidence.Code == "GATE_ARRIVAL")) flags.Add("LANDING_ON_OUTSIDE_RUNWAY");
+
+            if (evidence.XpdrAltExpected && !data.TransponderCharlieMode) flags.Add("XPDR_ALT_EXPECTED");
+            if (evidence.BeaconExpected && !data.BeaconLightsOn) flags.Add("BEACON_EXPECTED");
+            if (evidence.NavExpected && !data.NavLightsOn) flags.Add("NAV_EXPECTED");
+            if ((evidence.Code == "GATE_ORIGIN" || evidence.Code == "STARTUP_AT_GATE" || evidence.Code == "GATE_ARRIVAL") && !data.ParkingBrake) flags.Add("PARKING_BRAKE_EXPECTED_AT_GATE");
+            if (data.DoorOpen && (evidence.Code == "READY_TAXI_OUT" || evidence.Code == "TAXI_OUT" || evidence.Code == "RUNWAY_DEPARTURE" || evidence.Code == "AIRBORNE" || evidence.Code == "APPROACH_FINAL" || evidence.Code == "RUNWAY_ARRIVAL" || evidence.Code == "TAXI_IN")) flags.Add("DOOR_OPEN_OPERATIONAL_PHASE");
+
+            if (flags.Count == 0)
+            {
+                evidence.Status = "OK";
+                evidence.Flags = string.Empty;
+            }
+            else
+            {
+                evidence.Status = "EVIDENCE_REVIEW";
+                evidence.Flags = string.Join(",", flags);
+            }
+
+            evidence.Summary += " Luces: NAV=" + BoolText(data.NavLightsOn) +
+                                " BCN=" + BoolText(data.BeaconLightsOn) +
+                                " STB=" + BoolText(data.StrobeLightsOn) +
+                                " TAXI=" + BoolText(data.TaxiLightsOn) +
+                                " LAND=" + BoolText(data.LandingLightsOn) +
+                                " XPDR_ALT=" + BoolText(data.TransponderCharlieMode) +
+                                "; MSFS=" + FirstNonEmpty(data.FacilityNearestRunwayAirportIcao, "N/D") +
+                                " RWY=" + FirstNonEmpty(data.FacilityNearestRunwayIdent, "N/D") +
+                                " lat=" + data.FacilityRunwayLateralOffsetMeters.ToString("F0", CultureInfo.InvariantCulture) +
+                                "m hdgErr=" + data.FacilityRunwayHeadingErrorDeg.ToString("F0", CultureInfo.InvariantCulture) + "deg.";
+            return evidence;
+        }
+
+        private static string BoolText(bool value)
+        {
+            return value ? "ON" : "OFF";
+        }
+
+        private static string FirstNonEmpty(string value, string fallback)
+        {
+            return string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+        }
+
+        private sealed class RunwayTdzEvidence
+        {
+            public string Code { get; set; } = "UNKNOWN";
+            public string Name { get; set; } = string.Empty;
+            public string Reason { get; set; } = string.Empty;
+            public string EstimatedRunwayIdent { get; set; } = string.Empty;
+            public string EstimatedRunwayReciprocalIdent { get; set; } = string.Empty;
+            public double EstimatedRunwayHeadingDeg { get; set; }
+            public double HeadingDeltaDeg { get; set; }
+            public bool AlignedCandidate { get; set; }
+            public bool EntryCandidate { get; set; }
+            public bool ExitCandidate { get; set; }
+            public bool TakeoffRollCandidate { get; set; }
+            public bool LandingRollCandidate { get; set; }
+            public bool TouchdownZoneCandidate { get; set; }
+            public bool TaxiwayProbable { get; set; }
+            public bool GeometryAvailable { get; set; }
+            public bool Reliable { get; set; }
+        }
+
+        private RunwayTdzEvidence BuildRunwayTdzContext(SimData data, FlightPhase phase, bool onGround, SurfaceContextEvidence surface)
+        {
+            var gs = SafeNumber(data.GroundSpeed);
+            var ias = SafeNumber(data.IndicatedAirspeed);
+            var agl = ResolveAgl(data);
+            var heading = NormalizeHeading(data.Heading);
+            var touchdown = data.TouchdownDetected;
+            var afterTouchdown = _touchdownDetected || data.TouchdownDetected || phase == FlightPhase.Landing || phase == FlightPhase.Arrived || (data.HasBeenAirborne && onGround && phase == FlightPhase.Taxi);
+            var runwayEnergy = onGround && (surface.RunwayCandidate || gs >= 35d || ias >= 35d || phase == FlightPhase.Takeoff || phase == FlightPhase.Landing);
+
+            if (onGround && !afterTouchdown && runwayEnergy && double.IsNaN(_departureRunwayHeadingDeg))
+            {
+                _departureRunwayHeadingDeg = heading;
+            }
+
+            if (onGround && afterTouchdown && runwayEnergy && double.IsNaN(_arrivalRunwayHeadingDeg))
+            {
+                _arrivalRunwayHeadingDeg = heading;
+            }
+
+            var hasFacilityRunway = data.FacilityRunwayGeometryAvailable && !string.IsNullOrWhiteSpace(data.FacilityNearestRunwayIdent);
+            var axis = hasFacilityRunway ? NormalizeHeading(data.FacilityNearestRunwayHeadingDeg) : ResolveRunwayAxis(phase, afterTouchdown, heading);
+            var delta = hasFacilityRunway ? SafeNumber(data.FacilityRunwayHeadingErrorDeg) : SmallestHeadingDifference(heading, axis);
+            var aligned = hasFacilityRunway ? data.FacilityRunwayAlignedCandidate : delta <= 12d;
+            var runwayIdent = hasFacilityRunway ? data.FacilityNearestRunwayIdent : RunwayIdentFromHeading(axis);
+            var reciprocal = hasFacilityRunway ? data.FacilityNearestRunwayReciprocalIdent : RunwayIdentFromHeading(axis + 180d);
+            var geometryReason = hasFacilityRunway
+                ? "C11C geometria MSFS Facilities: " + data.FacilityRunwayGeometrySummary
+                : "C10 sin geometria aeroportuaria exacta; inferencia por rumbo, velocidad, fase y touchdown";
+
+            var evidence = new RunwayTdzEvidence
+            {
+                Code = "UNKNOWN",
+                Name = "Contexto pista/rodaje no determinado",
+                Reason = geometryReason,
+                EstimatedRunwayHeadingDeg = axis,
+                HeadingDeltaDeg = delta,
+                EstimatedRunwayIdent = runwayIdent,
+                EstimatedRunwayReciprocalIdent = reciprocal,
+                GeometryAvailable = hasFacilityRunway,
+                Reliable = false
+            };
+
+            if (!onGround)
+            {
+                if (afterTouchdown)
+                {
+                    evidence.Code = "AIRBORNE_AFTER_TOUCHDOWN_UNEXPECTED";
+                    evidence.Name = "En vuelo despues de touchdown detectado";
+                    evidence.Reason = "Se detecto energia aérea posterior a touchdown; revisar salto/pausa/sim";
+                    evidence.Reliable = false;
+                    return evidence;
+                }
+
+                if (agl > 0d && agl <= 3000d && gs >= 55d)
+                {
+                    evidence.Code = phase == FlightPhase.Approach ? "APPROACH_RUNWAY_ALIGNED_CANDIDATE" : "AIRBORNE_RUNWAY_AXIS_CANDIDATE";
+                    evidence.Name = phase == FlightPhase.Approach ? "Aproximacion alineada candidata" : "Eje de pista probable en vuelo";
+                    evidence.Reason = hasFacilityRunway
+                        ? "AGL bajo y GS de vuelo; eje calculado con runway MSFS Facilities"
+                        : "AGL bajo y GS de vuelo; eje estimado por heading actual hasta disponer de geometria/navdata";
+                    evidence.AlignedCandidate = aligned;
+                    evidence.Reliable = hasFacilityRunway ? aligned : (phase == FlightPhase.Approach || agl <= 1500d);
+                    return evidence;
+                }
+
+                evidence.Code = "AIRBORNE_NO_RUNWAY_CONTEXT";
+                evidence.Name = "En vuelo sin contexto de pista";
+                evidence.Reason = "Muestra airborne fuera de capa de aproximacion/despegue";
+                evidence.Reliable = true;
+                return evidence;
+            }
+
+            if (surface.GateAreaCandidate || (gs <= 3d && data.ParkingBrake))
+            {
+                evidence.Code = afterTouchdown ? "GATE_AREA" : "APRON_PARKING";
+                evidence.Name = afterTouchdown ? "Gate/plataforma llegada" : "Plataforma/parking salida";
+                evidence.Reason = "GS<=3 y parking brake ON; no se considera pista/rodaje";
+                evidence.Reliable = true;
+                return evidence;
+            }
+
+            if (!afterTouchdown)
+            {
+                if (runwayEnergy || (hasFacilityRunway && data.FacilityOnRunwayCandidate && gs > 3d))
+                {
+                    evidence.Code = gs < 45d ? "RUNWAY_ENTRY_OR_LINEUP" : "RUNWAY_TAKEOFF_ROLL";
+                    evidence.Name = gs < 45d ? "Entrada/alineamiento pista probable" : "Carrera de despegue probable";
+                    evidence.Reason = hasFacilityRunway
+                        ? "Antes de airborne: aeronave sobre/near RWY " + runwayIdent + " segun MSFS Facilities"
+                        : "Antes de airborne: velocidad/IAS/phase compatibles con pista; runway exacta estimada por heading";
+                    evidence.EntryCandidate = gs < 45d;
+                    evidence.TakeoffRollCandidate = gs >= 35d || ias >= 35d || phase == FlightPhase.Takeoff;
+                    evidence.AlignedCandidate = aligned;
+                    evidence.Reliable = hasFacilityRunway ? data.FacilityOnRunwayCandidate : (evidence.TakeoffRollCandidate || (evidence.EntryCandidate && aligned));
+                    _wasRunwayCandidate = true;
+                    return evidence;
+                }
+
+                if (gs > 3d && gs < 35d)
+                {
+                    evidence.Code = "TAXIWAY_OUT_PROBABLE";
+                    evidence.Name = "Rodaje salida probable";
+                    evidence.Reason = "Antes de airborne con GS 3-35 kt fuera de carrera de pista";
+                    evidence.TaxiwayProbable = true;
+                    evidence.Reliable = true;
+                    return evidence;
+                }
+            }
+
+            if (afterTouchdown)
+            {
+                if (touchdown || (phase == FlightPhase.Landing && gs >= 40d))
+                {
+                    evidence.Code = touchdown ? "TOUCHDOWN_ZONE_CANDIDATE" : "LANDING_ROLL";
+                    evidence.Name = touchdown ? "TDZ candidato" : "Carrera de aterrizaje";
+                    evidence.Reason = touchdown
+                        ? (hasFacilityRunway ? "Touchdown detectado; TDZ candidato calculado contra threshold MSFS Facilities" : "Touchdown detectado; sin threshold georeferenciado se marca TDZ candidato, no TDZ exacto")
+                        : (hasFacilityRunway ? "Post-touchdown con velocidad de pista; runway MSFS Facilities" : "Post-touchdown con velocidad de pista; runway exacta estimada por heading");
+                    evidence.TouchdownZoneCandidate = hasFacilityRunway ? data.FacilityTouchdownZoneCandidate : touchdown;
+                    evidence.LandingRollCandidate = true;
+                    evidence.AlignedCandidate = aligned;
+                    evidence.Reliable = hasFacilityRunway ? data.FacilityOnRunwayCandidate : true;
+                    _wasRunwayCandidate = true;
+                    return evidence;
+                }
+
+                if (gs > 3d && gs <= 35d)
+                {
+                    evidence.Code = _wasRunwayCandidate && !_runwayExitDetected ? "RUNWAY_EXIT_CANDIDATE" : "TAXIWAY_IN_PROBABLE";
+                    evidence.Name = _wasRunwayCandidate && !_runwayExitDetected ? "Salida de pista candidata" : "Rodaje llegada probable";
+                    evidence.Reason = _wasRunwayCandidate && !_runwayExitDetected
+                        ? "Post-landing con GS taxi; probable salida de pista hacia calle de rodaje"
+                        : "Post-landing con GS 3-35 kt; taxiway inferido sin geometria aeroportuaria";
+                    evidence.ExitCandidate = _wasRunwayCandidate && !_runwayExitDetected;
+                    evidence.TaxiwayProbable = true;
+                    evidence.Reliable = true;
+                    if (evidence.ExitCandidate) _runwayExitDetected = true;
+                    return evidence;
+                }
+            }
+
+            if (gs > 3d && gs <= 35d)
+            {
+                evidence.Code = "TAXIWAY_PROBABLE";
+                evidence.Name = "Rodaje probable";
+                evidence.Reason = "OnGround con velocidad de taxi; sin geometria para nombrar taxiway";
+                evidence.TaxiwayProbable = true;
+                evidence.Reliable = true;
+                return evidence;
+            }
+
+            evidence.Code = "GROUND_INTERMEDIATE";
+            evidence.Name = "Suelo intermedio";
+            evidence.Reason = "OnGround sin velocidad/condicion suficiente para clasificar pista, rodaje o gate";
+            evidence.Reliable = true;
+            return evidence;
+        }
+
+        private double ResolveRunwayAxis(FlightPhase phase, bool afterTouchdown, double heading)
+        {
+            if (afterTouchdown && !double.IsNaN(_arrivalRunwayHeadingDeg))
+            {
+                return _arrivalRunwayHeadingDeg;
+            }
+
+            if (!afterTouchdown && !double.IsNaN(_departureRunwayHeadingDeg))
+            {
+                return _departureRunwayHeadingDeg;
+            }
+
+            if ((phase == FlightPhase.Approach || phase == FlightPhase.Landing) && !double.IsNaN(_arrivalRunwayHeadingDeg))
+            {
+                return _arrivalRunwayHeadingDeg;
+            }
+
+            return heading;
+        }
+
+        private static double NormalizeHeading(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value)) return 0d;
+            var heading = value % 360d;
+            if (heading < 0d) heading += 360d;
+            return heading;
+        }
+
+        private static double SmallestHeadingDifference(double a, double b)
+        {
+            var diff = Math.Abs(NormalizeHeading(a) - NormalizeHeading(b)) % 360d;
+            return diff > 180d ? 360d - diff : diff;
+        }
+
+        private static string RunwayIdentFromHeading(double heading)
+        {
+            var normalized = NormalizeHeading(heading);
+            var number = (int)Math.Round(normalized / 10d, MidpointRounding.AwayFromZero);
+            if (number <= 0) number = 36;
+            if (number > 36) number -= 36;
+            return number.ToString("00", CultureInfo.InvariantCulture);
         }
 
         private sealed class PhasePrevalidationEvidence
@@ -1350,9 +1969,52 @@ namespace PatagoniaWings.Acars.Core.Services
                 CabinPenalty    = eval.CabinPenalty
             };
 
+            ApplyStableApproachPolicy(report);
             report.ProceduralSummary = eval.Summary;
             report.ApplyLegacyScoreProjection();
             return report;
+        }
+
+        private void ApplyStableApproachPolicy(FlightReport report)
+        {
+            if (report == null || _telemetryLog.Count == 0) return;
+
+            var candidate = _telemetryLog
+                .Where(s => !s.OnGround
+                            && ResolveAgl(s) > 0d
+                            && ResolveAgl(s) <= 2000d
+                            && (s.OperationalPhaseCode == "APP" || s.SurfaceProcedurePhaseCode == "APPROACH_FINAL")
+                            && s.FacilityNearestRunwayDistanceMeters > 0d
+                            && (s.FacilityNearestRunwayDistanceMeters / 1852d) <= 7d)
+                .OrderByDescending(s => ResolveAgl(s))
+                .FirstOrDefault();
+
+            if (candidate == null) return;
+
+            var penalties = new List<string>();
+            var headingError = candidate.FacilityRunwayHeadingErrorDeg > 0d
+                ? candidate.FacilityRunwayHeadingErrorDeg
+                : (candidate.RunwayHeadingDeltaDeg > 0d ? candidate.RunwayHeadingDeltaDeg : 999d);
+
+            if (!candidate.GearDown) penalties.Add("tren_abajo");
+            if (!candidate.FlapsDeployed || candidate.FlapsPercent < 0.05d) penalties.Add("flaps");
+            if (!candidate.LandingLightsOn) penalties.Add("landing_lights");
+            if (Math.Abs(candidate.Bank) > 5d) penalties.Add("bank_gt_5");
+            if (headingError > 10d) penalties.Add("hdg_runway_gt_10");
+
+            if (penalties.Count == 0) return;
+
+            var penaltyPoints = penalties.Count * 5;
+            report.ApproachPenalty += penaltyPoints;
+            report.PatagoniaScore = Math.Max(0, report.PatagoniaScore - penaltyPoints);
+            report.ProcedureScore = Math.Max(0, report.ProcedureScore - penaltyPoints);
+            report.Violations.Add(new ScoreEvent
+            {
+                Code = "APP-STABLE-2000",
+                Phase = "APP",
+                Description = "Aproximacion no estabilizada a 2000 ft: " + string.Join(", ", penalties),
+                Points = -penaltyPoints
+            });
         }
 
         private double ComputeApproachQnh()

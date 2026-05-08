@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,11 +28,67 @@ namespace PatagoniaWings.Acars.SimConnect
         private const bool EnableLvarReadBridge = false;
         private const int WM_USER_SIMCONNECT = 0x0402;
 
+        private static readonly object ActiveInstanceLock = new object();
+        private static SimConnectService? _activeFacilitiesInstance;
+
         private Microsoft.FlightSimulator.SimConnect.SimConnect? _simConnect;
         private HwndSource? _hwndSource;
         private bool _disposed;
         private bool _isPaused;
         private bool _hasReceivedAircraftData;
+
+        // C11A Facilities bridge. This is discovery/evidence only; exact geometry
+        // resolution is handled in later C11B/C11C blocks.
+        private readonly object _facilityBridgeLock = new object();
+        private bool _facilityBridgeInitAttempted;
+        private DateTime? _facilityBridgeLastInitAttemptUtc;
+        private bool _facilityBridgeAvailable;
+        private bool _facilityBridgeSubscribed;
+        private bool _facilityDataReceived;
+        private string _facilityBridgeStatus = "not_initialized";
+        private string _facilityBridgeLastDataStatus = string.Empty;
+        private readonly Dictionary<string, int> _facilityBridgeDataTypeCounts = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private string _facilityBridgeLastIcao = string.Empty;
+        private string _facilityBridgeLastRegion = string.Empty;
+        private int _facilityBridgeRecordsReceived;
+        private int _facilityBridgeAirportCount;
+        private string _facilityBridgeNearestAirports = string.Empty;
+        private DateTime? _facilityBridgeLastRequestUtc;
+        private DateTime? _facilityBridgeLastReceivedUtc;
+
+        // C11B direct airport facility requests by ICAO. Discovery only; C11C will
+        // resolve runway/taxiway/parking geometry from confirmed payloads.
+        private bool _facilityAirportDefinitionConfigured;
+        private readonly HashSet<string> _facilityBridgeRequestedIcaos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly HashSet<string> _facilityBridgeReceivedIcaos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<uint, string> _facilityBridgeRequestIcaoByUserRequestId = new Dictionary<uint, string>();
+        private int _facilityBridgeDirectRequestsSent;
+        private int _facilityBridgeDataEndCount;
+        private int _facilityBridgeExceptionCount;
+        private string _facilityBridgeLastException = string.Empty;
+        private string _facilityBridgeLastRequestMode = string.Empty;
+
+        // C11C: runway geometry cache populated from SimConnect FacilityData.
+        // The cache is raw evidence only; ACARS does not calculate official score.
+        private readonly Dictionary<string, List<FacilityRunwayGeometry>> _facilityRunwaysByAirport = new Dictionary<string, List<FacilityRunwayGeometry>>(StringComparer.OrdinalIgnoreCase);
+        private string _facilityRunwayGeometryStatus = string.Empty;
+
+        // C11D1: taxi/parking payload discovery from SimConnect Facilities.
+        // This first block only proves that MSFS sends taxiway/parking records and
+        // exposes a concise diagnostic in the C11 bridge line. Geometry classification
+        // is intentionally deferred to C11D2 after payload validation.
+        private readonly Dictionary<string, int> _facilityTaxiParkingCountByAirport = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _facilityTaxiPointCountByAirport = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _facilityTaxiPathCountByAirport = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        private string _facilityTaxiGeometryStatus = string.Empty;
+
+        // C11D4: airport-local taxi geometry cache. MSFS taxi points/parking are
+        // delivered as BIAS_X/BIAS_Z offsets from the airport facility reference.
+        // We keep this as evidence only, not as official scoring.
+        private readonly Dictionary<string, FacilityAirportGeometry> _facilityAirportsByAirport = new Dictionary<string, FacilityAirportGeometry>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<FacilityTaxiParkingGeometry>> _facilityTaxiParkingsByAirport = new Dictionary<string, List<FacilityTaxiParkingGeometry>>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<FacilityTaxiPointGeometry>> _facilityTaxiPointsByAirport = new Dictionary<string, List<FacilityTaxiPointGeometry>>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<FacilityTaxiPathGeometry>> _facilityTaxiPathsByAirport = new Dictionary<string, List<FacilityTaxiPathGeometry>>(StringComparer.OrdinalIgnoreCase);
 
         private EnvironmentDataStruct _lastEnv;
 
@@ -78,8 +134,17 @@ namespace PatagoniaWings.Acars.SimConnect
                     null,
                     0);
 
+                lock (ActiveInstanceLock)
+                {
+                    _activeFacilitiesInstance = this;
+                }
+
                 RegisterDataDefinitions();
                 RegisterEvents();
+                // C11A2: initialize facilities immediately as well as from OnRecvOpen.
+                // Some MSFS/SimConnect managed wrappers can miss the open event timing,
+                // leaving the UI at API no disponible even though the API exists.
+                InitializeFacilityBridgeDiscovery(force: true);
 
                 // PMDG 737 SDK oficial
                 try
@@ -97,25 +162,30 @@ namespace PatagoniaWings.Acars.SimConnect
                     _pmdgSdk = null;
                 }
 
-                // MobiFlight para LVARs (A320 FBW, etc.)
-                try
+                // C11D6: modo seguro para periféricos/SPAD.next.
+                // Si el bridge LVAR está deshabilitado, NO inicializamos MobiFlight ni canales ClientData.
+                // Esto mantiene ACARS read-only sobre telemetría estándar y evita tocar canales que pueden
+                // compartir add-ons como SPAD.next, Logitech/Saitek o perfiles externos.
+                if (EnableLvarReadBridge)
                 {
-                    _mobiFlight = new MobiFlightIntegration();
-                    _mobiFlight.Initialize(_simConnect);
-                    Debug.WriteLine(_mobiFlight.IsAvailable
-                        ? "[SimConnect] ✓ MobiFlight WASM detectado"
-                        : "[SimConnect] ✗ MobiFlight no disponible");
+                    try
+                    {
+                        _mobiFlight = new MobiFlightIntegration();
+                        _mobiFlight.Initialize(_simConnect);
+                        Debug.WriteLine(_mobiFlight.IsAvailable
+                            ? "[SimConnect] ✓ MobiFlight WASM detectado"
+                            : "[SimConnect] ✗ MobiFlight no disponible");
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[SimConnect] MobiFlight init error: {ex.Message}");
+                        _mobiFlight = null;
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[SimConnect] MobiFlight init error: {ex.Message}");
-                    _mobiFlight = null;
-                }
-
-                if (!EnableLvarReadBridge)
+                else
                 {
                     _mobiFlight = null;
-                    Debug.WriteLine("[SimConnect] MobiFlight/LVAR bridge deshabilitado por modo read-only.");
+                    Debug.WriteLine("[SimConnect] MobiFlight/LVAR bridge no inicializado: modo read-only/peripheral-safe activo.");
                 }
 
                 IsConnected = false;
@@ -242,6 +312,9 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.OnRecvQuit             += OnRecvQuit;
             _simConnect.OnRecvException        += OnRecvException;
             _simConnect.OnRecvEvent            += OnRecvEvent;
+            _simConnect.OnRecvFacilityData     += OnRecvFacilityData;
+            _simConnect.OnRecvFacilityDataEnd  += OnRecvFacilityDataEnd;
+            _simConnect.OnRecvFacilityMinimalList += OnRecvFacilityMinimalList;
 
             _simConnect.SubscribeToSystemEvent(EventId.Pause,   "Pause");
             _simConnect.SubscribeToSystemEvent(EventId.Crashed, "Crashed");
@@ -316,10 +389,25 @@ namespace PatagoniaWings.Acars.SimConnect
             profile = NormalizeAddonProfile(profile, aircraftTitle);
             _lastProfile = profile;
 
+            // C11A2: if the bridge has not initialized yet, retry from the
+            // first real SimConnect aircraft sample. This avoids relying only
+            // on OnRecvOpen timing.
+            bool shouldRetryFacilities = false;
+            lock (_facilityBridgeLock)
+            {
+                shouldRetryFacilities = !_facilityBridgeAvailable ||
+                    (!_facilityDataReceived && _facilityBridgeLastRequestUtc.HasValue &&
+                     (DateTime.UtcNow - _facilityBridgeLastRequestUtc.Value).TotalSeconds > 20);
+            }
+
+            if (shouldRetryFacilities)
+                InitializeFacilityBridgeDiscovery(force: true);
+
             var simData = BuildSimData(raw, _lastEnv, profile);
             simData.IsConnected    = true;
             simData.SimulatorType  = DetectedSimulator == SimulatorType.None ? SimulatorType.MSFS2020 : DetectedSimulator;
             simData.Pause          = _isPaused;
+            ApplyFacilityBridgeState(simData);
 
             string profileCode = profile?.Code ?? "MSFS_NATIVE";
             string profileDisplayName = profile?.DisplayName ?? "MSFS Native";
@@ -369,11 +457,1813 @@ namespace PatagoniaWings.Acars.SimConnect
         {
             DetectedSimulator = SimulatorType.MSFS2020;
             RequestData();
+            InitializeFacilityBridgeDiscovery(force: true);
+        }
+
+        public static void RequestAirportFacilitiesForActive(params string[] icaos)
+        {
+            SimConnectService? active;
+            lock (ActiveInstanceLock)
+            {
+                active = _activeFacilitiesInstance;
+            }
+
+            active?.RequestAirportFacilitiesByIcao(icaos);
+        }
+
+        private void RequestAirportFacilitiesByIcao(IEnumerable<string>? icaos)
+        {
+            if (_simConnect == null || icaos == null)
+                return;
+
+            var normalized = new List<string>();
+            foreach (var icao in icaos)
+            {
+                var value = NormalizeFacilityIcao(icao);
+                if (string.IsNullOrWhiteSpace(value))
+                    continue;
+
+                if (!normalized.Contains(value, StringComparer.OrdinalIgnoreCase))
+                    normalized.Add(value);
+            }
+
+            if (normalized.Count == 0)
+                return;
+
+            InitializeFacilityBridgeDiscovery(force: false);
+
+            try
+            {
+                EnsureAirportFacilityDefinition();
+            }
+            catch (Exception ex)
+            {
+                lock (_facilityBridgeLock)
+                {
+                    _facilityBridgeAvailable = false;
+                    _facilityBridgeStatus = "airport_facility_define_failed: " + ex.Message;
+                    _facilityBridgeLastRequestUtc = DateTime.UtcNow;
+                    _facilityBridgeNearestAirports = string.Join(",", normalized);
+                }
+                Debug.WriteLine("[C11B Facilities] airport definition failed: " + ex);
+                return;
+            }
+
+            var submitted = new List<string>();
+            var requestModes = new List<string>();
+            foreach (var icao in normalized)
+            {
+                lock (_facilityBridgeLock)
+                {
+                    if (_facilityBridgeRequestedIcaos.Contains(icao))
+                        continue;
+
+                    _facilityBridgeRequestedIcaos.Add(icao);
+                }
+
+                try
+                {
+                    var requestId = (FacilityRequestId)((int)FacilityRequestId.AirportFacilityData + _facilityBridgeDirectRequestsSent + submitted.Count + 1);
+                    var requestIdValue = unchecked((uint)(int)requestId);
+                    var requestMode = "LEGACY_OPEN_CLOSE_REGISTERED";
+
+                    lock (_facilityBridgeLock)
+                    {
+                        _facilityBridgeRequestIcaoByUserRequestId[requestIdValue] = icao;
+                    }
+
+                    try
+                    {
+                        // C11B5: for airport ICAO requests, prefer the documented legacy
+                        // RequestFacilityData path. EX1 is retained as fallback only.
+                        _simConnect.RequestFacilityData(
+                            FacilityDefineId.Airport,
+                            requestId,
+                            icao,
+                            string.Empty);
+                    }
+                    catch (Exception legacyEx)
+                    {
+                        Debug.WriteLine("[C11B5 Facilities] RequestFacilityData legacy failed for " + icao + ": " + legacyEx.Message);
+                        requestMode = "EX1_AFTER_LEGACY_FAIL";
+                        _simConnect.RequestFacilityData_EX1(
+                            FacilityDefineId.Airport,
+                            requestId,
+                            icao,
+                            string.Empty,
+                            (sbyte)SIMCONNECT_FACILITY_DATA_TYPE.AIRPORT);
+                    }
+
+                    submitted.Add(icao);
+                    requestModes.Add(icao + ":" + requestMode + "#" + requestIdValue.ToString(CultureInfo.InvariantCulture));
+                }
+                catch (Exception requestEx)
+                {
+                    lock (_facilityBridgeLock)
+                    {
+                        _facilityBridgeStatus = "direct_request_failed_" + icao + ": " + requestEx.Message;
+                        _facilityBridgeLastRequestUtc = DateTime.UtcNow;
+                        _facilityBridgeAvailable = true;
+                    }
+                    Debug.WriteLine("[C11B Facilities] direct request failed for " + icao + ": " + requestEx);
+                }
+            }
+
+            if (submitted.Count > 0)
+            {
+                lock (_facilityBridgeLock)
+                {
+                    _facilityBridgeAvailable = true;
+                    _facilityBridgeStatus = "direct_airport_facility_requested:" + string.Join(",", submitted);
+                    _facilityBridgeLastIcao = string.Join(",", _facilityBridgeRequestedIcaos.OrderBy(x => x));
+                    _facilityBridgeLastRegion = string.Empty;
+                    _facilityBridgeNearestAirports = string.Join(",", _facilityBridgeRequestedIcaos.OrderBy(x => x));
+                    _facilityBridgeLastRequestUtc = DateTime.UtcNow;
+                    _facilityBridgeLastRequestMode = string.Join(",", requestModes);
+                    _facilityBridgeDirectRequestsSent += submitted.Count;
+                }
+            }
+        }
+
+        private void EnsureAirportFacilityDefinition()
+        {
+            if (_simConnect == null)
+                throw new InvalidOperationException("SimConnect no inicializado");
+
+            lock (_facilityBridgeLock)
+            {
+                if (_facilityAirportDefinitionConfigured)
+                    return;
+            }
+
+            // C11B5: SimConnect FacilityData requires a strict OPEN/CLOSE tree.
+            // The previous flat definition (ICAO/LATITUDE/LONGITUDE/ALTITUDE) can
+            // leave MSFS waiting without FacilityData records. Keep this as a safe
+            // diagnostic definition: airport counters + runway geometry essentials.
+            var fields = new[]
+            {
+                "OPEN AIRPORT",
+                "ICAO",
+                "LATITUDE",
+                "LONGITUDE",
+                "ALTITUDE",
+                "N_RUNWAYS",
+                "N_TAXI_POINTS",
+                "N_TAXI_PARKINGS",
+                "N_TAXI_PATHS",
+                "N_TAXI_NAMES",
+                "OPEN RUNWAY",
+                "PRIMARY_NUMBER",
+                "PRIMARY_DESIGNATOR",
+                "SECONDARY_NUMBER",
+                "SECONDARY_DESIGNATOR",
+                "LATITUDE",
+                "LONGITUDE",
+                "ALTITUDE",
+                "HEADING",
+                "LENGTH",
+                "WIDTH",
+                "SURFACE",
+                "CLOSE RUNWAY",
+                "OPEN TAXI_PARKING",
+                "TYPE",
+                "TAXI_POINT_TYPE",
+                "NAME",
+                "SUFFIX",
+                "NUMBER",
+                "ORIENTATION",
+                "HEADING",
+                "RADIUS",
+                "BIAS_X",
+                "BIAS_Z",
+                "CLOSE TAXI_PARKING",
+                "OPEN TAXI_POINT",
+                "TYPE",
+                "ORIENTATION",
+                "BIAS_X",
+                "BIAS_Z",
+                "CLOSE TAXI_POINT",
+                "OPEN TAXI_PATH",
+                "TYPE",
+                "WIDTH",
+                "LEFT_HALF_WIDTH",
+                "RIGHT_HALF_WIDTH",
+                "WEIGHT",
+                "RUNWAY_NUMBER",
+                "RUNWAY_DESIGNATOR",
+                "LEFT_EDGE",
+                "LEFT_EDGE_LIGHTED",
+                "RIGHT_EDGE",
+                "RIGHT_EDGE_LIGHTED",
+                "CENTER_LINE",
+                "CENTER_LINE_LIGHTED",
+                "START",
+                "END",
+                "NAME_INDEX",
+                "CLOSE TAXI_PATH",
+                "CLOSE AIRPORT"
+            };
+
+            foreach (var field in fields)
+            {
+                _simConnect.AddToFacilityDefinition(FacilityDefineId.Airport, field);
+            }
+
+            // Managed SimConnect must know how to marshal each FacilityData type.
+            // Keep registrations minimal and fail-soft so unsupported enum members
+            // do not break the whole ACARS session.
+            try
+            {
+                _simConnect.RegisterFacilityDataDefineStruct<FacilityAirportDataStruct>(SIMCONNECT_FACILITY_DATA_TYPE.AIRPORT);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[C11B5 Facilities] Register AIRPORT struct failed: " + ex.Message);
+            }
+
+            try
+            {
+                _simConnect.RegisterFacilityDataDefineStruct<FacilityRunwayDataStruct>(SIMCONNECT_FACILITY_DATA_TYPE.RUNWAY);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[C11B5 Facilities] Register RUNWAY struct failed: " + ex.Message);
+            }
+
+            try
+            {
+                _simConnect.RegisterFacilityDataDefineStruct<FacilityTaxiParkingDataStruct>(SIMCONNECT_FACILITY_DATA_TYPE.TAXI_PARKING);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[C11D1 Facilities] Register TAXI_PARKING struct failed: " + ex.Message);
+            }
+
+            try
+            {
+                _simConnect.RegisterFacilityDataDefineStruct<FacilityTaxiPointDataStruct>(SIMCONNECT_FACILITY_DATA_TYPE.TAXI_POINT);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[C11D1 Facilities] Register TAXI_POINT struct failed: " + ex.Message);
+            }
+
+            try
+            {
+                _simConnect.RegisterFacilityDataDefineStruct<FacilityTaxiPathDataStruct>(SIMCONNECT_FACILITY_DATA_TYPE.TAXI_PATH);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[C11D1 Facilities] Register TAXI_PATH struct failed: " + ex.Message);
+            }
+
+            lock (_facilityBridgeLock)
+            {
+                _facilityAirportDefinitionConfigured = true;
+                _facilityBridgeAvailable = true;
+                _facilityBridgeStatus = "airport_facility_definition_ready_open_close_registered";
+            }
+        }
+
+        private static string NormalizeFacilityIcao(string? value)
+        {
+            var text = (value ?? string.Empty).Trim().ToUpperInvariant();
+            if (text.Length < 3 || text == "----" || text == "????")
+                return string.Empty;
+
+            return text;
+        }
+
+        private void InitializeFacilityBridgeDiscovery(bool force = false)
+        {
+            if (_simConnect == null) return;
+
+            lock (_facilityBridgeLock)
+            {
+                if (!force && _facilityBridgeInitAttempted && _facilityBridgeLastInitAttemptUtc.HasValue &&
+                    (DateTime.UtcNow - _facilityBridgeLastInitAttemptUtc.Value).TotalSeconds < 20)
+                {
+                    return;
+                }
+
+                _facilityBridgeInitAttempted = true;
+                _facilityBridgeLastInitAttemptUtc = DateTime.UtcNow;
+            }
+
+            try
+            {
+                lock (_facilityBridgeLock)
+                {
+                    _facilityBridgeAvailable = true;
+                    _facilityBridgeStatus = "simconnect_facilities_methods_available";
+                    _facilityBridgeLastRequestUtc = DateTime.UtcNow;
+                }
+
+                // First safe step: subscribe/request nearby airport minimal facilities.
+                // Exact runway/taxiway definitions are intentionally deferred to C11B/C11C
+                // after we confirm live facility payload behavior in the user's simulator.
+                try
+                {
+                    _simConnect.SubscribeToFacilities_EX1(
+                        SIMCONNECT_FACILITY_LIST_TYPE.AIRPORT,
+                        FacilityRequestId.AirportsInRangeNew,
+                        FacilityRequestId.AirportsInRangeOld);
+
+                    lock (_facilityBridgeLock)
+                    {
+                        _facilityBridgeSubscribed = true;
+                        _facilityBridgeStatus = "airport_facility_subscription_active";
+                    }
+
+                    // Also request a one-shot list immediately. Subscription only reports
+                    // new/old in-range changes and may stay silent while already parked.
+                    try
+                    {
+                        _simConnect.RequestFacilitiesList_EX1(
+                            SIMCONNECT_FACILITY_LIST_TYPE.AIRPORT,
+                            FacilityRequestId.AirportList);
+
+                        lock (_facilityBridgeLock)
+                        {
+                            _facilityBridgeStatus = "airport_facility_subscription_active_list_requested";
+                            _facilityBridgeLastRequestUtc = DateTime.UtcNow;
+                        }
+                    }
+                    catch (Exception listAfterSubscribeEx)
+                    {
+                        Debug.WriteLine("[C11A2 Facilities] RequestFacilitiesList_EX1 after subscribe failed: " + listAfterSubscribeEx.Message);
+                    }
+                }
+                catch (Exception subscribeEx)
+                {
+                    Debug.WriteLine("[C11A Facilities] SubscribeToFacilities_EX1 unavailable/failed: " + subscribeEx.Message);
+                    try
+                    {
+                        _simConnect.RequestFacilitiesList_EX1(
+                            SIMCONNECT_FACILITY_LIST_TYPE.AIRPORT,
+                            FacilityRequestId.AirportList);
+
+                        lock (_facilityBridgeLock)
+                        {
+                            _facilityBridgeSubscribed = false;
+                            _facilityBridgeStatus = "airport_facility_list_requested";
+                        }
+                    }
+                    catch (Exception listEx)
+                    {
+                        Debug.WriteLine("[C11A2 Facilities] RequestFacilitiesList_EX1 failed: " + listEx.Message);
+                        try
+                        {
+                            _simConnect.RequestFacilitiesList(
+                                SIMCONNECT_FACILITY_LIST_TYPE.AIRPORT,
+                                FacilityRequestId.AirportList);
+
+                            lock (_facilityBridgeLock)
+                            {
+                                _facilityBridgeAvailable = true;
+                                _facilityBridgeSubscribed = false;
+                                _facilityBridgeStatus = "airport_facility_list_requested_legacy";
+                                _facilityBridgeLastRequestUtc = DateTime.UtcNow;
+                            }
+                        }
+                        catch (Exception legacyListEx)
+                        {
+                            lock (_facilityBridgeLock)
+                            {
+                                _facilityBridgeAvailable = false;
+                                _facilityBridgeStatus = "facility_list_request_failed: " + legacyListEx.Message;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                lock (_facilityBridgeLock)
+                {
+                    _facilityBridgeAvailable = false;
+                    _facilityBridgeStatus = "facility_bridge_init_failed: " + ex.Message;
+                }
+                Debug.WriteLine("[C11A Facilities] init error: " + ex);
+            }
+        }
+
+        private void OnRecvFacilityMinimalList(
+            Microsoft.FlightSimulator.SimConnect.SimConnect sender,
+            SIMCONNECT_RECV_FACILITY_MINIMAL_LIST data)
+        {
+            try
+            {
+                var names = new List<string>();
+                if (data.rgData != null)
+                {
+                    foreach (var item in data.rgData)
+                    {
+                        var icao = ExtractFacilityMinimalIcao(item);
+                        if (!string.IsNullOrWhiteSpace(icao) && !names.Contains(icao))
+                            names.Add(icao);
+                    }
+                }
+
+                lock (_facilityBridgeLock)
+                {
+                    _facilityDataReceived = true;
+                    _facilityBridgeAvailable = true;
+                    _facilityBridgeLastReceivedUtc = DateTime.UtcNow;
+                    _facilityBridgeAirportCount = Math.Max(_facilityBridgeAirportCount, names.Count);
+                    _facilityBridgeNearestAirports = string.Join(",", names.Take(12));
+                    _facilityBridgeStatus = names.Count > 0
+                        ? "airport_minimal_list_received"
+                        : "airport_minimal_list_received_empty";
+                    if (names.Count > 0)
+                        _facilityBridgeLastIcao = names[0];
+                }
+
+                // C11D3: facilities must also work for diversion/alternate operations.
+                // The route request covers origin/destination/alternate; the minimal
+                // airport list covers any airport that becomes relevant around the
+                // aircraft in real time. Request direct FacilityData for the nearest
+                // airports, de-duplicated by RequestAirportFacilitiesByIcao.
+                if (names.Count > 0)
+                {
+                    try
+                    {
+                        RequestAirportFacilitiesByIcao(names.Take(6).ToArray());
+                    }
+                    catch (Exception requestEx)
+                    {
+                        Debug.WriteLine("[C11D3 Facilities] nearest airport auto request skipped: " + requestEx.Message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[C11A Facilities] minimal list error: " + ex.Message);
+                lock (_facilityBridgeLock)
+                    _facilityBridgeStatus = "airport_minimal_list_error: " + ex.Message;
+            }
+        }
+
+        private void OnRecvFacilityData(
+            Microsoft.FlightSimulator.SimConnect.SimConnect sender,
+            SIMCONNECT_RECV_FACILITY_DATA data)
+        {
+            try
+            {
+                var payloadIcao = ExtractFacilityDataIcao(data);
+                var userRequestId = ExtractFacilityDataUserRequestId(data);
+                if (string.IsNullOrWhiteSpace(payloadIcao) && userRequestId > 0)
+                {
+                    lock (_facilityBridgeLock)
+                    {
+                        string mappedIcao;
+                        if (_facilityBridgeRequestIcaoByUserRequestId.TryGetValue(userRequestId, out mappedIcao))
+                            payloadIcao = mappedIcao;
+                    }
+                }
+
+                var geometrySummary = CaptureFacilityGeometry(data, payloadIcao, userRequestId);
+                var dataSummary = BuildFacilityDataPayloadSummary(data);
+                var dataTypeKey = GetFacilityDataTypeName(data);
+                if (string.IsNullOrWhiteSpace(dataTypeKey)) dataTypeKey = data.Type.ToString(CultureInfo.InvariantCulture);
+
+                var rawStatus = "facility_data_received_type_" + data.Type.ToString(CultureInfo.InvariantCulture);
+                if (!string.IsNullOrWhiteSpace(payloadIcao))
+                    rawStatus = "facility_data_received_" + payloadIcao;
+                if (!string.IsNullOrWhiteSpace(dataSummary))
+                    rawStatus += "_" + dataSummary;
+                if (!string.IsNullOrWhiteSpace(geometrySummary))
+                    rawStatus += "_" + geometrySummary;
+
+                // C11D4C: keep the long/raw status in LastData/XML, but expose a compact
+                // bridge status so the WPF operational log is readable even if old UI code
+                // still binds directly to FacilityBridgeStatus.
+                var compactStatus = "facility data " +
+                    (string.IsNullOrWhiteSpace(payloadIcao) ? "ICAO-ND" : payloadIcao.Trim().ToUpperInvariant()) +
+                    " " + dataTypeKey.Trim().ToUpperInvariant();
+                if (!string.IsNullOrWhiteSpace(geometrySummary))
+                    compactStatus += " geometry";
+                if (!string.IsNullOrWhiteSpace(dataSummary) && dataSummary.IndexOf("taxi_", StringComparison.OrdinalIgnoreCase) >= 0)
+                    compactStatus += " taxi-payload";
+
+                lock (_facilityBridgeLock)
+                {
+                    _facilityDataReceived = true;
+                    _facilityBridgeAvailable = true;
+                    _facilityBridgeLastReceivedUtc = DateTime.UtcNow;
+                    _facilityBridgeRecordsReceived++;
+                    _facilityBridgeLastDataStatus = rawStatus;
+                    int currentTypeCount;
+                    _facilityBridgeDataTypeCounts.TryGetValue(dataTypeKey, out currentTypeCount);
+                    _facilityBridgeDataTypeCounts[dataTypeKey] = currentTypeCount + 1;
+
+                    // Keep the last FacilityData status visible until a later request/control state overwrites it,
+                    // but preserve the dedicated last-data field so UI/XML can still show taxi/runway evidence.
+                    _facilityBridgeStatus = compactStatus;
+                    if (!string.IsNullOrWhiteSpace(payloadIcao))
+                    {
+                        _facilityBridgeReceivedIcaos.Add(payloadIcao);
+                        _facilityBridgeLastIcao = string.Join(",", _facilityBridgeReceivedIcaos.OrderBy(x => x));
+                        _facilityBridgeAirportCount = Math.Max(_facilityBridgeAirportCount, _facilityBridgeReceivedIcaos.Count);
+                        _facilityBridgeNearestAirports = string.Join(",", _facilityBridgeReceivedIcaos.OrderBy(x => x));
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[C11A Facilities] data error: " + ex.Message);
+            }
+        }
+
+        private void OnRecvFacilityDataEnd(
+            Microsoft.FlightSimulator.SimConnect.SimConnect sender,
+            SIMCONNECT_RECV_FACILITY_DATA_END data)
+        {
+            lock (_facilityBridgeLock)
+            {
+                _facilityBridgeLastReceivedUtc = DateTime.UtcNow;
+                _facilityBridgeDataEndCount++;
+                var pending = _facilityBridgeRequestedIcaos
+                    .Where(icao => !_facilityBridgeReceivedIcaos.Contains(icao))
+                    .OrderBy(icao => icao)
+                    .ToList();
+
+                if (!_facilityDataReceived)
+                {
+                    _facilityBridgeStatus = "facility_data_end_without_records_request_" + data.RequestId.ToString(CultureInfo.InvariantCulture);
+                }
+                else if (pending.Count > 0)
+                {
+                    _facilityBridgeStatus = "facility_data_end_pending:" + string.Join(",", pending);
+                }
+            }
+        }
+
+        private static uint ExtractFacilityDataUserRequestId(SIMCONNECT_RECV_FACILITY_DATA data)
+        {
+            try
+            {
+                var type = data.GetType();
+                foreach (var name in new[] { "UserRequestId", "RequestId", "dwRequestID", "uRequestID" })
+                {
+                    var field = type.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (field != null)
+                    {
+                        var value = field.GetValue(data);
+                        if (value != null) return Convert.ToUInt32(value, CultureInfo.InvariantCulture);
+                    }
+
+                    var prop = type.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (prop != null && prop.CanRead)
+                    {
+                        var value = prop.GetValue(data, null);
+                        if (value != null) return Convert.ToUInt32(value, CultureInfo.InvariantCulture);
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return 0;
+        }
+
+        private static string GetFacilityDataTypeName(SIMCONNECT_RECV_FACILITY_DATA data)
+        {
+            try
+            {
+                return Enum.IsDefined(typeof(SIMCONNECT_FACILITY_DATA_TYPE), (int)data.Type)
+                    ? ((SIMCONNECT_FACILITY_DATA_TYPE)(int)data.Type).ToString()
+                    : data.Type.ToString(CultureInfo.InvariantCulture);
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static string BuildFacilityDataPayloadSummary(SIMCONNECT_RECV_FACILITY_DATA data)
+        {
+            try
+            {
+                var items = data.Data == null ? 0 : data.Data.Length;
+                var typeName = GetFacilityDataTypeName(data);
+                var userRequestId = ExtractFacilityDataUserRequestId(data);
+                var requestText = userRequestId > 0 ? ";req=" + userRequestId.ToString(CultureInfo.InvariantCulture) : string.Empty;
+                return "type=" + typeName + ";items=" + items.ToString(CultureInfo.InvariantCulture) + requestText;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        private static string ExtractFacilityMinimalIcao(object item)
+        {
+            try
+            {
+                if (item == null) return string.Empty;
+                if (item is SIMCONNECT_FACILITY_MINIMAL minimal)
+                    return ExtractIcaoString(minimal.icao);
+
+                var field = item.GetType().GetField("icao", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                if (field != null)
+                    return ExtractIcaoString(field.GetValue(item));
+            }
+            catch
+            {
+            }
+            return string.Empty;
+        }
+
+        private static string ExtractFacilityDataIcao(SIMCONNECT_RECV_FACILITY_DATA data)
+        {
+            try
+            {
+                if (data == null || data.Data == null) return string.Empty;
+                foreach (var item in data.Data)
+                {
+                    var icao = ExtractIcaoFromPayloadObject(item);
+                    if (!string.IsNullOrWhiteSpace(icao)) return icao;
+                }
+            }
+            catch
+            {
+            }
+            return string.Empty;
+        }
+
+        private static string ExtractIcaoFromPayloadObject(object item)
+        {
+            try
+            {
+                if (item == null) return string.Empty;
+                foreach (var name in new[] { "Icao", "ICAO", "icao", "Ident", "ident" })
+                {
+                    var field = item.GetType().GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (field != null)
+                    {
+                        var value = field.GetValue(item);
+                        if (value != null && !string.IsNullOrWhiteSpace(value.ToString()))
+                            return NormalizeFacilityIcao(value.ToString());
+                    }
+
+                    var prop = item.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (prop != null && prop.CanRead)
+                    {
+                        var value = prop.GetValue(item, null);
+                        if (value != null && !string.IsNullOrWhiteSpace(value.ToString()))
+                            return NormalizeFacilityIcao(value.ToString());
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return string.Empty;
+        }
+
+        private static string ExtractIcaoString(object value)
+        {
+            if (value == null) return string.Empty;
+            var direct = value.ToString();
+            if (!string.IsNullOrWhiteSpace(direct) && direct.IndexOf("SIMCONNECT_", StringComparison.OrdinalIgnoreCase) < 0)
+                return direct.Trim();
+
+            try
+            {
+                var type = value.GetType();
+                foreach (var name in new[] { "Icao", "ICAO", "ident", "Ident", "Value", "value" })
+                {
+                    var f = type.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (f != null)
+                    {
+                        var v = f.GetValue(value);
+                        if (v != null && !string.IsNullOrWhiteSpace(v.ToString())) return v.ToString().Trim();
+                    }
+                    var p = type.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+                    if (p != null && p.CanRead)
+                    {
+                        var v = p.GetValue(value, null);
+                        if (v != null && !string.IsNullOrWhiteSpace(v.ToString())) return v.ToString().Trim();
+                    }
+                }
+            }
+            catch
+            {
+            }
+            return string.Empty;
+        }
+
+        private string CaptureFacilityGeometry(SIMCONNECT_RECV_FACILITY_DATA data, string airportIcao, uint userRequestId)
+        {
+            if (data == null || data.Data == null || data.Data.Length == 0)
+                return string.Empty;
+
+            if (string.IsNullOrWhiteSpace(airportIcao) && userRequestId > 0)
+            {
+                lock (_facilityBridgeLock)
+                {
+                    string mapped;
+                    if (_facilityBridgeRequestIcaoByUserRequestId.TryGetValue(userRequestId, out mapped))
+                        airportIcao = mapped;
+                }
+            }
+
+            airportIcao = NormalizeFacilityIcao(airportIcao);
+            if (string.IsNullOrWhiteSpace(airportIcao))
+                return string.Empty;
+
+            var facilityTypeName = GetFacilityDataTypeName(data);
+            if (facilityTypeName.IndexOf("TAXI_PARKING", StringComparison.OrdinalIgnoreCase) >= 0)
+                return CaptureFacilityTaxiParkingPayload(data, airportIcao);
+            if (facilityTypeName.IndexOf("TAXI_POINT", StringComparison.OrdinalIgnoreCase) >= 0)
+                return CaptureFacilityTaxiPointPayload(data, airportIcao);
+            if (facilityTypeName.IndexOf("TAXI_PATH", StringComparison.OrdinalIgnoreCase) >= 0)
+                return CaptureFacilityTaxiPathPayload(data, airportIcao);
+            if (facilityTypeName.IndexOf("RUNWAY", StringComparison.OrdinalIgnoreCase) < 0)
+                return CaptureFacilityAirportPayload(data, airportIcao, facilityTypeName);
+
+            var parsed = new List<FacilityRunwayGeometry>();
+            foreach (var item in data.Data)
+            {
+                FacilityRunwayGeometry runway;
+                if (TryExtractRunwayGeometry(item, airportIcao, out runway))
+                    parsed.Add(runway);
+            }
+
+            if (parsed.Count == 0)
+            {
+                var unparsed = DescribeFacilityPayloadForDebug(data);
+                lock (_facilityBridgeLock)
+                {
+                    _facilityRunwayGeometryStatus = "runway_payload_unparsed_" + airportIcao + ":" + unparsed;
+                }
+
+                return "runway_geometry_unparsed=" + airportIcao + ";" + unparsed;
+            }
+
+            lock (_facilityBridgeLock)
+            {
+                List<FacilityRunwayGeometry> list;
+                if (!_facilityRunwaysByAirport.TryGetValue(airportIcao, out list))
+                {
+                    list = new List<FacilityRunwayGeometry>();
+                    _facilityRunwaysByAirport[airportIcao] = list;
+                }
+
+                foreach (var runway in parsed)
+                {
+                    var existingIndex = list.FindIndex(existing =>
+                        string.Equals(existing.PrimaryIdent, runway.PrimaryIdent, StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(existing.SecondaryIdent, runway.SecondaryIdent, StringComparison.OrdinalIgnoreCase) &&
+                        Math.Abs(NormalizeHeading(existing.HeadingDeg) - NormalizeHeading(runway.HeadingDeg)) < 1.0d);
+
+                    if (existingIndex >= 0)
+                        list[existingIndex] = runway;
+                    else
+                        list.Add(runway);
+                }
+
+                var total = _facilityRunwaysByAirport.Values.Sum(runways => runways.Count);
+                _facilityRunwayGeometryStatus = "runway_geometry_cached_" + airportIcao + ":" + list.Count.ToString(CultureInfo.InvariantCulture) + " rwy;total=" + total.ToString(CultureInfo.InvariantCulture);
+            }
+
+            var first = parsed[0];
+            return "runway_geometry_cached=" + airportIcao + ":" + first.DisplayIdent + ";count=" + parsed.Count.ToString(CultureInfo.InvariantCulture);
+        }
+
+
+        private string CaptureFacilityAirportPayload(SIMCONNECT_RECV_FACILITY_DATA data, string airportIcao, string facilityTypeName)
+        {
+            if (facilityTypeName.IndexOf("AIRPORT", StringComparison.OrdinalIgnoreCase) < 0)
+                return string.Empty;
+
+            var items = data.Data == null ? 0 : data.Data.Length;
+            var summary = "airport_payload=" + airportIcao + ";items=" + items.ToString(CultureInfo.InvariantCulture);
+            try
+            {
+                if (items > 0 && data.Data[0] != null)
+                {
+                    var item = data.Data[0];
+                    var lat = ReadDoubleMember(item, 1, "Latitude", "LATITUDE", "latitude");
+                    var lon = ReadDoubleMember(item, 2, "Longitude", "LONGITUDE", "longitude");
+                    var alt = ReadDoubleMember(item, 3, "AltitudeMeters", "ALTITUDE", "altitude");
+                    var runways = ReadIntMember(item, 4, "RunwayCount", "N_RUNWAYS", "runwayCount");
+                    var taxiPoints = ReadIntMember(item, 5, "TaxiPointCount", "N_TAXI_POINTS", "taxiPointCount");
+                    var taxiParkings = ReadIntMember(item, 6, "TaxiParkingCount", "N_TAXI_PARKINGS", "taxiParkingCount");
+                    var taxiPaths = ReadIntMember(item, 7, "TaxiPathCount", "N_TAXI_PATHS", "taxiPathCount");
+                    summary += ";runways=" + runways.ToString(CultureInfo.InvariantCulture) +
+                               ";parkings=" + taxiParkings.ToString(CultureInfo.InvariantCulture) +
+                               ";points=" + taxiPoints.ToString(CultureInfo.InvariantCulture) +
+                               ";paths=" + taxiPaths.ToString(CultureInfo.InvariantCulture);
+
+                    if (IsPlausibleLatitude(lat) && IsPlausibleLongitude(lon))
+                    {
+                        lock (_facilityBridgeLock)
+                        {
+                            _facilityAirportsByAirport[airportIcao] = new FacilityAirportGeometry
+                            {
+                                AirportIcao = airportIcao,
+                                Latitude = lat,
+                                Longitude = lon,
+                                AltitudeMeters = alt,
+                                RunwayCount = runways,
+                                TaxiPointCount = taxiPoints,
+                                TaxiParkingCount = taxiParkings,
+                                TaxiPathCount = taxiPaths
+                            };
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return summary;
+        }
+
+        private string CaptureFacilityTaxiParkingPayload(SIMCONNECT_RECV_FACILITY_DATA data, string airportIcao)
+        {
+            var items = data.Data == null ? 0 : data.Data.Length;
+            var summary = "taxi_parking_payload=" + airportIcao + ";items=" + items.ToString(CultureInfo.InvariantCulture);
+            var parsed = new List<FacilityTaxiParkingGeometry>();
+
+            for (var index = 0; index < items; index++)
+            {
+                var item = data.Data[index];
+                if (item == null) continue;
+
+                var type = ReadIntMember(item, 0, "Type", "TYPE", "type");
+                var taxiPointType = ReadIntMember(item, 1, "TaxiPointType", "TAXI_POINT_TYPE", "taxiPointType");
+                var name = ReadIntMember(item, 2, "Name", "NAME", "name");
+                var suffix = ReadIntMember(item, 3, "Suffix", "SUFFIX", "suffix");
+                var number = ReadIntMember(item, 4, "Number", "NUMBER", "number");
+                var orientation = ReadIntMember(item, 5, "Orientation", "ORIENTATION", "orientation");
+                var heading = ReadDoubleMember(item, 6, "HeadingDegrees", "HEADING", "heading", "Heading");
+                var radius = ReadDoubleMember(item, 7, "RadiusMeters", "RADIUS", "radius", "Radius");
+                var biasX = ReadDoubleMember(item, 8, "BiasX", "BIAS_X", "biasX");
+                var biasZ = ReadDoubleMember(item, 9, "BiasZ", "BIAS_Z", "biasZ");
+
+                parsed.Add(new FacilityTaxiParkingGeometry
+                {
+                    AirportIcao = airportIcao,
+                    Index = index,
+                    Type = type,
+                    TaxiPointType = taxiPointType,
+                    Name = name,
+                    Suffix = suffix,
+                    Number = number,
+                    Orientation = orientation,
+                    HeadingDeg = heading,
+                    RadiusMeters = radius,
+                    BiasX = biasX,
+                    BiasZ = biasZ
+                });
+            }
+
+            if (parsed.Count > 0)
+            {
+                var first = parsed[0];
+                summary += ";first=type" + first.Type.ToString(CultureInfo.InvariantCulture) +
+                           "/name" + first.Name.ToString(CultureInfo.InvariantCulture) +
+                           "/suffix" + first.Suffix.ToString(CultureInfo.InvariantCulture) +
+                           "/num" + first.Number.ToString(CultureInfo.InvariantCulture) +
+                           "/hdg" + first.HeadingDeg.ToString("F0", CultureInfo.InvariantCulture) +
+                           "/r" + first.RadiusMeters.ToString("F0", CultureInfo.InvariantCulture) +
+                           "/x" + first.BiasX.ToString("F0", CultureInfo.InvariantCulture) +
+                           "/z" + first.BiasZ.ToString("F0", CultureInfo.InvariantCulture);
+            }
+
+            lock (_facilityBridgeLock)
+            {
+                _facilityTaxiParkingCountByAirport[airportIcao] = Math.Max(GetDictionaryValue(_facilityTaxiParkingCountByAirport, airportIcao), items);
+                if (parsed.Count > 0)
+                    _facilityTaxiParkingsByAirport[airportIcao] = parsed;
+                _facilityTaxiGeometryStatus = BuildFacilityTaxiGeometryStatusUnsafe(airportIcao);
+            }
+            return summary;
+        }
+
+        private string CaptureFacilityTaxiPointPayload(SIMCONNECT_RECV_FACILITY_DATA data, string airportIcao)
+        {
+            var items = data.Data == null ? 0 : data.Data.Length;
+            var summary = "taxi_point_payload=" + airportIcao + ";items=" + items.ToString(CultureInfo.InvariantCulture);
+            var parsed = new List<FacilityTaxiPointGeometry>();
+
+            for (var index = 0; index < items; index++)
+            {
+                var item = data.Data[index];
+                if (item == null) continue;
+
+                var type = ReadIntMember(item, 0, "Type", "TYPE", "type");
+                var orientation = ReadIntMember(item, 1, "Orientation", "ORIENTATION", "orientation");
+                var biasX = ReadDoubleMember(item, 2, "BiasX", "BIAS_X", "biasX");
+                var biasZ = ReadDoubleMember(item, 3, "BiasZ", "BIAS_Z", "biasZ");
+
+                parsed.Add(new FacilityTaxiPointGeometry
+                {
+                    AirportIcao = airportIcao,
+                    Index = index,
+                    Type = type,
+                    Orientation = orientation,
+                    BiasX = biasX,
+                    BiasZ = biasZ
+                });
+            }
+
+            if (parsed.Count > 0)
+            {
+                var first = parsed[0];
+                summary += ";first=type" + first.Type.ToString(CultureInfo.InvariantCulture) +
+                           "/orient" + first.Orientation.ToString(CultureInfo.InvariantCulture) +
+                           "/x" + first.BiasX.ToString("F0", CultureInfo.InvariantCulture) +
+                           "/z" + first.BiasZ.ToString("F0", CultureInfo.InvariantCulture);
+            }
+
+            lock (_facilityBridgeLock)
+            {
+                _facilityTaxiPointCountByAirport[airportIcao] = Math.Max(GetDictionaryValue(_facilityTaxiPointCountByAirport, airportIcao), items);
+                if (parsed.Count > 0)
+                    _facilityTaxiPointsByAirport[airportIcao] = parsed;
+                _facilityTaxiGeometryStatus = BuildFacilityTaxiGeometryStatusUnsafe(airportIcao);
+            }
+            return summary;
+        }
+
+        private string CaptureFacilityTaxiPathPayload(SIMCONNECT_RECV_FACILITY_DATA data, string airportIcao)
+        {
+            var items = data.Data == null ? 0 : data.Data.Length;
+            var summary = "taxi_path_payload=" + airportIcao + ";items=" + items.ToString(CultureInfo.InvariantCulture);
+            var parsed = new List<FacilityTaxiPathGeometry>();
+
+            for (var index = 0; index < items; index++)
+            {
+                var item = data.Data[index];
+                if (item == null) continue;
+
+                var type = ReadIntMember(item, 0, "Type", "TYPE", "type");
+                var width = ReadDoubleMember(item, 1, "WidthMeters", "WIDTH", "width", "Width");
+                var leftHalf = ReadDoubleMember(item, 2, "LeftHalfWidthMeters", "LEFT_HALF_WIDTH", "leftHalfWidth");
+                var rightHalf = ReadDoubleMember(item, 3, "RightHalfWidthMeters", "RIGHT_HALF_WIDTH", "rightHalfWidth");
+                var weight = ReadIntMember(item, 4, "WeightLimitLbs", "WEIGHT", "weight");
+                var runwayNumber = ReadIntMember(item, 5, "RunwayNumber", "RUNWAY_NUMBER", "runwayNumber");
+                var runwayDesignator = ReadIntMember(item, 6, "RunwayDesignator", "RUNWAY_DESIGNATOR", "runwayDesignator");
+                var start = ReadIntMember(item, 13, "Start", "START", "start");
+                var end = ReadIntMember(item, 14, "End", "END", "end");
+                var nameIndex = ReadIntMember(item, 15, "NameIndex", "NAME_INDEX", "nameIndex");
+
+                parsed.Add(new FacilityTaxiPathGeometry
+                {
+                    AirportIcao = airportIcao,
+                    Index = index,
+                    Type = type,
+                    WidthMeters = width,
+                    LeftHalfWidthMeters = leftHalf,
+                    RightHalfWidthMeters = rightHalf,
+                    WeightLimitLbs = weight,
+                    RunwayNumber = runwayNumber,
+                    RunwayDesignator = runwayDesignator,
+                    Start = start,
+                    End = end,
+                    NameIndex = nameIndex
+                });
+            }
+
+            if (parsed.Count > 0)
+            {
+                var first = parsed[0];
+                summary += ";first=type" + first.Type.ToString(CultureInfo.InvariantCulture) +
+                           "/w" + first.WidthMeters.ToString("F0", CultureInfo.InvariantCulture) +
+                           "/start" + first.Start.ToString(CultureInfo.InvariantCulture) +
+                           "/end" + first.End.ToString(CultureInfo.InvariantCulture) +
+                           "/nameIdx" + first.NameIndex.ToString(CultureInfo.InvariantCulture);
+            }
+
+            lock (_facilityBridgeLock)
+            {
+                _facilityTaxiPathCountByAirport[airportIcao] = Math.Max(GetDictionaryValue(_facilityTaxiPathCountByAirport, airportIcao), items);
+                if (parsed.Count > 0)
+                    _facilityTaxiPathsByAirport[airportIcao] = parsed;
+                _facilityTaxiGeometryStatus = BuildFacilityTaxiGeometryStatusUnsafe(airportIcao);
+            }
+            return summary;
+        }
+
+        private static int GetDictionaryValue(Dictionary<string, int> dictionary, string key)
+        {
+            if (dictionary == null || string.IsNullOrWhiteSpace(key)) return 0;
+            int value;
+            return dictionary.TryGetValue(key, out value) ? value : 0;
+        }
+
+        private static int SumDictionaryValues(Dictionary<string, int> dictionary)
+        {
+            if (dictionary == null || dictionary.Count == 0) return 0;
+            return dictionary.Values.Sum();
+        }
+
+        private string BuildFacilityBridgeTypeHistogramUnsafe()
+        {
+            if (_facilityBridgeDataTypeCounts == null || _facilityBridgeDataTypeCounts.Count == 0)
+                return string.Empty;
+
+            return string.Join(",", _facilityBridgeDataTypeCounts
+                .OrderByDescending(pair => pair.Value)
+                .ThenBy(pair => pair.Key)
+                .Take(8)
+                .Select(pair => pair.Key + "=" + pair.Value.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        private string BuildFacilityTaxiGeometryStatusUnsafe(string airportIcao)
+        {
+            var parking = GetDictionaryValue(_facilityTaxiParkingCountByAirport, airportIcao);
+            var points = GetDictionaryValue(_facilityTaxiPointCountByAirport, airportIcao);
+            var paths = GetDictionaryValue(_facilityTaxiPathCountByAirport, airportIcao);
+            var parkingGeom = GetListCount(_facilityTaxiParkingsByAirport, airportIcao);
+            var pointGeom = GetListCount(_facilityTaxiPointsByAirport, airportIcao);
+            var pathGeom = GetListCount(_facilityTaxiPathsByAirport, airportIcao);
+            var geometry = (parkingGeom > 0 || pointGeom > 0 || pathGeom > 0)
+                ? ";geom=" + parkingGeom.ToString(CultureInfo.InvariantCulture) + "/" + pointGeom.ToString(CultureInfo.InvariantCulture) + "/" + pathGeom.ToString(CultureInfo.InvariantCulture)
+                : string.Empty;
+            return "taxi_geometry_payload_cached_" + airportIcao +
+                   ":parking=" + parking.ToString(CultureInfo.InvariantCulture) +
+                   ";points=" + points.ToString(CultureInfo.InvariantCulture) +
+                   ";paths=" + paths.ToString(CultureInfo.InvariantCulture) +
+                   geometry;
+        }
+
+        private static int GetListCount<T>(Dictionary<string, List<T>> dictionary, string key)
+        {
+            if (dictionary == null || string.IsNullOrWhiteSpace(key)) return 0;
+            List<T> list;
+            return dictionary.TryGetValue(key, out list) && list != null ? list.Count : 0;
+        }
+
+        private static double CountAllGeometry<T>(Dictionary<string, List<T>> dictionary)
+        {
+            if (dictionary == null || dictionary.Count == 0) return 0d;
+            var total = 0;
+            foreach (var pair in dictionary)
+            {
+                if (pair.Value != null) total += pair.Value.Count;
+            }
+            return total;
+        }
+
+        private void ApplyFacilityTaxiGeometryState(SimData simData)
+        {
+            if (simData == null) return;
+
+            List<FacilityTaxiParkingGeometry> parkings;
+            List<FacilityTaxiPointGeometry> points;
+            List<FacilityTaxiPathGeometry> paths;
+            Dictionary<string, FacilityAirportGeometry> airports;
+
+            lock (_facilityBridgeLock)
+            {
+                parkings = FlattenGeometry(_facilityTaxiParkingsByAirport);
+                points = FlattenGeometry(_facilityTaxiPointsByAirport);
+                paths = FlattenGeometry(_facilityTaxiPathsByAirport);
+                airports = new Dictionary<string, FacilityAirportGeometry>(_facilityAirportsByAirport, StringComparer.OrdinalIgnoreCase);
+            }
+
+            simData.FacilityTaxiParkingGeometryCount = parkings.Count;
+            simData.FacilityTaxiPointGeometryCount = points.Count;
+            simData.FacilityTaxiPathGeometryCount = paths.Count;
+            simData.FacilityTaxiGeometryVersion = "C11D4";
+
+            if (!IsPlausibleLatitude(simData.Latitude) || !IsPlausibleLongitude(simData.Longitude))
+                return;
+
+            foreach (var parking in parkings)
+                EnrichTaxiPointWithAirportReference(parking, airports);
+            foreach (var point in points)
+                EnrichTaxiPointWithAirportReference(point, airports);
+
+            FacilityTaxiParkingGeometry bestParking = null;
+            var bestParkingDistance = double.MaxValue;
+            foreach (var parking in parkings)
+            {
+                if (!parking.HasLatLon) continue;
+                var distance = DistanceMeters(simData.Latitude, simData.Longitude, parking.Latitude, parking.Longitude);
+                if (distance < bestParkingDistance)
+                {
+                    bestParkingDistance = distance;
+                    bestParking = parking;
+                }
+            }
+
+            FacilityTaxiPointGeometry bestPoint = null;
+            var bestPointDistance = double.MaxValue;
+            foreach (var point in points)
+            {
+                if (!point.HasLatLon) continue;
+                var distance = DistanceMeters(simData.Latitude, simData.Longitude, point.Latitude, point.Longitude);
+                if (distance < bestPointDistance)
+                {
+                    bestPointDistance = distance;
+                    bestPoint = point;
+                }
+            }
+
+            FacilityTaxiPathMatch bestPath = null;
+            foreach (var path in paths)
+            {
+                var match = BuildTaxiPathMatch(simData, path, points);
+                if (match == null) continue;
+                if (bestPath == null || match.DistanceMeters < bestPath.DistanceMeters)
+                    bestPath = match;
+            }
+
+            var bestDistance = Math.Min(bestParkingDistance, Math.Min(bestPointDistance, bestPath != null ? bestPath.DistanceMeters : double.MaxValue));
+            if (double.IsInfinity(bestDistance) || bestDistance == double.MaxValue)
+                return;
+
+            simData.FacilityTaxiGeometryAvailable = true;
+            simData.FacilityNearestTaxiAirportIcao = bestParking != null
+                ? bestParking.AirportIcao
+                : (bestPoint != null ? bestPoint.AirportIcao : (bestPath != null ? bestPath.AirportIcao : string.Empty));
+            simData.FacilityNearestTaxiParkingLabel = bestParking == null ? string.Empty : bestParking.DisplayLabel;
+            simData.FacilityNearestTaxiParkingDistanceMeters = bestParkingDistance == double.MaxValue ? 0d : bestParkingDistance;
+            simData.FacilityNearestTaxiPointDistanceMeters = bestPointDistance == double.MaxValue ? 0d : bestPointDistance;
+            simData.FacilityNearestTaxiPathDistanceMeters = bestPath == null ? 0d : bestPath.DistanceMeters;
+            simData.FacilityGateAreaCandidate = bestParking != null && bestParkingDistance <= Math.Max(65d, bestParking.RadiusMeters + 25d);
+            simData.FacilityTaxiwayCandidate = (bestPath != null && bestPath.DistanceMeters <= Math.Max(45d, bestPath.WidthMeters + 20d)) ||
+                                               (!simData.FacilityGateAreaCandidate && bestPoint != null && bestPointDistance <= 55d);
+
+            var pathText = bestPath == null
+                ? "path=N/D"
+                : "path=" + bestPath.DistanceMeters.ToString("F0", CultureInfo.InvariantCulture) + "m" +
+                  "/w" + bestPath.WidthMeters.ToString("F0", CultureInfo.InvariantCulture) +
+                  "/" + bestPath.Start.ToString(CultureInfo.InvariantCulture) + "-" + bestPath.End.ToString(CultureInfo.InvariantCulture);
+            var pointText = bestPointDistance == double.MaxValue ? "point=N/D" : "point=" + bestPointDistance.ToString("F0", CultureInfo.InvariantCulture) + "m";
+            var parkingText = bestParking == null
+                ? "parking=N/D"
+                : "parking=" + bestParking.DisplayLabel + "/" + bestParkingDistance.ToString("F0", CultureInfo.InvariantCulture) + "m";
+
+            simData.FacilityTaxiGeometrySummary =
+                (string.IsNullOrWhiteSpace(simData.FacilityNearestTaxiAirportIcao) ? "ICAO N/D" : simData.FacilityNearestTaxiAirportIcao) +
+                " " + parkingText + " " + pointText + " " + pathText +
+                " gate=" + (simData.FacilityGateAreaCandidate ? "YES" : "NO") +
+                " taxi=" + (simData.FacilityTaxiwayCandidate ? "YES" : "NO");
+        }
+
+        private static List<T> FlattenGeometry<T>(Dictionary<string, List<T>> dictionary)
+        {
+            var result = new List<T>();
+            if (dictionary == null) return result;
+            foreach (var pair in dictionary)
+            {
+                if (pair.Value != null) result.AddRange(pair.Value);
+            }
+            return result;
+        }
+
+        private static void EnrichTaxiPointWithAirportReference(FacilityAirportLocalPoint point, Dictionary<string, FacilityAirportGeometry> airports)
+        {
+            if (point == null || point.HasLatLon || airports == null) return;
+            FacilityAirportGeometry airport;
+            if (!airports.TryGetValue(point.AirportIcao ?? string.Empty, out airport) || airport == null)
+                return;
+            ConvertAirportBiasToLatLon(airport.Latitude, airport.Longitude, point.BiasX, point.BiasZ, out point.Latitude, out point.Longitude);
+            point.HasLatLon = IsPlausibleLatitude(point.Latitude) && IsPlausibleLongitude(point.Longitude);
+        }
+
+        private static FacilityTaxiPathMatch BuildTaxiPathMatch(SimData simData, FacilityTaxiPathGeometry path, List<FacilityTaxiPointGeometry> points)
+        {
+            if (path == null || points == null || points.Count == 0) return null;
+            var start = FindTaxiPoint(points, path.AirportIcao, path.Start);
+            var end = FindTaxiPoint(points, path.AirportIcao, path.End);
+            if (start == null || end == null || !start.HasLatLon || !end.HasLatLon) return null;
+
+            double startNorth;
+            double startEast;
+            double endNorth;
+            double endEast;
+            ProjectRelativeMeters(simData.Latitude, simData.Longitude, start.Latitude, start.Longitude, out startNorth, out startEast);
+            ProjectRelativeMeters(simData.Latitude, simData.Longitude, end.Latitude, end.Longitude, out endNorth, out endEast);
+
+            var distance = DistancePointToSegmentMeters(0d, 0d, startEast, startNorth, endEast, endNorth);
+            return new FacilityTaxiPathMatch
+            {
+                AirportIcao = path.AirportIcao,
+                Start = path.Start,
+                End = path.End,
+                WidthMeters = path.WidthMeters > 0d ? path.WidthMeters : Math.Max(path.LeftHalfWidthMeters + path.RightHalfWidthMeters, 0d),
+                DistanceMeters = distance
+            };
+        }
+
+        private static FacilityTaxiPointGeometry FindTaxiPoint(List<FacilityTaxiPointGeometry> points, string airportIcao, int index)
+        {
+            foreach (var point in points)
+            {
+                if (point != null && point.Index == index && string.Equals(point.AirportIcao, airportIcao, StringComparison.OrdinalIgnoreCase))
+                    return point;
+            }
+            return null;
+        }
+
+        private static void ConvertAirportBiasToLatLon(double airportLatDeg, double airportLonDeg, double biasXEastMeters, double biasZNorthMeters, out double latDeg, out double lonDeg)
+        {
+            const double earthRadiusMeters = 6371000d;
+            latDeg = airportLatDeg + (biasZNorthMeters / earthRadiusMeters) * (180d / Math.PI);
+            var cosLat = Math.Cos(ToRadians(airportLatDeg));
+            if (Math.Abs(cosLat) < 0.000001d) cosLat = 0.000001d;
+            lonDeg = airportLonDeg + (biasXEastMeters / (earthRadiusMeters * cosLat)) * (180d / Math.PI);
+        }
+
+        private static double DistanceMeters(double lat1, double lon1, double lat2, double lon2)
+        {
+            double north;
+            double east;
+            ProjectRelativeMeters(lat1, lon1, lat2, lon2, out north, out east);
+            return Math.Sqrt(north * north + east * east);
+        }
+
+        private static double DistancePointToSegmentMeters(double px, double py, double ax, double ay, double bx, double by)
+        {
+            var dx = bx - ax;
+            var dy = by - ay;
+            var len2 = dx * dx + dy * dy;
+            if (len2 <= 0.000001d)
+            {
+                var ex = px - ax;
+                var ey = py - ay;
+                return Math.Sqrt(ex * ex + ey * ey);
+            }
+
+            var t = ((px - ax) * dx + (py - ay) * dy) / len2;
+            if (t < 0d) t = 0d;
+            if (t > 1d) t = 1d;
+            var cx = ax + t * dx;
+            var cy = ay + t * dy;
+            var ox = px - cx;
+            var oy = py - cy;
+            return Math.Sqrt(ox * ox + oy * oy);
+        }
+
+        private static bool TryExtractRunwayGeometry(object item, string airportIcao, out FacilityRunwayGeometry runway)
+        {
+            runway = null;
+            if (item == null)
+                return false;
+
+            var primaryNumber = ReadIntMember(item, 0, "PrimaryNumber", "PRIMARY_NUMBER", "primaryNumber", "primary_number", "primary_number");
+            var primaryDesignator = ReadIntMember(item, 1, "PrimaryDesignator", "PRIMARY_DESIGNATOR", "primaryDesignator", "primary_designator");
+            var secondaryNumber = ReadIntMember(item, 2, "SecondaryNumber", "SECONDARY_NUMBER", "secondaryNumber", "secondary_number");
+            var secondaryDesignator = ReadIntMember(item, 3, "SecondaryDesignator", "SECONDARY_DESIGNATOR", "secondaryDesignator", "secondary_designator");
+            var lat = ReadDoubleMember(item, 4, "Latitude", "LATITUDE", "latitude", "lat");
+            var lon = ReadDoubleMember(item, 5, "Longitude", "LONGITUDE", "longitude", "lon", "lng");
+            var altitudeMeters = ReadDoubleMember(item, 6, "AltitudeMeters", "ALTITUDE", "altitudeMeters", "altitude", "alt");
+            var heading = ReadDoubleMember(item, 7, "HeadingDegrees", "HEADING", "heading", "Heading", "headingDegrees");
+            var length = ReadDoubleMember(item, 8, "LengthMeters", "LENGTH", "length", "Length", "lengthMeters");
+            var width = ReadDoubleMember(item, 9, "WidthMeters", "WIDTH", "width", "Width", "widthMeters");
+            var surface = ReadIntMember(item, 10, "Surface", "SURFACE", "surface");
+
+            // Defensive fallback for managed wrapper variants where runway identifiers
+            // arrive as zero but geometry fields are valid. The ident can be derived
+            // from heading; geometry must still be plausible.
+            if (!IsPlausibleLatitude(lat) || !IsPlausibleLongitude(lon) || length < 150d || width < 5d)
+                return false;
+
+            var primaryIdent = BuildRunwayIdent(primaryNumber, primaryDesignator);
+            var secondaryIdent = BuildRunwayIdent(secondaryNumber, secondaryDesignator);
+            if (string.IsNullOrWhiteSpace(primaryIdent))
+                primaryIdent = RunwayIdentFromHeading(heading);
+            if (string.IsNullOrWhiteSpace(secondaryIdent))
+                secondaryIdent = RunwayIdentFromHeading(heading + 180d);
+
+            runway = new FacilityRunwayGeometry
+            {
+                AirportIcao = airportIcao,
+                PrimaryIdent = primaryIdent,
+                SecondaryIdent = secondaryIdent,
+                Latitude = lat,
+                Longitude = lon,
+                AltitudeMeters = altitudeMeters,
+                HeadingDeg = NormalizeHeading(heading),
+                LengthMeters = length,
+                WidthMeters = width,
+                Surface = surface
+            };
+            return true;
+        }
+
+        private void ApplyFacilityRunwayGeometryState(SimData simData)
+        {
+            if (simData == null)
+                return;
+
+            List<FacilityRunwayGeometry> runways;
+            string status;
+            lock (_facilityBridgeLock)
+            {
+                runways = _facilityRunwaysByAirport.Values.SelectMany(list => list).ToList();
+                status = _facilityRunwayGeometryStatus ?? string.Empty;
+            }
+
+            simData.FacilityRunwayGeometryCount = runways.Count;
+            simData.FacilityRunwayGeometryStatus = status;
+            simData.FacilityRunwayGeometryVersion = "C11C";
+
+            if (runways.Count == 0 || !IsPlausibleLatitude(simData.Latitude) || !IsPlausibleLongitude(simData.Longitude))
+                return;
+
+            FacilityRunwayMatch best = null;
+            foreach (var runway in runways)
+            {
+                var match = BuildRunwayMatch(simData, runway);
+                if (match == null)
+                    continue;
+                if (best == null || match.DistanceMeters < best.DistanceMeters)
+                    best = match;
+            }
+
+            if (best == null)
+                return;
+
+            simData.FacilityRunwayGeometryAvailable = true;
+            simData.FacilityNearestRunwayAirportIcao = best.Runway.AirportIcao;
+            simData.FacilityNearestRunwayIdent = best.ActiveIdent;
+            simData.FacilityNearestRunwayReciprocalIdent = best.ReciprocalIdent;
+            simData.FacilityNearestRunwayHeadingDeg = best.ActiveHeadingDeg;
+            simData.FacilityNearestRunwayLengthMeters = best.Runway.LengthMeters;
+            simData.FacilityNearestRunwayWidthMeters = best.Runway.WidthMeters;
+            simData.FacilityNearestRunwayDistanceMeters = best.DistanceMeters;
+            simData.FacilityRunwayLateralOffsetMeters = best.LateralMeters;
+            simData.FacilityRunwayLongitudinalOffsetMeters = best.LongitudinalMeters;
+            simData.FacilityRunwayHeadingErrorDeg = best.HeadingErrorDeg;
+            simData.FacilityRunwayDistanceFromThresholdMeters = best.DistanceFromActiveThresholdMeters;
+            simData.FacilityOnRunwayCandidate = best.OnRunwayCandidate;
+            simData.FacilityRunwayAlignedCandidate = best.AlignedCandidate;
+            simData.FacilityTouchdownZoneCandidate = best.TouchdownZoneCandidate;
+            simData.FacilityRunwayGeometrySummary =
+                best.Runway.AirportIcao + " RWY " + best.ActiveIdent +
+                " dist=" + best.DistanceMeters.ToString("F0", CultureInfo.InvariantCulture) + "m" +
+                " lat=" + best.LateralMeters.ToString("F0", CultureInfo.InvariantCulture) + "m" +
+                " thr=" + best.DistanceFromActiveThresholdMeters.ToString("F0", CultureInfo.InvariantCulture) + "m" +
+                " hdgErr=" + best.HeadingErrorDeg.ToString("F0", CultureInfo.InvariantCulture) + "deg";
+        }
+
+        private static FacilityRunwayMatch BuildRunwayMatch(SimData simData, FacilityRunwayGeometry runway)
+        {
+            if (runway == null || runway.LengthMeters < 150d || runway.WidthMeters < 5d)
+                return null;
+
+            double northMeters;
+            double eastMeters;
+            ProjectRelativeMeters(runway.Latitude, runway.Longitude, simData.Latitude, simData.Longitude, out northMeters, out eastMeters);
+
+            var primaryHeading = NormalizeHeading(runway.HeadingDeg);
+            var reciprocalHeading = NormalizeHeading(primaryHeading + 180d);
+            var heading = NormalizeHeading(simData.Heading);
+            var primaryError = SmallestHeadingDifference(heading, primaryHeading);
+            var reciprocalError = SmallestHeadingDifference(heading, reciprocalHeading);
+            var useReciprocal = reciprocalError < primaryError;
+            var activeHeading = useReciprocal ? reciprocalHeading : primaryHeading;
+            var activeIdent = useReciprocal ? runway.SecondaryIdent : runway.PrimaryIdent;
+            var reciprocalIdent = useReciprocal ? runway.PrimaryIdent : runway.SecondaryIdent;
+            var headingError = useReciprocal ? reciprocalError : primaryError;
+
+            var axisEast = Math.Sin(ToRadians(primaryHeading));
+            var axisNorth = Math.Cos(ToRadians(primaryHeading));
+            var along = eastMeters * axisEast + northMeters * axisNorth;
+            var cross = eastMeters * axisNorth - northMeters * axisEast;
+            var absCross = Math.Abs(cross);
+            var absAlong = Math.Abs(along);
+            var lateralOverflow = Math.Max(0d, absCross - (runway.WidthMeters / 2d));
+            var longitudinalOverflow = Math.Max(0d, absAlong - (runway.LengthMeters / 2d));
+            var distanceToRunway = Math.Sqrt(lateralOverflow * lateralOverflow + longitudinalOverflow * longitudinalOverflow);
+            var onRunway = absCross <= (runway.WidthMeters / 2d + 30d) && absAlong <= (runway.LengthMeters / 2d + 90d);
+            var aligned = headingError <= 15d;
+            var distanceFromThreshold = useReciprocal
+                ? (runway.LengthMeters / 2d) - along
+                : along + (runway.LengthMeters / 2d);
+            var tdzLimit = Math.Min(900d, Math.Max(450d, runway.LengthMeters * 0.35d));
+            var touchdownZone = onRunway && aligned && distanceFromThreshold >= -100d && distanceFromThreshold <= tdzLimit;
+
+            return new FacilityRunwayMatch
+            {
+                Runway = runway,
+                ActiveIdent = string.IsNullOrWhiteSpace(activeIdent) ? RunwayIdentFromHeading(activeHeading) : activeIdent,
+                ReciprocalIdent = string.IsNullOrWhiteSpace(reciprocalIdent) ? RunwayIdentFromHeading(activeHeading + 180d) : reciprocalIdent,
+                ActiveHeadingDeg = activeHeading,
+                HeadingErrorDeg = headingError,
+                LateralMeters = cross,
+                LongitudinalMeters = along,
+                DistanceMeters = distanceToRunway,
+                DistanceFromActiveThresholdMeters = distanceFromThreshold,
+                OnRunwayCandidate = onRunway,
+                AlignedCandidate = aligned,
+                TouchdownZoneCandidate = touchdownZone
+            };
+        }
+
+        private static double ReadDoubleMember(object item, int fallbackIndex, params string[] names)
+        {
+            object value;
+            if (TryReadMember(item, out value, fallbackIndex, names) && value != null)
+            {
+                try { return Convert.ToDouble(value, CultureInfo.InvariantCulture); }
+                catch { }
+            }
+            return 0d;
+        }
+
+        private static double ReadDoubleMember(object item, params string[] names)
+        {
+            return ReadDoubleMember(item, -1, names);
+        }
+
+        private static int ReadIntMember(object item, int fallbackIndex, params string[] names)
+        {
+            object value;
+            if (TryReadMember(item, out value, fallbackIndex, names) && value != null)
+            {
+                try { return Convert.ToInt32(value, CultureInfo.InvariantCulture); }
+                catch { }
+            }
+            return 0;
+        }
+
+        private static int ReadIntMember(object item, params string[] names)
+        {
+            return ReadIntMember(item, -1, names);
+        }
+
+        private static bool TryReadMember(object item, out object value, int fallbackIndex, params string[] names)
+        {
+            value = null;
+            if (item == null)
+                return false;
+
+            var directValues = item as object[];
+            if (directValues != null && fallbackIndex >= 0 && fallbackIndex < directValues.Length)
+            {
+                value = directValues[fallbackIndex];
+                return true;
+            }
+
+            var array = item as Array;
+            if (array != null && fallbackIndex >= 0 && fallbackIndex < array.Length)
+            {
+                value = array.GetValue(fallbackIndex);
+                return true;
+            }
+
+            if (names == null)
+                return false;
+
+            var type = item.GetType();
+            foreach (var name in names)
+            {
+                var field = type.GetField(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                if (field != null)
+                {
+                    value = field.GetValue(item);
+                    return true;
+                }
+
+                var prop = type.GetProperty(name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.IgnoreCase);
+                if (prop != null && prop.CanRead)
+                {
+                    value = prop.GetValue(item, null);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static bool TryReadMember(object item, out object value, params string[] names)
+        {
+            return TryReadMember(item, out value, -1, names);
+        }
+
+        private static string DescribeFacilityPayloadForDebug(SIMCONNECT_RECV_FACILITY_DATA data)
+        {
+            try
+            {
+                if (data == null || data.Data == null || data.Data.Length == 0)
+                    return "payload_empty";
+
+                var item = data.Data[0];
+                if (item == null)
+                    return "payload_item_null";
+
+                var parts = new List<string>();
+                parts.Add("item=" + ShortTypeName(item.GetType()));
+
+                var values = item as object[];
+                if (values != null)
+                {
+                    parts.Add("arrayLen=" + values.Length.ToString(CultureInfo.InvariantCulture));
+                    parts.Add("array0=" + SummarizeValues(values.Take(12)));
+                    return string.Join(";", parts);
+                }
+
+                var array = item as Array;
+                if (array != null)
+                {
+                    var first = new List<object>();
+                    for (var i = 0; i < Math.Min(12, array.Length); i++)
+                        first.Add(array.GetValue(i));
+                    parts.Add("arrayLen=" + array.Length.ToString(CultureInfo.InvariantCulture));
+                    parts.Add("array0=" + SummarizeValues(first));
+                    return string.Join(";", parts);
+                }
+
+                var members = new List<string>();
+                foreach (var field in item.GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Take(16))
+                {
+                    object value = null;
+                    try { value = field.GetValue(item); } catch { }
+                    members.Add(field.Name + "=" + ShortValue(value));
+                }
+
+                foreach (var prop in item.GetType().GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance).Where(p => p.CanRead).Take(8))
+                {
+                    object value = null;
+                    try { value = prop.GetValue(item, null); } catch { }
+                    members.Add(prop.Name + "=" + ShortValue(value));
+                }
+
+                if (members.Count == 0)
+                    members.Add("no_public_members");
+
+                parts.Add(string.Join(",", members));
+                return string.Join(";", parts);
+            }
+            catch (Exception ex)
+            {
+                return "payload_debug_error=" + ex.GetType().Name;
+            }
+        }
+
+        private static string ShortTypeName(Type type)
+        {
+            if (type == null) return "null";
+            var name = type.FullName ?? type.Name;
+            if (name.Length <= 80) return name;
+            return name.Substring(name.Length - 80);
+        }
+
+        private static string SummarizeValues(IEnumerable<object> values)
+        {
+            if (values == null) return string.Empty;
+            return string.Join(",", values.Select(ShortValue));
+        }
+
+        private static string ShortValue(object value)
+        {
+            if (value == null) return "null";
+            try
+            {
+                var text = Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+                text = text.Replace(";", ":").Replace("\r", " ").Replace("\n", " ");
+                if (text.Length > 32) text = text.Substring(0, 32);
+                return text;
+            }
+            catch
+            {
+                return value.GetType().Name;
+            }
+        }
+
+        private static string BuildRunwayIdent(int number, int designator)
+        {
+            if (number <= 0 || number > 36)
+                return string.Empty;
+
+            var suffix = string.Empty;
+            switch (designator)
+            {
+                case 1: suffix = "C"; break;
+                case 2: suffix = "L"; break;
+                case 3: suffix = "R"; break;
+                case 4: suffix = "W"; break;
+                case 5: suffix = "A"; break;
+                case 6: suffix = "B"; break;
+            }
+
+            return number.ToString("00", CultureInfo.InvariantCulture) + suffix;
+        }
+
+        private static string RunwayIdentFromHeading(double headingDeg)
+        {
+            var normalized = NormalizeHeading(headingDeg);
+            var number = (int)Math.Round(normalized / 10d, MidpointRounding.AwayFromZero);
+            if (number <= 0) number = 36;
+            if (number > 36) number = 36;
+            return number.ToString("00", CultureInfo.InvariantCulture);
+        }
+
+        private static void ProjectRelativeMeters(double originLatDeg, double originLonDeg, double latDeg, double lonDeg, out double northMeters, out double eastMeters)
+        {
+            const double earthRadiusMeters = 6371000d;
+            var originLatRad = ToRadians(originLatDeg);
+            var dLat = ToRadians(latDeg - originLatDeg);
+            var dLon = ToRadians(lonDeg - originLonDeg);
+            northMeters = dLat * earthRadiusMeters;
+            eastMeters = dLon * earthRadiusMeters * Math.Cos(originLatRad);
+        }
+
+        private static double NormalizeHeading(double headingDeg)
+        {
+            var value = headingDeg % 360d;
+            if (value < 0d) value += 360d;
+            return value;
+        }
+
+        private static double SmallestHeadingDifference(double a, double b)
+        {
+            var diff = Math.Abs(NormalizeHeading(a) - NormalizeHeading(b)) % 360d;
+            return diff > 180d ? 360d - diff : diff;
+        }
+
+        private static double ToRadians(double degrees)
+        {
+            return degrees * Math.PI / 180d;
+        }
+
+        private static bool IsPlausibleLatitude(double value)
+        {
+            return value >= -90d && value <= 90d && Math.Abs(value) > 0.0001d;
+        }
+
+        private static bool IsPlausibleLongitude(double value)
+        {
+            return value >= -180d && value <= 180d && Math.Abs(value) > 0.0001d;
+        }
+
+        private sealed class FacilityAirportGeometry
+        {
+            public string AirportIcao = string.Empty;
+            public double Latitude;
+            public double Longitude;
+            public double AltitudeMeters;
+            public int RunwayCount;
+            public int TaxiPointCount;
+            public int TaxiParkingCount;
+            public int TaxiPathCount;
+        }
+
+        private abstract class FacilityAirportLocalPoint
+        {
+            public string AirportIcao = string.Empty;
+            public int Index;
+            public double BiasX;
+            public double BiasZ;
+            public double Latitude;
+            public double Longitude;
+            public bool HasLatLon;
+        }
+
+        private sealed class FacilityTaxiParkingGeometry : FacilityAirportLocalPoint
+        {
+            public int Type;
+            public int TaxiPointType;
+            public int Name;
+            public int Suffix;
+            public int Number;
+            public int Orientation;
+            public double HeadingDeg;
+            public double RadiusMeters;
+
+            public string DisplayLabel
+            {
+                get
+                {
+                    var number = Number > 0 ? Number.ToString(CultureInfo.InvariantCulture) : (Index + 1).ToString(CultureInfo.InvariantCulture);
+                    return "P" + number;
+                }
+            }
+        }
+
+        private sealed class FacilityTaxiPointGeometry : FacilityAirportLocalPoint
+        {
+            public int Type;
+            public int Orientation;
+        }
+
+        private sealed class FacilityTaxiPathGeometry
+        {
+            public string AirportIcao = string.Empty;
+            public int Index;
+            public int Type;
+            public double WidthMeters;
+            public double LeftHalfWidthMeters;
+            public double RightHalfWidthMeters;
+            public int WeightLimitLbs;
+            public int RunwayNumber;
+            public int RunwayDesignator;
+            public int Start;
+            public int End;
+            public int NameIndex;
+        }
+
+        private sealed class FacilityTaxiPathMatch
+        {
+            public string AirportIcao = string.Empty;
+            public int Start;
+            public int End;
+            public double WidthMeters;
+            public double DistanceMeters;
+        }
+
+        private sealed class FacilityRunwayGeometry
+        {
+            public string AirportIcao = string.Empty;
+            public string PrimaryIdent = string.Empty;
+            public string SecondaryIdent = string.Empty;
+            public double Latitude;
+            public double Longitude;
+            public double AltitudeMeters;
+            public double HeadingDeg;
+            public double LengthMeters;
+            public double WidthMeters;
+            public int Surface;
+
+            public string DisplayIdent
+            {
+                get { return PrimaryIdent + "/" + SecondaryIdent; }
+            }
+        }
+
+        private sealed class FacilityRunwayMatch
+        {
+            public FacilityRunwayGeometry Runway;
+            public string ActiveIdent = string.Empty;
+            public string ReciprocalIdent = string.Empty;
+            public double ActiveHeadingDeg;
+            public double HeadingErrorDeg;
+            public double LateralMeters;
+            public double LongitudinalMeters;
+            public double DistanceMeters;
+            public double DistanceFromActiveThresholdMeters;
+            public bool OnRunwayCandidate;
+            public bool AlignedCandidate;
+            public bool TouchdownZoneCandidate;
         }
 
         // ──────────────────────────────────────────────────────────────────────
         // BUILD SIM DATA
         // ──────────────────────────────────────────────────────────────────────
+
+        private void ApplyFacilityBridgeState(SimData simData)
+        {
+            if (simData == null) return;
+            lock (_facilityBridgeLock)
+            {
+                simData.FacilityBridgeAvailable = _facilityBridgeAvailable;
+                simData.FacilityBridgeSubscribed = _facilityBridgeSubscribed;
+                simData.FacilityDataReceived = _facilityDataReceived;
+                simData.FacilityDataSource = _facilityBridgeAvailable ? "SIMCONNECT_FACILITIES" : (_facilityBridgeInitAttempted ? "SIMCONNECT_FACILITIES_INIT_FAILED" : "UNAVAILABLE");
+                simData.FacilityBridgeStatus = _facilityBridgeStatus ?? string.Empty;
+                simData.FacilityBridgeLastIcao = _facilityBridgeLastIcao ?? string.Empty;
+                simData.FacilityBridgeLastRegion = _facilityBridgeLastRegion ?? string.Empty;
+                var requested = _facilityBridgeRequestedIcaos.OrderBy(x => x).ToList();
+                var received = _facilityBridgeReceivedIcaos.OrderBy(x => x).ToList();
+                var pending = requested.Where(icao => !_facilityBridgeReceivedIcaos.Contains(icao)).OrderBy(x => x).ToList();
+                var secondsSinceRequest = _facilityBridgeLastRequestUtc.HasValue
+                    ? Math.Max(0d, (DateTime.UtcNow - _facilityBridgeLastRequestUtc.Value).TotalSeconds)
+                    : 0d;
+
+                if (pending.Count > 0 && !_facilityDataReceived && secondsSinceRequest >= 20d && _facilityBridgeStatus.StartsWith("direct_airport_facility_requested", StringComparison.OrdinalIgnoreCase))
+                {
+                    _facilityBridgeStatus = "facility_data_timeout_waiting:" + string.Join(",", pending);
+                }
+
+                simData.FacilityBridgeRecordsReceived = _facilityBridgeRecordsReceived;
+                simData.FacilityBridgeAirportCount = _facilityBridgeAirportCount;
+                simData.FacilityBridgeNearestAirports = _facilityBridgeNearestAirports ?? string.Empty;
+                simData.FacilityBridgeRequestedIcaos = string.Join(",", requested);
+                simData.FacilityBridgeReceivedIcaos = string.Join(",", received);
+                simData.FacilityBridgePendingIcaos = string.Join(",", pending);
+                simData.FacilityBridgeDirectRequestsSent = _facilityBridgeDirectRequestsSent;
+                simData.FacilityBridgeDataEndCount = _facilityBridgeDataEndCount;
+                simData.FacilityBridgeExceptionCount = _facilityBridgeExceptionCount;
+                simData.FacilityBridgeLastException = _facilityBridgeLastException ?? string.Empty;
+                simData.FacilityBridgeLastRequestMode = _facilityBridgeLastRequestMode ?? string.Empty;
+                simData.FacilityBridgeAwaitingResponse = pending.Count > 0 && !_facilityDataReceived;
+                simData.FacilityBridgeSecondsSinceRequest = secondsSinceRequest;
+                simData.FacilityBridgeLastRequestUtc = _facilityBridgeLastRequestUtc;
+                simData.FacilityBridgeLastReceivedUtc = _facilityBridgeLastReceivedUtc;
+                simData.FacilityBridgeLastDataStatus = _facilityBridgeLastDataStatus ?? string.Empty;
+                simData.FacilityBridgeDataTypeHistogram = BuildFacilityBridgeTypeHistogramUnsafe();
+                simData.FacilityTaxiGeometryStatus = _facilityTaxiGeometryStatus ?? string.Empty;
+                simData.FacilityTaxiParkingPayloadCount = SumDictionaryValues(_facilityTaxiParkingCountByAirport);
+                simData.FacilityTaxiPointPayloadCount = SumDictionaryValues(_facilityTaxiPointCountByAirport);
+                simData.FacilityTaxiPathPayloadCount = SumDictionaryValues(_facilityTaxiPathCountByAirport);
+                simData.FacilityTaxiGeometryVersion = "C11D4";
+                simData.FacilityBridgeVersion = "C11D3";
+            }
+
+            ApplyFacilityRunwayGeometryState(simData);
+            ApplyFacilityTaxiGeometryState(simData);
+        }
 
         private static SimData BuildSimData(
             AircraftDataStruct r,
@@ -452,6 +2342,10 @@ namespace PatagoniaWings.Acars.SimConnect
             }
 
             var simconnectXpdrRaw = NormalizeTransponderState(r.TransponderAvailable != 0, Convert.ToInt32(Math.Round(r.TransponderState)));
+            if (ProfileIsBlackSquareC208(profileCode))
+            {
+                simconnectXpdrRaw = NormalizeBlackSquareC208TransponderState(simconnectXpdrRaw, squawk, Convert.ToInt32(Math.Round(r.TransponderState)));
+            }
             var gForce = Math.Abs(r.GForce) > 0.01 ? r.GForce : 1.0;
             var detection = BuildDetectionMetadata(r.Title ?? string.Empty, profile);
             var resolvedAltitude = ResolveAltitude(r, e);
@@ -880,6 +2774,45 @@ namespace PatagoniaWings.Acars.SimConnect
             SIMCONNECT_RECV_EXCEPTION data)
         {
             Debug.WriteLine($"SimConnect exception: {data.dwException}");
+
+            lock (_facilityBridgeLock)
+            {
+                var recentFacilityRequest = _facilityBridgeLastRequestUtc.HasValue
+                    && (DateTime.UtcNow - _facilityBridgeLastRequestUtc.Value).TotalSeconds <= 90d;
+
+                if (!recentFacilityRequest)
+                    return;
+
+                var exceptionCode = data.dwException.ToString(CultureInfo.InvariantCulture);
+
+                // C11B3: SimConnect exception 26 is SIMCONNECT_EXCEPTION_ALREADY_SUBSCRIBED.
+                // It can occur when the bridge retries SubscribeToFacilities while the subscription
+                // is already active. Treat it as a benign signal and keep waiting for the direct
+                // RequestFacilityData response instead of overwriting the UI with a hard exception.
+                if (data.dwException == 26)
+                {
+                    _facilityBridgeAvailable = true;
+                    _facilityBridgeSubscribed = true;
+                    _facilityBridgeLastReceivedUtc = DateTime.UtcNow;
+                    _facilityBridgeLastException = "benign_already_subscribed=26";
+
+                    var pending = _facilityBridgeRequestedIcaos
+                        .Where(x => !_facilityBridgeReceivedIcaos.Contains(x))
+                        .OrderBy(x => x)
+                        .ToList();
+
+                    _facilityBridgeStatus = pending.Count > 0
+                        ? "facility_subscription_already_active_waiting:" + string.Join(",", pending)
+                        : "facility_subscription_already_active";
+                    return;
+                }
+
+                _facilityBridgeExceptionCount++;
+                _facilityBridgeAvailable = true;
+                _facilityBridgeLastReceivedUtc = DateTime.UtcNow;
+                _facilityBridgeLastException = "dwException=" + exceptionCode;
+                _facilityBridgeStatus = "facility_exception_after_request:" + _facilityBridgeLastException;
+            }
         }
 
         // ──────────────────────────────────────────────────────────────────────
@@ -914,6 +2847,12 @@ namespace PatagoniaWings.Acars.SimConnect
             {
                 try { _simConnect.Dispose(); } catch { }
                 _simConnect = null;
+            }
+
+            lock (ActiveInstanceLock)
+            {
+                if (ReferenceEquals(_activeFacilitiesInstance, this))
+                    _activeFacilitiesInstance = null;
             }
 
             IsConnected = false;
@@ -1362,7 +3301,9 @@ namespace PatagoniaWings.Acars.SimConnect
                 baseData.DoorOpen = anyDoorOpen;
                 baseData.ApuAvailable = apuSwitchOn;
                 baseData.ApuRunning = apuSwitchOn;
-                baseData.AutopilotActive = autopilotOn;
+                // El master AP nativo (baseData.AutopilotActive) manda sobre modos CMD/CWS.
+                // Si master esta OFF, no debemos mantener AP activo por estados residuales.
+                baseData.AutopilotActive = baseData.AutopilotActive && autopilotOn;
 
                 // Luces PMDG más fiables que algunos simvars estándar en ciertas variantes
                 baseData.TaxiLightsOn = _latestData.TaxiLight != 0;
@@ -2253,7 +4194,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 }
 
                 if (_lvarCache.TryGetValue("AutopilotRaw", out var genericApRaw))
-                    baseData.AutopilotActive = genericApRaw > 0.5;
+                    baseData.AutopilotActive = baseData.AutopilotActive && genericApRaw > 0.5;
 
                 if (_lvarCache.TryGetValue("BleedAirRaw", out var genericBleedRaw))
                     baseData.BleedAirOn = genericBleedRaw > 0.5;
@@ -2296,18 +4237,20 @@ namespace PatagoniaWings.Acars.SimConnect
         {
             if (double.IsNaN(value) || double.IsInfinity(value) || value <= 0d) return 0d;
 
-            // Ya viene en MHz normal: 121.700
-            if (value >= 100d && value <= 150d) return Math.Round(value, 3);
+            // Ya viene en MHz normal: 121.700. COM voice usable range in MSFS/IFR ops is
+            // roughly 118.000-136.975; values like 100.000 are decoder noise and must
+            // not satisfy PIC or pollute EventTimeline.
+            if (value >= 118d && value <= 137d) return Math.Round(value, 3);
 
             // Algunos bridges/addons devuelven Hz: 121700000
-            if (value >= 100000000d && value <= 150000000d)
+            if (value >= 118000000d && value <= 137000000d)
                 return Math.Round(value / 1000000d, 3);
 
             // Algunos devuelven kHz o MHz*100 / MHz*1000: 12170 o 121700
-            if (value >= 100000d && value <= 150000d)
+            if (value >= 118000d && value <= 137000d)
                 return Math.Round(value / 1000d, 3);
 
-            if (value >= 10000d && value <= 15000d)
+            if (value >= 11800d && value <= 13700d)
                 return Math.Round(value / 100d, 3);
 
             // SimConnect clásico con Frequency BCD16 puede entregar decimal del hex BCD.
@@ -2321,7 +4264,7 @@ namespace PatagoniaWings.Acars.SimConnect
                 var d3 = hex[2] - '0';
                 var d4 = hex[3] - '0';
                 var mhz = 100d + (d1 * 10d) + d2 + (d3 / 10d) + (d4 / 100d);
-                if (mhz >= 100d && mhz <= 150d)
+                if (mhz >= 118d && mhz <= 137d)
                     return Math.Round(mhz, 3);
             }
 
@@ -2333,6 +4276,19 @@ namespace PatagoniaWings.Acars.SimConnect
             if (!available) return -1;
             if (rawState < 0 || rawState > 5) return -1;
             return rawState;
+        }
+
+        private static int NormalizeBlackSquareC208TransponderState(int normalizedState, int squawk, int rawState)
+        {
+            // C208 BlackSquare puede reportar availability/state inconsistente por SimVar,
+            // aun con XPDR operativo y código válido. Si hay squawk real, forzamos ALT.
+            if (normalizedState >= 3) return normalizedState;
+            if (squawk <= 0) return normalizedState;
+            if (normalizedState == -1 || normalizedState == 0 || normalizedState == 1 || rawState == 1)
+            {
+                return 3;
+            }
+            return normalizedState;
         }
     }
 }

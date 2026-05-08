@@ -1,11 +1,11 @@
 ﻿{
     "channel":  "stable",
-    "version":  "7.0.17",
-    "latestVersion":  "7.0.17",
-    "currentVersion":  "7.0.17",
-    "revision":  "2026.5.3.3",
-    "latestRevision":  "2026.5.3.3",
-    "releaseDate":  "2026-04-29",
+    "version":  "7.0.19",
+    "latestVersion":  "7.0.19",
+    "currentVersion":  "7.0.19",
+    "revision":  "2026.5.8.1",
+    "latestRevision":  "2026.5.8.1",
+    "releaseDate":  "2026-05-08",
     "manifestUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/acars-update.json",
     "installerUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
     "downloadUrl":  "https://qoradagitvccyabfkgkw.supabase.co/storage/v1/object/public/acars-releases/PatagoniaWingsACARSSetup.exe",
@@ -17,7 +17,7 @@
     "required":  true,
     "minimumVersion":  "1.0.0",
     "minSupportedVersion":  "1.0.0",
-    "forceUpdateBelow":  "7.0.17",
-    "notes":  "ACARS 7.0.17 - ACARS 7.0.17 - Hotfix C9: cierre en gate robusto, auditoria de superficie, deteccion de pista/rodaje/gate probable y correccion de BuildSurfaceContextDisplay.",
-    "releaseNotes":  "ACARS 7.0.17 - ACARS 7.0.17 - Hotfix C9: cierre en gate robusto, auditoria de superficie, deteccion de pista/rodaje/gate probable y correccion de BuildSurfaceContextDisplay."
+    "forceUpdateBelow":  "7.0.19",
+    "notes":  "ACARS 7.0.19 - Fix cierre de vuelo activo, fase APP 7NM alineada, aproximacion estable 2000ft, AP master y anti-rebote gate/taxi.",
+    "releaseNotes":  "ACARS 7.0.19 - Fix cierre de vuelo activo, fase APP 7NM alineada, aproximacion estable 2000ft, AP master y anti-rebote gate/taxi."
 }

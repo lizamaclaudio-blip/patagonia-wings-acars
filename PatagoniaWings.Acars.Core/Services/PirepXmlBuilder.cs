@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -57,8 +57,10 @@ namespace PatagoniaWings.Acars.Core.Services
             var blockMinutes = Math.Max(1, (int)Math.Round(GetDuration(report, telemetry).TotalMinutes));
             var flightMinutes = ComputeAirborneMinutes(telemetry, report);
             var distanceNm = ResolveDistanceNm(report, telemetry);
-            var fuelStartKg = ResolveFuelKg(firstSample, dispatch.FuelPlannedKg);
-            var fuelEndKg = ResolveFuelKg(lastSample, 0d);
+            var fuelStartSample = firstAirborne ?? firstSample;
+            var gateStopSample = telemetry.LastOrDefault(sample => sample.OnGround && sample.ParkingBrake && sample.GroundSpeed <= 3d);
+            var fuelStartKg = ResolveFuelKg(fuelStartSample, dispatch.FuelPlannedKg);
+            var fuelEndKg = ResolveFuelKg(gateStopSample ?? lastSample, 0d);
             var fuelUsedKg = ResolveFuelUsedKg(report, fuelStartKg, fuelEndKg);
             var fuelPerHour = blockMinutes > 0 ? fuelUsedKg / Math.Max(1d / 60d, blockMinutes / 60d) : 0d;
             var fuelPer100Nm = distanceNm > 0 ? (fuelUsedKg / distanceNm) * 100d : 0d;
@@ -81,12 +83,14 @@ namespace PatagoniaWings.Acars.Core.Services
                     BuildPhaseAuditReport(telemetry),
                     BuildPhasePrevalidationPackage(telemetry),
                     BuildPhaseAcceptanceMatrix(telemetry),
+                    BuildRunwayTdzAuditReport(telemetry),
+                    BuildFacilityBridgeAuditReport(telemetry),
                     BuildPhaseTestRunManifest(telemetry, dispatch, report),
                     BuildEventTimeline(telemetry, dispatch, activeFlight, report),
                     BuildVuelo(telemetry, report, generatedAtUtc),
                     BuildResumen(dispatch, report, telemetry, firstSample, lastSample, firstAirborne, touchdown, blockMinutes, flightMinutes, distanceNm, fuelStartKg, fuelEndKg, fuelUsedKg, fuelPerHour, fuelPer100Nm),
                     BuildIndicadores(telemetry, report, blockMinutes),
-                    BuildAeropuertos(dispatch, report, firstSample, touchdown, lastSample),
+                    BuildAeropuertos(dispatch, report, telemetry, firstSample, touchdown, lastSample),
                     BuildEvaluacionPendiente(),
                     BuildProcedimientosPendiente(),
                     BuildPerformancePendiente(report),
@@ -168,6 +172,7 @@ namespace PatagoniaWings.Acars.Core.Services
             var first = telemetry[0];
             SimData? previous = null;
             var cumulativeDistance = 0d;
+            var lastLoggedAtUtc = DateTime.MinValue;
 
             for (var index = 0; index < telemetry.Count; index++)
             {
@@ -178,12 +183,42 @@ namespace PatagoniaWings.Acars.Core.Services
                 }
 
                 var eventText = ResolveEventText(previous, sample, index, report);
-                rows.Add(Element("Log", FormatLogLine(sample.CapturedAtUtc, eventText, sample, cumulativeDistance, first.CapturedAtUtc)));
+                var phaseChanged = previous != null && !string.Equals(previous.OperationalPhaseCode, sample.OperationalPhaseCode, StringComparison.OrdinalIgnoreCase);
+                var periodic = lastLoggedAtUtc == DateTime.MinValue || (sample.CapturedAtUtc - lastLoggedAtUtc).TotalSeconds >= 30d;
+                var major = IsMajorVueloEvent(eventText);
+                var boundary = index == 0 || index == telemetry.Count - 1;
+
+                // C15: keep the legacy <Vuelo>/<Log> format, but stop writing every
+                // telemetry sample. The raw black-box samples remain available in ACARS
+                // memory/export; the PIREP XML should carry operational evidence.
+                if (boundary || phaseChanged || major || periodic)
+                {
+                    rows.Add(Element("Log", FormatLogLine(sample.CapturedAtUtc, eventText, sample, cumulativeDistance, first.CapturedAtUtc)));
+                    lastLoggedAtUtc = sample.CapturedAtUtc;
+                }
+
                 previous = sample;
             }
 
             rows.Add(Element("Log", FormatLogLine(telemetry[telemetry.Count - 1].CapturedAtUtc, "STOP", telemetry[telemetry.Count - 1], cumulativeDistance, first.CapturedAtUtc)));
             return new XElement("Vuelo", rows);
+        }
+
+        private static bool IsMajorVueloEvent(string eventText)
+        {
+            var text = (eventText ?? string.Empty).ToUpperInvariant();
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            return text.Contains("START")
+                || text.Contains("STOP")
+                || text.Contains("AIRBORNE")
+                || text.Contains("TOUCHDOWN")
+                || text.Contains("TAKEOFF")
+                || text.Contains("LANDING")
+                || text.Contains("PHASE")
+                || text.Contains("RUNWAY")
+                || text.Contains("GATE")
+                || text.Contains("PIC")
+                || text.Contains("XPDR");
         }
 
         private static XElement BuildResumen(
@@ -248,7 +283,7 @@ namespace PatagoniaWings.Acars.Core.Services
             var maxAscent = telemetry.Count == 0 ? 0d : telemetry.Max(sample => sample.VerticalSpeed);
             var maxDescent = telemetry.Count == 0 ? 0d : telemetry.Min(sample => sample.VerticalSpeed);
             var touchdown = FindTouchdownSample(telemetry);
-            var touchdownG = ResolveGForce(touchdown, report.LandingG);
+            var touchdownG = ResolveTouchdownGForce(telemetry, touchdown, report.LandingG);
             var maxG = telemetry.Count == 0 ? touchdownG : telemetry.Select(sample => ResolveGForce(sample, touchdownG)).DefaultIfEmpty(touchdownG).Max();
             var minG = telemetry.Count == 0 ? touchdownG : telemetry.Select(sample => ResolveGForce(sample, touchdownG)).DefaultIfEmpty(touchdownG).Min();
 
@@ -276,23 +311,29 @@ namespace PatagoniaWings.Acars.Core.Services
             );
         }
 
-        private static XElement BuildAeropuertos(PreparedDispatch dispatch, FlightReport report, SimData? firstSample, SimData? touchdown, SimData? lastSample)
+        private static XElement BuildAeropuertos(PreparedDispatch dispatch, FlightReport report, IReadOnlyList<SimData> telemetry, SimData? firstSample, SimData? touchdown, SimData? lastSample)
         {
-            var touchdownG = ResolveGForce(touchdown, report.LandingG);
+            var touchdownG = ResolveTouchdownGForce(telemetry, touchdown, report.LandingG);
+            var depRunway = ResolveRunwayIdent(firstSample);
+            var arrRunway = ResolveRunwayIdent(touchdown ?? lastSample);
+            var depGate = ResolveGateLabel(firstSample);
+            var arrGate = ResolveGateLabel(lastSample);
+            var depRunwayLen = ResolveRunwayLengthMeters(firstSample);
+            var arrRunwayLen = ResolveRunwayLengthMeters(touchdown ?? lastSample);
             return new XElement("Aeropuertos",
                 new XElement("Despegue",
                     Element("ICAO", FirstNonEmpty(dispatch.DepartureIcao, report.DepartureIcao)),
-                    Element("Pista", string.Empty),
-                    Element("Gate", "0"),
+                    Element("Pista", depRunway),
+                    Element("Gate", depGate),
                     Element("Altura", ToIntString(firstSample == null ? 0d : firstSample.AltitudeFeet)),
-                    Element("LargoPistaMts", "0")
+                    Element("LargoPistaMts", ToIntString(depRunwayLen))
                 ),
                 new XElement("Aterrizaje",
                     Element("ICAO", FirstNonEmpty(dispatch.ArrivalIcao, report.ArrivalIcao)),
-                    Element("Pista", string.Empty),
-                    Element("Gate", "0"),
-                    Element("Altura", ToIntString(lastSample == null ? 0d : lastSample.AltitudeFeet)),
-                    Element("LargoPistaMts", "0"),
+                    Element("Pista", arrRunway),
+                    Element("Gate", arrGate),
+                    Element("Altura", ToIntString((touchdown ?? lastSample) == null ? 0d : (touchdown ?? lastSample).AltitudeFeet)),
+                    Element("LargoPistaMts", ToIntString(arrRunwayLen)),
                     Element("CantTouchdowns", Math.Abs(report.LandingVS) > 0d ? "1" : "0"),
                     Element("TouchdownGForce", FormatDecimal(touchdownG, 3)),
                     Element("TouchdownVS", ToIntString(report.LandingVS)),
@@ -549,8 +590,8 @@ namespace PatagoniaWings.Acars.Core.Services
                 Element("TelemetrySamples", telemetry == null ? 0 : telemetry.Count),
                 Element("TouchdownDetected", Bool(touchdown != null)),
                 Element("TouchdownVS", ToIntString(touchdown == null ? report.LandingVS : touchdown.LandingVS)),
-                Element("TouchdownG", FormatDecimal(touchdown == null ? report.LandingG : ResolveGForce(touchdown, report.LandingG), 3)),
-                Element("DistanceNm", FormatDecimal(report.Distance, 1)),
+                Element("TouchdownG", FormatDecimal(ResolveTouchdownGForce(telemetry, touchdown, report.LandingG), 3)),
+                Element("DistanceNm", FormatDecimal(ResolveDistanceNm(report, telemetry), 1)),
                 Element("FinalStatusRequested", FirstNonEmpty(report.ResultStatus, report.Status.ToString())),
                 Element("UnsupportedMetricsMustNotPenalize", "True")
             );
@@ -733,6 +774,42 @@ namespace PatagoniaWings.Acars.Core.Services
                 Element("GateAreaCandidate", Bool(sample != null && sample.GateAreaCandidate)),
                 Element("SurfaceContextReliable", Bool(sample != null && sample.SurfaceContextReliable)),
                 Element("SurfaceContextVersion", sample == null ? string.Empty : sample.SurfaceContextVersion),
+                Element("RunwayContextCode", sample == null ? string.Empty : sample.RunwayContextCode),
+                Element("RunwayContextName", sample == null ? string.Empty : sample.RunwayContextName),
+                Element("RunwayContextReason", sample == null ? string.Empty : sample.RunwayContextReason),
+                Element("EstimatedRunwayIdent", sample == null ? string.Empty : sample.EstimatedRunwayIdent),
+                Element("EstimatedRunwayReciprocalIdent", sample == null ? string.Empty : sample.EstimatedRunwayReciprocalIdent),
+                Element("EstimatedRunwayHeadingDeg", FormatDecimal(sample == null ? 0d : sample.EstimatedRunwayHeadingDeg, 1)),
+                Element("RunwayHeadingDeltaDeg", FormatDecimal(sample == null ? 0d : sample.RunwayHeadingDeltaDeg, 1)),
+                Element("RunwayAlignedCandidate", Bool(sample != null && sample.RunwayAlignedCandidate)),
+                Element("RunwayEntryCandidate", Bool(sample != null && sample.RunwayEntryCandidate)),
+                Element("RunwayExitCandidate", Bool(sample != null && sample.RunwayExitCandidate)),
+                Element("TakeoffRollCandidate", Bool(sample != null && sample.TakeoffRollCandidate)),
+                Element("LandingRollCandidate", Bool(sample != null && sample.LandingRollCandidate)),
+                Element("TouchdownZoneCandidate", Bool(sample != null && sample.TouchdownZoneCandidate)),
+                Element("TaxiwayProbable", Bool(sample != null && sample.TaxiwayProbable)),
+                Element("RunwayGeometryAvailable", Bool(sample != null && sample.RunwayGeometryAvailable)),
+                Element("RunwayContextReliable", Bool(sample != null && sample.RunwayContextReliable)),
+                Element("RunwayContextVersion", sample == null ? string.Empty : sample.RunwayContextVersion),
+                Element("FacilityRunwayGeometryAvailable", Bool(sample != null && sample.FacilityRunwayGeometryAvailable)),
+                Element("FacilityRunwayGeometryStatus", sample == null ? string.Empty : sample.FacilityRunwayGeometryStatus),
+                Element("FacilityNearestRunwayAirportIcao", sample == null ? string.Empty : sample.FacilityNearestRunwayAirportIcao),
+                Element("FacilityNearestRunwayIdent", sample == null ? string.Empty : sample.FacilityNearestRunwayIdent),
+                Element("FacilityNearestRunwayReciprocalIdent", sample == null ? string.Empty : sample.FacilityNearestRunwayReciprocalIdent),
+                Element("FacilityNearestRunwayHeadingDeg", FormatDecimal(sample == null ? 0d : sample.FacilityNearestRunwayHeadingDeg, 1)),
+                Element("FacilityNearestRunwayLengthMeters", FormatDecimal(sample == null ? 0d : sample.FacilityNearestRunwayLengthMeters, 0)),
+                Element("FacilityNearestRunwayWidthMeters", FormatDecimal(sample == null ? 0d : sample.FacilityNearestRunwayWidthMeters, 0)),
+                Element("FacilityNearestRunwayDistanceMeters", FormatDecimal(sample == null ? 0d : sample.FacilityNearestRunwayDistanceMeters, 0)),
+                Element("FacilityRunwayLateralOffsetMeters", FormatDecimal(sample == null ? 0d : sample.FacilityRunwayLateralOffsetMeters, 0)),
+                Element("FacilityRunwayLongitudinalOffsetMeters", FormatDecimal(sample == null ? 0d : sample.FacilityRunwayLongitudinalOffsetMeters, 0)),
+                Element("FacilityRunwayHeadingErrorDeg", FormatDecimal(sample == null ? 0d : sample.FacilityRunwayHeadingErrorDeg, 1)),
+                Element("FacilityRunwayDistanceFromThresholdMeters", FormatDecimal(sample == null ? 0d : sample.FacilityRunwayDistanceFromThresholdMeters, 0)),
+                Element("FacilityOnRunwayCandidate", Bool(sample != null && sample.FacilityOnRunwayCandidate)),
+                Element("FacilityRunwayAlignedCandidate", Bool(sample != null && sample.FacilityRunwayAlignedCandidate)),
+                Element("FacilityTouchdownZoneCandidate", Bool(sample != null && sample.FacilityTouchdownZoneCandidate)),
+                Element("FacilityRunwayGeometrySummary", sample == null ? string.Empty : sample.FacilityRunwayGeometrySummary),
+                Element("FacilityRunwayGeometryCount", sample == null ? "0" : sample.FacilityRunwayGeometryCount.ToString(CultureInfo.InvariantCulture)),
+                Element("FacilityRunwayGeometryVersion", sample == null ? string.Empty : sample.FacilityRunwayGeometryVersion),
                 Element("Lat", FormatDecimal(sample == null ? 0d : sample.Latitude, 5)),
                 Element("Lon", FormatDecimal(sample == null ? 0d : sample.Longitude, 5)),
                 Element("AGL", ToIntString(sample == null ? 0d : ResolveAgl(sample))),
@@ -1084,6 +1161,153 @@ namespace PatagoniaWings.Acars.Core.Services
         }
 
 
+        private static XElement BuildRunwayTdzAuditReport(IReadOnlyList<SimData> telemetry)
+        {
+            var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var root = new XElement("RunwayTdzAuditReport",
+                Element("SchemaVersion", "PIREP_PERFECT_C11D4"),
+                Element("Policy", "runway_taxi_tdz_alignment_are_raw_evidence_no_client_score"),
+                Element("GeometryAvailable", Bool(list.Any(sample => sample.RunwayGeometryAvailable || sample.FacilityRunwayGeometryAvailable))),
+                Element("GeometryPolicy", "C11C may use MSFS SimConnect Facilities runway geometry; Web/Supabase remains official scoring authority."),
+                Element("FacilityRunwayGeometrySamples", list.Count(sample => sample.FacilityRunwayGeometryAvailable)),
+                Element("FacilityOnRunwaySamples", list.Count(sample => sample.FacilityOnRunwayCandidate)),
+                Element("FacilityTdzSamples", list.Count(sample => sample.FacilityTouchdownZoneCandidate)),
+                Element("Samples", list.Count),
+                Element("RunwayEntrySamples", list.Count(sample => sample.RunwayEntryCandidate)),
+                Element("RunwayAlignedSamples", list.Count(sample => sample.RunwayAlignedCandidate)),
+                Element("TakeoffRollSamples", list.Count(sample => sample.TakeoffRollCandidate)),
+                Element("TouchdownZoneCandidateSamples", list.Count(sample => sample.TouchdownZoneCandidate)),
+                Element("LandingRollSamples", list.Count(sample => sample.LandingRollCandidate)),
+                Element("RunwayExitSamples", list.Count(sample => sample.RunwayExitCandidate)),
+                Element("TaxiwayProbableSamples", list.Count(sample => sample.TaxiwayProbable)));
+
+            var groups = list
+                .Where(sample => !string.IsNullOrWhiteSpace(sample.RunwayContextCode))
+                .GroupBy(sample => sample.RunwayContextCode.Trim().ToUpperInvariant())
+                .OrderByDescending(group => group.Count())
+                .ThenBy(group => group.Key);
+
+            foreach (var group in groups)
+            {
+                var first = group.First();
+                var last = group.Last();
+                root.Add(new XElement("Context",
+                    new XAttribute("code", group.Key),
+                    Element("Count", group.Count()),
+                    Element("Name", first.RunwayContextName),
+                    Element("FirstUtc", FormatClock(first.CapturedAtUtc)),
+                    Element("LastUtc", FormatClock(last.CapturedAtUtc)),
+                    Element("EstimatedRunwayIdent", first.EstimatedRunwayIdent),
+                    Element("EstimatedRunwayReciprocalIdent", first.EstimatedRunwayReciprocalIdent),
+                    Element("AvgHeadingDeltaDeg", FormatDecimal(group.Select(sample => sample.RunwayHeadingDeltaDeg).DefaultIfEmpty(0d).Average(), 1)),
+                    Element("FacilityRunwayIdent", first.FacilityNearestRunwayIdent),
+                    Element("FacilityRunwayAirportIcao", first.FacilityNearestRunwayAirportIcao),
+                    Element("FacilityRunwayGeometry", first.FacilityRunwayGeometrySummary),
+                    Element("AvgFacilityDistanceMeters", FormatDecimal(group.Where(sample => sample.FacilityRunwayGeometryAvailable).Select(sample => sample.FacilityNearestRunwayDistanceMeters).DefaultIfEmpty(0d).Average(), 0)),
+                    Element("AvgFacilityLateralMeters", FormatDecimal(group.Where(sample => sample.FacilityRunwayGeometryAvailable).Select(sample => Math.Abs(sample.FacilityRunwayLateralOffsetMeters)).DefaultIfEmpty(0d).Average(), 0)),
+                    Element("MaxGS", ToIntString(group.Select(sample => sample.GroundSpeed).DefaultIfEmpty(0d).Max())),
+                    Element("Reason", first.RunwayContextReason)));
+            }
+
+            var firstRunwayEntry = list.FirstOrDefault(sample => sample.RunwayEntryCandidate);
+            var firstTakeoffRoll = list.FirstOrDefault(sample => sample.TakeoffRollCandidate);
+            var touchdown = list.FirstOrDefault(sample => sample.TouchdownZoneCandidate);
+            var runwayExit = list.FirstOrDefault(sample => sample.RunwayExitCandidate);
+
+            root.Add(new XElement("KeyRunwayInstants",
+                InstantNode("runway_entry_candidate", firstRunwayEntry),
+                InstantNode("takeoff_roll_candidate", firstTakeoffRoll),
+                InstantNode("tdz_candidate", touchdown),
+                InstantNode("runway_exit_candidate", runwayExit)));
+
+            return root;
+        }
+
+
+        private static XElement BuildFacilityBridgeAuditReport(IReadOnlyList<SimData> telemetry)
+        {
+            var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
+            var samplesWithBridge = list.Where(sample => sample.FacilityBridgeAvailable || sample.FacilityDataReceived || !string.IsNullOrWhiteSpace(sample.FacilityBridgeStatus)).ToList();
+            var last = samplesWithBridge.LastOrDefault() ?? list.LastOrDefault();
+
+            var root = new XElement("FacilityBridgeAuditReport",
+                Element("SchemaVersion", "PIREP_PERFECT_C11D2"),
+                Element("Policy", "simconnect_facilities_bridge_runway_taxi_parking_raw_evidence_no_client_score"),
+                Element("Source", last == null ? string.Empty : last.FacilityDataSource),
+                Element("BridgeAvailable", Bool(samplesWithBridge.Any(sample => sample.FacilityBridgeAvailable))),
+                Element("Subscribed", Bool(samplesWithBridge.Any(sample => sample.FacilityBridgeSubscribed))),
+                Element("DataReceived", Bool(samplesWithBridge.Any(sample => sample.FacilityDataReceived))),
+                Element("Samples", list.Count),
+                Element("BridgeSamples", samplesWithBridge.Count),
+                Element("AirportCountMax", samplesWithBridge.Count == 0 ? "0" : samplesWithBridge.Max(sample => sample.FacilityBridgeAirportCount).ToString(CultureInfo.InvariantCulture)),
+                Element("RecordsReceivedMax", samplesWithBridge.Count == 0 ? "0" : samplesWithBridge.Max(sample => sample.FacilityBridgeRecordsReceived).ToString(CultureInfo.InvariantCulture)),
+                Element("DirectRequestsSentMax", samplesWithBridge.Count == 0 ? "0" : samplesWithBridge.Max(sample => sample.FacilityBridgeDirectRequestsSent).ToString(CultureInfo.InvariantCulture)),
+                Element("DataEndCountMax", samplesWithBridge.Count == 0 ? "0" : samplesWithBridge.Max(sample => sample.FacilityBridgeDataEndCount).ToString(CultureInfo.InvariantCulture)),
+                Element("ExceptionCountMax", samplesWithBridge.Count == 0 ? "0" : samplesWithBridge.Max(sample => sample.FacilityBridgeExceptionCount).ToString(CultureInfo.InvariantCulture)),
+                Element("NearestAirports", last == null ? string.Empty : last.FacilityBridgeNearestAirports),
+                Element("RequestedIcaos", last == null ? string.Empty : last.FacilityBridgeRequestedIcaos),
+                Element("ReceivedIcaos", last == null ? string.Empty : last.FacilityBridgeReceivedIcaos),
+                Element("PendingIcaos", last == null ? string.Empty : last.FacilityBridgePendingIcaos),
+                Element("LastStatus", last == null ? string.Empty : last.FacilityBridgeStatus),
+                Element("LastDataStatus", last == null ? string.Empty : last.FacilityBridgeLastDataStatus),
+                Element("DataTypeHistogram", last == null ? string.Empty : last.FacilityBridgeDataTypeHistogram),
+                Element("LastIcao", last == null ? string.Empty : last.FacilityBridgeLastIcao),
+                Element("LastRequestMode", last == null ? string.Empty : last.FacilityBridgeLastRequestMode),
+                Element("AwaitingResponse", Bool(last != null && last.FacilityBridgeAwaitingResponse)),
+                Element("SecondsSinceRequest", last == null ? "0" : last.FacilityBridgeSecondsSinceRequest.ToString("F0", CultureInfo.InvariantCulture)),
+                Element("LastException", last == null ? string.Empty : last.FacilityBridgeLastException),
+                Element("LastRequestUtc", last != null && last.FacilityBridgeLastRequestUtc.HasValue ? FormatClock(last.FacilityBridgeLastRequestUtc.Value) : string.Empty),
+                Element("LastReceivedUtc", last != null && last.FacilityBridgeLastReceivedUtc.HasValue ? FormatClock(last.FacilityBridgeLastReceivedUtc.Value) : string.Empty),
+                Element("FacilityRunwayGeometryAvailable", Bool(list.Any(sample => sample.FacilityRunwayGeometryAvailable))),
+                Element("FacilityRunwayGeometrySamples", list.Count(sample => sample.FacilityRunwayGeometryAvailable)),
+                Element("FacilityRunwayGeometryCountMax", list.Count == 0 ? "0" : list.Max(sample => sample.FacilityRunwayGeometryCount).ToString(CultureInfo.InvariantCulture)),
+                Element("LastFacilityRunwayGeometryStatus", last == null ? string.Empty : last.FacilityRunwayGeometryStatus),
+                Element("LastFacilityRunwayGeometrySummary", last == null ? string.Empty : last.FacilityRunwayGeometrySummary),
+                Element("FacilityTaxiParkingPayloadCountMax", list.Count == 0 ? "0" : list.Max(sample => sample.FacilityTaxiParkingPayloadCount).ToString(CultureInfo.InvariantCulture)),
+                Element("FacilityTaxiPointPayloadCountMax", list.Count == 0 ? "0" : list.Max(sample => sample.FacilityTaxiPointPayloadCount).ToString(CultureInfo.InvariantCulture)),
+                Element("FacilityTaxiPathPayloadCountMax", list.Count == 0 ? "0" : list.Max(sample => sample.FacilityTaxiPathPayloadCount).ToString(CultureInfo.InvariantCulture)),
+                Element("LastFacilityTaxiGeometryStatus", last == null ? string.Empty : last.FacilityTaxiGeometryStatus),
+                Element("FacilityTaxiGeometryAvailable", Bool(list.Any(sample => sample.FacilityTaxiGeometryAvailable))),
+                Element("FacilityTaxiGeometrySamples", list.Count(sample => sample.FacilityTaxiGeometryAvailable)),
+                Element("FacilityTaxiParkingGeometryCountMax", list.Count == 0 ? "0" : list.Max(sample => sample.FacilityTaxiParkingGeometryCount).ToString(CultureInfo.InvariantCulture)),
+                Element("FacilityTaxiPointGeometryCountMax", list.Count == 0 ? "0" : list.Max(sample => sample.FacilityTaxiPointGeometryCount).ToString(CultureInfo.InvariantCulture)),
+                Element("FacilityTaxiPathGeometryCountMax", list.Count == 0 ? "0" : list.Max(sample => sample.FacilityTaxiPathGeometryCount).ToString(CultureInfo.InvariantCulture)),
+                Element("LastFacilityTaxiGeometrySummary", last == null ? string.Empty : last.FacilityTaxiGeometrySummary),
+                Element("LastFacilityNearestTaxiAirportIcao", last == null ? string.Empty : last.FacilityNearestTaxiAirportIcao),
+                Element("LastFacilityNearestTaxiParkingLabel", last == null ? string.Empty : last.FacilityNearestTaxiParkingLabel),
+                Element("LastFacilityNearestTaxiParkingDistanceMeters", last == null ? "0" : last.FacilityNearestTaxiParkingDistanceMeters.ToString("F0", CultureInfo.InvariantCulture)),
+                Element("LastFacilityNearestTaxiPathDistanceMeters", last == null ? "0" : last.FacilityNearestTaxiPathDistanceMeters.ToString("F0", CultureInfo.InvariantCulture)),
+                Element("LastFacilityGateAreaCandidate", Bool(last != null && last.FacilityGateAreaCandidate)),
+                Element("LastFacilityTaxiwayCandidate", Bool(last != null && last.FacilityTaxiwayCandidate)),
+                Element("SurfaceProcedureEvidenceSamples", list.Count(sample => !string.IsNullOrWhiteSpace(sample.SurfaceProcedureEvidenceStatus))),
+                Element("LastSurfaceProcedurePhaseCode", last == null ? string.Empty : last.SurfaceProcedurePhaseCode),
+                Element("LastSurfaceProcedurePhaseName", last == null ? string.Empty : last.SurfaceProcedurePhaseName),
+                Element("LastSurfaceProcedureEvidenceStatus", last == null ? string.Empty : last.SurfaceProcedureEvidenceStatus),
+                Element("LastSurfaceProcedureEvidenceSummary", last == null ? string.Empty : last.SurfaceProcedureEvidenceSummary),
+                Element("LastSurfaceProcedureEvidenceFlags", last == null ? string.Empty : last.SurfaceProcedureEvidenceFlags),
+                Element("LastSurfaceProcedureTaxiLightExpected", Bool(last != null && last.SurfaceProcedureTaxiLightExpected)),
+                Element("LastSurfaceProcedureStrobeExpected", Bool(last != null && last.SurfaceProcedureStrobeExpected)),
+                Element("LastSurfaceProcedureLandingLightExpected", Bool(last != null && last.SurfaceProcedureLandingLightExpected)),
+                Element("LastSurfaceProcedureXpdrAltExpected", Bool(last != null && last.SurfaceProcedureXpdrAltExpected)),
+                Element("SurfaceProcedureEvidenceVersion", last == null ? "C11F" : last.SurfaceProcedureEvidenceVersion),
+                Element("NextBlock", "C11F/C12 phase ladder and procedure evidence ready for Web/Supabase official scoring."));
+
+            foreach (var group in samplesWithBridge
+                .Where(sample => !string.IsNullOrWhiteSpace(sample.FacilityBridgeStatus))
+                .GroupBy(sample => sample.FacilityBridgeStatus.Trim())
+                .OrderByDescending(group => group.Count())
+                .ThenBy(group => group.Key))
+            {
+                root.Add(new XElement("StatusGroup",
+                    new XAttribute("status", group.Key),
+                    Element("Count", group.Count()),
+                    Element("FirstUtc", FormatClock(group.First().CapturedAtUtc)),
+                    Element("LastUtc", FormatClock(group.Last().CapturedAtUtc))));
+            }
+
+            return root;
+        }
+
         private static XElement BuildPhaseTestRunManifest(IReadOnlyList<SimData> telemetry, PreparedDispatch dispatch, FlightReport report)
         {
             var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
@@ -1309,8 +1533,9 @@ namespace PatagoniaWings.Acars.Core.Services
         {
             var list = telemetry == null ? new List<SimData>() : telemetry.Where(sample => sample != null).OrderBy(sample => sample.CapturedAtUtc).ToList();
             var root = new XElement("EventTimeline",
-                Element("SchemaVersion", "PIREP_PERFECT_A2"),
-                Element("Policy", "events_are_raw_evidence_web_supabase_scores"));
+                Element("SchemaVersion", "C15_EVENT_SLIM"),
+                Element("Policy", "operational_events_only_raw_evidence_web_supabase_scores"),
+                Element("RawTelemetryPolicy", "raw_samples_not_repeated_as_events"));
 
             if (list.Count == 0)
             {
@@ -1331,6 +1556,14 @@ namespace PatagoniaWings.Acars.Core.Services
             if (!gearSupported) root.Add(EventNode("PREFLIGHT", list[0].CapturedAtUtc, "GEAR_UNSUPPORTED", "Gear state not reliable or fixed gear; do not penalize", list[0], "profile", false, "unsupported"));
 
             SimData? previous = null;
+            var runwayEntryLogged = false;
+            var takeoffRollLogged = false;
+            var runwayExitLogged = false;
+            var tdzLogged = false;
+            var approachGateLogged = false;
+            var airborneLogged = false;
+            var touchdownLogged = false;
+
             for (var index = 0; index < list.Count; index++)
             {
                 var current = list[index];
@@ -1341,42 +1574,59 @@ namespace PatagoniaWings.Acars.Core.Services
                     continue;
                 }
 
+                if (!string.Equals(previous.OperationalPhaseCode, current.OperationalPhaseCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    root.Add(EventNode(phase, current.CapturedAtUtc, "PHASE_CHANGED", "Phase " + previous.OperationalPhaseCode + " → " + current.OperationalPhaseCode, current, "phase_engine", true, "confirmed"));
+                }
+
+                // C15: record material operational changes, not continuous radio/sensor polling.
                 AddBooleanEvent(root, phase, previous.ParkingBrake, current.ParkingBrake, current, "PARKING_BRAKE_ON", "PARKING_BRAKE_OFF", "SimConnect", true, "confirmed");
-                AddBooleanEvent(root, phase, previous.NavLightsOn, current.NavLightsOn, current, "NAV_LIGHTS_ON", "NAV_LIGHTS_OFF", lightsSupported ? "SimConnect" : "unsupported", lightsSupported, lightsSupported ? "confirmed" : "unsupported");
                 AddBooleanEvent(root, phase, previous.BeaconLightsOn, current.BeaconLightsOn, current, "BEACON_ON", "BEACON_OFF", lightsSupported ? "SimConnect" : "unsupported", lightsSupported, lightsSupported ? "confirmed" : "unsupported");
-                AddBooleanEvent(root, phase, previous.StrobeLightsOn, current.StrobeLightsOn, current, "STROBE_ON", "STROBE_OFF", lightsSupported ? "SimConnect" : "unsupported", lightsSupported, lightsSupported ? "confirmed" : "unsupported");
                 AddBooleanEvent(root, phase, previous.TaxiLightsOn, current.TaxiLightsOn, current, "TAXI_LIGHTS_ON", "TAXI_LIGHTS_OFF", lightsSupported ? "SimConnect" : "unsupported", lightsSupported, lightsSupported ? "confirmed" : "unsupported");
+                AddBooleanEvent(root, phase, previous.StrobeLightsOn, current.StrobeLightsOn, current, "STROBE_ON", "STROBE_OFF", lightsSupported ? "SimConnect" : "unsupported", lightsSupported, lightsSupported ? "confirmed" : "unsupported");
                 AddBooleanEvent(root, phase, previous.LandingLightsOn, current.LandingLightsOn, current, "LANDING_LIGHTS_ON", "LANDING_LIGHTS_OFF", lightsSupported ? "SimConnect" : "unsupported", lightsSupported, lightsSupported ? "confirmed" : "unsupported");
                 AddBooleanEvent(root, phase, previous.DoorOpen, current.DoorOpen, current, "DOORS_OPEN", "DOORS_CLOSED", doorsSupported ? FirstNonEmpty(profile.DoorSource, "native") : "unsupported", doorsSupported, doorsSupported ? "confirmed" : "unsupported");
-                AddBooleanEvent(root, phase, previous.GearDown, current.GearDown, current, "GEAR_DOWN", "GEAR_UP", gearSupported ? "SimConnect" : "unsupported", gearSupported, gearSupported ? "confirmed" : "unsupported");
-                AddBooleanEvent(root, phase, previous.AutopilotActive, current.AutopilotActive, current, "AUTOPILOT_ON", "AUTOPILOT_OFF", "SimConnect", true, "confirmed");
-                AddBooleanEvent(root, phase, previous.SeatBeltSign, current.SeatBeltSign, current, "SEATBELTS_ON", "SEATBELTS_OFF", profile.SupportsSeatbeltSystem ? "SimConnect" : "unsupported", profile.SupportsSeatbeltSystem, profile.SupportsSeatbeltSystem ? "confirmed" : "unsupported");
-                AddBooleanEvent(root, phase, previous.SpoilersArmed, current.SpoilersArmed, current, "SPOILERS_ARMED", "SPOILERS_DISARMED", "SimConnect", true, "confirmed");
-                AddBooleanEvent(root, phase, previous.ReverserActive, current.ReverserActive, current, "REVERSER_ACTIVE", "REVERSER_INACTIVE", "SimConnect", true, "confirmed");
+                AddBooleanEvent(root, phase, previous.AutopilotActive, current.AutopilotActive, current, "AUTOPILOT_MASTER_ON", "AUTOPILOT_MASTER_OFF", "SimConnect", true, "confirmed");
 
-                if (previous.OnGround && !current.OnGround)
+                if (!airborneLogged && previous.OnGround && !current.OnGround)
                 {
+                    airborneLogged = true;
                     root.Add(EventNode("TAKEOFF", current.CapturedAtUtc, "AIRBORNE", "Aircraft became airborne", current, "OnGroundTransition", true, "confirmed"));
                 }
-                if (!previous.OnGround && current.OnGround)
+                if (!touchdownLogged && !previous.OnGround && current.OnGround)
                 {
+                    touchdownLogged = true;
                     root.Add(EventNode("LANDING", current.CapturedAtUtc, "TOUCHDOWN", "Touchdown detected from airborne-to-ground transition", current, "OnGroundTransition", true, "confirmed"));
                 }
-                if (previous.OnGround && current.OnGround && previous.GroundSpeed < 30d && current.GroundSpeed >= 30d)
+                if (!takeoffRollLogged && previous.OnGround && current.OnGround && previous.GroundSpeed < 30d && current.GroundSpeed >= 30d)
                 {
+                    takeoffRollLogged = true;
                     root.Add(EventNode("TAKEOFF", current.CapturedAtUtc, "TAKEOFF_ROLL", "Ground speed crossed 30 kt while on ground", current, "computed", true, "inferred"));
                 }
-                if (!previous.OnGround && current.AltitudeAGL < 1500d && previous.AltitudeAGL >= 1500d)
+                if (!runwayEntryLogged && !previous.RunwayEntryCandidate && current.RunwayEntryCandidate)
                 {
+                    runwayEntryLogged = true;
+                    root.Add(EventNode(phase, current.CapturedAtUtc, "RUNWAY_ENTRY_CANDIDATE", "C10/C11 detected probable runway entry or lineup", current, "C11", false, "geometry_evidence"));
+                }
+                if (!takeoffRollLogged && !previous.TakeoffRollCandidate && current.TakeoffRollCandidate)
+                {
+                    takeoffRollLogged = true;
+                    root.Add(EventNode("TAKEOFF", current.CapturedAtUtc, "RUNWAY_TAKEOFF_ROLL_CANDIDATE", "C10/C11 detected probable takeoff roll on runway axis", current, "C11", false, "geometry_evidence"));
+                }
+                if (!tdzLogged && !previous.TouchdownZoneCandidate && current.TouchdownZoneCandidate)
+                {
+                    tdzLogged = true;
+                    root.Add(EventNode("LANDING", current.CapturedAtUtc, "TDZ_CANDIDATE", "C11 detected touchdown zone candidate", current, "C11", false, "geometry_evidence"));
+                }
+                if (!runwayExitLogged && !previous.RunwayExitCandidate && current.RunwayExitCandidate)
+                {
+                    runwayExitLogged = true;
+                    root.Add(EventNode("TAXI_IN", current.CapturedAtUtc, "RUNWAY_EXIT_CANDIDATE", "C10/C11 detected probable runway exit toward taxiway", current, "C11", false, "geometry_evidence"));
+                }
+                if (!approachGateLogged && !previous.OnGround && current.AltitudeAGL < 1500d && previous.AltitudeAGL >= 1500d)
+                {
+                    approachGateLogged = true;
                     root.Add(EventNode("APPROACH", current.CapturedAtUtc, "APPROACH_GATE_1500_AGL", "Aircraft descended below 1500 ft AGL", current, "computed", true, "inferred"));
-                }
-                if (Math.Abs(previous.Com1FrequencyMhz - current.Com1FrequencyMhz) >= 0.01d && current.Com1FrequencyMhz > 0d)
-                {
-                    root.Add(EventNode(phase, current.CapturedAtUtc, "COM1_CHANGED", "COM1 " + FormatFrequency(current.Com1FrequencyMhz), current, "SimConnect", true, "confirmed"));
-                }
-                if (Math.Abs(previous.Com2FrequencyMhz - current.Com2FrequencyMhz) >= 0.01d && current.Com2FrequencyMhz > 0d)
-                {
-                    root.Add(EventNode(phase, current.CapturedAtUtc, "COM2_CHANGED", "COM2 " + FormatFrequency(current.Com2FrequencyMhz), current, "SimConnect", true, "confirmed"));
                 }
                 if (xpdrSupported && (previous.TransponderCode != current.TransponderCode || previous.TransponderStateRaw != current.TransponderStateRaw))
                 {
@@ -1384,6 +1634,12 @@ namespace PatagoniaWings.Acars.Core.Services
                 }
 
                 previous = current;
+            }
+
+            if (report.PicChecksTotal > 0)
+            {
+                var picStatus = report.PicChecksFailed > 0 ? "PIC_CHECK_FAILED" : (report.PicChecksSucceeded > 0 ? "PIC_CHECK_PASSED" : "PIC_CHECK_SCHEDULED");
+                root.Add(EventNode("CRUISE", list[list.Count - 1].CapturedAtUtc, picStatus, "PIC COM2 checks " + report.PicChecksSucceeded.ToString(CultureInfo.InvariantCulture) + "/" + report.PicChecksTotal.ToString(CultureInfo.InvariantCulture), list[list.Count - 1], "PIC_COM2", report.PicChecksFailed > 0, report.PicChecksFailed > 0 ? "failed" : "confirmed"));
             }
 
             root.Add(EventNode(ResolveOperationalPhase(list[list.Count - 1], list, report), list[list.Count - 1].CapturedAtUtc, "ACARS_STOP", "ACARS recording frozen for manual closeout", list[list.Count - 1], "acars", true, "manual_closeout"));
@@ -1444,6 +1700,42 @@ namespace PatagoniaWings.Acars.Core.Services
                 Element("GateAreaCandidate", Bool(sample != null && sample.GateAreaCandidate)),
                 Element("SurfaceContextReliable", Bool(sample != null && sample.SurfaceContextReliable)),
                 Element("SurfaceContextVersion", sample == null ? string.Empty : sample.SurfaceContextVersion),
+                Element("RunwayContextCode", sample == null ? string.Empty : sample.RunwayContextCode),
+                Element("RunwayContextName", sample == null ? string.Empty : sample.RunwayContextName),
+                Element("RunwayContextReason", sample == null ? string.Empty : sample.RunwayContextReason),
+                Element("EstimatedRunwayIdent", sample == null ? string.Empty : sample.EstimatedRunwayIdent),
+                Element("EstimatedRunwayReciprocalIdent", sample == null ? string.Empty : sample.EstimatedRunwayReciprocalIdent),
+                Element("EstimatedRunwayHeadingDeg", FormatDecimal(sample == null ? 0d : sample.EstimatedRunwayHeadingDeg, 1)),
+                Element("RunwayHeadingDeltaDeg", FormatDecimal(sample == null ? 0d : sample.RunwayHeadingDeltaDeg, 1)),
+                Element("RunwayAlignedCandidate", Bool(sample != null && sample.RunwayAlignedCandidate)),
+                Element("RunwayEntryCandidate", Bool(sample != null && sample.RunwayEntryCandidate)),
+                Element("RunwayExitCandidate", Bool(sample != null && sample.RunwayExitCandidate)),
+                Element("TakeoffRollCandidate", Bool(sample != null && sample.TakeoffRollCandidate)),
+                Element("LandingRollCandidate", Bool(sample != null && sample.LandingRollCandidate)),
+                Element("TouchdownZoneCandidate", Bool(sample != null && sample.TouchdownZoneCandidate)),
+                Element("TaxiwayProbable", Bool(sample != null && sample.TaxiwayProbable)),
+                Element("RunwayGeometryAvailable", Bool(sample != null && sample.RunwayGeometryAvailable)),
+                Element("RunwayContextReliable", Bool(sample != null && sample.RunwayContextReliable)),
+                Element("RunwayContextVersion", sample == null ? string.Empty : sample.RunwayContextVersion),
+                Element("FacilityRunwayGeometryAvailable", Bool(sample != null && sample.FacilityRunwayGeometryAvailable)),
+                Element("FacilityRunwayGeometryStatus", sample == null ? string.Empty : sample.FacilityRunwayGeometryStatus),
+                Element("FacilityNearestRunwayAirportIcao", sample == null ? string.Empty : sample.FacilityNearestRunwayAirportIcao),
+                Element("FacilityNearestRunwayIdent", sample == null ? string.Empty : sample.FacilityNearestRunwayIdent),
+                Element("FacilityNearestRunwayReciprocalIdent", sample == null ? string.Empty : sample.FacilityNearestRunwayReciprocalIdent),
+                Element("FacilityNearestRunwayHeadingDeg", FormatDecimal(sample == null ? 0d : sample.FacilityNearestRunwayHeadingDeg, 1)),
+                Element("FacilityNearestRunwayLengthMeters", FormatDecimal(sample == null ? 0d : sample.FacilityNearestRunwayLengthMeters, 0)),
+                Element("FacilityNearestRunwayWidthMeters", FormatDecimal(sample == null ? 0d : sample.FacilityNearestRunwayWidthMeters, 0)),
+                Element("FacilityNearestRunwayDistanceMeters", FormatDecimal(sample == null ? 0d : sample.FacilityNearestRunwayDistanceMeters, 0)),
+                Element("FacilityRunwayLateralOffsetMeters", FormatDecimal(sample == null ? 0d : sample.FacilityRunwayLateralOffsetMeters, 0)),
+                Element("FacilityRunwayLongitudinalOffsetMeters", FormatDecimal(sample == null ? 0d : sample.FacilityRunwayLongitudinalOffsetMeters, 0)),
+                Element("FacilityRunwayHeadingErrorDeg", FormatDecimal(sample == null ? 0d : sample.FacilityRunwayHeadingErrorDeg, 1)),
+                Element("FacilityRunwayDistanceFromThresholdMeters", FormatDecimal(sample == null ? 0d : sample.FacilityRunwayDistanceFromThresholdMeters, 0)),
+                Element("FacilityOnRunwayCandidate", Bool(sample != null && sample.FacilityOnRunwayCandidate)),
+                Element("FacilityRunwayAlignedCandidate", Bool(sample != null && sample.FacilityRunwayAlignedCandidate)),
+                Element("FacilityTouchdownZoneCandidate", Bool(sample != null && sample.FacilityTouchdownZoneCandidate)),
+                Element("FacilityRunwayGeometrySummary", sample == null ? string.Empty : sample.FacilityRunwayGeometrySummary),
+                Element("FacilityRunwayGeometryCount", sample == null ? "0" : sample.FacilityRunwayGeometryCount.ToString(CultureInfo.InvariantCulture)),
+                Element("FacilityRunwayGeometryVersion", sample == null ? string.Empty : sample.FacilityRunwayGeometryVersion),
                 Element("Lat", FormatDecimal(sample == null ? 0d : sample.Latitude, 5)),
                 Element("Lon", FormatDecimal(sample == null ? 0d : sample.Longitude, 5)),
                 Element("Altitude", ToIntString(sample == null ? 0d : ResolveMsl(sample))),
@@ -1757,6 +2049,51 @@ namespace PatagoniaWings.Acars.Core.Services
             if (Math.Abs(value) <= 0.01d && sample != null && IsOperationalGForce(sample.LandingG)) value = sample.LandingG;
             if (Math.Abs(value) <= 0.01d && IsOperationalGForce(fallback)) value = fallback;
             return IsOperationalGForce(value) ? value : 0d;
+        }
+
+        private static double ResolveTouchdownGForce(IReadOnlyList<SimData> telemetry, SimData? touchdown, double fallback)
+        {
+            var value = ResolveGForce(touchdown, fallback);
+            if (Math.Abs(value) > 0.01d) return value;
+
+            if (touchdown != null && telemetry != null && telemetry.Count > 0)
+            {
+                var start = touchdown.CapturedAtUtc.AddSeconds(-6);
+                var end = touchdown.CapturedAtUtc.AddSeconds(6);
+                var around = telemetry
+                    .Where(sample => sample != null && sample.CapturedAtUtc >= start && sample.CapturedAtUtc <= end)
+                    .Select(sample => ResolveGForce(sample, fallback))
+                    .Where(g => Math.Abs(g) > 0.01d)
+                    .ToList();
+                if (around.Count > 0)
+                {
+                    return around.OrderByDescending(Math.Abs).First();
+                }
+
+                // Si hay touchdown confirmado pero sin dato de G valido, usar baseline operativo.
+                return 1.0d;
+            }
+
+            return value;
+        }
+
+        private static string ResolveRunwayIdent(SimData? sample)
+        {
+            return FirstNonEmpty(
+                sample == null ? string.Empty : sample.FacilityNearestRunwayIdent,
+                sample == null ? string.Empty : sample.EstimatedRunwayIdent);
+        }
+
+        private static string ResolveGateLabel(SimData? sample)
+        {
+            var label = FirstNonEmpty(sample == null ? string.Empty : sample.FacilityNearestTaxiParkingLabel);
+            return string.IsNullOrWhiteSpace(label) ? "0" : label;
+        }
+
+        private static double ResolveRunwayLengthMeters(SimData? sample)
+        {
+            if (sample == null) return 0d;
+            return sample.FacilityNearestRunwayLengthMeters > 0d ? sample.FacilityNearestRunwayLengthMeters : 0d;
         }
 
         private static bool IsOperationalGForce(double value)

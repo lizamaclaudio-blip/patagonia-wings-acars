@@ -1,11 +1,11 @@
-﻿<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
+<UserControl x:Class="PatagoniaWings.Acars.Master.Views.Pages.InFlightPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:preview="clr-namespace:PatagoniaWings.Acars.Master.Preview"
              Background="Transparent"
              Loaded="OnPageLoaded">
 
-    <Grid x:Name="PageRoot" DataContext="{Binding DataContext.MainVM.InFlightVM, RelativeSource={RelativeSource AncestorType=Window}}">
+    <Grid x:Name="PageRoot">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="6"/>
@@ -28,23 +28,19 @@
             <StackPanel Margin="11,10,11,10">
 
                 <!-- TIPO DE VUELO -->
-                <TextBlock Text="{Binding DataContext.MainVM.PreFlightVM.FlightModeDisplayLabel,
-                                          RelativeSource={RelativeSource AncestorType=Window},
-                                          FallbackValue='VUELO'}"
+                <TextBlock Text="{Binding FlightModeDisplayLabel, FallbackValue='VUELO'}"
                            Foreground="White" FontSize="13" FontWeight="Bold" FontFamily="Segoe UI"
-                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,4"                            Visibility="{Binding DataContext.MainVM.PreFlightVM.IsOnlineFlightMode, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolToVisibilityConverter}}">
+                           HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,4"                            Visibility="{Binding IsOnlineFlightMode, Converter={StaticResource BoolToVisibilityConverter}}">
                     <TextBlock.Effect><DropShadowEffect Color="#0099FF" BlurRadius="12" ShadowDepth="0" Opacity="0.7"/></TextBlock.Effect>
                 </TextBlock>
 
                 <!-- NÃºmero de vuelo + matrÃ­cula -->
                 <StackPanel HorizontalAlignment="Center" Margin="0,0,0,6">
-                    <TextBlock Text="{Binding DataContext.MainVM.PreFlightVM.FlightNumber,
-                                              RelativeSource={RelativeSource AncestorType=Window},
+                    <TextBlock Text="{Binding FlightNumber,
                                               Converter={StaticResource StringFallbackConverter},
                                               ConverterParameter={x:Static preview:AcarsPreviewData.LiveFlightNumber}}"
                                Foreground="#DDEEFF" FontSize="15" FontWeight="Bold" FontFamily="Consolas" HorizontalAlignment="Center"/>
-                    <TextBlock Text="{Binding DataContext.MainVM.PreFlightVM.PreparedDispatch.AircraftRegistration,
-                                              RelativeSource={RelativeSource AncestorType=Window},
+                    <TextBlock Text="{Binding AircraftRegistrationDisplay,
                                               TargetNullValue={x:Static preview:AcarsPreviewData.LiveRegistration}}"
                                Foreground="#7AAAD4" FontSize="9" HorizontalAlignment="Center" Margin="0,1,0,0"/>
                 </StackPanel>
@@ -121,24 +117,65 @@
                 </Grid>
                 <TextBlock Text="{Binding RouteDistanceSourceDisplay, FallbackValue='Fuente distancia: N/D'}"
                            Foreground="#6AAAD6" FontSize="10" FontWeight="SemiBold" Margin="0,4,0,0"/>
-                <TextBlock Text="{Binding PhaseChecklistDisplay, FallbackValue='Checklist fase: pendiente'}"
-                           Foreground="#8FD5FF" FontSize="9" FontWeight="SemiBold" Margin="0,2,0,0"
-                           TextWrapping="Wrap" MaxHeight="28"/>
-                <TextBlock Text="{Binding PhaseTransitionDisplay, FallbackValue='Transición fase: pendiente'}"
-                           Foreground="#8FB8D9" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
-                           TextWrapping="Wrap" MaxHeight="28"/>
-                <TextBlock Text="{Binding PhaseAuditDisplay, FallbackValue='Auditoría fase: pendiente'}"
-                           Foreground="#22C55E" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
-                           TextWrapping="Wrap" MaxHeight="34"/>
-                <TextBlock Text="{Binding PhaseReviewDisplay, FallbackValue='Revisión fase: pendiente'}"
-                           Foreground="#F59E0B" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
-                           TextWrapping="Wrap" MaxHeight="42"/>
-                <TextBlock Text="{Binding PhasePrevalidationDisplay, FallbackValue='C6 prevalidación: pendiente'}"
-                           Foreground="#C084FC" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
-                           TextWrapping="Wrap" MaxHeight="42"/>
-                <TextBlock Text="{Binding SurfaceContextDisplay, FallbackValue='C9 superficie: pendiente'}"
-                           Foreground="#38BDF8" FontSize="9" FontFamily="Consolas" Margin="0,1,0,0"
-                           TextWrapping="Wrap" MaxHeight="30"/>
+
+                <!-- C13: cierre visible en gate aunque la bitacora operacional sea extensa. -->
+                <Button Content="{Binding FinishFlightButtonText, FallbackValue='FINALIZAR VUELO'}"
+                        Command="{Binding FinishFlightCommand}"
+                        IsEnabled="True"
+                        Visibility="{Binding CanManualCloseout, Converter={StaticResource BoolToVisibilityConverter}}"
+                        FontSize="9" FontWeight="Bold" Foreground="White" BorderThickness="0"
+                        Background="#16A34A" Padding="0,7" Margin="0,5,0,2" Cursor="Hand">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border CornerRadius="9" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <Button.ToolTip>
+                        <ToolTip Content="{Binding ManualCloseoutStatus, FallbackValue='Cierre disponible solo detenido en gate/cold and dark'}"/>
+                    </Button.ToolTip>
+                </Button>
+
+                <!-- C11B4: bitácora operacional con scroll. Evita que C9/C10/C11 queden cortados cuando hay diagnóstico largo. -->
+                <Border Background="#082A4B" BorderBrush="#17476F" BorderThickness="1" CornerRadius="8"
+                        Padding="4,3" Margin="0,3,0,0">
+                    <ScrollViewer MaxHeight="82"
+                                  VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  CanContentScroll="False"
+                                  PanningMode="VerticalOnly">
+                        <StackPanel>
+                            <TextBlock Text="{Binding PhaseChecklistDisplay, FallbackValue='Checklist fase: pendiente'}"
+                                       Foreground="#8FD5FF" FontSize="8.4" FontWeight="SemiBold" Margin="0,0,0,1"
+                                       TextWrapping="Wrap" ToolTip="{Binding PhaseChecklistDisplay}"/>
+                            <TextBlock Text="{Binding PhaseTransitionDisplay, FallbackValue='Transición fase: pendiente'}"
+                                       Foreground="#8FB8D9" FontSize="8.4" FontFamily="Consolas" Margin="0,0,0,1"
+                                       TextWrapping="Wrap" ToolTip="{Binding PhaseTransitionDisplay}"/>
+                            <TextBlock Text="{Binding PhaseAuditDisplay, FallbackValue='Auditoría fase: pendiente'}"
+                                       Foreground="#22C55E" FontSize="8.4" FontFamily="Consolas" Margin="0,0,0,1"
+                                       TextWrapping="Wrap" ToolTip="{Binding PhaseAuditDisplay}"/>
+                            <TextBlock Text="{Binding PhaseReviewDisplay, FallbackValue='Revisión fase: pendiente'}"
+                                       Foreground="#F59E0B" FontSize="8.4" FontFamily="Consolas" Margin="0,0,0,1"
+                                       TextWrapping="Wrap" ToolTip="{Binding PhaseReviewDisplay}"/>
+                            <TextBlock Text="{Binding PhasePrevalidationDisplay, FallbackValue='C6 prevalidación: pendiente'}"
+                                       Foreground="#C084FC" FontSize="8.4" FontFamily="Consolas" Margin="0,0,0,1"
+                                       TextWrapping="Wrap" ToolTip="{Binding PhasePrevalidationDisplay}"/>
+                            <TextBlock Text="{Binding SurfaceContextDisplay, FallbackValue='C9 superficie: pendiente'}"
+                                       Foreground="#38BDF8" FontSize="8.4" FontFamily="Consolas" Margin="0,0,0,1"
+                                       TextWrapping="Wrap" ToolTip="{Binding SurfaceContextDisplay}"/>
+                            <TextBlock Text="{Binding RunwayTdzDisplay, FallbackValue='C10 pista/TDZ: pendiente'}"
+                                       Foreground="#10B981" FontSize="8.4" FontFamily="Consolas" Margin="0,0,0,1"
+                                       TextWrapping="Wrap" ToolTip="{Binding RunwayTdzDisplay}"/>
+                            <TextBlock Text="{Binding SurfaceProcedureEvidenceDisplay, FallbackValue='C11D5 reglaje evidencia: pendiente'}"
+                                       Foreground="#FCD34D" FontSize="8.4" FontFamily="Consolas" Margin="0,0,0,1"
+                                       TextWrapping="Wrap" ToolTip="{Binding SurfaceProcedureEvidenceDisplay}"/>
+                            <TextBlock Text="{Binding FacilityBridgeDisplay, FallbackValue='C11 bridge: pendiente'}"
+                                       Foreground="#A7F3D0" FontSize="8.4" FontFamily="Consolas" Margin="0,0,0,0"
+                                       TextWrapping="Wrap" ToolTip="{Binding FacilityBridgeDisplay}"/>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
 
             </StackPanel>
         </Border>
@@ -379,7 +416,7 @@
                     <TextBlock Text="RADIO ACARS" Foreground="#1565C0" FontSize="7.5" FontWeight="Bold" FontFamily="Segoe UI"/>
                     <TextBlock Text="{Binding RadioAcarsMessage, FallbackValue='COM2: Sintonice frecuencia asignada y estÃ© atento.'}"
                                Foreground="#0D2143" FontSize="9" FontFamily="Segoe UI" FontWeight="SemiBold"
-                               TextWrapping="Wrap" MaxHeight="32" TextTrimming="CharacterEllipsis"/>
+                               TextWrapping="Wrap" MaxHeight="26" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
             </Grid>
         </Border>
@@ -427,9 +464,9 @@
                     </Button.Template>
                 </Button>
 
-                <Button Grid.Column="2" Content="{Binding FinishFlightButtonText, FallbackValue='CIERRE EN GATE'}"
+                <Button Grid.Column="2" Content="{Binding FinishFlightButtonText, FallbackValue='FINALIZAR VUELO'}"
                         Command="{Binding FinishFlightCommand}"
-                        IsEnabled="{Binding CanManualCloseout}"
+                        IsEnabled="True"
                         FontSize="9" FontWeight="Bold" Foreground="White" BorderThickness="0"
                         Background="{Binding CanManualCloseout, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#16A34A|#94A3B8}" Padding="0,9" Cursor="Hand">
                     <Button.Template>
@@ -450,4 +487,3 @@
 
     </Grid>
 </UserControl>
-

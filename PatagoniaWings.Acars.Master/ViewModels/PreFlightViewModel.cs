@@ -37,6 +37,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private PatagoniaStartFlightGateResult? _startGateResult;
         private bool _lastDispatchResolvedFromWeb;
         private bool _lastDispatchUsedLocalFallback;
+        private string _departureFlag = string.Empty;
+        private string _arrivalFlag = string.Empty;
 
         public ObservableCollection<SimulatorType> SimulatorOptions { get; } = new ObservableCollection<SimulatorType>
         {
@@ -201,6 +203,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         }
 
         public bool IsDispatchReady { get { return PreparedDispatch != null && PreparedDispatch.IsDispatchReady; } }
+        public string DepartureFlag { get { return _departureFlag; } }
+        public string ArrivalFlag { get { return _arrivalFlag; } }
         public bool StartGateAllowsStart { get { return _startGateResult != null && (_startGateResult.CanStart || CanStartWithColdAndDarkOverride()); } }
         public string StartGateSummary
         {
@@ -449,12 +453,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             get
             {
-                if (PreparedDispatch == null || PreparedDispatch.PayloadKg <= 0)
+                if (PreparedDispatch == null || PreparedDispatch.CargoKg <= 0)
                 {
                     return "Carga: —";
                 }
 
-                return "Carga: " + FormatKg(PreparedDispatch.PayloadKg);
+                return "Carga: " + FormatKg(PreparedDispatch.CargoKg);
             }
         }
 
@@ -751,6 +755,50 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(ArrivalWeatherSummary));
             OnPropertyChanged(nameof(OperationalMinimaSummary));
             OnPropertyChanged(nameof(OperationalQualificationsSummary));
+            _ = LoadAirportFlagsAsync();
+        }
+
+        private async Task LoadAirportFlagsAsync()
+        {
+            var dep = Safe(DepartureIcao).ToUpperInvariant();
+            var arr = Safe(ArrivalIcao).ToUpperInvariant();
+
+            var depFlag = string.Empty;
+            var arrFlag = string.Empty;
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(dep))
+                {
+                    var depResult = await AcarsContext.Api.GetAirportAsync(dep);
+                    if (depResult.Success && depResult.Data != null)
+                        depFlag = ResolveCountryFlag(depResult.Data.Country, dep);
+                }
+            }
+            catch { }
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(arr))
+                {
+                    var arrResult = await AcarsContext.Api.GetAirportAsync(arr);
+                    if (arrResult.Success && arrResult.Data != null)
+                        arrFlag = ResolveCountryFlag(arrResult.Data.Country, arr);
+                }
+            }
+            catch { }
+
+            if (_departureFlag != depFlag)
+            {
+                _departureFlag = depFlag;
+                OnPropertyChanged(nameof(DepartureFlag));
+            }
+
+            if (_arrivalFlag != arrFlag)
+            {
+                _arrivalFlag = arrFlag;
+                OnPropertyChanged(nameof(ArrivalFlag));
+            }
         }
 
         private void SetDispatchResolutionState(bool resolvedFromWeb, bool usedLocalFallback)
@@ -968,7 +1016,11 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             AircraftIcao = string.Empty;
             Route = string.Empty;
             Remarks = string.Empty;
+            _departureFlag = string.Empty;
+            _arrivalFlag = string.Empty;
             ResetWeatherContext();
+            OnPropertyChanged(nameof(DepartureFlag));
+            OnPropertyChanged(nameof(ArrivalFlag));
             OnPropertyChanged(nameof(StartGateAllowsStart));
             OnPropertyChanged(nameof(StartGateSummary));
             OnPropertyChanged(nameof(StartGateParkingBrakeOk));
@@ -1599,6 +1651,55 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             var icao = Safe(dispatch.AircraftIcao).ToUpperInvariant();
             return string.IsNullOrWhiteSpace(icao) ? string.Empty : icao;
+        }
+
+        private static string ResolveCountryFlag(string countryName, string icaoHint)
+        {
+            var country = Safe(countryName).Trim().ToLowerInvariant();
+            var iso2 = string.Empty;
+            if (country == "cl" || country == "chl" || country == "chile") iso2 = "CL";
+            else if (country == "argentina") iso2 = "AR";
+            else if (country == "ar" || country == "arg") iso2 = "AR";
+            else if (country == "peru" || country == "perú" || country == "pe" || country == "per") iso2 = "PE";
+            else if (country == "bolivia") iso2 = "BO";
+            else if (country == "bo" || country == "bol") iso2 = "BO";
+            else if (country == "brasil" || country == "brazil" || country == "br" || country == "bra") iso2 = "BR";
+            else if (country == "uruguay") iso2 = "UY";
+            else if (country == "uy" || country == "ury") iso2 = "UY";
+            else if (country == "paraguay") iso2 = "PY";
+            else if (country == "py" || country == "pry") iso2 = "PY";
+            else if (country == "colombia") iso2 = "CO";
+            else if (country == "co" || country == "col") iso2 = "CO";
+            else if (country == "ecuador") iso2 = "EC";
+            else if (country == "ec" || country == "ecu") iso2 = "EC";
+            else if (country == "mexico" || country == "méxico") iso2 = "MX";
+            else if (country == "mx" || country == "mex") iso2 = "MX";
+            else if (country == "united states" || country == "estados unidos" || country == "usa") iso2 = "US";
+            else if (country == "us" || country == "usa") iso2 = "US";
+            else if (country == "spain" || country == "españa") iso2 = "ES";
+            else if (country == "es" || country == "esp") iso2 = "ES";
+
+            if (iso2.Length != 2)
+            {
+                var hint = Safe(icaoHint).Trim().ToUpperInvariant();
+                if (hint.StartsWith("SC")) iso2 = "CL";
+                else if (hint.StartsWith("SA")) iso2 = "AR";
+                else if (hint.StartsWith("SP")) iso2 = "PE";
+                else if (hint.StartsWith("SL")) iso2 = "BO";
+                else if (hint.StartsWith("SB")) iso2 = "BR";
+                else if (hint.StartsWith("SU")) iso2 = "UY";
+                else if (hint.StartsWith("SG")) iso2 = "PY";
+                else if (hint.StartsWith("SK")) iso2 = "CO";
+                else if (hint.StartsWith("SE")) iso2 = "EC";
+                else if (hint.StartsWith("MM")) iso2 = "MX";
+                else if (hint.StartsWith("K")) iso2 = "US";
+                else if (hint.StartsWith("LE")) iso2 = "ES";
+            }
+
+            if (iso2.Length != 2) return string.Empty;
+            var c1 = char.ConvertFromUtf32(0x1F1E6 + (iso2[0] - 'A'));
+            var c2 = char.ConvertFromUtf32(0x1F1E6 + (iso2[1] - 'A'));
+            return c1 + c2;
         }
 
         private static string FormatKg(double value)

@@ -44,8 +44,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid x:Name="PageRoot"
-          DataContext="{Binding DataContext.MainVM.PostFlightVM, RelativeSource={RelativeSource AncestorType=Window}}">
+    <Grid x:Name="PageRoot">
         <ScrollViewer VerticalScrollBarVisibility="Auto"
                       HorizontalScrollBarVisibility="Disabled"
                       Background="Transparent">
@@ -61,7 +60,7 @@
                                    FontFamily="Consolas"
                                    FontSize="18"
                                    FontWeight="Bold"/>
-                        <TextBlock Text="{Binding DataContext.MainVM.PreFlightVM.PreparedDispatch.AircraftRegistration, RelativeSource={RelativeSource AncestorType=Window}, TargetNullValue={x:Static preview:AcarsPreviewData.CloseRegistration}}"
+                        <TextBlock Text="{Binding AircraftRegistrationDisplay, TargetNullValue={x:Static preview:AcarsPreviewData.CloseRegistration}}"
                                    Foreground="{StaticResource TextSecondaryBrush}"
                                    FontSize="10"
                                    Margin="0,2,0,0"/>
@@ -169,7 +168,7 @@
 
                     <Button Grid.Column="0"
                             Style="{StaticResource SecondaryButton}"
-                            Command="{Binding DataContext.GoLiveFlightCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            Click="CancelButton_Click"
                             Content="CANCELAR"
                             Height="38"
                             Margin="0,0,5,0"/>

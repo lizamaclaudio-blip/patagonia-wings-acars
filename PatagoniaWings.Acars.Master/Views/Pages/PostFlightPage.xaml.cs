@@ -37,6 +37,19 @@ namespace PatagoniaWings.Acars.Master.Views.Pages
             }
         }
 
+
+        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        {
+            var hostWindow = Window.GetWindow(this);
+            if (hostWindow != null && hostWindow.DataContext is AcarsShellViewModel shellVm)
+            {
+                if (shellVm.GoLiveFlightCommand != null && shellVm.GoLiveFlightCommand.CanExecute(null))
+                {
+                    shellVm.GoLiveFlightCommand.Execute(null);
+                }
+            }
+        }
+
         private PostFlightViewModel? ResolveViewModel()
         {
             if (PageRoot != null && PageRoot.DataContext is PostFlightViewModel pageVm)

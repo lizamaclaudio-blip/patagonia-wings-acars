@@ -76,6 +76,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                             AcarsContext.Api.SetAuthToken(pilot.Token);
                             AcarsContext.Auth.SetCurrentPilot(pilot);
                             AcarsContext.Runtime.SetCurrentPilot(pilot);
+                            await AcarsContext.Api.CleanupStaleActiveReservationsAsync(pilot.CallSign, "interrupted");
                             AcarsContext.TriggerPendingCloseoutRetry("login_success", 500);
 
                             if (RememberMe)

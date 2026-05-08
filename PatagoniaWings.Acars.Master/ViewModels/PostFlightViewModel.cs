@@ -53,6 +53,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     OnPropertyChanged(nameof(QualificationsDisplay));
                     OnPropertyChanged(nameof(HasReport));
                     OnPropertyChanged(nameof(FlightNumberDisplay));
+                    OnPropertyChanged(nameof(AircraftRegistrationDisplay));
                     OnPropertyChanged(nameof(RouteDisplay));
                     OnPropertyChanged(nameof(CloseButtonTitle));
                     OnPropertyChanged(nameof(CanSubmit));
@@ -137,6 +138,21 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool IsPendingCloseoutRetry => IsCloseoutPendingRetry(Report?.ResultStatus);
 
         public string FlightNumberDisplay => string.IsNullOrWhiteSpace(Report?.FlightNumber) ? "PW0000" : Report!.FlightNumber;
+
+        public string AircraftRegistrationDisplay
+        {
+            get
+            {
+                var dispatchRegistration = AcarsContext.Runtime.CurrentDispatch?.AircraftRegistration;
+                if (!string.IsNullOrWhiteSpace(dispatchRegistration))
+                {
+                    return dispatchRegistration!.Trim();
+                }
+
+                var reportAircraft = Report?.AircraftIcao;
+                return string.IsNullOrWhiteSpace(reportAircraft) ? string.Empty : reportAircraft!.Trim();
+            }
+        }
 
         public string RouteDisplay
         {

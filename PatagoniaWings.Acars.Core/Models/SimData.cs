@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using PatagoniaWings.Acars.Core.Enums;
 
 namespace PatagoniaWings.Acars.Core.Models
@@ -105,6 +105,120 @@ namespace PatagoniaWings.Acars.Core.Models
         public bool GateAreaCandidate { get; set; }
         public bool SurfaceContextReliable { get; set; }
         public string SurfaceContextVersion { get; set; } = "C9";
+
+        // C10 Runway/Taxiway/TDZ audit: inferred operational geometry.
+        // Without airport geometry/navdata ACARS does not claim exact taxiway/runway names;
+        // it estimates runway intent, alignment and TDZ candidate from position, heading,
+        // speed, phase and touchdown evidence. Web/Supabase remains the scoring authority.
+        public string RunwayContextCode { get; set; } = "UNKNOWN";
+        public string RunwayContextName { get; set; } = string.Empty;
+        public string RunwayContextReason { get; set; } = string.Empty;
+        public string EstimatedRunwayIdent { get; set; } = string.Empty;
+        public string EstimatedRunwayReciprocalIdent { get; set; } = string.Empty;
+        public double EstimatedRunwayHeadingDeg { get; set; }
+        public double RunwayHeadingDeltaDeg { get; set; }
+        public bool RunwayAlignedCandidate { get; set; }
+        public bool RunwayEntryCandidate { get; set; }
+        public bool RunwayExitCandidate { get; set; }
+        public bool TakeoffRollCandidate { get; set; }
+        public bool LandingRollCandidate { get; set; }
+        public bool TouchdownZoneCandidate { get; set; }
+        public bool TaxiwayProbable { get; set; }
+        public bool RunwayGeometryAvailable { get; set; }
+        public bool RunwayContextReliable { get; set; }
+        public string RunwayContextVersion { get; set; } = "C10";
+
+        // C11A SimConnect Facilities bridge: raw discovery evidence only.
+        // This confirms whether MSFS facility APIs are available and whether ACARS
+        // receives airport/facility data. C11B/C11C will transform this into
+        // runway/taxiway/TDZ geometry. No client-side scoring is performed here.
+        public bool FacilityBridgeAvailable { get; set; }
+        public bool FacilityBridgeSubscribed { get; set; }
+        public bool FacilityDataReceived { get; set; }
+        public string FacilityDataSource { get; set; } = string.Empty;
+        public string FacilityBridgeStatus { get; set; } = string.Empty;
+        public string FacilityBridgeLastIcao { get; set; } = string.Empty;
+        public string FacilityBridgeLastRegion { get; set; } = string.Empty;
+        public int FacilityBridgeRecordsReceived { get; set; }
+        public int FacilityBridgeAirportCount { get; set; }
+        public string FacilityBridgeNearestAirports { get; set; } = string.Empty;
+        public string FacilityBridgeRequestedIcaos { get; set; } = string.Empty;
+        public string FacilityBridgeReceivedIcaos { get; set; } = string.Empty;
+        public string FacilityBridgePendingIcaos { get; set; } = string.Empty;
+        public int FacilityBridgeDirectRequestsSent { get; set; }
+        public int FacilityBridgeDataEndCount { get; set; }
+        public int FacilityBridgeExceptionCount { get; set; }
+        public string FacilityBridgeLastException { get; set; } = string.Empty;
+        public string FacilityBridgeLastRequestMode { get; set; } = string.Empty;
+        public bool FacilityBridgeAwaitingResponse { get; set; }
+        public double FacilityBridgeSecondsSinceRequest { get; set; }
+        public DateTime? FacilityBridgeLastRequestUtc { get; set; }
+        public DateTime? FacilityBridgeLastReceivedUtc { get; set; }
+        public string FacilityBridgeVersion { get; set; } = "C11B2";
+
+        // C11C Facilities runway geometry resolver: exact airport/runway geometry
+        // from SimConnect FacilityData. These fields are still raw evidence only;
+        // Web/Supabase remains the official scoring authority.
+        public bool FacilityRunwayGeometryAvailable { get; set; }
+        public string FacilityRunwayGeometryStatus { get; set; } = string.Empty;
+        public string FacilityNearestRunwayAirportIcao { get; set; } = string.Empty;
+        public string FacilityNearestRunwayIdent { get; set; } = string.Empty;
+        public string FacilityNearestRunwayReciprocalIdent { get; set; } = string.Empty;
+        public double FacilityNearestRunwayHeadingDeg { get; set; }
+        public double FacilityNearestRunwayLengthMeters { get; set; }
+        public double FacilityNearestRunwayWidthMeters { get; set; }
+        public double FacilityNearestRunwayDistanceMeters { get; set; }
+        public double FacilityRunwayLateralOffsetMeters { get; set; }
+        public double FacilityRunwayLongitudinalOffsetMeters { get; set; }
+        public double FacilityRunwayHeadingErrorDeg { get; set; }
+        public double FacilityRunwayDistanceFromThresholdMeters { get; set; }
+        public bool FacilityOnRunwayCandidate { get; set; }
+        public bool FacilityRunwayAlignedCandidate { get; set; }
+        public bool FacilityTouchdownZoneCandidate { get; set; }
+        public string FacilityRunwayGeometrySummary { get; set; } = string.Empty;
+        public int FacilityRunwayGeometryCount { get; set; }
+        public string FacilityRunwayGeometryVersion { get; set; } = "C11C";
+
+        // C11D Facilities taxiway/parking discovery: raw payload counters only.
+        // These fields expose MSFS taxi/parking evidence to UI/XML without changing scoring.
+        public string FacilityBridgeLastDataStatus { get; set; } = string.Empty;
+        public string FacilityBridgeDataTypeHistogram { get; set; } = string.Empty;
+        public string FacilityTaxiGeometryStatus { get; set; } = string.Empty;
+        public int FacilityTaxiParkingPayloadCount { get; set; }
+        public int FacilityTaxiPointPayloadCount { get; set; }
+        public int FacilityTaxiPathPayloadCount { get; set; }
+        public string FacilityTaxiGeometryVersion { get; set; } = "C11D2";
+
+        // C11D4 Facilities taxiway/parking geometry resolver: approximate MSFS
+        // airport-local taxi/parking geometry transformed into evidence fields.
+        // ACARS still records evidence only; Web/Supabase owns official scoring.
+        public bool FacilityTaxiGeometryAvailable { get; set; }
+        public string FacilityNearestTaxiAirportIcao { get; set; } = string.Empty;
+        public string FacilityNearestTaxiParkingLabel { get; set; } = string.Empty;
+        public double FacilityNearestTaxiParkingDistanceMeters { get; set; }
+        public double FacilityNearestTaxiPointDistanceMeters { get; set; }
+        public double FacilityNearestTaxiPathDistanceMeters { get; set; }
+        public bool FacilityGateAreaCandidate { get; set; }
+        public bool FacilityTaxiwayCandidate { get; set; }
+        public string FacilityTaxiGeometrySummary { get; set; } = string.Empty;
+        public int FacilityTaxiParkingGeometryCount { get; set; }
+        public int FacilityTaxiPointGeometryCount { get; set; }
+        public int FacilityTaxiPathGeometryCount { get; set; }
+
+        // C11D5 Surface procedure evidence. This is recorder evidence only;
+        // Web/Supabase owns the official score/reglaje.
+        public string SurfaceProcedurePhaseCode { get; set; } = string.Empty;
+        public string SurfaceProcedurePhaseName { get; set; } = string.Empty;
+        public string SurfaceProcedureEvidenceStatus { get; set; } = string.Empty;
+        public string SurfaceProcedureEvidenceSummary { get; set; } = string.Empty;
+        public string SurfaceProcedureEvidenceFlags { get; set; } = string.Empty;
+        public bool SurfaceProcedureTaxiLightExpected { get; set; }
+        public bool SurfaceProcedureStrobeExpected { get; set; }
+        public bool SurfaceProcedureLandingLightExpected { get; set; }
+        public bool SurfaceProcedureXpdrAltExpected { get; set; }
+        public bool SurfaceProcedureBeaconExpected { get; set; }
+        public bool SurfaceProcedureNavExpected { get; set; }
+        public string SurfaceProcedureEvidenceVersion { get; set; } = "C11D5";
 
         // Velocidad
         public double IndicatedAirspeed { get; set; }

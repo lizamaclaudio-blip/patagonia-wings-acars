@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Input;
@@ -11,6 +12,7 @@ using PatagoniaWings.Acars.Core.Enums;
 using PatagoniaWings.Acars.Core.Models;
 using PatagoniaWings.Acars.Core.Services;
 using PatagoniaWings.Acars.Master.Helpers;
+using PatagoniaWings.Acars.SimConnect;
 
 namespace PatagoniaWings.Acars.Master.ViewModels
 {
@@ -27,6 +29,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private bool _isAltitudeReliable;
         private string _altitudeSource = string.Empty;
         private string _surfaceContextDisplay = "Superficie: pendiente";
+        private string _runwayTdzDisplay = "C10 pista/TDZ: pendiente";
+        private string _facilityBridgeDisplay = "C11 bridge: pendiente";
+        private string _lastFacilityDirectRequestKey = string.Empty;
+        private DateTime _lastFacilityDirectRequestUtc = DateTime.MinValue;
         private string _surfaceContextCode = "UNKNOWN";
         private bool _runwayCandidate;
         private bool _taxiwayCandidate;
@@ -86,11 +92,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private int _picChecksDone;
         private int _picPenaltyPoints;
         private DateTime _lastPicCheckTime = DateTime.MinValue;
+        private DateTime _engineStopCoolingStartedUtc = DateTime.MinValue;
+        private bool _engineStopCooldownObserved;
+        private const int EngineCooldownRequiredSeconds = 60;
         private static readonly Random _picRandom = new Random();
         private static readonly double[] _picFrequencies = {
             118.000, 119.500, 121.700, 122.800, 125.000, 127.000, 128.300, 133.000, 135.000
         };
-        private const double PicFrequencyToleranceMhz = 0.015d; // Â±15 kHz para radios 25/8.33 kHz y redondeo SimConnect
+        private const double PicFrequencyToleranceMhz = 0.030d; // ±30 kHz: tolera radios 25/8.33 kHz, SPAD.next y redondeo SimConnect
         private double _flapsPercent;
         private bool _spoilersArmed;
         private bool _reverserActive;
@@ -133,10 +142,23 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _phasePrevalidationStatus = "PENDING";
         private string _phasePrevalidationSummary = string.Empty;
         private string _phasePrevalidationFlags = string.Empty;
+        private string _surfaceProcedureEvidenceDisplay = "C11E reglaje evidencia: pendiente";
         private string _routeStatusLabel = "Esperando inicio oficial";
         private double _routeProgressPercent;
         private const double RouteCanvasWidth = 320;
         private const double RoutePlaneVisualWidth = 20;
+        private static readonly IReadOnlyDictionary<string, (double Lat, double Lon)> KnownAirportCoordinates =
+            new Dictionary<string, (double Lat, double Lon)>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["SCEL"] = (-33.392975, -70.785803),
+                ["SCTB"] = (-33.456944, -70.546389),
+                ["SCIE"] = (-36.772650, -73.063100),
+                ["SCVD"] = (-39.650000, -73.086111),
+                ["SCQP"] = (-38.925900, -72.651500),
+                ["SCTE"] = (-41.438900, -73.094000),
+                ["SCJO"] = (-40.611200, -73.060300),
+                ["SCVM"] = (-32.949600, -71.478600),
+            };
 
         // Patagonia Wings 7.0.14 hotfix:
         // La UI/recorder de un vuelo activo no debe caer a Desconectado tras
@@ -144,6 +166,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         // o al cancelar explicitamente.
         private FlightPhase _lastValidActivePhase = FlightPhase.PreFlight;
         private bool _hasBeenAirborne;
+        private bool _engineStartCalloutPlayed;
 
         // â”€â”€ Pesos / comparaciÃ³n SimBrief vs Sim â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         private double _fuelAtEngineStartKg = -1; // -1 = no capturado aÃºn
@@ -523,6 +546,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public bool NoSmokingSign { get => _noSmokingSign; set { if (SetField(ref _noSmokingSign, value)) OnPropertyChanged(nameof(LiveNoSmokingSign)); } }
 
         public bool IsC208Family => _detectedProfileCode == "C208_MSFS" || _detectedProfileCode == "C208_BLACKSQUARE" || (!string.IsNullOrWhiteSpace(_aircraftTitle) && _aircraftTitle.ToUpperInvariant().Contains("CARAVAN"));
+        public bool IsFixedGearAircraft => IsFixedGearProfile(_detectedProfileCode, _aircraftTitle);
         public bool ShowGroundSpeedMetric => false;
         public bool ShowSeatbeltSystem => _supportsSeatbeltSystem;
         public bool ShowNoSmokingSystem => _supportsNoSmokingSystem;
@@ -837,6 +861,24 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             set => SetField(ref _surfaceContextDisplay, string.IsNullOrWhiteSpace(value) ? "Superficie: N/D" : value);
         }
 
+        public string RunwayTdzDisplay
+        {
+            get => _runwayTdzDisplay;
+            set => SetField(ref _runwayTdzDisplay, string.IsNullOrWhiteSpace(value) ? "C10 pista/TDZ: N/D" : value);
+        }
+
+        public string FacilityBridgeDisplay
+        {
+            get => _facilityBridgeDisplay;
+            set => SetField(ref _facilityBridgeDisplay, string.IsNullOrWhiteSpace(value) ? "C11 bridge: N/D" : value);
+        }
+
+        public string SurfaceProcedureEvidenceDisplay
+        {
+            get => _surfaceProcedureEvidenceDisplay;
+            set => SetField(ref _surfaceProcedureEvidenceDisplay, string.IsNullOrWhiteSpace(value) ? "C11E reglaje evidencia: N/D" : value);
+        }
+
         public string RouteStatusLabel
         {
             get => _routeStatusLabel;
@@ -888,6 +930,84 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         // â”€â”€ Propiedades de pesos (Plan SimBrief vs Actual Sim) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
         private PreparedDispatch? Dispatch => AcarsContext.Runtime.CurrentDispatch;
+
+        public string FlightNumber => FirstNonEmpty(
+            Dispatch?.FlightDesignator,
+            Dispatch?.FlightNumber,
+            Dispatch?.RouteCode,
+            AcarsContext.FlightService.CurrentFlight?.FlightNumber,
+            string.Empty);
+
+        public string AircraftRegistrationDisplay => FirstNonEmpty(
+            Dispatch?.AircraftRegistration,
+            AcarsContext.FlightService.CurrentFlight?.AircraftIcao,
+            DetectedProfileCode,
+            string.Empty);
+
+        public string FlightModeDisplayLabel
+        {
+            get
+            {
+                var mode = (Dispatch?.FlightMode ?? string.Empty).Trim().ToUpperInvariant();
+                switch (mode)
+                {
+                    case "CAREER":
+                    case "ITINERARY":
+                        return "Itinerario";
+                    case "CHARTER":
+                        return "Chárter";
+                    case "TRAINING":
+                        return "Entrenamiento";
+                    case "FREE_FLIGHT":
+                    case "FREE":
+                        return "Vuelo Libre";
+                    case "EVENT":
+                        return "Evento";
+                    case "CHECKRIDE":
+                        return "Checkride";
+                    case "ASSIGNMENT":
+                        return "Habilitación";
+                    case "TOUR":
+                        return "Tour";
+                }
+
+                if (mode.Contains("CHARTER")) return "Chárter";
+                if (mode.Contains("TRAIN")) return "Entrenamiento";
+                if (mode.Contains("ITINERARY")) return "Itinerario";
+                if (mode.Contains("MISSION")) return "Misión Especial";
+                return mode.Length > 0 ? mode : "Vuelo";
+            }
+        }
+
+        public bool IsOnlineFlightMode
+        {
+            get
+            {
+                var mode = (Dispatch?.FlightMode ?? string.Empty).Trim().ToUpperInvariant();
+                return mode.Contains("ONLINE")
+                    || mode.Contains("VATSIM")
+                    || mode.Contains("IVAO")
+                    || mode.Contains("NETWORK");
+            }
+        }
+
+        private static string FirstNonEmpty(params string?[] values)
+        {
+            if (values == null)
+            {
+                return string.Empty;
+            }
+
+            foreach (var value in values)
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    return value!.Trim();
+                }
+            }
+
+            return string.Empty;
+        }
 
         /// <summary>True cuando hay un despacho SimBrief activo con datos de combustible.</summary>
         public bool HasDispatchWeights => Dispatch != null && Dispatch.FuelPlannedKg > 0;
@@ -1137,17 +1257,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private double ComputeDistanceFromOriginNm()
         {
-            var plannedTotal = GetDispatchPlannedDistanceNm();
             if (TryGetRouteCoordinates(out var depLat, out var depLon, out _, out _)
                 && TryGetAircraftCoordinates(out var aircraftLat, out var aircraftLon))
             {
                 var geoFromOrigin = CalculateDistanceNm(depLat, depLon, aircraftLat, aircraftLon);
-                if (plannedTotal <= 0.1 || geoFromOrigin <= plannedTotal + 10.0)
-                {
-                    return Math.Max(0, geoFromOrigin);
-                }
+                return Math.Max(0, geoFromOrigin);
             }
 
+            var plannedTotal = GetDispatchPlannedDistanceNm();
             var flown = Math.Max(0, AcarsContext.FlightService.TotalDistanceNm);
             return plannedTotal > 0.1 ? Math.Min(flown, plannedTotal) : flown;
         }
@@ -1258,8 +1375,55 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 }
             }
 
+            if (TryResolveAirportIcao(prefixes, out var icao)
+                && TryResolveKnownAirportCoordinate(icao, out latitude, out longitude))
+            {
+                return true;
+            }
+
             latitude = longitude = 0;
             return false;
+        }
+
+        private bool TryResolveAirportIcao(string[] prefixes, out string icao)
+        {
+            icao = string.Empty;
+            foreach (var source in new object?[] { AcarsContext.FlightService.CurrentFlight, AcarsContext.Runtime.CurrentDispatch })
+            {
+                if (source == null) continue;
+
+                foreach (var prefix in prefixes)
+                {
+                    if (prefix.Equals("Departure", StringComparison.OrdinalIgnoreCase) || prefix.Equals("Origin", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (TryReadString(source, "DepartureIcao", out icao) || TryReadString(source, "OriginIcao", out icao))
+                        {
+                            icao = NormalizeIcao(icao);
+                            if (!string.IsNullOrWhiteSpace(icao)) return true;
+                        }
+                    }
+                    else if (prefix.Equals("Arrival", StringComparison.OrdinalIgnoreCase) || prefix.Equals("Destination", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (TryReadString(source, "ArrivalIcao", out icao) || TryReadString(source, "DestinationIcao", out icao))
+                        {
+                            icao = NormalizeIcao(icao);
+                            if (!string.IsNullOrWhiteSpace(icao)) return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryResolveKnownAirportCoordinate(string icao, out double latitude, out double longitude)
+        {
+            latitude = longitude = 0;
+            if (string.IsNullOrWhiteSpace(icao)) return false;
+            if (!KnownAirportCoordinates.TryGetValue(icao.Trim().ToUpperInvariant(), out var point)) return false;
+            latitude = point.Lat;
+            longitude = point.Lon;
+            return IsValidCoordinate(latitude, longitude);
         }
 
         private static bool TryReadCoordinatePair(object source, string prefix, out double latitude, out double longitude)
@@ -1321,6 +1485,25 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
+        private static bool TryReadString(object source, string propertyName, out string value)
+        {
+            value = string.Empty;
+            var property = source.GetType().GetProperty(propertyName);
+            if (property == null)
+            {
+                return false;
+            }
+
+            var raw = property.GetValue(source);
+            if (raw == null)
+            {
+                return false;
+            }
+
+            value = Convert.ToString(raw)?.Trim() ?? string.Empty;
+            return !string.IsNullOrWhiteSpace(value);
+        }
+
         private static bool IsValidCoordinate(double latitude, double longitude)
         {
             return latitude >= -90 && latitude <= 90
@@ -1366,15 +1549,78 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             };
         }
 
+        private void RequestFacilityDataForCurrentRoute()
+        {
+            try
+            {
+                var requestedIcaos = new List<string>();
+
+                AddFacilityRequestIcao(requestedIcaos, AcarsContext.FlightService.CurrentFlight?.DepartureIcao);
+                AddFacilityRequestIcao(requestedIcaos, AcarsContext.FlightService.CurrentFlight?.ArrivalIcao);
+
+                // C11D3: include SimBrief/dispatch alternate from the beginning.
+                // If the pilot diverts to the planned alternate, ACARS already has
+                // runway/taxi/parking facility evidence ready without waiting for
+                // a new long request during approach.
+                AddFacilityRequestIcao(requestedIcaos, AcarsContext.Runtime.CurrentDispatch?.AlternateIcao);
+
+                // Dispatch current airport is useful before start, especially when
+                // the web dispatch differs from the legacy CurrentFlight snapshot.
+                AddFacilityRequestIcao(requestedIcaos, AcarsContext.Runtime.CurrentDispatch?.CurrentAirportCode);
+
+                if (requestedIcaos.Count == 0)
+                    return;
+
+                var key = string.Join(">", requestedIcaos);
+                if (string.Equals(_lastFacilityDirectRequestKey, key, StringComparison.OrdinalIgnoreCase) &&
+                    (DateTime.UtcNow - _lastFacilityDirectRequestUtc).TotalSeconds < 30)
+                    return;
+
+                _lastFacilityDirectRequestKey = key;
+                _lastFacilityDirectRequestUtc = DateTime.UtcNow;
+                SimConnectService.RequestAirportFacilitiesForActive(requestedIcaos.ToArray());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[C11D3 Facilities] route/alternate direct request skipped: " + ex.Message);
+            }
+        }
+
+        private static void AddFacilityRequestIcao(List<string> target, string? value)
+        {
+            if (target == null) return;
+
+            var icao = NormalizeIcao(value);
+            if (icao == "----") return;
+
+            var alreadyExists = false;
+            foreach (var existing in target)
+            {
+                if (string.Equals(existing, icao, StringComparison.OrdinalIgnoreCase))
+                {
+                    alreadyExists = true;
+                    break;
+                }
+            }
+
+            if (!alreadyExists)
+                target.Add(icao);
+        }
+
         private void RefreshRouteSnapshot(SimData? data = null)
         {
             var flight = AcarsContext.FlightService.CurrentFlight;
             _routeOrigin = NormalizeIcao(flight?.DepartureIcao);
             _routeDestination = NormalizeIcao(flight?.ArrivalIcao);
+            RequestFacilityDataForCurrentRoute();
             OfficialPhaseCode = GetOfficialPhaseCode(Phase, data);
             RouteProgressPercent = ComputeRouteProgressPercent();
             RouteStatusLabel = BuildRouteStatusLabel();
 
+            OnPropertyChanged(nameof(FlightNumber));
+            OnPropertyChanged(nameof(AircraftRegistrationDisplay));
+            OnPropertyChanged(nameof(FlightModeDisplayLabel));
+            OnPropertyChanged(nameof(IsOnlineFlightMode));
             OnPropertyChanged(nameof(RouteOrigin));
             OnPropertyChanged(nameof(RouteDestination));
             OnPropertyChanged(nameof(RouteDisplay));
@@ -1506,6 +1752,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand ConnectXPlaneCommand { get; }
         public ICommand DisconnectSimCommand { get; }
         public ICommand FinishFlightCommand { get; }
+        public ICommand ExportEvidenceCommand { get; }
         public ICommand CancelFlightCommand { get; }
         public ICommand ConfirmPicCommand { get; }
 
@@ -1528,7 +1775,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 if (_picConfirmed && !_picCheckActive)
                     return $"âœ“  PIC OK â€” {(_lastPicMatchedRadio == string.Empty ? "radio" : _lastPicMatchedRadio)}: {_picFrequency:F3}";
                 if (_picCheckActive)
-                    return $"Sintonice COM2: {_picFrequency:F3}  actual {_com2FrequencyMhz:F3} [{_picSecondsLeft}s]";
+                    return $"Sintonice COM2: {_picFrequency:F3}  activo {_com2FrequencyMhz:F3} / standby {_com2StandbyFrequencyMhz:F3} [{_picSecondsLeft}s]";
                 if (_picChecksTotal == 0)
                     return "Verificacion PIC activa en crucero";
                 return $"Vuelo en curso | checks: {_picChecksDone}/{_picChecksTotal}";
@@ -1540,7 +1787,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             get
             {
-                return AcarsContext.FlightService.IsFlightActive && IsManualCloseoutGateReady(out _);
+                return AcarsContext.FlightService.IsFlightActive;
             }
         }
 
@@ -1550,7 +1797,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             private set => SetField(ref _manualCloseoutStatus, value);
         }
 
-        public string FinishFlightButtonText => CanManualCloseout ? "FINALIZAR EN GATE" : "CIERRE EN GATE";
+        public string FinishFlightButtonText => "FINALIZAR VUELO";
 
         private readonly System.Windows.Threading.DispatcherTimer _elapsedTimer;
 
@@ -1560,7 +1807,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             ConnectMsfsCommand = new RelayCommand(() => _main.NavigateToSimulatorConnect());
             ConnectXPlaneCommand = new RelayCommand(() => _main.NavigateToSimulatorConnect());
             DisconnectSimCommand = new RelayCommand(() => { });
-            FinishFlightCommand = new RelayCommand(() => { RefreshManualCloseoutState(); if (CanManualCloseout) FinishFlight(); }, () => CanManualCloseout);
+            FinishFlightCommand = new RelayCommand(() => { RefreshManualCloseoutState(); FinishFlight(); }, () => true);
+            ExportEvidenceCommand = new RelayCommand(() => ExportCurrentEvidence(), () => AcarsContext.FlightService.IsFlightActive);
             CancelFlightCommand = new RelayCommand(() => CancelFlight(), () => AcarsContext.FlightService.IsFlightActive);
             ConfirmPicCommand = new RelayCommand(
                 () => { },
@@ -1601,6 +1849,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private void OnFlightOfficiallyStarted()
         {
+            _engineStopCoolingStartedUtc = DateTime.MinValue;
+            _engineStopCooldownObserved = false;
             System.Windows.Application.Current?.Dispatcher?.Invoke(() => StartElapsedTimer());
         }
 
@@ -1686,6 +1936,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             OnPropertyChanged(nameof(RouteDistanceDisplay));
             OnPropertyChanged(nameof(RouteDistanceSourceDisplay));
             OnPropertyChanged(nameof(SurfaceContextDisplay));
+            OnPropertyChanged(nameof(RunwayTdzDisplay));
 
             UpdatePirepPreview();
             RefreshRouteSnapshot();
@@ -1720,6 +1971,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     _detectedProfileCode = data.DetectedProfileCode;
                     OnPropertyChanged(nameof(DetectedProfileCode));
                     OnPropertyChanged(nameof(DetectedDisplayName));
+                    OnPropertyChanged(nameof(IsFixedGearAircraft));
+                    OnPropertyChanged(nameof(GearDown));
+                    OnPropertyChanged(nameof(AircraftRegistrationDisplay));
                 }
                 AircraftTitle = data.AircraftTitle;
                 Altitude    = data.AltitudeMslFeet > 0 ? data.AltitudeMslFeet : data.AltitudeFeet;
@@ -1748,6 +2002,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 TaxiwayCandidate = data.TaxiwayCandidate;
                 GateAreaCandidate = data.GateAreaCandidate;
                 SurfaceContextDisplay = BuildSurfaceContextDisplay(data);
+                RunwayTdzDisplay = BuildRunwayTdzDisplay(data);
+                SurfaceProcedureEvidenceDisplay = BuildSurfaceProcedureEvidenceDisplay(data);
+                RefreshSurfaceAwarePhaseLabel(data);
+                FacilityBridgeDisplay = BuildFacilityBridgeDisplay(data);
                 IAS = data.IndicatedAirspeed;
                 GS = data.GroundSpeed;
                 VS = data.VerticalSpeed;
@@ -1799,8 +2057,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 Debug.WriteLine($"[InFlightVM] Luces - STROBE:{data.StrobeLightsOn} BEACON:{data.BeaconLightsOn} LANDING:{data.LandingLightsOn} TAXI:{data.TaxiLightsOn} NAV:{data.NavLightsOn}");
                 SeatBeltSign = data.SeatBeltSign;
                 NoSmokingSign = data.NoSmokingSign;
-                GearDown = data.GearDown;
-                GearTransitioning = data.GearTransitioning;
+                var fixedGearAircraft = IsFixedGearProfile(data.DetectedProfileCode, data.AircraftTitle);
+                GearDown = fixedGearAircraft || data.GearDown;
+                GearTransitioning = fixedGearAircraft ? false : data.GearTransitioning;
                 FlapsPercent = Math.Round(data.FlapsPercent, 0);
                 SpoilersArmed = data.SpoilersArmed;
                 ReverserActive = data.ReverserActive;
@@ -1810,6 +2069,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 Debug.WriteLine($"[InFlightVM] XPDR state:{data.TransponderStateRaw} squawk:{data.TransponderCode} mode:{TransponderModeDisplay}");
                 ApuRunning = data.ApuRunning;
                 ApuAvailable = data.ApuAvailable;
+                UpdateEngineCooldownState(data);
                 BleedAirOn = data.BleedAirOn;
                 CabinAlt = Math.Round(data.CabinAltitudeFeet, 0);
                 PressDiff = Math.Round(data.PressureDiffPsi, 2);
@@ -1838,6 +2098,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 LogLightEvent("LANDING", _prevLandingOn, data.LandingLightsOn, data.OnGround);
                 LogLightEvent("TAXI",    _prevTaxiOn,    data.TaxiLightsOn,    data.OnGround);
                 LogLightEvent("NAV",     _prevNavOn,     data.NavLightsOn,     data.OnGround);
+
+                // C11D7: el aviso ground "Encendido de motores" no debe dispararse en despegue.
+                // Se adelanta al primer BEACON ON en tierra, que es la señal operacional real de inicio/start sequence.
+                if (!_engineStartCalloutPlayed && !_prevBeaconOn && data.BeaconLightsOn && data.OnGround && !data.HasBeenAirborne)
+                {
+                    _engineStartCalloutPlayed = true;
+                    _ = AcarsContext.Sound.PlayGroundEnginesAsync();
+                }
+
                 if (_prevApOn != data.AutopilotActive)
                     _eventLog.Add($"{PhaseLabel}: AP {(data.AutopilotActive ? "ENGAG." : "DESCONECT.")}");
                 if (ShowSeatbeltSystem && _prevSeatBelt != data.SeatBeltSign)
@@ -1936,7 +2205,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             _elapsedTimer.Stop();
             ElapsedTime = "00:00:00";
             _eventLog.Clear();
-            _prevBeaconOn = _prevStrobeOn = _prevLandingOn = _prevTaxiOn = _prevNavOn = _prevApOn = _prevSeatBelt = false;
+            _prevBeaconOn = _prevStrobeOn = _prevLandingOn = _prevNavOn = _prevApOn = _prevSeatBelt = false;
+            _engineStartCalloutPlayed = false;
             _eng1Started = _eng2Started = _eng3Started = _eng4Started = false;
             _engineStartOrder.Clear();
             RefreshRouteSnapshot();
@@ -2143,7 +2413,6 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                         if (_startTime == default(DateTime)) StartElapsedTimer();
                         break;
                     case FlightPhase.Takeoff:
-                        _ = AcarsContext.Sound.PlayGroundEnginesAsync();
                         if (_startTime == default(DateTime)) StartElapsedTimer();
                         break;
                     case FlightPhase.Cruise:
@@ -2168,7 +2437,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         {
             var ready = IsManualCloseoutGateReady(out var reason);
             ManualCloseoutStatus = ready
-                ? "Listo para cierre manual: gate/destino, freno parking, motores OFF y Cold & Dark confirmado."
+                ? "Listo para cierre manual: gate/destino, freno parking, motores OFF, cooldown 60s, APU OFF y luces de llegada correctas."
                 : reason;
             OnPropertyChanged(nameof(CanManualCloseout));
             OnPropertyChanged(nameof(FinishFlightButtonText));
@@ -2177,7 +2446,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private bool IsManualCloseoutGateReady(out string reason)
         {
-            reason = "Cierre manual: aterrice, llegue a gate, freno parking, motores OFF y Cold & Dark.";
+            reason = "Cierre manual: aterrice, llegue a gate, freno parking, motores OFF, cooldown 60s, APU OFF, XPDR 2000/STBY y luces correctas.";
 
             if (!AcarsContext.FlightService.IsFlightActive)
             {
@@ -2237,16 +2506,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 return false;
             }
 
-            var maxN1 = Math.Max(Math.Max(N1Eng1, N1Eng2), Math.Max(_n1Eng3, _n1Eng4));
-            if (maxN1 > 5)
+            if (AreAnyEnginesRunningForCloseout(liveSample))
             {
-                reason = $"Cierre bloqueado: motores encendidos/N1 {maxN1:F0}%. Apague motores.";
+                reason = "Cierre bloqueado: motores encendidos. Apague motores.";
                 return false;
             }
 
-            if (!IsColdAndDarkForCloseout())
+            if (!IsArrivalShutdownReadyForCloseout(liveSample, out var shutdownReason))
             {
-                reason = BuildColdAndDarkCloseoutReason();
+                reason = shutdownReason;
                 return false;
             }
 
@@ -2307,42 +2575,101 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 && liveSample.ParkingBrake;
         }
 
+        private void UpdateEngineCooldownState(SimData sample)
+        {
+            if (sample == null) return;
+
+            var anyEngineRunning = AreAnyEnginesRunningForCloseout(sample);
+
+            if (anyEngineRunning)
+            {
+                _engineStopCoolingStartedUtc = DateTime.MinValue;
+                _engineStopCooldownObserved = false;
+                return;
+            }
+
+            if (_engineStopCoolingStartedUtc == DateTime.MinValue)
+            {
+                _engineStopCoolingStartedUtc = DateTime.UtcNow;
+                _engineStopCooldownObserved = false;
+                return;
+            }
+
+            if ((DateTime.UtcNow - _engineStopCoolingStartedUtc).TotalSeconds >= EngineCooldownRequiredSeconds)
+            {
+                _engineStopCooldownObserved = true;
+            }
+        }
+
+        private bool IsArrivalShutdownReadyForCloseout(SimData liveSample, out string reason)
+        {
+            reason = string.Empty;
+            if (AreAnyEnginesRunningForCloseout(liveSample))
+            {
+                reason = "Cierre bloqueado: motores encendidos. Apague motores.";
+                return false;
+            }
+
+            if (!_engineStopCooldownObserved)
+            {
+                var elapsed = _engineStopCoolingStartedUtc == DateTime.MinValue ? 0 : (int)Math.Max(0, (DateTime.UtcNow - _engineStopCoolingStartedUtc).TotalSeconds);
+                var remaining = Math.Max(0, EngineCooldownRequiredSeconds - elapsed);
+                reason = $"Cierre bloqueado: espere cooldown de motores {remaining}s antes de cerrar.";
+                return false;
+            }
+
+            if (ApuRunning || (liveSample != null && liveSample.ApuRunning))
+            {
+                reason = "Cierre bloqueado: APU debe estar OFF para cierre final.";
+                return false;
+            }
+
+            // C18: cierre realista. NAV puede quedar ON; no exigir avion totalmente cold & dark.
+            if (BeaconOn || StrobeOn || LandingOn || TaxiOn)
+            {
+                reason = "Cierre bloqueado: deje OFF beacon/strobe/landing/taxi. NAV puede quedar ON.";
+                return false;
+            }
+
+            if (_supportsDoorSystem && !DoorOpen)
+            {
+                reason = "Cierre bloqueado: abra puerta principal/cabina si la aeronave reporta puertas.";
+                return false;
+            }
+
+            if (_supportsTransponderSystem)
+            {
+                var xpdrStateOk = TransponderStateRaw <= 1;
+                var xpdrCodeOk = Squawk == 2000;
+                if (!xpdrStateOk || !xpdrCodeOk)
+                {
+                    reason = $"Cierre bloqueado: deje XPDR 2000 y STBY/OFF. Actual {Squawk}/{TransponderModeDisplay}.";
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool AreAnyEnginesRunningForCloseout(SimData sample)
+        {
+            if (sample == null) return false;
+            return sample.EngineOneRunning
+                   || sample.EngineTwoRunning
+                   || sample.EngineThreeRunning
+                   || sample.EngineFourRunning;
+        }
+
         private bool IsColdAndDarkForCloseout()
         {
-            var profileCode = (_detectedProfileCode ?? string.Empty).ToUpperInvariant();
-            var title = (AircraftTitle ?? string.Empty).ToUpperInvariant();
-            var isBlackSquareC208 = IsBlackSquareC208OrCaravan(profileCode, title);
-
-            var lightsOff = !NavOn && !BeaconOn && !StrobeOn && !LandingOn && !TaxiOn;
-
-            // C208 Black Square: no usar battery/avionics/main bus para C&D.
-            // El addon puede mantener HOT BATTERY BUS y simvars nativas vivas aunque el cockpit este apagado.
-            // Motores OFF se valida antes; aqui se exige luces exteriores OFF.
-            var electricalOff = isBlackSquareC208
-                ? true
-                : (!_batteryMasterOn && !_avionicsMasterOn);
-
-            return lightsOff && electricalOff;
+            return IsArrivalShutdownReadyForCloseout(AcarsContext.Runtime.LastTelemetry, out _);
         }
 
         private string BuildColdAndDarkCloseoutReason()
         {
-            var parts = new System.Collections.Generic.List<string>();
-            if (NavOn || BeaconOn || StrobeOn || LandingOn || TaxiOn)
-                parts.Add("luces ON");
-            var profileCode = (_detectedProfileCode ?? string.Empty).ToUpperInvariant();
-            var title = (AircraftTitle ?? string.Empty).ToUpperInvariant();
-            var isBlackSquareC208 = IsBlackSquareC208OrCaravan(profileCode, title);
-
-            if (!isBlackSquareC208 && _batteryMasterOn)
-                parts.Add("bateria ON");
-            if (!isBlackSquareC208 && _avionicsMasterOn)
-                parts.Add("avionica ON");
-            if (!isBlackSquareC208 && _electricalMainBusVoltage >= 3.0)
-                parts.Add($"bus electrico {_electricalMainBusVoltage:F1}V");
-
-            var detail = parts.Count == 0 ? "energia/luces aun no confirman Cold & Dark" : string.Join(", ", parts);
-            return "Cierre bloqueado: debe quedar Cold & Dark nuevamente (" + detail + ").";
+            return IsArrivalShutdownReadyForCloseout(AcarsContext.Runtime.LastTelemetry, out var reason)
+                ? string.Empty
+                : reason;
         }
 
         private bool IsAtDestinationOrGateArea()
@@ -2357,21 +2684,172 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             return OnGround && GS <= 3 && ParkingBrakeOn;
         }
 
-        private void FinishFlight()
+
+        private void ExportCurrentEvidence()
         {
-            if (!IsManualCloseoutGateReady(out var closeoutBlockReason))
+            try
             {
-                RefreshManualCloseoutState();
+                var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
+                var dispatch = Dispatch ?? new PreparedDispatch();
+                var flight = AcarsContext.FlightService.CurrentFlight;
+
+                if (flight != null)
+                {
+                    if (string.IsNullOrWhiteSpace(dispatch.FlightDesignator)) dispatch.FlightDesignator = flight.FlightNumber;
+                    if (string.IsNullOrWhiteSpace(dispatch.DepartureIcao)) dispatch.DepartureIcao = flight.DepartureIcao;
+                    if (string.IsNullOrWhiteSpace(dispatch.ArrivalIcao)) dispatch.ArrivalIcao = flight.ArrivalIcao;
+                    if (string.IsNullOrWhiteSpace(dispatch.AircraftIcao)) dispatch.AircraftIcao = flight.AircraftIcao;
+                    if (string.IsNullOrWhiteSpace(dispatch.AircraftDisplayName)) dispatch.AircraftDisplayName = flight.AircraftName;
+                    if (string.IsNullOrWhiteSpace(dispatch.ReservationId)) dispatch.ReservationId = flight.ReservationId;
+                }
+
+                if (pilot == null)
+                {
+                    MessageBox.Show("No hay piloto autenticado para exportar evidencia.", "Exportar evidencia", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                if (flight == null)
+                {
+                    MessageBox.Show("No hay vuelo activo para exportar evidencia.", "Exportar evidencia", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+
+                var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
+                report.ResultStatus = "diagnostic_export";
+                report.ManualCloseoutConfirmed = false;
+                report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
+                    ? "Export diagnostico local C14A: vuelo activo no cerrado. ACARS caja negra, XML solo para revision."
+                    : report.Remarks + " | Export diagnostico local C14A: vuelo activo no cerrado.";
+                ApplyPicSummaryToReport(report);
+
+                var telemetry = AcarsContext.FlightService.GetTelemetrySnapshot();
+                var builder = new PirepXmlBuilder();
+                var xml = builder.Build(dispatch, pilot, report, flight, telemetry);
+
+                var safeFlight = MakeFileNameSafe(string.IsNullOrWhiteSpace(report.FlightNumber) ? "PWG" : report.FlightNumber);
+                var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmmss", System.Globalization.CultureInfo.InvariantCulture);
+                var baseDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
+                    "PatagoniaWings_ACARS_Evidence",
+                    safeFlight + "_" + stamp);
+                Directory.CreateDirectory(baseDir);
+
+                var xmlPath = Path.Combine(baseDir, xml.FileName);
+                File.WriteAllText(xmlPath, xml.XmlContent, Encoding.UTF8);
+
+                var statePath = Path.Combine(baseDir, safeFlight + "_estado_cierre.txt");
+                File.WriteAllText(statePath, BuildEvidenceStateText(report, telemetry, xml), Encoding.UTF8);
+
+                var telemetryPath = Path.Combine(baseDir, safeFlight + "_telemetry_tail.csv");
+                File.WriteAllText(telemetryPath, BuildTelemetryTailCsv(telemetry), Encoding.UTF8);
+
                 MessageBox.Show(
-                    closeoutBlockReason + "\n\nEl cierre de vuelo es manual y solo se habilita al quedar detenido en gate con motores apagados y Cold & Dark.",
-                    "Cierre de vuelo bloqueado",
+                    "Evidencia local exportada.\n\n" + baseDir + "\n\nSube esta carpeta ZIP para revisar XML, estado de cierre y telemetria.",
+                    "Exportar evidencia ACARS",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
-                return;
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show("No se pudo exportar evidencia local.\n\n" + ex.Message, "Exportar evidencia ACARS", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private static string MakeFileNameSafe(string value)
+        {
+            var text = string.IsNullOrWhiteSpace(value) ? "PWG" : value.Trim();
+            foreach (var ch in Path.GetInvalidFileNameChars())
+                text = text.Replace(ch, '_');
+            return text;
+        }
+
+        private string BuildEvidenceStateText(FlightReport report, IReadOnlyList<SimData> telemetry, PirepXmlBuilder.BuildResult xml)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("Patagonia Wings ACARS - Export diagnostico local C14A");
+            sb.AppendLine("No cierra reserva, no envia PIREP, no modifica wallet/salary/ledger.");
+            sb.AppendLine("GeneratedUtc=" + DateTime.UtcNow.ToString("o"));
+            sb.AppendLine("XmlFile=" + xml.FileName);
+            sb.AppendLine("XmlSha256=" + xml.ChecksumSha256);
+            sb.AppendLine("FlightNumber=" + (report.FlightNumber ?? string.Empty));
+            sb.AppendLine("ResultStatus=" + (report.ResultStatus ?? string.Empty));
+            sb.AppendLine("PhaseLabel=" + PhaseLabelDisplay);
+            sb.AppendLine("OfficialPhaseCode=" + _officialPhaseCode);
+            sb.AppendLine("ManualCloseoutReady=" + CanManualCloseout);
+            sb.AppendLine("ManualCloseoutStatus=" + ManualCloseoutStatus);
+            sb.AppendLine("SurfaceEvidence=" + SurfaceProcedureEvidenceDisplay);
+            sb.AppendLine("RunwayTdz=" + RunwayTdzDisplay);
+            sb.AppendLine("FacilityBridge=" + FacilityBridgeDisplay);
+            sb.AppendLine("PhaseAudit=" + PhaseAuditDisplay);
+            sb.AppendLine("PhaseChecklist=" + PhaseChecklistDisplay);
+            sb.AppendLine("PhasePrevalidation=" + PhasePrevalidationDisplay);
+            sb.AppendLine("TelemetrySamples=" + (telemetry == null ? 0 : telemetry.Count));
+            sb.AppendLine("Lat=" + Lat.ToString("F6", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("Lon=" + Lon.ToString("F6", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("ALT=" + Altitude.ToString("F0", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("AGL=" + AltitudeAGL.ToString("F0", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("GS=" + GS.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("VS=" + VS.ToString("F0", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("Heading=" + Heading.ToString("F0", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("ParkingBrake=" + ParkingBrakeOn);
+            sb.AppendLine("OnGround=" + OnGround);
+            sb.AppendLine("DoorOpen=" + DoorOpen);
+            sb.AppendLine("N1Eng1=" + N1Eng1.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("N1Eng2=" + N1Eng2.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine("APU=" + ApuRunning);
+            sb.AppendLine("Lights NAV=" + NavOn + " BCN=" + BeaconOn + " STB=" + StrobeOn + " TAXI=" + TaxiOn + " LAND=" + LandingOn);
+            sb.AppendLine("XPDR raw=" + _transponderStateRaw + " squawk=" + _squawk);
+            sb.AppendLine("PIC active=" + _picCheckActive + " done=" + _picChecksDone + "/" + _picChecksTotal + " penalty=" + _picPenaltyPoints + " COM2=" + _com2FrequencyMhz.ToString("F3", System.Globalization.CultureInfo.InvariantCulture) + " requested=" + _picFrequency.ToString("F3", System.Globalization.CultureInfo.InvariantCulture));
+            sb.AppendLine();
+            sb.AppendLine("PirepPreview:");
+            sb.AppendLine(PirepPreview ?? string.Empty);
+            return sb.ToString();
+        }
+
+        private static string BuildTelemetryTailCsv(IReadOnlyList<SimData> telemetry)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("CapturedAtUtc,PhaseCode,Lat,Lon,Alt,Agl,GS,VS,Heading,OnGround,ParkingBrake,Nav,Beacon,Strobe,Taxi,Landing,XPDR,Squawk,N1_1,N1_2,DoorOpen,ApuRunning,RunwayIcao,RunwayIdent,SurfaceCode");
+            if (telemetry == null || telemetry.Count == 0) return sb.ToString();
+            var start = Math.Max(0, telemetry.Count - 240);
+            for (int i = start; i < telemetry.Count; i++)
+            {
+                var s = telemetry[i];
+                sb.AppendLine(string.Join(",", new string[]
+                {
+                    s.CapturedAtUtc.ToString("o"),
+                    Csv(s.OperationalPhaseCode),
+                    F(s.Latitude), F(s.Longitude), F(s.AltitudeFeet), F(s.AltitudeAGL), F(s.GroundSpeed), F(s.VerticalSpeed), F(s.Heading),
+                    s.OnGround.ToString(), s.ParkingBrake.ToString(), s.NavLightsOn.ToString(), s.BeaconLightsOn.ToString(), s.StrobeLightsOn.ToString(), s.TaxiLightsOn.ToString(), s.LandingLightsOn.ToString(),
+                    s.TransponderStateRaw.ToString(System.Globalization.CultureInfo.InvariantCulture), s.TransponderCode.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    F(s.Engine1N1), F(s.Engine2N1), s.DoorOpen.ToString(), s.ApuRunning.ToString(),
+                    Csv(s.FacilityNearestRunwayAirportIcao), Csv(s.FacilityNearestRunwayIdent), Csv(s.SurfaceContextCode)
+                }));
+            }
+            return sb.ToString();
+        }
+
+        private static string F(double value)
+        {
+            return value.ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+        }
+
+        private static string Csv(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return string.Empty;
+            var v = value.Replace("\"", "\"\"");
+            return "\"" + v + "\"";
+        }
+
+        private void FinishFlight()
+        {
+            var atGateReady = IsManualCloseoutGateReady(out var closeoutBlockReason);
 
             var confirm = MessageBox.Show(
-                "Cerrar vuelo ahora?\n\nConfirme solo si esta en gate/destino, freno de estacionamiento activado, motores apagados y aeronave Cold & Dark.",
+                atGateReady
+                    ? "Cerrar vuelo ahora?\n\nConfirme solo si esta en gate/destino, freno de estacionamiento activado, motores apagados y aeronave Cold & Dark."
+                    : "Finalizar vuelo fuera de gate.\n\nSe cerrara con el estado actual y NO se movera piloto/aeronave a destino.\n\nMotivo actual: " + closeoutBlockReason + "\n\n¿Desea continuar?",
                 "Confirmar cierre manual",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
@@ -2380,8 +2858,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             var pilot = AcarsContext.Runtime.CurrentPilot ?? AcarsContext.Auth.CurrentPilot;
             if (pilot == null) return;
             var report = AcarsContext.FlightService.GenerateReport(pilot.CallSign);
-            report.ResultStatus = "completed";
+            report.ResultStatus = atGateReady ? "completed" : "cancelled";
             report.ManualCloseoutConfirmed = true;
+            if (!atGateReady)
+            {
+                report.Remarks = string.IsNullOrWhiteSpace(report.Remarks)
+                    ? "Finalizado manual fuera de gate: conserva origen para piloto/aeronave."
+                    : report.Remarks + " | Finalizado manual fuera de gate: conserva origen para piloto/aeronave.";
+            }
             if (_picCheckActive)
                 CompletePicCheck(false);
             ApplyPicSummaryToReport(report);
@@ -2463,7 +2947,15 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             if (FrequencyMatches(_com2FrequencyMhz, _picFrequency))
             {
-                matchedRadio = "COM2";
+                matchedRadio = "COM2 ACTIVE";
+                return true;
+            }
+
+            // C17: many hardware panels/SPAD.next workflows tune COM2 standby first.
+            // Accept COM2 standby as PIC evidence too; COM1 never satisfies PIC.
+            if (FrequencyMatches(_com2StandbyFrequencyMhz, _picFrequency))
+            {
+                matchedRadio = "COM2 STBY";
                 return true;
             }
 
@@ -2472,7 +2964,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
         private static bool FrequencyMatches(double actual, double required)
         {
-            return actual > 100d && required > 100d && Math.Abs(actual - required) <= PicFrequencyToleranceMhz;
+            return actual >= 118d && actual <= 137d && required >= 118d && required <= 137d && Math.Abs(actual - required) <= PicFrequencyToleranceMhz;
         }
 
         private void ApplyPicSummaryToReport(FlightReport report)
@@ -2518,7 +3010,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             _picSecondsLeft--;
             OnPropertyChanged(nameof(PicCheckLabel));
             OnPropertyChanged(nameof(PicButtonLabel));
-            RadioAcarsMessage = $"PIC CHECK #{_picChecksDone + 1}/{_picChecksTotal} - COM2 requerida: {_picFrequency:F3} MHz | actual: {_com2FrequencyMhz:F3} MHz ({_picSecondsLeft}s)";
+            RadioAcarsMessage = $"PIC CHECK #{_picChecksDone + 1}/{_picChecksTotal} - COM2 requerida: {_picFrequency:F3} MHz | activo {_com2FrequencyMhz:F3} / standby {_com2StandbyFrequencyMhz:F3} MHz ({_picSecondsLeft}s)";
 
             if (_picSecondsLeft <= 0)
                 CompletePicCheck(false);
@@ -2581,6 +3073,217 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 : string.Empty;
 
             return $"C9 superficie: {code} · {name}{suffix} · {reason}";
+        }
+
+        private static string BuildRunwayTdzDisplay(SimData data)
+        {
+            if (data == null)
+            {
+                return "C10 pista/TDZ: N/D";
+            }
+
+            var code = string.IsNullOrWhiteSpace(data.RunwayContextCode) ? "UNKNOWN" : data.RunwayContextCode.Trim();
+            var name = string.IsNullOrWhiteSpace(data.RunwayContextName) ? "Contexto pista/rodaje no determinado" : data.RunwayContextName.Trim();
+            var reason = string.IsNullOrWhiteSpace(data.RunwayContextReason) ? "sin evidencia suficiente" : data.RunwayContextReason.Trim();
+            var runway = string.IsNullOrWhiteSpace(data.EstimatedRunwayIdent) ? "RWY N/D" : "RWY " + data.EstimatedRunwayIdent;
+
+            var flags = new List<string>();
+            if (data.RunwayAlignedCandidate) flags.Add("alineado");
+            if (data.RunwayEntryCandidate) flags.Add("entrada pista");
+            if (data.TakeoffRollCandidate) flags.Add("takeoff roll");
+            if (data.TouchdownZoneCandidate) flags.Add("TDZ candidato");
+            if (data.LandingRollCandidate) flags.Add("landing roll");
+            if (data.RunwayExitCandidate) flags.Add("salida pista");
+            if (data.TaxiwayProbable) flags.Add("taxiway probable");
+            if (data.FacilityRunwayGeometryAvailable)
+            {
+                flags.Add("geometria MSFS");
+                if (data.FacilityOnRunwayCandidate) flags.Add("sobre pista");
+                if (data.FacilityTouchdownZoneCandidate) flags.Add("TDZ MSFS");
+                if (!string.IsNullOrWhiteSpace(data.FacilityRunwayGeometrySummary)) flags.Add(data.FacilityRunwayGeometrySummary.Trim());
+            }
+            else if (!data.RunwayGeometryAvailable)
+            {
+                flags.Add("sin geometria exacta");
+            }
+
+            var label = data.FacilityRunwayGeometryAvailable || string.Equals(data.RunwayContextVersion, "C11C", StringComparison.OrdinalIgnoreCase)
+                ? "C11C pista/TDZ"
+                : "C10 pista/TDZ";
+            var suffix = flags.Count > 0 ? " · " + string.Join(" · ", flags) : string.Empty;
+            return $"{label}: {code} · {name} · {runway} Δ{data.RunwayHeadingDeltaDeg:F0}°{suffix} · {reason}";
+        }
+
+        private void RefreshSurfaceAwarePhaseLabel(SimData data)
+        {
+            var label = ResolveSurfaceAwarePhaseLabel(Phase, data);
+            if (!string.IsNullOrWhiteSpace(label) && !string.Equals(PhaseLabel, label, StringComparison.Ordinal))
+            {
+                PhaseLabel = label;
+            }
+        }
+
+        private static string ResolveSurfaceAwarePhaseLabel(FlightPhase phase, SimData data)
+        {
+            if (data == null) return GetPhaseLabel(phase);
+
+            var code = string.IsNullOrWhiteSpace(data.SurfaceProcedurePhaseCode)
+                ? string.Empty
+                : data.SurfaceProcedurePhaseCode.Trim().ToUpperInvariant();
+
+            if (string.IsNullOrWhiteSpace(code) || code == "UNKNOWN")
+                return GetPhaseLabel(phase);
+
+            // C11E: display-phase only. This does not change FlightService phase,
+            // scoring, closeout, XML legality or Web/Supabase evaluation. It prevents
+            // the UI from showing "Prevuelo" when C11 geometry already proves runway,
+            // taxiway or gate context during an active flight.
+            switch (code)
+            {
+                case "GATE_ORIGIN":
+                    return phase == FlightPhase.PreFlight || phase == FlightPhase.Boarding
+                        ? "Gate salida"
+                        : GetPhaseLabel(phase);
+                case "READY_TAXI_OUT":
+                    return "Listo rodaje";
+                case "TAXI_OUT":
+                    return "Rodaje salida";
+                case "RUNWAY_DEPARTURE":
+                    return "Pista salida";
+                case "APPROACH_FINAL":
+                    return "Aproximacion";
+                case "RUNWAY_ARRIVAL":
+                    return "Pista llegada";
+                case "TAXI_IN":
+                    return "Rodaje llegada";
+                case "GATE_ARRIVAL":
+                    return "Gate llegada";
+                case "GROUND_INTERMEDIATE":
+                case "GROUND_STOPPED":
+                    if (data.HasBeenAirborne || data.TouchdownDetected || phase == FlightPhase.Taxi || phase == FlightPhase.Arrived || phase == FlightPhase.Landing)
+                        return data.GroundSpeed > 2 ? "Rodaje llegada" : "Superficie llegada";
+                    if (phase == FlightPhase.PreFlight || phase == FlightPhase.Boarding || phase == FlightPhase.PushbackTaxi)
+                        return data.GroundSpeed > 2 ? "Rodaje salida" : "Superficie salida";
+                    return GetPhaseLabel(phase);
+                case "AIRBORNE":
+                    return phase == FlightPhase.PreFlight || phase == FlightPhase.Boarding || phase == FlightPhase.PushbackTaxi
+                        ? "En vuelo"
+                        : GetPhaseLabel(phase);
+                default:
+                    return GetPhaseLabel(phase);
+            }
+        }
+
+        private static bool IsFixedGearProfile(string? profileCode, string? aircraftTitle)
+        {
+            var p = (profileCode ?? string.Empty).Trim().ToUpperInvariant();
+            var t = (aircraftTitle ?? string.Empty).Trim().ToUpperInvariant();
+
+            if (p.Contains("C172") || p.Contains("C208") || p.Contains("SKYHAWK") || p.Contains("CARAVAN"))
+                return true;
+
+            if (t.Contains("CESSNA 172") || t.Contains("C172") || t.Contains("SKYHAWK") || t.Contains("CARAVAN") || t.Contains("C208"))
+                return true;
+
+            return false;
+        }
+
+        private static string BuildSurfaceProcedureEvidenceDisplay(SimData data)
+        {
+            if (data == null) return "C11E reglaje evidencia: N/D";
+
+            var code = string.IsNullOrWhiteSpace(data.SurfaceProcedurePhaseCode) ? "UNKNOWN" : data.SurfaceProcedurePhaseCode.Trim();
+            var name = string.IsNullOrWhiteSpace(data.SurfaceProcedurePhaseName) ? "fase procedimiento no determinada" : data.SurfaceProcedurePhaseName.Trim();
+            var status = string.IsNullOrWhiteSpace(data.SurfaceProcedureEvidenceStatus) ? "OBSERVE" : data.SurfaceProcedureEvidenceStatus.Trim();
+            var summary = string.IsNullOrWhiteSpace(data.SurfaceProcedureEvidenceSummary) ? "sin evidencia de reglaje" : data.SurfaceProcedureEvidenceSummary.Trim();
+            var flags = string.IsNullOrWhiteSpace(data.SurfaceProcedureEvidenceFlags) ? string.Empty : " · flags " + TrimFacilityText(data.SurfaceProcedureEvidenceFlags.Trim(), 90);
+
+            return "C11E reglaje evidencia: " + status + " · " + code + " · " + name + " · " + TrimFacilityText(summary, 150) + flags;
+        }
+
+        private static string BuildFacilityBridgeDisplay(SimData data)
+        {
+            if (data == null) return "C11 bridge: N/D";
+
+            var rawStatus = string.IsNullOrWhiteSpace(data.FacilityBridgeStatus) ? "sin estado" : data.FacilityBridgeStatus.Trim();
+            var status = CompactFacilityBridgeStatus(rawStatus);
+            var source = string.IsNullOrWhiteSpace(data.FacilityDataSource) ? "sin fuente" : data.FacilityDataSource.Trim();
+            var airports = string.IsNullOrWhiteSpace(data.FacilityBridgeNearestAirports) ? "sin aeropuertos cercanos" : data.FacilityBridgeNearestAirports.Trim();
+
+            var priority = new List<string>();
+            if (data.FacilityTaxiGeometryAvailable)
+            {
+                var taxiFlags = new List<string>();
+                if (data.FacilityGateAreaCandidate) taxiFlags.Add("gate MSFS");
+                if (data.FacilityTaxiwayCandidate) taxiFlags.Add("taxiway MSFS");
+                if (!string.IsNullOrWhiteSpace(data.FacilityTaxiGeometrySummary)) taxiFlags.Add(data.FacilityTaxiGeometrySummary.Trim());
+                priority.Add("C11D4 taxi/gate " + TrimFacilityText(string.Join(" ", taxiFlags), 130));
+            }
+            if (!string.IsNullOrWhiteSpace(data.FacilityTaxiGeometryStatus))
+            {
+                priority.Add("D4 cache " + TrimFacilityText(data.FacilityTaxiGeometryStatus.Trim(), 110));
+            }
+            if (data.FacilityTaxiParkingPayloadCount > 0 || data.FacilityTaxiPointPayloadCount > 0 || data.FacilityTaxiPathPayloadCount > 0)
+            {
+                priority.Add($"taxi payload parking={data.FacilityTaxiParkingPayloadCount} points={data.FacilityTaxiPointPayloadCount} paths={data.FacilityTaxiPathPayloadCount}");
+            }
+            if (!string.IsNullOrWhiteSpace(data.FacilityBridgeDataTypeHistogram))
+            {
+                priority.Add("types " + TrimFacilityText(data.FacilityBridgeDataTypeHistogram.Trim(), 90));
+            }
+
+            var flags = new List<string>();
+            flags.Add(data.FacilityBridgeAvailable ? "API disponible" : "API no disponible");
+            if (data.FacilityBridgeSubscribed) flags.Add("suscrito");
+            if (data.FacilityDataReceived) flags.Add("datos recibidos");
+            if (data.FacilityBridgeAwaitingResponse) flags.Add("esperando respuesta");
+            if (data.FacilityBridgeDirectRequestsSent > 0) flags.Add($"requests {data.FacilityBridgeDirectRequestsSent}");
+            if (data.FacilityBridgeRecordsReceived > 0) flags.Add($"records {data.FacilityBridgeRecordsReceived}");
+            if (data.FacilityBridgeDataEndCount > 0) flags.Add($"end {data.FacilityBridgeDataEndCount}");
+            if (data.FacilityBridgeExceptionCount > 0) flags.Add($"exceptions {data.FacilityBridgeExceptionCount}");
+            if (data.FacilityBridgeAirportCount > 0) flags.Add($"aeropuertos {data.FacilityBridgeAirportCount}");
+            if (!string.IsNullOrWhiteSpace(data.FacilityBridgeLastRequestMode)) flags.Add(TrimFacilityText(data.FacilityBridgeLastRequestMode.Trim(), 90));
+            if (!string.IsNullOrWhiteSpace(data.FacilityBridgeLastDataStatus)) flags.Add("lastData " + TrimFacilityText(data.FacilityBridgeLastDataStatus.Trim(), 90));
+            if (!string.IsNullOrWhiteSpace(data.FacilityBridgePendingIcaos)) flags.Add("pendiente " + data.FacilityBridgePendingIcaos.Trim());
+            if (!string.IsNullOrWhiteSpace(data.FacilityBridgeLastException)) flags.Add(TrimFacilityText(data.FacilityBridgeLastException.Trim(), 90));
+            if (data.FacilityBridgeSecondsSinceRequest > 0.1d) flags.Add($"t+{data.FacilityBridgeSecondsSinceRequest:F0}s");
+
+            if (priority.Count > 0) flags.InsertRange(0, priority);
+            return $"C11 bridge: {source} · {status} · {string.Join(" · ", flags)} · {airports}";
+        }
+
+        private static string CompactFacilityBridgeStatus(string status)
+        {
+            if (string.IsNullOrWhiteSpace(status)) return "sin estado";
+            var text = status.Trim();
+            if (text.StartsWith("facility_data_received_", StringComparison.OrdinalIgnoreCase))
+            {
+                var airport = ExtractBetween(text, "facility_data_received_", "_type=");
+                var type = ExtractBetween(text, "_type=", ";");
+                if (!string.IsNullOrWhiteSpace(airport) && !string.IsNullOrWhiteSpace(type))
+                    return "facility data " + airport + " " + type;
+            }
+            return TrimFacilityText(text, 120);
+        }
+
+        private static string ExtractBetween(string text, string startToken, string endToken)
+        {
+            if (string.IsNullOrEmpty(text) || string.IsNullOrEmpty(startToken)) return string.Empty;
+            var start = text.IndexOf(startToken, StringComparison.OrdinalIgnoreCase);
+            if (start < 0) return string.Empty;
+            start += startToken.Length;
+            var end = string.IsNullOrEmpty(endToken) ? -1 : text.IndexOf(endToken, start, StringComparison.OrdinalIgnoreCase);
+            if (end < 0) end = text.Length;
+            if (end <= start) return string.Empty;
+            return text.Substring(start, end - start).Trim();
+        }
+
+        private static string TrimFacilityText(string text, int maxLength)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return string.Empty;
+            var clean = text.Replace("\r", " ").Replace("\n", " ").Trim();
+            if (maxLength <= 0 || clean.Length <= maxLength) return clean;
+            return clean.Substring(0, Math.Max(0, maxLength - 1)).TrimEnd() + "…";
         }
 
         private static string GetPhaseLabel(FlightPhase phase)
@@ -2683,5 +3386,3 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         }
     }
 }
-
-

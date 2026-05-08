@@ -30,7 +30,7 @@ $msbuildPaths = @(
 )
 $msbuild = $msbuildPaths | Where-Object { Test-Path $_ } | Select-Object -First 1
 
-$appVersion = "4.0.1"
+$appVersion = "7.0.18"
 if (Test-Path -LiteralPath $appConfigPath) {
     try {
         [xml]$appConfig = Get-Content -LiteralPath $appConfigPath

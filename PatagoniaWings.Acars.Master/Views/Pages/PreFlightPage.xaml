@@ -90,11 +90,14 @@
 
                         <StackPanel>
                             <TextBlock Text="ORIGEN" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding DepartureIcao, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchOrigin}}"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontFamily="Consolas"
-                                       FontSize="20"
-                                       FontWeight="Bold"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding DepartureIcao, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchOrigin}}"
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           FontFamily="Consolas"
+                                           FontSize="20"
+                                           FontWeight="Bold"/>
+                                <TextBlock Text="{Binding DepartureFlag}" Margin="6,0,0,0" FontSize="16" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </StackPanel>
 
                         <TextBlock Grid.Column="1"
@@ -107,12 +110,15 @@
                             <TextBlock Text="DESTINO"
                                        Style="{StaticResource FieldLabel}"
                                        HorizontalAlignment="Right"/>
-                            <TextBlock Text="{Binding ArrivalIcao, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchDestination}}"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
-                                       FontFamily="Consolas"
-                                       FontSize="20"
-                                       FontWeight="Bold"
-                                       HorizontalAlignment="Right"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding ArrivalIcao, Converter={StaticResource StringFallbackConverter}, ConverterParameter={x:Static preview:AcarsPreviewData.DispatchDestination}}"
+                                           Foreground="{StaticResource TextPrimaryBrush}"
+                                           FontFamily="Consolas"
+                                           FontSize="20"
+                                           FontWeight="Bold"
+                                           HorizontalAlignment="Right"/>
+                                <TextBlock Text="{Binding ArrivalFlag}" Margin="6,0,0,0" FontSize="16" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
 
@@ -193,21 +199,32 @@
                         </StackPanel>
                         <StackPanel Margin="4,0,0,8">
                             <TextBlock Text="PAYLOAD" Style="{StaticResource FieldLabel}"/>
-                            <TextBlock Text="{Binding PayloadMainLine}"
-                                       Foreground="{StaticResource AccentLightBlueBrush}"
-                                       FontSize="12.5"
-                                       FontWeight="SemiBold"
-                                       TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding PayloadPaxLine}"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="8.3"
-                                       Margin="0,2,0,0"/>
-                            <TextBlock Text="{Binding PayloadCargoLine}"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="8.3"/>
-                            <TextBlock Text="{Binding PayloadZfwLine}"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
-                                       FontSize="8.3"/>
+                            <Border BorderBrush="#D4E4F4" BorderThickness="1" CornerRadius="8" Padding="6,5" Background="#F8FBFF">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="TOTAL" Foreground="{StaticResource TextSecondaryBrush}" FontSize="8.2" FontWeight="SemiBold"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding PayloadMainLine}" Foreground="{StaticResource AccentLightBlueBrush}" FontSize="14.5" FontWeight="Bold"/>
+
+                                    <TextBlock Grid.Row="1" Grid.Column="0" Text="PAX" Foreground="{StaticResource TextSecondaryBrush}" FontSize="8.2" Margin="0,3,0,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding PayloadPaxLine}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="9.2" Margin="0,3,0,0"/>
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Text="CARGA" Foreground="{StaticResource TextSecondaryBrush}" FontSize="8.2" Margin="0,3,0,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding PayloadCargoLine}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="9.2" Margin="0,3,0,0"/>
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Text="ZFW" Foreground="{StaticResource TextSecondaryBrush}" FontSize="8.2" Margin="0,3,0,0"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding PayloadZfwLine}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="9.2" Margin="0,3,0,0"/>
+                                </Grid>
+                            </Border>
                         </StackPanel>
                         <StackPanel Margin="0,0,4,0">
                             <TextBlock Text="ALTERNO" Style="{StaticResource FieldLabel}"/>
