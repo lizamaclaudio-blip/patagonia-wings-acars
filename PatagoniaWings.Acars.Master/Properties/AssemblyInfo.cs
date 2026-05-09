@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Runtime.InteropServices;
 
 [assembly: AssemblyTitle("Patagonia Wings ACARS")]
@@ -10,6 +10,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTrademark("")]
 [assembly: ComVisible(false)]
 
-[assembly: AssemblyVersion("7.0.20.0")]
-[assembly: AssemblyFileVersion("7.0.20.0")]
-[assembly: AssemblyInformationalVersion("7.0.20")]
+[assembly: AssemblyVersion("7.0.21.0")]
+[assembly: AssemblyFileVersion("7.0.21.0")]
+[assembly: AssemblyInformationalVersion("7.0.21")]

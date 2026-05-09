@@ -1,5 +1,5 @@
-﻿#define MyAppName "Patagonia Wings ACARS"
-#define MyAppVersion "7.0.20"
+#define MyAppName "Patagonia Wings ACARS"
+#define MyAppVersion "7.0.21"
 #define MyAppPublisher "Patagonia Wings"
 #define MyAppExeName "PatagoniaWings.Acars.Master.exe"
 

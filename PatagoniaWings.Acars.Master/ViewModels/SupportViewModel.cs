@@ -4,8 +4,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using PatagoniaWings.Acars.Core.Models;
+using PatagoniaWings.Acars.Core.Services;
 using PatagoniaWings.Acars.Master.Helpers;
 
 namespace PatagoniaWings.Acars.Master.ViewModels
@@ -28,6 +31,9 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _updateDownloadUrl = string.Empty;
         private string _updateLastError = string.Empty;
         private string _updateState = "Sin diagnostico";
+        private string _telemetryInspectorSummary = "Sin telemetria en vivo";
+        private string _telemetryInspectorLastExport = "Sin exportaciones";
+        private string _telemetryInspectorLastMark = "Sin pruebas marcadas";
 
         public SupportViewModel()
         {
@@ -58,6 +64,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             DownloadUpdateCommand = new AsyncRelayCommand(async _ => await DownloadUpdateAsync());
             OpenUpdateLogsCommand = new RelayCommand(OpenUpdateLogs);
             CopyUpdateDiagnosticCommand = new RelayCommand(CopyUpdateDiagnostic);
+            RefreshProfileCommand = new RelayCommand(RefreshTelemetryInspector);
+            ResetSampleSessionCommand = new RelayCommand(ResetTelemetryInspectorSession);
+            ExportSnapshotJsonCommand = new RelayCommand(ExportTelemetrySnapshotJson);
+            ExportSessionCsvCommand = new RelayCommand(ExportTelemetrySessionCsv);
+            CopyTelemetryDiagnosticCommand = new RelayCommand(CopyTelemetryDiagnostic);
+            MarkAircraftTestedCommand = new RelayCommand(MarkAircraftTested);
+
+            AcarsContext.Runtime.Changed += () =>
+            {
+                RefreshTelemetryInspector();
+            };
 
             UpdateService.UpdateStatusChanged += message =>
             {
@@ -94,6 +111,12 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand DownloadUpdateCommand { get; }
         public ICommand OpenUpdateLogsCommand { get; }
         public ICommand CopyUpdateDiagnosticCommand { get; }
+        public ICommand RefreshProfileCommand { get; }
+        public ICommand ResetSampleSessionCommand { get; }
+        public ICommand ExportSnapshotJsonCommand { get; }
+        public ICommand ExportSessionCsvCommand { get; }
+        public ICommand CopyTelemetryDiagnosticCommand { get; }
+        public ICommand MarkAircraftTestedCommand { get; }
 
         public string AcarsVersion => "v" + UpdateService.CurrentVersion;
         public string FsuipcVersion => ResolveFsuipcVersion();
@@ -268,6 +291,24 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                     SavePreferences();
                 }
             }
+        }
+
+        public string TelemetryInspectorSummary
+        {
+            get => _telemetryInspectorSummary;
+            set => SetField(ref _telemetryInspectorSummary, value);
+        }
+
+        public string TelemetryInspectorLastExport
+        {
+            get => _telemetryInspectorLastExport;
+            set => SetField(ref _telemetryInspectorLastExport, value);
+        }
+
+        public string TelemetryInspectorLastMark
+        {
+            get => _telemetryInspectorLastMark;
+            set => SetField(ref _telemetryInspectorLastMark, value);
         }
 
         private async Task RetryLastPirepAsync()
@@ -517,6 +558,220 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
+        private void RefreshTelemetryInspector()
+        {
+            var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+            if (sample == null)
+            {
+                TelemetryInspectorSummary = "Sin telemetria en vivo";
+                return;
+            }
+
+            var sb = new StringBuilder();
+            sb.AppendLine("Patagonia Wings ACARS Data Lab");
+            sb.AppendLine($"capturedAtUtc={sample.CapturedAtUtc:O}");
+            sb.AppendLine($"simConnected={AcarsContext.Runtime.IsSimulatorConnected} backend={AcarsContext.Runtime.SimulatorBackend}");
+            sb.AppendLine($"aircraftTitle={sample.AircraftTitle}");
+            sb.AppendLine($"detectedProfileCode={sample.DetectedProfileCode} profileCode={sample.ProfileCode} status={sample.ProfileStatus}");
+            sb.AppendLine($"detectionConfidence={sample.DetectionConfidence} reason={sample.DetectionReason}");
+            sb.AppendLine($"pos=({sample.Latitude:F6},{sample.Longitude:F6}) hdg={sample.Heading:F0}");
+            sb.AppendLine($"altMSL={sample.AltitudeMslFeet:F0} altAGL={sample.AltitudeAglFeet:F0} reliable={sample.IsAltitudeReliable}");
+            sb.AppendLine($"ias={sample.IndicatedAirspeed:F0} gs={sample.GroundSpeed:F0} vs={sample.VerticalSpeed:F0}");
+            sb.AppendLine($"phase={sample.OperationalPhaseCode}/{sample.OperationalPhaseName} checklist={sample.PhaseChecklistStatus}");
+            sb.AppendLine($"eng={BoolTo01(sample.EngineOneRunning)}{BoolTo01(sample.EngineTwoRunning)}{BoolTo01(sample.EngineThreeRunning)}{BoolTo01(sample.EngineFourRunning)} n1={sample.Engine1N1:F0}/{sample.Engine2N1:F0}");
+            sb.AppendLine($"fuelKg={sample.FuelKg:F0} payloadKg={sample.PayloadKg:F0} zfwKg={sample.ZeroFuelWeightKg:F0}");
+            sb.AppendLine($"xpdr={sample.TransponderCode:D4} raw={sample.TransponderStateRaw} c={sample.TransponderCharlieMode}");
+            sb.AppendLine($"lights bcn={sample.BeaconLightsOn} nav={sample.NavLightsOn} stb={sample.StrobeLightsOn} land={sample.LandingLightsOn} taxi={sample.TaxiLightsOn}");
+            sb.AppendLine($"cfg pb={sample.ParkingBrake} gear={sample.GearDown}/{sample.GearTransitioning} flaps={sample.FlapsPercent:F0} rev={sample.ReverserActive}");
+            TelemetryInspectorSummary = sb.ToString().TrimEnd();
+        }
+
+        private void ResetTelemetryInspectorSession()
+        {
+            TelemetryInspectorLastMark = "Sesion de muestra reiniciada";
+            TelemetryInspectorLastExport = "Sin exportaciones";
+            StatusMessage = "Telemetry Inspector: sesion reiniciada.";
+        }
+
+        private void ExportTelemetrySnapshotJson()
+        {
+            try
+            {
+                var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+                if (sample == null)
+                {
+                    StatusMessage = "No hay telemetria para exportar JSON.";
+                    return;
+                }
+
+                var exportDir = GetTelemetryInspectorExportsFolderPath();
+                Directory.CreateDirectory(exportDir);
+                var fileName = $"{SafeFile(sample.DetectedProfileCode)}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+                var path = Path.Combine(exportDir, fileName);
+                File.WriteAllText(path, BuildSnapshotJson(sample), Encoding.UTF8);
+                TelemetryInspectorLastExport = "JSON: " + path;
+                StatusMessage = "Export JSON listo.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude exportar JSON: " + ex.Message;
+            }
+        }
+
+        private void ExportTelemetrySessionCsv()
+        {
+            try
+            {
+                var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+                if (sample == null)
+                {
+                    StatusMessage = "No hay telemetria para exportar CSV.";
+                    return;
+                }
+
+                var exportDir = GetTelemetryInspectorExportsFolderPath();
+                Directory.CreateDirectory(exportDir);
+                var fileName = $"{SafeFile(sample.DetectedProfileCode)}_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+                var path = Path.Combine(exportDir, fileName);
+                File.WriteAllText(path, BuildSnapshotCsv(sample), Encoding.UTF8);
+                TelemetryInspectorLastExport = "CSV: " + path;
+                StatusMessage = "Export CSV listo.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude exportar CSV: " + ex.Message;
+            }
+        }
+
+        private void CopyTelemetryDiagnostic()
+        {
+            try
+            {
+                RefreshTelemetryInspector();
+                System.Windows.Clipboard.SetText(TelemetryInspectorSummary);
+                StatusMessage = "Diagnostico de telemetria copiado.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude copiar diagnostico: " + ex.Message;
+            }
+        }
+
+        private void MarkAircraftTested()
+        {
+            try
+            {
+                var sample = AcarsContext.Runtime.LastTelemetry ?? AcarsContext.FlightService.LastSimData;
+                if (sample == null)
+                {
+                    StatusMessage = "No hay aeronave activa para marcar prueba.";
+                    return;
+                }
+
+                var dir = Path.Combine(GetDataFolderPath(), "TelemetryInspector");
+                Directory.CreateDirectory(dir);
+                var markFile = Path.Combine(dir, "aircraft_tested.log");
+                var line = $"{DateTime.UtcNow:O}|{sample.DetectedProfileCode}|{sample.AircraftTitle}|{sample.ProfileStatus}|{sample.DetectionConfidence}";
+                File.AppendAllLines(markFile, new[] { line }, Encoding.UTF8);
+                TelemetryInspectorLastMark = line;
+                StatusMessage = "Aeronave marcada como probada.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude marcar aeronave: " + ex.Message;
+            }
+        }
+
+        private static string BuildSnapshotJson(SimData sample)
+        {
+            string E(string text) => (text ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var sb = new StringBuilder();
+            sb.AppendLine("{");
+            sb.AppendLine($"  \"timestamp\": \"{sample.CapturedAtUtc:O}\",");
+            sb.AppendLine($"  \"appVersion\": \"{UpdateService.CurrentVersion}\",");
+            sb.AppendLine("  \"identity\": {");
+            sb.AppendLine($"    \"aircraftTitle\": \"{E(sample.AircraftTitle)}\",");
+            sb.AppendLine($"    \"detectedProfileCode\": \"{E(sample.DetectedProfileCode)}\",");
+            sb.AppendLine($"    \"profileCode\": \"{E(sample.ProfileCode)}\",");
+            sb.AppendLine($"    \"aircraftTypeCode\": \"{E(sample.AircraftTypeCode)}\",");
+            sb.AppendLine($"    \"aircraftVariantCode\": \"{E(sample.AircraftVariantCode)}\",");
+            sb.AppendLine($"    \"addonSource\": \"{E(sample.AddonSource)}\",");
+            sb.AppendLine($"    \"detectionConfidence\": \"{E(sample.DetectionConfidence)}\",");
+            sb.AppendLine($"    \"detectionReason\": \"{E(sample.DetectionReason)}\",");
+            sb.AppendLine($"    \"profileStatus\": \"{E(sample.ProfileStatus)}\"");
+            sb.AppendLine("  },");
+            sb.AppendLine("  \"normalizedValues\": {");
+            sb.AppendLine($"    \"latitude\": {sample.Latitude:F6},");
+            sb.AppendLine($"    \"longitude\": {sample.Longitude:F6},");
+            sb.AppendLine($"    \"altitudeMslFt\": {sample.AltitudeMslFeet:F1},");
+            sb.AppendLine($"    \"altitudeAglFt\": {sample.AltitudeAglFeet:F1},");
+            sb.AppendLine($"    \"ias\": {sample.IndicatedAirspeed:F1},");
+            sb.AppendLine($"    \"groundSpeed\": {sample.GroundSpeed:F1},");
+            sb.AppendLine($"    \"fuelKg\": {sample.FuelKg:F1},");
+            sb.AppendLine($"    \"payloadKg\": {sample.PayloadKg:F1},");
+            sb.AppendLine($"    \"xpdrCode\": {sample.TransponderCode},");
+            sb.AppendLine($"    \"phaseCode\": \"{E(sample.OperationalPhaseCode)}\"");
+            sb.AppendLine("  }");
+            sb.AppendLine("}");
+            return sb.ToString();
+        }
+
+        private static string BuildSnapshotCsv(SimData sample)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("timestamp,aircraftTitle,profileCode,field,value,unit,status,source,reliability,penaltyEligible,reason");
+            void L(string field, string value, string unit, string status, string source, string reliability, string penaltyEligible, string reason)
+            {
+                sb.AppendLine(string.Join(",",
+                    Csv(sample.CapturedAtUtc.ToString("O")),
+                    Csv(sample.AircraftTitle),
+                    Csv(sample.DetectedProfileCode),
+                    Csv(field),
+                    Csv(value),
+                    Csv(unit),
+                    Csv(status),
+                    Csv(source),
+                    Csv(reliability),
+                    Csv(penaltyEligible),
+                    Csv(reason)));
+            }
+            L("latitude", sample.Latitude.ToString("F6"), "deg", ResolveFieldStatus(sample.Latitude), "sim.telemetry", "raw", "false", "");
+            L("longitude", sample.Longitude.ToString("F6"), "deg", ResolveFieldStatus(sample.Longitude), "sim.telemetry", "raw", "false", "");
+            L("altitude_msl_ft", sample.AltitudeMslFeet.ToString("F1"), "ft", sample.IsAltitudeReliable ? "OK" : "SUSPECT", "sim.telemetry", sample.IsAltitudeReliable ? "high" : "low", "true", sample.AltitudeSource);
+            L("fuel_kg", sample.FuelKg.ToString("F1"), "kg", ResolveFieldStatus(sample.FuelKg), "sim.telemetry", "medium", "true", "");
+            L("xpdr_code", sample.TransponderCode.ToString(), "code", sample.TransponderCode > 0 ? "OK" : "NOT_AVAILABLE", "sim.telemetry", "medium", "true", "");
+            L("phase", sample.OperationalPhaseCode, "code", string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? "NOT_AVAILABLE" : "OK", "phase.resolver", "high", "true", sample.OperationalPhaseReason);
+            return sb.ToString();
+        }
+
+        private static string Csv(string value)
+        {
+            var safe = (value ?? string.Empty).Replace("\"", "\"\"");
+            return $"\"{safe}\"";
+        }
+
+        private static string ResolveFieldStatus(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value)) return "SUSPECT";
+            if (Math.Abs(value) < 0.0001d) return "ZERO";
+            return "OK";
+        }
+
+        private static string BoolTo01(bool value)
+        {
+            return value ? "1" : "0";
+        }
+
+        private static string SafeFile(string value)
+        {
+            var text = string.IsNullOrWhiteSpace(value) ? "UNKNOWN_PROFILE" : value.Trim();
+            foreach (var c in Path.GetInvalidFileNameChars())
+            {
+                text = text.Replace(c, '_');
+            }
+            return text;
+        }
+
         private static string ResolveFsuipcVersion()
         {
             try
@@ -564,6 +819,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "PatagoniaWings",
                 "Acars",
+                "exports");
+        }
+
+        private static string GetTelemetryInspectorExportsFolderPath()
+        {
+            return Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "PatagoniaWings",
+                "Acars",
+                "TelemetryInspector",
                 "exports");
         }
 
