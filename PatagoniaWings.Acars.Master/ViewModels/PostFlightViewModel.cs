@@ -312,6 +312,27 @@ namespace PatagoniaWings.Acars.Master.ViewModels
 
             try
             {
+                if (IsPendingCloseoutRetry && !string.IsNullOrWhiteSpace(Report.ReservationId))
+                {
+                    SubmitMessage = "Reintentando sincronizacion del PIREP pendiente...";
+                    await AcarsContext.Api.TryProcessPendingCloseoutsAsync("postflight_manual_retry").ConfigureAwait(false);
+
+                    if (!AcarsContext.Api.HasPendingCloseout(Report.ReservationId))
+                    {
+                        Report.ReservationClosed = true;
+                        Report.ResultStatus = "completed";
+                        if (string.IsNullOrWhiteSpace(Report.ResultUrl))
+                        {
+                            Report.ResultUrl = AcarsContext.Api.BuildFlightResultUrl(Report.ReservationId);
+                        }
+
+                        Submitted = true;
+                        SubmitMessage = "PIREP sincronizado correctamente desde cola pendiente.";
+                        CloseoutCompleted?.Invoke();
+                        return;
+                    }
+                }
+
                 ApplyCloseoutInputs();
 
                 // ── Enviar al backend oficial ────────────────────────────────────
@@ -387,7 +408,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 else if (isQueued)
                 {
                     Submitted = false;
-                    SubmitMessage = "PIREP pendiente de sincronizacion. Quedo en cola local y se puede reenviar desde Soporte o desde esta pantalla.";
+                    SubmitMessage = "PIREP pendiente de sincronizacion. Quedo en cola local y se puede reenviar desde Soporte o desde esta pantalla. "
+                        + AcarsContext.Api.GetLastFinalizeDiagnostic();
 
                     OnPropertyChanged(nameof(CloseButtonTitle));
                     OnPropertyChanged(nameof(CanSubmit));
