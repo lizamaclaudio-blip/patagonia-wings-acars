@@ -510,6 +510,7 @@ namespace PatagoniaWings.Acars.Core.Services
             var sustainedClimb = vs > 250d || _mslIncreasingSamples >= 2;
             var sustainedDescent = vs < -350d || _mslDecreasingSamples >= 3;
             var nearApproachLayer = agl > 0d && agl <= 3000d;
+            var altitudeReliableForApproach = data.IsAltitudeReliable || agl >= 50d;
             var runwayDistanceNm = data.FacilityNearestRunwayDistanceMeters > 0d
                 ? data.FacilityNearestRunwayDistanceMeters / 1852d
                 : double.MaxValue;
@@ -520,12 +521,15 @@ namespace PatagoniaWings.Acars.Core.Services
                                            || data.FacilityRunwayAlignedCandidate
                                            || data.RunwayAlignedCandidate;
             var approachContext = nearArrivalAirport || _destinationAreaObserved || _totalDistanceNm >= 8d || airborneSince >= 180d;
+            var approachArmed = _descentObserved || CurrentPhase == FlightPhase.Descent || _descentConfirmSamples >= 2;
             var approachCandidate = nearApproachLayer
+                && altitudeReliableForApproach
                 && approachContext
                 && sustainedDescent
+                && !sustainedClimb
                 && runwayDistanceNm <= 7.0d
                 && runwayAlignedForApproach
-                && (_descentObserved || _cruiseObserved || airborneSince >= 180d)
+                && approachArmed
                 && !_touchdownDetected;
             var descentCandidate = agl >= 900d
                 && approachContext
