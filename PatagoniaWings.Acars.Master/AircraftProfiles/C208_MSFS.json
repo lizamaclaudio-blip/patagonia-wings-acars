@@ -61,7 +61,7 @@
     "BleedAirSource":  "none",
     "FuelPumpSource":  "native_or_custom",
     "Notes":  "C208 Asobo. Tren fijo: no evaluar gear. Inertial separator disponible solo si la variable responde.",
-    "FlapSource":  "auto",
+    "FlapSource":  "handle_percent",
     "SupportsFlapsRead":  true,
-    "FlapDeployThresholdPercent":  0.01
+    "FlapDeployThresholdPercent":  0.5
 }

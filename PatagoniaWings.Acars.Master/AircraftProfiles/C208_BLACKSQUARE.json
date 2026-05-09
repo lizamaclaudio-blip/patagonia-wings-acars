@@ -68,7 +68,7 @@
     "Notes":  "PIREP operativo: C208 Black Square con XPDR/Squawk habilitado por SimConnect+fallback FSUIPC. Gear fijo y puertas siguen capability-aware sin penalizar lecturas no soportadas.",
     "SupportsTransponderModeReadback":  true,
     "SupportsSquawkReadback":  true,
-    "FlapSource":  "auto",
+    "FlapSource":  "handle_percent",
     "SupportsFlapsRead":  true,
-    "FlapDeployThresholdPercent":  0.01
+    "FlapDeployThresholdPercent":  0.5
 }
