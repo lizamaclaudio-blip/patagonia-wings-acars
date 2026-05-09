@@ -6,6 +6,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using PatagoniaWings.Acars.Core.Enums;
@@ -3690,7 +3691,8 @@ namespace PatagoniaWings.Acars.Core.Services
             try
             {
                 var endpoint = BuildAbsoluteWebUrl(path);
-                var content = new StringContent(_json.Serialize(payload), Encoding.UTF8, "application/json");
+                var payloadJson = SanitizeJsonNumberLiterals(_json.Serialize(payload));
+                var content = new StringContent(payloadJson, Encoding.UTF8, "application/json");
                 var response = await _http.PostAsync(endpoint, content).ConfigureAwait(false);
                 var raw = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
                 if (!response.IsSuccessStatusCode)
@@ -3705,6 +3707,24 @@ namespace PatagoniaWings.Acars.Core.Services
             {
                 return ApiResult<Dictionary<string, object>>.Fail(ex.Message);
             }
+        }
+
+        private static string SanitizeJsonNumberLiterals(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return "{}";
+            }
+
+            // JavaScriptSerializer can emit NaN/Infinity, which are invalid JSON tokens.
+            // Replace them with 0 so finalize payload is always parseable server-side.
+            var sanitized = Regex.Replace(
+                json,
+                @"(?<=[:\[,])\s*(-?Infinity|NaN)\s*(?=[,\}\]])",
+                "0",
+                RegexOptions.CultureInvariant);
+
+            return sanitized;
         }
 
         private string BuildAbsoluteWebUrl(string pathOrAbsolute)
