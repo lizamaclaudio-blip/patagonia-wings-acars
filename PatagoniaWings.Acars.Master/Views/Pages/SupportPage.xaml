@@ -353,8 +353,28 @@
                 </UniformGrid>
                 <TextBlock Text="{Binding TelemetryInspectorLastExport}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap" Margin="0,0,0,3"/>
                 <TextBlock Text="{Binding TelemetryInspectorLastMark}" Foreground="#4A6E9A" FontSize="7.5" FontFamily="Segoe UI" TextWrapping="Wrap" Margin="0,0,0,5"/>
-                <Border Background="#F0F6FF" BorderBrush="#B8D0EA" BorderThickness="1" CornerRadius="8" Padding="8,6">
-                    <TextBlock Text="{Binding TelemetryInspectorSummary}" Foreground="#0D1F3C" FontSize="8" FontFamily="Consolas" TextWrapping="Wrap"/>
+                <Border Background="#F0F6FF" BorderBrush="#B8D0EA" BorderThickness="1" CornerRadius="8" Padding="6,6">
+                    <DataGrid ItemsSource="{Binding TelemetryInspectorRows}"
+                              AutoGenerateColumns="False"
+                              HeadersVisibility="Column"
+                              IsReadOnly="True"
+                              CanUserAddRows="False"
+                              CanUserDeleteRows="False"
+                              CanUserResizeRows="False"
+                              RowHeaderWidth="0"
+                              MinHeight="260"
+                              MaxHeight="460"
+                              FontSize="8"
+                              GridLinesVisibility="Horizontal"
+                              HorizontalGridLinesBrush="#D5E5F4"
+                              VerticalGridLinesBrush="#D5E5F4">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Campo" Binding="{Binding Field}" Width="150"/>
+                            <DataGridTextColumn Header="Leído" Binding="{Binding ReadValue}" Width="120"/>
+                            <DataGridTextColumn Header="Esperado reglaje" Binding="{Binding ExpectedByRule}" Width="*"/>
+                            <DataGridTextColumn Header="Estado" Binding="{Binding Status}" Width="90"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </Border>
             </StackPanel>
         </Border>

@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
+using System.Collections.ObjectModel;
 using PatagoniaWings.Acars.Core.Models;
 using PatagoniaWings.Acars.Core.Services;
 using PatagoniaWings.Acars.Master.Helpers;
@@ -34,6 +35,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private string _telemetryInspectorSummary = "Sin telemetria en vivo";
         private string _telemetryInspectorLastExport = "Sin exportaciones";
         private string _telemetryInspectorLastMark = "Sin pruebas marcadas";
+        private readonly ObservableCollection<TelemetryInspectorRow> _telemetryInspectorRows = new ObservableCollection<TelemetryInspectorRow>();
 
         public SupportViewModel()
         {
@@ -298,6 +300,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             get => _telemetryInspectorSummary;
             set => SetField(ref _telemetryInspectorSummary, value);
         }
+
+        public ObservableCollection<TelemetryInspectorRow> TelemetryInspectorRows => _telemetryInspectorRows;
 
         public string TelemetryInspectorLastExport
         {
@@ -564,6 +568,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             if (sample == null)
             {
                 TelemetryInspectorSummary = "Sin telemetria en vivo";
+                _telemetryInspectorRows.Clear();
                 return;
             }
 
@@ -584,6 +589,55 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             sb.AppendLine($"lights bcn={sample.BeaconLightsOn} nav={sample.NavLightsOn} stb={sample.StrobeLightsOn} land={sample.LandingLightsOn} taxi={sample.TaxiLightsOn}");
             sb.AppendLine($"cfg pb={sample.ParkingBrake} gear={sample.GearDown}/{sample.GearTransitioning} flaps={sample.FlapsPercent:F0} rev={sample.ReverserActive}");
             TelemetryInspectorSummary = sb.ToString().TrimEnd();
+            RebuildTelemetryInspectorRows(sample);
+        }
+
+        private void RebuildTelemetryInspectorRows(SimData sample)
+        {
+            _telemetryInspectorRows.Clear();
+
+            void Add(string field, string readValue, string expected, string status)
+            {
+                _telemetryInspectorRows.Add(new TelemetryInspectorRow
+                {
+                    Field = field,
+                    ReadValue = readValue,
+                    ExpectedByRule = expected,
+                    Status = status
+                });
+            }
+
+            Add("Aircraft Title", sample.AircraftTitle, "No vacío; debe coincidir con perfil", string.IsNullOrWhiteSpace(sample.AircraftTitle) ? "NOT_AVAILABLE" : "OK");
+            Add("Profile Code", sample.DetectedProfileCode, "Perfil detectado exacto o fallback controlado", string.IsNullOrWhiteSpace(sample.DetectedProfileCode) ? "NOT_AVAILABLE" : "OK");
+            Add("Latitude", sample.Latitude.ToString("F6"), "Debe variar con movimiento", ResolveFieldStatus(sample.Latitude));
+            Add("Longitude", sample.Longitude.ToString("F6"), "Debe variar con movimiento", ResolveFieldStatus(sample.Longitude));
+            Add("Altitude MSL", sample.AltitudeMslFeet.ToString("F1") + " ft", "Fuente MSL confiable", sample.IsAltitudeReliable ? "OK" : "SUSPECT");
+            Add("Altitude AGL", sample.AltitudeAglFeet.ToString("F1") + " ft", ">= 0; en tierra cercano a 0", sample.AltitudeAglFeet < -5 ? "SUSPECT" : "OK");
+            Add("IAS", sample.IndicatedAirspeed.ToString("F1") + " kt", "0 en estacionario; sube en carrera", ResolveFieldStatus(sample.IndicatedAirspeed));
+            Add("Ground Speed", sample.GroundSpeed.ToString("F1") + " kt", "0 en gate; >0 en rodaje/vuelo", ResolveFieldStatus(sample.GroundSpeed));
+            Add("Vertical Speed", sample.VerticalSpeed.ToString("F1") + " fpm", "Cerca 0 en nivelado", "OK");
+            Add("Fuel Kg", sample.FuelKg.ToString("F1") + " kg", ">0 mientras tanque con combustible", sample.FuelKg <= 0 ? "SUSPECT" : "OK");
+            Add("Payload Kg", sample.PayloadKg.ToString("F1") + " kg", ">= 0", sample.PayloadKg < 0 ? "SUSPECT" : "OK");
+            Add("Parking Brake", sample.ParkingBrake ? "ON" : "OFF", "ON en gate/preflight", "OK");
+            Add("Gear Down", sample.GearDown ? "DOWN" : "UP", "DOWN en tierra", "OK");
+            Add("Flaps Percent", sample.FlapsPercent.ToString("F1") + " %", "Debe leer posición real de flap por aeronave", sample.FlapsPercent < 0 ? "SUSPECT" : "OK");
+            Add("Flaps Deployed", sample.FlapsDeployed ? "YES" : "NO", "YES cuando flaps > 0", (sample.FlapsDeployed == (sample.FlapsPercent > 0.01)) ? "OK" : "SUSPECT");
+            Add("Spoilers Armed", sample.SpoilersArmed ? "YES" : "NO", "Según perfil/procedimiento", "OK");
+            Add("Reverser Active", sample.ReverserActive ? "YES" : "NO", "NO en preflight", "OK");
+            Add("Beacon", sample.BeaconLightsOn ? "ON" : "OFF", "ON antes de arranque", "OK");
+            Add("Nav Lights", sample.NavLightsOn ? "ON" : "OFF", "ON en operación", "OK");
+            Add("Strobe", sample.StrobeLightsOn ? "ON" : "OFF", "ON en pista; OFF en gate/taxi", "OK");
+            Add("Landing Lights", sample.LandingLightsOn ? "ON" : "OFF", "ON en despegue/aproximación", "OK");
+            Add("Taxi Lights", sample.TaxiLightsOn ? "ON" : "OFF", "ON en rodaje", "OK");
+            Add("Engine 1 N1", sample.Engine1N1.ToString("F1"), "Coherente con motor encendido", "OK");
+            Add("Engine Running", $"{BoolTo01(sample.EngineOneRunning)}{BoolTo01(sample.EngineTwoRunning)}{BoolTo01(sample.EngineThreeRunning)}{BoolTo01(sample.EngineFourRunning)}", "Estado por motor según perfil", "OK");
+            Add("Battery Master", sample.BatteryMasterOn ? "ON" : "OFF", "ON si cabina energizada", "OK");
+            Add("Avionics Master", sample.AvionicsMasterOn ? "ON" : "OFF", "ON en preparación/operación", "OK");
+            Add("XPDR Code", sample.TransponderCode.ToString("D4"), "Código válido 0000-7777", sample.TransponderCode > 0 ? "OK" : "NOT_AVAILABLE");
+            Add("XPDR Raw State", sample.TransponderStateRaw.ToString(), "Debe cambiar con selector XPDR", "OK");
+            Add("XPDR Charlie", sample.TransponderCharlieMode ? "YES" : "NO", "YES en vuelo", "OK");
+            Add("Phase", sample.OperationalPhaseCode + " / " + sample.OperationalPhaseName, "Fase operacional coherente", string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? "NOT_AVAILABLE" : "OK");
+            Add("Phase Checklist", sample.PhaseChecklistStatus, "READY/WARN/PENDING según checks", string.IsNullOrWhiteSpace(sample.PhaseChecklistStatus) ? "NOT_AVAILABLE" : "OK");
         }
 
         private void ResetTelemetryInspectorSession()
@@ -739,6 +793,8 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             L("longitude", sample.Longitude.ToString("F6"), "deg", ResolveFieldStatus(sample.Longitude), "sim.telemetry", "raw", "false", "");
             L("altitude_msl_ft", sample.AltitudeMslFeet.ToString("F1"), "ft", sample.IsAltitudeReliable ? "OK" : "SUSPECT", "sim.telemetry", sample.IsAltitudeReliable ? "high" : "low", "true", sample.AltitudeSource);
             L("fuel_kg", sample.FuelKg.ToString("F1"), "kg", ResolveFieldStatus(sample.FuelKg), "sim.telemetry", "medium", "true", "");
+            L("flaps_percent", sample.FlapsPercent.ToString("F1"), "%", sample.FlapsPercent >= 0 ? "OK" : "SUSPECT", "sim.telemetry", "medium", "true", "Debe reflejar posicion real de flap");
+            L("flaps_deployed", sample.FlapsDeployed ? "1" : "0", "bool", "OK", "sim.telemetry", "medium", "true", "Coherente con flaps_percent > 0");
             L("xpdr_code", sample.TransponderCode.ToString(), "code", sample.TransponderCode > 0 ? "OK" : "NOT_AVAILABLE", "sim.telemetry", "medium", "true", "");
             L("phase", sample.OperationalPhaseCode, "code", string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? "NOT_AVAILABLE" : "OK", "phase.resolver", "high", "true", sample.OperationalPhaseReason);
             return sb.ToString();
@@ -770,6 +826,14 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 text = text.Replace(c, '_');
             }
             return text;
+        }
+
+        public sealed class TelemetryInspectorRow
+        {
+            public string Field { get; set; } = string.Empty;
+            public string ReadValue { get; set; } = string.Empty;
+            public string ExpectedByRule { get; set; } = string.Empty;
+            public string Status { get; set; } = string.Empty;
         }
 
         private static string ResolveFsuipcVersion()
