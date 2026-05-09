@@ -265,7 +265,9 @@ namespace PatagoniaWings.Acars.SimConnect
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TURB ENG N1:2",              "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "AUTOPILOT MASTER",           "Bool",             SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "FLAPS HANDLE PERCENT",       "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRAILING EDGE FLAPS LEFT PERCENT", "percent",     SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
+            _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRAILING EDGE FLAPS RIGHT PERCENT", "percent",    SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "SPOILERS HANDLE POSITION",   "percent",          SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
 
             _simConnect.AddToDataDefinition(DataDefineId.AircraftData, "TRANSPONDER STATE:1",        "number",           SIMCONNECT_DATATYPE.FLOAT64, 0, sc);
@@ -2308,6 +2310,9 @@ namespace PatagoniaWings.Acars.SimConnect
             // ── Perfil de aeronave normalizado ────────────────────────────────
             var profileCode = profile?.Code ?? AircraftNormalizationService.ResolveCode(r.Title ?? string.Empty);
 
+            var flapPercent = ResolveFlapPercent(r, profile);
+            var flapDeployThreshold = Math.Max(0.01, profile?.FlapDeployThresholdPercent ?? 0.01);
+
             double indicatedAirspeed = r.IndicatedAirspeed;
             double groundSpeed = r.GroundSpeed;
             if (ProfileIsMaddog(profileCode) && r.OnGround != 0)
@@ -2417,8 +2422,8 @@ namespace PatagoniaWings.Acars.SimConnect
 
                 GearDown           = r.GearHandleDown != 0,
                 GearTransitioning  = false,
-                FlapsDeployed      = r.FlapsPercent > 0.01,
-                FlapsPercent       = r.FlapsPercent,
+                FlapsDeployed      = flapPercent > flapDeployThreshold,
+                FlapsPercent       = flapPercent,
                 SpoilersArmed      = r.SpoilersHandlePercent > 0.01,
                 ReverserActive     = false,
 
@@ -3022,6 +3027,43 @@ namespace PatagoniaWings.Acars.SimConnect
 
         private static bool ProfileIsBlackSquareC208(string profileCode) =>
             string.Equals(profileCode, "C208_BLACKSQUARE", StringComparison.OrdinalIgnoreCase);
+
+        private static double ResolveFlapPercent(AircraftDataStruct raw, AircraftProfile? profile)
+        {
+            if (profile != null && !profile.SupportsFlapsRead)
+            {
+                return 0.0;
+            }
+
+            var source = (profile?.FlapSource ?? "trailing_left_percent").Trim().ToLowerInvariant();
+            var handle = NormalizePercent(raw.FlapsHandlePercent);
+            var left = NormalizePercent(raw.FlapsLeftPercent);
+            var right = NormalizePercent(raw.FlapsRightPercent);
+
+            switch (source)
+            {
+                case "handle_percent":
+                    return handle;
+                case "trailing_right_percent":
+                    return right;
+                case "trailing_avg_percent":
+                    return (left + right) / 2.0;
+                case "auto":
+                    if (left > 0.01 || right > 0.01) return (left + right) / 2.0;
+                    return handle;
+                case "trailing_left_percent":
+                default:
+                    return left;
+            }
+        }
+
+        private static double NormalizePercent(double value)
+        {
+            if (double.IsNaN(value) || double.IsInfinity(value)) return 0.0;
+            if (value < 0.0) return 0.0;
+            if (value > 100.0) return 100.0;
+            return value;
+        }
 
         private static double NormalizeVoltage(double value)
         {

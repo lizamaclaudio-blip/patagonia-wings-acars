@@ -4,9 +4,11 @@
     "FamilyGroup":  "B350_FAMILY",
     "Simulator":  "MSFS2020",
     "AddonProvider":  "BlackSquare",
-    "PrimaryTelemetrySource": "SimVar",
-    "TelemetrySourcePriority": ["SimVar"],
-    "CapabilityAuditState": "LIMITADO",
+    "PrimaryTelemetrySource":  "SimVar",
+    "TelemetrySourcePriority":  [
+                                    "SimVar"
+                                ],
+    "CapabilityAuditState":  "LIMITADO",
     "EngineCount":  2,
     "IsPressurized":  true,
     "HasApu":  false,
@@ -44,5 +46,8 @@
     "SupportsBatteryRead":  false,
     "SupportsAvionicsRead":  false,
     "SupportsEngineRunRead":  true,
-    "CabinSystemsReliable":  false
+    "CabinSystemsReliable":  false,
+    "FlapSource":  "auto",
+    "SupportsFlapsRead":  true,
+    "FlapDeployThresholdPercent":  0.01
 }

@@ -46,6 +46,9 @@ namespace PatagoniaWings.Acars.Core.Models
 
         public string ApuSource { get; set; } = "native";
         public string BleedAirSource { get; set; } = "native";
+        public string FlapSource { get; set; } = "trailing_left_percent";
+        public bool SupportsFlapsRead { get; set; } = true;
+        public double FlapDeployThresholdPercent { get; set; } = 0.01;
         public string FuelPumpSource { get; set; } = string.Empty;
         public string ContinuousIgnitionSource { get; set; } = string.Empty;
         public string FireTestSource { get; set; } = string.Empty;

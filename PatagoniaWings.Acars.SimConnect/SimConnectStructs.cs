@@ -98,7 +98,9 @@ namespace PatagoniaWings.Acars.SimConnect
         public double TurbEngN1_2;
 
         public double AutopilotActive;
-        public double FlapsPercent;
+        public double FlapsHandlePercent;
+        public double FlapsLeftPercent;
+        public double FlapsRightPercent;
         public double SpoilersHandlePercent;
 
         public double TransponderState;
