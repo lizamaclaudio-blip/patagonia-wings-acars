@@ -122,6 +122,14 @@ namespace PatagoniaWings.Acars.Core.Services
             return _profilesByCode["MSFS_NATIVE"];
         }
 
+        public static IReadOnlyList<AircraftProfile> GetAllProfiles(string? baseDirectory = null)
+        {
+            EnsureLoaded(baseDirectory);
+            return _profilesByCode.Values
+                .OrderBy(p => p.Code ?? string.Empty, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+
 
         private static bool TryResolveLvfrAirbus(string aircraftTitle, out AircraftProfile profile)
         {

@@ -8,6 +8,8 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
+using System.Linq;
 using PatagoniaWings.Acars.Core.Models;
 using PatagoniaWings.Acars.Core.Services;
 using PatagoniaWings.Acars.Master.Helpers;
@@ -70,6 +72,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             ResetSampleSessionCommand = new RelayCommand(ResetTelemetryInspectorSession);
             ExportSnapshotJsonCommand = new RelayCommand(ExportTelemetrySnapshotJson);
             ExportSessionCsvCommand = new RelayCommand(ExportTelemetrySessionCsv);
+            ExportFleetMapCommand = new RelayCommand(ExportFleetVariableMaps);
             CopyTelemetryDiagnosticCommand = new RelayCommand(CopyTelemetryDiagnostic);
             MarkAircraftTestedCommand = new RelayCommand(MarkAircraftTested);
 
@@ -117,6 +120,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         public ICommand ResetSampleSessionCommand { get; }
         public ICommand ExportSnapshotJsonCommand { get; }
         public ICommand ExportSessionCsvCommand { get; }
+        public ICommand ExportFleetMapCommand { get; }
         public ICommand CopyTelemetryDiagnosticCommand { get; }
         public ICommand MarkAircraftTestedCommand { get; }
 
@@ -635,8 +639,17 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 Add("Gear Down", "N/D", "No aplica a este perfil (tren fijo o no confiable)", "UNSUPPORTED");
             }
-            Add("Flaps Percent", sample.FlapsPercent.ToString("F1") + " %", "Debe leer posiciÃ³n real de flap por aeronave", sample.FlapsPercent < 0 ? "SUSPECT" : "OK");
-            Add("Flaps Deployed", sample.FlapsDeployed ? "YES" : "NO", "YES cuando flaps > 0", (sample.FlapsDeployed == (sample.FlapsPercent > 0.01)) ? "OK" : "SUSPECT");
+            if (profile?.SupportsFlapsRead ?? true)
+            {
+                var flapSource = string.IsNullOrWhiteSpace(profile?.FlapSource) ? "auto" : profile!.FlapSource;
+                Add("Flaps Percent", sample.FlapsPercent.ToString("F1") + " %", "Fuente: " + flapSource + " (segun perfil)", sample.FlapsPercent < 0 ? "SUSPECT" : "OK");
+                Add("Flaps Deployed", sample.FlapsDeployed ? "YES" : "NO", "YES cuando flaps > umbral perfil", "OK");
+            }
+            else
+            {
+                Add("Flaps Percent", "N/D", "No aplica a este perfil", "UNSUPPORTED");
+                Add("Flaps Deployed", "N/D", "No aplica a este perfil", "UNSUPPORTED");
+            }
             Add("Spoilers Armed", sample.SpoilersArmed ? "YES" : "NO", "SegÃºn perfil/procedimiento", "OK");
             if (supportsReverse)
             {
@@ -725,6 +738,42 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             }
         }
 
+        private void ExportFleetVariableMaps()
+        {
+            try
+            {
+                var profiles = AircraftNormalizationService.GetAllProfiles();
+                var exportDir = Path.Combine(GetDataFolderPath(), "TelemetryInspector", "fleet-maps");
+                Directory.CreateDirectory(exportDir);
+                var stamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                var indexPath = Path.Combine(exportDir, $"fleet_variable_map_{stamp}.csv");
+                var indexSb = new StringBuilder();
+                indexSb.AppendLine("profileCode,displayName,engineCount,requiresLvars,lvarProfile,file");
+
+                foreach (var profile in profiles)
+                {
+                    var fileName = $"{SafeFile(profile.Code)}_{stamp}.json";
+                    var jsonPath = Path.Combine(exportDir, fileName);
+                    File.WriteAllText(jsonPath, BuildFleetProfileVariableMapJson(profile), Encoding.UTF8);
+                    indexSb.AppendLine(string.Join(",",
+                        Csv(profile.Code),
+                        Csv(profile.DisplayName),
+                        Csv(profile.EngineCount.ToString()),
+                        Csv(profile.RequiresLvars ? "true" : "false"),
+                        Csv(profile.LvarProfile),
+                        Csv(fileName)));
+                }
+
+                File.WriteAllText(indexPath, indexSb.ToString(), Encoding.UTF8);
+                TelemetryInspectorLastExport = "FLEET MAP: " + exportDir;
+                StatusMessage = $"Mapa de variables exportado para {profiles.Count} perfiles.";
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = "No pude exportar mapa de flota: " + ex.Message;
+            }
+        }
+
         private void CopyTelemetryDiagnostic()
         {
             try
@@ -798,6 +847,88 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             return sb.ToString();
         }
 
+        private static string BuildFleetProfileVariableMapJson(AircraftProfile profile)
+        {
+            string E(string text) => (text ?? string.Empty).Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var vars = BuildProfileVariableRows(profile);
+            var sb = new StringBuilder();
+            sb.AppendLine("{");
+            sb.AppendLine($"  \"timestamp\": \"{DateTime.UtcNow:O}\",");
+            sb.AppendLine($"  \"appVersion\": \"{UpdateService.CurrentVersion}\",");
+            sb.AppendLine("  \"profile\": {");
+            sb.AppendLine($"    \"code\": \"{E(profile.Code)}\",");
+            sb.AppendLine($"    \"displayName\": \"{E(profile.DisplayName)}\",");
+            sb.AppendLine($"    \"engineCount\": {profile.EngineCount},");
+            sb.AppendLine($"    \"requiresLvars\": {(profile.RequiresLvars ? "true" : "false")},");
+            sb.AppendLine($"    \"lvarProfile\": \"{E(profile.LvarProfile)}\",");
+            sb.AppendLine($"    \"n1Source\": \"{E(profile.N1Source)}\",");
+            sb.AppendLine($"    \"flapSource\": \"{E(profile.FlapSource)}\"");
+            sb.AppendLine("  },");
+            sb.AppendLine("  \"variables\": [");
+            for (var i = 0; i < vars.Count; i++)
+            {
+                var v = vars[i];
+                sb.AppendLine("    {");
+                sb.AppendLine($"      \"field\": \"{E(v.Field)}\",");
+                sb.AppendLine($"      \"expectedSource\": \"{E(v.Source)}\",");
+                sb.AppendLine($"      \"unit\": \"{E(v.Unit)}\",");
+                sb.AppendLine($"      \"required\": {(v.Required ? "true" : "false")},");
+                sb.AppendLine($"      \"supported\": {(v.Supported ? "true" : "false")},");
+                sb.AppendLine($"      \"notes\": \"{E(v.Notes)}\"");
+                sb.Append("    }");
+                sb.AppendLine(i < vars.Count - 1 ? "," : string.Empty);
+            }
+            sb.AppendLine("  ]");
+            sb.AppendLine("}");
+            return sb.ToString();
+        }
+
+        private static List<FleetVarRow> BuildProfileVariableRows(AircraftProfile p)
+        {
+            var rows = new List<FleetVarRow>();
+            void Add(string field, string source, string unit, bool required, bool supported, string notes)
+            {
+                rows.Add(new FleetVarRow { Field = field, Source = source, Unit = unit, Required = required, Supported = supported, Notes = notes });
+            }
+
+            Add("latitude", "SimVar: PLANE LATITUDE", "deg", true, true, "Posicion global");
+            Add("longitude", "SimVar: PLANE LONGITUDE", "deg", true, true, "Posicion global");
+            Add("altitudeMslFt", "SimVar: PLANE ALTITUDE", "ft", true, true, "Altitud MSL");
+            Add("altitudeAglFt", "SimVar: PLANE ALT ABOVE GROUND", "ft", true, true, "Altitud AGL");
+            Add("indicatedAirspeed", "SimVar: AIRSPEED INDICATED", "kt", true, true, "Velocidad indicada");
+            Add("groundSpeed", "SimVar: GROUND VELOCITY", "kt", true, true, "Velocidad suelo");
+            Add("verticalSpeed", "SimVar: VERTICAL SPEED", "fpm", true, true, "Razon vertical");
+            Add("engine1N1", "Profile N1Source: " + (p.N1Source ?? "turb_n1"), "%", true, p.SupportsEngineRunRead || !string.Equals(p.N1Source, "none", StringComparison.OrdinalIgnoreCase), "Puede ser proxy por perfil");
+            Add("engineRunning", "SimVar: GENERAL ENG COMBUSTION:n", "bool", true, true, "Estado por motor");
+            Add("fuelKg", "SimVar: FUEL TOTAL QUANTITY WEIGHT", "kg", true, p.SupportsFuelRead, "Combustible total");
+            Add("payloadKg", "Derivada: TOTAL WEIGHT - EMPTY WEIGHT - FUEL", "kg", true, p.SupportsPayloadRead, "Carga/pax estimada");
+            Add("zeroFuelWeightKg", "Derivada", "kg", true, p.SupportsZfwReadback, "ZFW calculado");
+            Add("parkingBrake", "SimVar: BRAKE PARKING POSITION", "bool", true, p.SupportsParkingBrakeRead, "Freno parking");
+            Add("gearDown", "SimVar: GEAR HANDLE POSITION", "bool", true, p.SupportsGearRead, "Tren abajo segun perfil");
+            Add("flapsPercent", "Profile FlapSource: " + (p.FlapSource ?? "auto"), "%", true, p.SupportsFlapsRead, "Lectura de flap real por perfil");
+            Add("reverserActive", "SimVar derivado + perfil", "bool", false, p.EngineCount > 1, "No aplica a ciertas aeronaves");
+            Add("beaconLightsOn", "SimVar: LIGHT BEACON", "bool", true, p.SupportsLightsRead, "Luces beacon");
+            Add("navLightsOn", "SimVar: LIGHT NAV", "bool", true, p.SupportsLightsRead, "Luces nav");
+            Add("strobeLightsOn", "SimVar: LIGHT STROBE", "bool", true, p.SupportsLightsRead, "Luces strobo");
+            Add("landingLightsOn", "SimVar: LIGHT LANDING", "bool", true, p.SupportsLightsRead, "Luces landing");
+            Add("taxiLightsOn", "SimVar: LIGHT TAXI", "bool", true, p.SupportsLightsRead, "Luces taxi");
+            Add("batteryMasterOn", "SimVar: ELECTRICAL MASTER BATTERY", "bool", true, p.SupportsBatteryRead, "Bateria master");
+            Add("avionicsMasterOn", "SimVar: AVIONICS MASTER SWITCH", "bool", true, p.SupportsAvionicsRead, "Avionica master");
+            Add("apuRunning", "Profile ApuSource: " + (p.ApuSource ?? "native"), "bool", false, p.SupportsApuSystem, "APU");
+            Add("transponderCode", "SimVar: TRANSPONDER CODE:1", "octal/decimal", true, p.SupportsSquawkSystem, "Codigo XPDR");
+            Add("transponderStateRaw", "Profile TransponderStateSource: " + (p.TransponderStateSource ?? "native"), "state", true, p.SupportsTransponderModeSystem, "Estado XPDR RAW");
+            Add("transponderCharlieMode", "Derivada de state/raw", "bool", true, p.SupportsTransponderModeSystem, "Modo Charlie/ALT");
+            Add("com1FrequencyMhz", "SimVar: COM ACTIVE FREQUENCY:1", "mhz", true, true, "COM1 activa");
+            Add("com1StandbyFrequencyMhz", "SimVar: COM STANDBY FREQUENCY:1", "mhz", true, true, "COM1 standby");
+            Add("com2FrequencyMhz", "SimVar: COM ACTIVE FREQUENCY:2", "mhz", true, true, "COM2 activa");
+            Add("com2StandbyFrequencyMhz", "SimVar: COM STANDBY FREQUENCY:2", "mhz", true, true, "COM2 standby");
+            Add("doorOpen", "Profile DoorSource: " + (p.DoorSource ?? "native"), "bool", false, p.SupportsDoorSystem, "Puerta abierta");
+            Add("seatbeltOn", "Profile SeatbeltSource: " + (p.SeatbeltSource ?? "native"), "bool", false, p.SupportsSeatbeltSystem, "Seatbelt/no smoking");
+            Add("noSmokingOn", "Profile NoSmokingSource: " + (p.NoSmokingSource ?? "native"), "bool", false, p.SupportsNoSmokingSystem, "No smoking");
+            Add("inertialSeparator", "Profile InertialSeparatorSource: " + (p.InertialSeparatorSource ?? "native"), "bool", false, p.SupportsInertialSeparatorSystem, "Solo C208/compatibles");
+            return rows;
+        }
+
         private static string BuildSnapshotCsv(SimData sample)
         {
             var sb = new StringBuilder();
@@ -862,6 +993,16 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             public string ReadValue { get; set; } = string.Empty;
             public string ExpectedByRule { get; set; } = string.Empty;
             public string Status { get; set; } = string.Empty;
+        }
+
+        private sealed class FleetVarRow
+        {
+            public string Field { get; set; } = string.Empty;
+            public string Source { get; set; } = string.Empty;
+            public string Unit { get; set; } = string.Empty;
+            public bool Required { get; set; }
+            public bool Supported { get; set; }
+            public string Notes { get; set; } = string.Empty;
         }
 
         private static string ResolveFsuipcVersion()
