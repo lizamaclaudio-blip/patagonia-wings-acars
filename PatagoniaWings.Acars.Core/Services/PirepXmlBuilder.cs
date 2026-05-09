@@ -2070,11 +2070,28 @@ namespace PatagoniaWings.Acars.Core.Services
                     return around.OrderByDescending(Math.Abs).First();
                 }
 
-                // Si hay touchdown confirmado pero sin dato de G valido, usar baseline operativo.
-                return 1.0d;
+                // Si hay touchdown confirmado pero sin dato de G valido, estimar desde VS para
+                // evitar reportar 1.000 fijo en aterrizajes reales.
+                var estimated = EstimateTouchdownGFromVs(touchdown.LandingVS);
+                if (estimated > 1.0d) return estimated;
+
+                return 1.05d;
             }
 
             return value;
+        }
+
+        private static double EstimateTouchdownGFromVs(double landingVsFpm)
+        {
+            var sink = Math.Abs(landingVsFpm);
+            if (sink < 1d) return 1.0d;
+
+            // Curva simple y estable para traducir VS vertical de touchdown a rango de G util.
+            // -130 fpm -> ~1.20G, -300 fpm -> ~1.45G, -600 fpm -> ~1.90G
+            var g = 1.0d + (sink / 650d);
+            if (g < 1.0d) g = 1.0d;
+            if (g > 2.8d) g = 2.8d;
+            return g;
         }
 
         private static string ResolveRunwayIdent(SimData? sample)

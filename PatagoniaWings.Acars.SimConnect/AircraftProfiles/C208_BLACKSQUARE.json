@@ -31,7 +31,7 @@
     "NoSmokingSource":  "none",
     "InertialSeparatorSource":  "mobiflight",
     "TransponderStateSource":  "native",
-    "TransponderCodeFormat":  "bco16",
+    "TransponderCodeFormat":  "decimal_or_bco16",
     "PreferFsuipcAutopilot":  true,
     "PreferFsuipcTransponder":  true,
     "SupportsFuelRead":  true,
@@ -47,5 +47,8 @@
     "SupportsEngineRunRead":  true,
     "HasInertialSeparator":  true,
     "SupportsInertialSeparatorReadback":  true,
-    "MobiFlightInertialSeparatorExpression":  "(L:XMLVAR_InterSep, Bool)"
+    "MobiFlightInertialSeparatorExpression":  "(L:XMLVAR_InterSep, Bool)",
+    "CapabilityAuditState":  "OPERATIVO_XPDR_ENABLED",
+    "SupportsTransponderModeReadback":  true,
+    "SupportsSquawkReadback":  true
 }

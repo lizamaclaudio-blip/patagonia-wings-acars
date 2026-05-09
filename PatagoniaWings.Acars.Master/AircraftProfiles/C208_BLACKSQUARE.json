@@ -4,7 +4,7 @@
   "TelemetrySourcePriority": [
     "SimVar"
   ],
-  "CapabilityAuditState": "PARCIAL_XPDR_UNSUPPORTED",
+  "CapabilityAuditState": "OPERATIVO_XPDR_ENABLED",
   "Supported": true,
   "LightMode": "individual",
   "DoorOpenThresholdPercent": 5.0,
@@ -12,10 +12,10 @@
   "AutopilotDebounceFrames": 4,
   "TransponderStateDebounceFrames": 3,
   "TransponderDefaultState": 1,
-  "TransponderCodeFormat": "unsupported",
+  "TransponderCodeFormat": "decimal_or_bco16",
   "TransponderCodeDebounceFrames": 2,
   "PreferFsuipcAutopilot": true,
-  "PreferFsuipcTransponder": false,
+  "PreferFsuipcTransponder": true,
   "SupportsFuelRead": true,
   "SupportsPayloadRead": false,
   "SupportsFlagsRead": true,
@@ -53,7 +53,7 @@
   "NoSmokingSource": "none",
   "InertialSeparatorSource": "mobiflight",
   "AutopilotSource": "native_or_fsuipc",
-  "TransponderStateSource": "unsupported",
+  "TransponderStateSource": "native",
   "SupportsApuRead": false,
   "SupportsGearRead": false,
   "SupportsDoorRead": false,
@@ -63,7 +63,7 @@
   "ApuSource": "none",
   "BleedAirSource": "none",
   "FuelPumpSource": "native_or_custom",
-  "Notes": "PIREP Perfect A1: Black Square C208 XPDR/doors/gear no evaluables hasta validar fuente confiable. No penalizar unsupported.",
-  "SupportsTransponderModeReadback": false,
-  "SupportsSquawkReadback": false
+  "Notes": "PIREP operativo: C208 Black Square con XPDR/Squawk habilitado por SimConnect+fallback FSUIPC. Gear fijo y puertas siguen capability-aware sin penalizar lecturas no soportadas.",
+  "SupportsTransponderModeReadback": true,
+  "SupportsSquawkReadback": true
 }
