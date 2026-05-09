@@ -1370,7 +1370,7 @@ namespace PatagoniaWings.Acars.Core.Services
                 Dispatch = dispatch,
                 Report = report,
                 ActiveFlight = activeFlight ?? new Flight(),
-                TelemetryLog = telemetry,
+                TelemetryLog = CompactTelemetryForTransport(telemetry, 320),
                 LastSimData = lastSample ?? new SimData(),
                 DamageEvents = (damageEvents ?? Array.Empty<AircraftDamageEvent>()).ToList(),
                 Payload = payload
@@ -1790,10 +1790,10 @@ namespace PatagoniaWings.Acars.Core.Services
                         report = SerializeFlightReport(envelope.Report),
                         activeFlight = SerializeFlight(envelope.ActiveFlight),
                         preparedDispatch = SerializePreparedDispatch(envelope.Dispatch),
-                        telemetryLog = SerializeTelemetryLog(envelope.TelemetryLog),
+                        telemetryLog = SerializeTelemetryLog(envelope.TelemetryLog, 220),
                         lastSimData = SerializeSimData(envelope.LastSimData),
                         damageEvents = SerializeDamageEvents(envelope.DamageEvents),
-                        closeoutPayload = SerializeCloseoutPayload(envelope.Payload)
+                        closeoutPayload = SerializeCloseoutPayload(envelope.Payload, true)
                     }).ConfigureAwait(false);
 
                 if (!webResponse.Success && IsPayloadTooLargeError(webResponse.Error))
@@ -1806,7 +1806,7 @@ namespace PatagoniaWings.Acars.Core.Services
                             report = SerializeFlightReport(envelope.Report),
                             activeFlight = SerializeFlight(envelope.ActiveFlight),
                             preparedDispatch = SerializePreparedDispatch(envelope.Dispatch),
-                            telemetryLog = SerializeTelemetryLog(envelope.TelemetryLog, 600),
+                            telemetryLog = SerializeTelemetryLog(envelope.TelemetryLog, 280),
                             lastSimData = SerializeSimData(envelope.LastSimData),
                             damageEvents = SerializeDamageEvents(envelope.DamageEvents),
                             closeoutPayload = SerializeCloseoutPayload(envelope.Payload, true)
@@ -4094,32 +4094,64 @@ namespace PatagoniaWings.Acars.Core.Services
 
         private object SerializeTelemetryLog(IReadOnlyList<SimData>? telemetryLog, int maxSamples = 0)
         {
+            var samples = CompactTelemetryForTransport(telemetryLog, maxSamples > 0 ? maxSamples : 220);
+
+            return samples.Select(SerializeSimData).ToArray();
+        }
+
+        private List<SimData> CompactTelemetryForTransport(IReadOnlyList<SimData>? telemetryLog, int maxSamples)
+        {
             var samples = (telemetryLog ?? Array.Empty<SimData>()).ToList();
-            if (maxSamples > 0 && samples.Count > maxSamples)
+            if (samples.Count <= 1 || maxSamples <= 0 || samples.Count <= maxSamples)
             {
-                var step = Math.Max(1, samples.Count / maxSamples);
-                var reduced = new List<SimData>(maxSamples + 4);
-                for (var i = 0; i < samples.Count; i += step)
+                return samples;
+            }
+
+            var reduced = new List<SimData>(maxSamples + 8) { samples[0] };
+            var lastAdded = samples[0];
+
+            for (var i = 1; i < samples.Count - 1; i++)
+            {
+                var current = samples[i];
+                var phaseChanged = !string.Equals(lastAdded.OperationalPhaseCode, current.OperationalPhaseCode, StringComparison.OrdinalIgnoreCase);
+                var stateChanged = lastAdded.OnGround != current.OnGround
+                                   || lastAdded.ParkingBrake != current.ParkingBrake
+                                   || lastAdded.GearDown != current.GearDown
+                                   || lastAdded.FlapsPercent != current.FlapsPercent
+                                   || lastAdded.TransponderCharlieMode != current.TransponderCharlieMode;
+                var periodic = (current.CapturedAtUtc - lastAdded.CapturedAtUtc).TotalSeconds >= 20d;
+
+                if (phaseChanged || stateChanged || periodic)
                 {
-                    reduced.Add(samples[i]);
-                    if (reduced.Count >= maxSamples - 2)
+                    reduced.Add(current);
+                    lastAdded = current;
+                }
+            }
+
+            reduced.Add(samples[samples.Count - 1]);
+
+            if (reduced.Count > maxSamples)
+            {
+                var step = Math.Max(1, reduced.Count / maxSamples);
+                var downsampled = new List<SimData>(maxSamples + 2);
+                for (var i = 0; i < reduced.Count; i += step)
+                {
+                    downsampled.Add(reduced[i]);
+                    if (downsampled.Count >= maxSamples - 1)
                     {
                         break;
                     }
                 }
 
-                if (samples.Count > 0)
-                {
-                    reduced.Add(samples[samples.Count - 1]);
-                }
-
-                samples = reduced
-                    .Distinct()
-                    .Take(maxSamples)
-                    .ToList();
+                downsampled.Add(reduced[reduced.Count - 1]);
+                reduced = downsampled;
             }
 
-            return samples.Select(SerializeSimData).ToArray();
+            return reduced
+                .Where(sample => sample != null)
+                .Distinct()
+                .Take(maxSamples)
+                .ToList();
         }
 
         private object SerializeDamageEvents(IReadOnlyList<AircraftDamageEvent>? damageEvents)
