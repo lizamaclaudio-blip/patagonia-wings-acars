@@ -1,5 +1,5 @@
-#define MyAppName "Patagonia Wings ACARS"
-#define MyAppVersion "7.0.21"
+﻿#define MyAppName "Patagonia Wings ACARS"
+#define MyAppVersion "7.0.22"
 #define MyAppPublisher "Patagonia Wings"
 #define MyAppExeName "PatagoniaWings.Acars.Master.exe"
 
@@ -48,3 +48,4 @@ Name: "{autodesktop}\Patagonia Wings ACARS"; Filename: "{app}\{#MyAppExeName}"; 
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Iniciar Patagonia Wings ACARS"; Flags: nowait postinstall skipifsilent
+

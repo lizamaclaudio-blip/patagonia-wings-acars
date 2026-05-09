@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
@@ -569,6 +569,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             {
                 TelemetryInspectorSummary = "Sin telemetria en vivo";
                 _telemetryInspectorRows.Clear();
+            var profile = AircraftNormalizationService.ResolveProfile(sample.AircraftTitle ?? string.Empty);
+            var supportsGear = profile?.SupportsGearRead ?? true;
+            var supportsReverse = (profile?.EngineCount ?? 1) > 1 || (sample.DetectedProfileCode?.IndexOf("C208", StringComparison.OrdinalIgnoreCase) >= 0);
+            var n1IsProxy = string.Equals(profile?.N1Source, "combustion_proxy", StringComparison.OrdinalIgnoreCase);
                 return;
             }
 
@@ -595,6 +599,10 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         private void RebuildTelemetryInspectorRows(SimData sample)
         {
             _telemetryInspectorRows.Clear();
+            var profile = AircraftNormalizationService.ResolveProfile(sample.AircraftTitle ?? string.Empty);
+            var supportsGear = profile?.SupportsGearRead ?? true;
+            var supportsReverse = (profile?.EngineCount ?? 1) > 1 || (sample.DetectedProfileCode?.IndexOf("C208", StringComparison.OrdinalIgnoreCase) >= 0);
+            var n1IsProxy = string.Equals(profile?.N1Source, "combustion_proxy", StringComparison.OrdinalIgnoreCase);
 
             void Add(string field, string readValue, string expected, string status)
             {
@@ -607,7 +615,7 @@ namespace PatagoniaWings.Acars.Master.ViewModels
                 });
             }
 
-            Add("Aircraft Title", sample.AircraftTitle, "No vacío; debe coincidir con perfil", string.IsNullOrWhiteSpace(sample.AircraftTitle) ? "NOT_AVAILABLE" : "OK");
+            Add("Aircraft Title", sample.AircraftTitle, "No vacÃ­o; debe coincidir con perfil", string.IsNullOrWhiteSpace(sample.AircraftTitle) ? "NOT_AVAILABLE" : "OK");
             Add("Profile Code", sample.DetectedProfileCode, "Perfil detectado exacto o fallback controlado", string.IsNullOrWhiteSpace(sample.DetectedProfileCode) ? "NOT_AVAILABLE" : "OK");
             Add("Latitude", sample.Latitude.ToString("F6"), "Debe variar con movimiento", ResolveFieldStatus(sample.Latitude));
             Add("Longitude", sample.Longitude.ToString("F6"), "Debe variar con movimiento", ResolveFieldStatus(sample.Longitude));
@@ -619,25 +627,45 @@ namespace PatagoniaWings.Acars.Master.ViewModels
             Add("Fuel Kg", sample.FuelKg.ToString("F1") + " kg", ">0 mientras tanque con combustible", sample.FuelKg <= 0 ? "SUSPECT" : "OK");
             Add("Payload Kg", sample.PayloadKg.ToString("F1") + " kg", ">= 0", sample.PayloadKg < 0 ? "SUSPECT" : "OK");
             Add("Parking Brake", sample.ParkingBrake ? "ON" : "OFF", "ON en gate/preflight", "OK");
-            Add("Gear Down", sample.GearDown ? "DOWN" : "UP", "DOWN en tierra", "OK");
-            Add("Flaps Percent", sample.FlapsPercent.ToString("F1") + " %", "Debe leer posición real de flap por aeronave", sample.FlapsPercent < 0 ? "SUSPECT" : "OK");
+            if (supportsGear)
+            {
+                Add("Gear Down", sample.GearDown ? "DOWN" : "UP", "DOWN en tierra", "OK");
+            }
+            else
+            {
+                Add("Gear Down", "N/D", "No aplica a este perfil (tren fijo o no confiable)", "UNSUPPORTED");
+            }
+            Add("Flaps Percent", sample.FlapsPercent.ToString("F1") + " %", "Debe leer posiciÃ³n real de flap por aeronave", sample.FlapsPercent < 0 ? "SUSPECT" : "OK");
             Add("Flaps Deployed", sample.FlapsDeployed ? "YES" : "NO", "YES cuando flaps > 0", (sample.FlapsDeployed == (sample.FlapsPercent > 0.01)) ? "OK" : "SUSPECT");
-            Add("Spoilers Armed", sample.SpoilersArmed ? "YES" : "NO", "Según perfil/procedimiento", "OK");
-            Add("Reverser Active", sample.ReverserActive ? "YES" : "NO", "NO en preflight", "OK");
+            Add("Spoilers Armed", sample.SpoilersArmed ? "YES" : "NO", "SegÃºn perfil/procedimiento", "OK");
+            if (supportsReverse)
+            {
+                Add("Reverser Active", sample.ReverserActive ? "YES" : "NO", "NO en preflight", "OK");
+            }
+            else
+            {
+                Add("Reverser Active", "N/D", "No aplica a este perfil", "UNSUPPORTED");
+            }
             Add("Beacon", sample.BeaconLightsOn ? "ON" : "OFF", "ON antes de arranque", "OK");
-            Add("Nav Lights", sample.NavLightsOn ? "ON" : "OFF", "ON en operación", "OK");
+            Add("Nav Lights", sample.NavLightsOn ? "ON" : "OFF", "ON en operaciÃ³n", "OK");
             Add("Strobe", sample.StrobeLightsOn ? "ON" : "OFF", "ON en pista; OFF en gate/taxi", "OK");
-            Add("Landing Lights", sample.LandingLightsOn ? "ON" : "OFF", "ON en despegue/aproximación", "OK");
+            Add("Landing Lights", sample.LandingLightsOn ? "ON" : "OFF", "ON en despegue/aproximaciÃ³n", "OK");
             Add("Taxi Lights", sample.TaxiLightsOn ? "ON" : "OFF", "ON en rodaje", "OK");
-            Add("Engine 1 N1", sample.Engine1N1.ToString("F1"), "Coherente con motor encendido", "OK");
-            Add("Engine Running", $"{BoolTo01(sample.EngineOneRunning)}{BoolTo01(sample.EngineTwoRunning)}{BoolTo01(sample.EngineThreeRunning)}{BoolTo01(sample.EngineFourRunning)}", "Estado por motor según perfil", "OK");
+            Add(
+                "Engine 1 N1",
+                sample.Engine1N1.ToString("F1"),
+                n1IsProxy ? "Lectura proxy (combustion): 0 apagado / ~20 encendido" : "Coherente con motor encendido",
+                n1IsProxy
+                    ? ((sample.EngineOneRunning && sample.Engine1N1 >= 15) || (!sample.EngineOneRunning && sample.Engine1N1 <= 1) ? "OK" : "SUSPECT")
+                    : "OK");
+            Add("Engine Running", $"{BoolTo01(sample.EngineOneRunning)}{BoolTo01(sample.EngineTwoRunning)}{BoolTo01(sample.EngineThreeRunning)}{BoolTo01(sample.EngineFourRunning)}", "Estado por motor segÃºn perfil", "OK");
             Add("Battery Master", sample.BatteryMasterOn ? "ON" : "OFF", "ON si cabina energizada", "OK");
-            Add("Avionics Master", sample.AvionicsMasterOn ? "ON" : "OFF", "ON en preparación/operación", "OK");
-            Add("XPDR Code", sample.TransponderCode.ToString("D4"), "Código válido 0000-7777", sample.TransponderCode > 0 ? "OK" : "NOT_AVAILABLE");
+            Add("Avionics Master", sample.AvionicsMasterOn ? "ON" : "OFF", "ON en preparaciÃ³n/operaciÃ³n", "OK");
+            Add("XPDR Code", sample.TransponderCode.ToString("D4"), "CÃ³digo vÃ¡lido 0000-7777", sample.TransponderCode > 0 ? "OK" : "NOT_AVAILABLE");
             Add("XPDR Raw State", sample.TransponderStateRaw.ToString(), "Debe cambiar con selector XPDR", "OK");
             Add("XPDR Charlie", sample.TransponderCharlieMode ? "YES" : "NO", "YES en vuelo", "OK");
             Add("Phase", sample.OperationalPhaseCode + " / " + sample.OperationalPhaseName, "Fase operacional coherente", string.IsNullOrWhiteSpace(sample.OperationalPhaseCode) ? "NOT_AVAILABLE" : "OK");
-            Add("Phase Checklist", sample.PhaseChecklistStatus, "READY/WARN/PENDING según checks", string.IsNullOrWhiteSpace(sample.PhaseChecklistStatus) ? "NOT_AVAILABLE" : "OK");
+            Add("Phase Checklist", sample.PhaseChecklistStatus, "READY/WARN/PENDING segÃºn checks", string.IsNullOrWhiteSpace(sample.PhaseChecklistStatus) ? "NOT_AVAILABLE" : "OK");
         }
 
         private void ResetTelemetryInspectorSession()
@@ -923,3 +951,4 @@ namespace PatagoniaWings.Acars.Master.ViewModels
         }
     }
 }
+
