@@ -7,22 +7,22 @@
         <ResourceDictionary Source="Converters.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 
-    <!-- ── Tema blanco/azul premium ── -->
+    <!-- Tema blanco y azul premium -->
     <Color x:Key="BackgroundDarkColor">#0A1525</Color>
     <Color x:Key="BackgroundMidColor">#0E1C30</Color>
-    <Color x:Key="BackgroundCardColor">#F3F8FF</Color>
-    <Color x:Key="BackgroundCardAltColor">#EBF3FF</Color>
-    <Color x:Key="AccentBlueColor">#1565C0</Color>
-    <Color x:Key="AccentLightBlueColor">#1976D2</Color>
-    <Color x:Key="AccentTealColor">#0288D1</Color>
+    <Color x:Key="BackgroundCardColor">#F6FAFF</Color>
+    <Color x:Key="BackgroundCardAltColor">#EAF3FF</Color>
+    <Color x:Key="AccentBlueColor">#1F6FB4</Color>
+    <Color x:Key="AccentLightBlueColor">#2F8FD2</Color>
+    <Color x:Key="AccentTealColor">#0CA789</Color>
     <Color x:Key="AccentVioletColor">#5C6BC0</Color>
     <Color x:Key="TextPrimaryColor">#0D1F3C</Color>
     <Color x:Key="TextSecondaryColor">#1E3A64</Color>
     <Color x:Key="TextMutedColor">#4A6E9A</Color>
-    <Color x:Key="BorderColor">#B8D0EA</Color>
-    <Color x:Key="GreenColor">#1B8A4C</Color>
-    <Color x:Key="RedColor">#C62828</Color>
-    <Color x:Key="YellowColor">#E65100</Color>
+    <Color x:Key="BorderColor">#BCD3EA</Color>
+    <Color x:Key="GreenColor">#16845B</Color>
+    <Color x:Key="RedColor">#B4233A</Color>
+    <Color x:Key="YellowColor">#B7791F</Color>
 
     <SolidColorBrush x:Key="BackgroundDarkBrush" Color="{StaticResource BackgroundDarkColor}"/>
     <SolidColorBrush x:Key="BackgroundMidBrush" Color="{StaticResource BackgroundMidColor}"/>
@@ -45,22 +45,22 @@
     <!-- Fondo ventana: blanco premium -->
     <LinearGradientBrush x:Key="WindowBackgroundBrush" StartPoint="0,0" EndPoint="0,1">
         <GradientStop Color="#FFFFFF" Offset="0"/>
-        <GradientStop Color="#EEF5FF" Offset="0.5"/>
-        <GradientStop Color="#E6F0FF" Offset="1"/>
+        <GradientStop Color="#F4F8FF" Offset="0.52"/>
+        <GradientStop Color="#E9F2FF" Offset="1"/>
     </LinearGradientBrush>
 
     <LinearGradientBrush x:Key="ActionGradientBrush" StartPoint="0,0" EndPoint="1,0">
-        <GradientStop Color="#1565C0" Offset="0"/>
-        <GradientStop Color="#1976D2" Offset="1"/>
+        <GradientStop Color="#1F6FB4" Offset="0"/>
+        <GradientStop Color="#0CA789" Offset="1"/>
     </LinearGradientBrush>
 
-    <DropShadowEffect x:Key="PanelShadow" Color="#440D1F3C" BlurRadius="18" ShadowDepth="2" Opacity="0.18"/>
-    <DropShadowEffect x:Key="GlowShadow" Color="#801565C0" BlurRadius="14" ShadowDepth="0" Opacity="0.32"/>
+    <DropShadowEffect x:Key="PanelShadow" Color="#330D1F3C" BlurRadius="14" ShadowDepth="1" Opacity="0.16"/>
+    <DropShadowEffect x:Key="GlowShadow" Color="#661F6FB4" BlurRadius="12" ShadowDepth="0" Opacity="0.28"/>
 
     <Style x:Key="PageTitle" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
         <Setter Property="FontFamily" Value="{StaticResource MainFont}"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontSize" Value="15"/>
         <Setter Property="FontWeight" Value="Bold"/>
         <Setter Property="Margin" Value="0,0,0,6"/>
     </Style>
@@ -87,8 +87,8 @@
         <Setter Property="Background" Value="#FFFFFF"/>
         <Setter Property="BorderBrush" Value="#B8D0EA"/>
         <Setter Property="BorderThickness" Value="1.5"/>
-        <Setter Property="CornerRadius" Value="12"/>
-        <Setter Property="Padding" Value="10"/>
+        <Setter Property="CornerRadius" Value="14"/>
+        <Setter Property="Padding" Value="11"/>
         <Setter Property="Effect" Value="{StaticResource PanelShadow}"/>
     </Style>
 
@@ -96,7 +96,7 @@
         <Setter Property="Background" Value="#F0F6FF"/>
         <Setter Property="BorderBrush" Value="#C8DDF5"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="CornerRadius" Value="10"/>
+        <Setter Property="CornerRadius" Value="11"/>
         <Setter Property="Padding" Value="8,7"/>
     </Style>
 
@@ -135,7 +135,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{TemplateBinding Background}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                    <Border Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -160,7 +160,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="10" Padding="{TemplateBinding Padding}">
+                    <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="12" Padding="{TemplateBinding Padding}">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>

@@ -22,8 +22,8 @@
 
     <Grid Background="Transparent">
         <Border Margin="8"
-                CornerRadius="20"
-                BorderBrush="#C2D8EF"
+                CornerRadius="22"
+                BorderBrush="#B7D2EA"
                 BorderThickness="1.5"
                 Background="{StaticResource WindowBackgroundBrush}"
                 Effect="{StaticResource PanelShadow}">
@@ -36,8 +36,8 @@
 
                 <!-- TITLE BAR -->
                 <Border Grid.Row="0"
-                        Background="#FFFFFF"
-                        BorderBrush="#D4E8F8"
+                        Background="#FAFCFF"
+                        BorderBrush="#D8E8F6"
                         BorderThickness="0,0,0,1.5"
                         CornerRadius="20,20,0,0"
                         MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
@@ -52,8 +52,8 @@
 
                         <!-- Logo sin borde ni fondo -->
                         <Image Source="pack://application:,,,/Assets/patagonia-logo.png"
-                               Width="34"
-                               Height="34"
+                               Width="36"
+                               Height="36"
                                Stretch="Uniform"
                                VerticalAlignment="Center"
                                RenderOptions.BitmapScalingMode="HighQuality"/>
@@ -74,8 +74,8 @@
 
                         <!-- Step badge — solo visible si no es paso auxiliar -->
                         <Border Grid.Column="2"
-                                Background="#E0EDFF"
-                                BorderBrush="#90B4D8"
+                                Background="#E6F3FF"
+                                BorderBrush="#8CB8DC"
                                 BorderThickness="1"
                                 CornerRadius="10"
                                 Padding="8,3"
@@ -194,9 +194,9 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Ellipse Width="7"
-                                 Height="7"
-                                 Fill="#22C55E"
+                        <Ellipse Width="8"
+                                 Height="8"
+                                 Fill="#16A34A"
                                  VerticalAlignment="Center"
                                  Margin="0,0,6,0"/>
 

@@ -31,7 +31,7 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel>
-                    <TextBlock Text="ACTUALIZACION DISPONIBLE"
+                    <TextBlock Text="ACTUALIZACIÓN DISPONIBLE"
                                Foreground="{StaticResource AccentLightBlueBrush}"
                                FontSize="11"
                                FontWeight="Bold"/>

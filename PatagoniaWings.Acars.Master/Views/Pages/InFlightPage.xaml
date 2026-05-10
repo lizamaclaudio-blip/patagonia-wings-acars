@@ -34,7 +34,7 @@
                     <TextBlock.Effect><DropShadowEffect Color="#0099FF" BlurRadius="12" ShadowDepth="0" Opacity="0.7"/></TextBlock.Effect>
                 </TextBlock>
 
-                <!-- NÃºmero de vuelo + matrÃ­cula -->
+                <!-- Número de vuelo + matrícula -->
                 <StackPanel HorizontalAlignment="Center" Margin="0,0,0,6">
                     <TextBlock Text="{Binding FlightNumber,
                                               Converter={StaticResource StringFallbackConverter},
@@ -180,12 +180,12 @@
             </StackPanel>
         </Border>
 
-        <!-- â•â• SISTEMAS Y PARÃMETROS â•â• -->
+        <!-- â•â• SISTEMAS Y PARÁMETROS â•â• -->
         <Border Grid.Row="2" Background="#F4F8FF" BorderBrush="#C2D8EF" BorderThickness="1"
                 CornerRadius="14" Padding="10,9" Effect="{StaticResource PanelShadow}">
             <StackPanel>
 
-                <TextBlock Text="SISTEMAS Y PARÃMETROS" Foreground="#1554A8" FontSize="8" FontWeight="Bold" Margin="0,0,0,7"/>
+                <TextBlock Text="SISTEMAS Y PARÁMETROS" Foreground="#1554A8" FontSize="8" FontWeight="Bold" Margin="0,0,0,7"/>
 
                 <!-- â”€â”€ LEDs LIVE: NAV BCN STB / TAXI LAND TREN / AP PUERTA FRENO â”€â”€ -->
                 <UniformGrid Columns="5" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
@@ -333,7 +333,7 @@
                                        FontSize="9.5" FontWeight="Bold" FontFamily="Consolas"
                                        Foreground="{Binding PicConfirmed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#1B5E20|#78350F}"/>
                         </StackPanel>
-                        <Button Grid.Column="2" Content="{Binding PicButtonLabel, FallbackValue='âœ“ PIC'}"
+                        <Button Grid.Column="2" Content="{Binding PicButtonLabel, FallbackValue='✓ PIC'}"
                                 Command="{Binding ConfirmPicCommand}"
                                 FontSize="8" FontWeight="Bold" Padding="6,4"
                                 Background="{Binding PicConfirmed, Converter={StaticResource BoolToColorConverter}, ConverterParameter=#4CAF50|#F59E0B}"
@@ -351,12 +351,12 @@
 
                 <Border Height="1" Background="#C8DCF0" Margin="0,8,0,8"/>
 
-                <!-- â”€â”€ TELEMETRÃA LIVE â”€â”€ -->
+                <!-- â”€â”€ TELEMETRÍA LIVE â”€â”€ -->
                 <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource BoolToVisibilityConverter}}">
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="ALT/FL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding AltitudeDisplay, FallbackValue='â€”'}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding AltitudeDisplay, FallbackValue='N/D'}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,0"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AGL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
@@ -384,12 +384,12 @@
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,0,0">
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="QNH" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/>
-                            <TextBlock Text="{Binding QnhDisplay, FallbackValue='â€”'}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
+                            <TextBlock Text="{Binding QnhDisplay, FallbackValue='N/D'}" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/>
                         </StackPanel>
                     </Border>
                 </UniformGrid>
 
-                <!-- â”€â”€ TELEMETRÃA PREVIEW â”€â”€ -->
+                <!-- â”€â”€ TELEMETRÍA PREVIEW â”€â”€ -->
                 <UniformGrid Columns="3" Visibility="{Binding HasLiveTelemetry, Converter={StaticResource InverseBooleanToVisibilityConverter}}">
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="0,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="ALT/FL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="---" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
                     <Border Background="#EEF5FF" BorderBrush="#C8DCF0" BorderThickness="1" CornerRadius="8" Padding="5,5" Margin="3,0,3,4"><StackPanel HorizontalAlignment="Center"><TextBlock Text="AGL" Foreground="#5080A8" FontSize="7" FontWeight="Bold" HorizontalAlignment="Center"/><TextBlock Text="0 ft" Foreground="#0D2143" FontFamily="Consolas" FontSize="11" FontWeight="Bold" HorizontalAlignment="Center"/></StackPanel></Border>
@@ -414,7 +414,7 @@
                 <TextBlock Text="ðŸ“»" FontSize="14" VerticalAlignment="Center" Margin="0,0,8,0"/>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Text="RADIO ACARS" Foreground="#1565C0" FontSize="7.5" FontWeight="Bold" FontFamily="Segoe UI"/>
-                    <TextBlock Text="{Binding RadioAcarsMessage, FallbackValue='COM2: Sintonice frecuencia asignada y estÃ© atento.'}"
+                    <TextBlock Text="{Binding RadioAcarsMessage, FallbackValue='COM2: Sintonice frecuencia asignada y esté atento.'}"
                                Foreground="#0D2143" FontSize="9" FontFamily="Segoe UI" FontWeight="SemiBold"
                                TextWrapping="Wrap" MaxHeight="26" TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
