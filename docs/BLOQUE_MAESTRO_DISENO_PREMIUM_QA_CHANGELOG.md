@@ -18,3 +18,8 @@
 
 ## No tocado
 - Sin cambios en ViewModels, servicios ACARS, telemetry, PIREP/XML, finalize logic, manifests o autoupdate.
+
+## 2026-05-10 - BLOQUE FINAL MOJIBAKE + QA VISUAL
+- Corrección de mojibake visual en `Views/Pages/InFlightPage.xaml` (iconografía de radio).
+- Se mantiene diseño compacto vertical y sin cambios de comandos, bindings operativos ni ViewModels.
+- Validaciones: MSBuild Debug x64 OK, Release x64 OK.
