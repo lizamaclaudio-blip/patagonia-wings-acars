@@ -23,3 +23,8 @@
 - Corrección de mojibake visual en `Views/Pages/InFlightPage.xaml` (iconografía de radio).
 - Se mantiene diseño compacto vertical y sin cambios de comandos, bindings operativos ni ViewModels.
 - Validaciones: MSBuild Debug x64 OK, Release x64 OK.
+
+## 2026-05-10 - BLOQUE FINAL GLASS + CONTRASTE + QA
+- Se ejecuta QA visual y de contraste final en ACARS sin cambios de lógica.
+- Compilaciones verificadas: Debug x64 OK y Release x64 OK.
+- Se mantiene ventana compacta vertical y no se tocaron ViewModels, Services ni flujos operativos.
